@@ -1,0 +1,22 @@
+#name: ns
+# --
+(ns ${1:name}
+  (:use clojure.stacktrace
+        midi osc byte-spec
+        [overtone config time-utils log event]
+        [overtone.helpers chance scaling]
+        [overtone.sc.ugen constants]
+        [overtone.sc allocator core ugen node synth synthdef cgen
+         trigger buffer envelope bus sample sc-lang example]
+        [overtone.sc.cgen audio-in oscillators demand]
+        [overtone.sc.examples demand osc trig compander audio-in]
+        [overtone.music rhythm pitch tuning]
+        [overtone.studio core util fx]
+        [overtone.viz scope]
+        [overtone.inst piano io drum synth]
+        clojure.repl
+        clojure.pprint))
+
+(boot)
+
+$0

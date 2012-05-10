@@ -1,0 +1,15 @@
+#!/bin/zsh
+
+echo "clearing out live packs"
+rm -rf ~/.emacs.d/packs/live
+
+echo "creating new live pack dir"
+mkdir ~/.emacs.d/packs/live
+
+echo "copying content from dev packs"
+cp -pRL ~/.emacs.d/packs/dev/* ~/.emacs.d/packs/live/
+
+echo "removing dev detritus"
+rm -rf ~/.emacs.d/packs/live/**/vendor
+rm -rf ~/.emacs.d/packs/live/**/.git*
+rm -rf ~/.emacs.d/packs/live/**/*.elc

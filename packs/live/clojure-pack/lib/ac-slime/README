@@ -1,0 +1,31 @@
+Slime completion source for Emacs auto-complete package
+=======================================================
+
+This plugin provides a completion source for the popular Emacs
+interactive auto-completion framework "auto-complete"
+(http://www.emacswiki.org/emacs/AutoComplete).
+
+Where slime provides it, pop-up documentation for completed symbols
+will be displayed.
+
+
+Installation
+============
+
+You must have auto-complete installed and enabled in Slime source
+buffers, if not globally. Then, ensure ac-slime.el is in a directory
+on your load-path.
+
+After calling (require 'ac-slime), two AC sources will be defined,
+namely ac-source-slime-simple and ac-source-slime-fuzzy. Simply add
+one of these to your ac-sources list for lisp source buffers.
+
+For convenience, the function set-up-slime-ac can be used to modify your
+ac-sources list:
+
+(add-hook 'slime-mode-hook 'set-up-slime-ac)
+
+For more complete set-up code, see the documentation in ac-slime.el.
+
+To use fuzzy completion, you must install and require slime-fuzzy.el,
+which comes with the full Slime distro, but not the version in ELPA.

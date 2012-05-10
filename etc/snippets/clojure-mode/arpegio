@@ -1,0 +1,7 @@
+#name: arpegio
+# --
+(let [time (now)]
+  (at (+ 200 time) (piano 62))
+  (at (+ 400 time) (piano 66))
+  (at (+ 700 time) (piano 69))
+  (at (+ 800 time) (piano 72)))
