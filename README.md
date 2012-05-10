@@ -30,19 +30,23 @@ Shipped Packs
 -------------
 
 Emacs live ships with a few packs:
-* **Live** A live-programming power up with a specific focus on Clojure and Overtone hacking
-* **Colour** Colour highlighting in two flavours - blackbeard and whitebeard
-* **User** An empty pack for your own libs and config.
+* **Foundation** A set of defaults to create a clutter free and friendly Emacs.
+* **Colour** Colour highlighting in two flavours - blackbeard and whitebeard.
+* **Clojure** A set of goodies to get you hacking Clojure like a pro.
+* **Lang** A number of extra language modes for your joy.
+* **Power** A boost of fantastic functionality for your live-coding fingertips.
+* **User** An empty place for your own libs and config.
 
 Loading Packs
 -------------
 
-By default, Emacs live will load the live, colour and user packs in
+By default, Emacs live will load the foundation, colour, clojure, lang and power packs in
 that order. However, you may create a ~/.emacs-live.el file to
 override this behaviour. Simply set the var live-packs to a list of
 symbols representing the packs you'd like to load up (the order
-will be honoured). For example to keep the default:
-(setq live-packs '(live colour user))
+will be honoured). For example to only load the foundation and colour packs:
+
+    (setq live-packs '(live/foundation-pack live/colour-pack))
 
 Helper fns
 ----------
@@ -52,4 +56,3 @@ within your live packs:
 
 * `live-pack-lib-dir` this returns the path of the lib dir for the current pack
 * `live-load-config-file` loads a config file located in the config dir of the current pack
-dfdf
