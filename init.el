@@ -71,3 +71,37 @@
 
 ;; Load all packs - Power Extreme!
 (mapcar (lambda (pack-name) (live-load-pack pack-name)) live-packs)
+
+(defun live-user-first-name ()
+  (car  (split-string user-full-name)))
+
+(setq live-welcome-messages
+      (list (concat "Hello " (live-user-first-name) ", somewhere in the world the sun is shining for you right now.")
+            (concat "Hello " (live-user-first-name) ", it's lovely to see you again. I do hope that you're well.")
+            (concat (live-user-first-name) ", turn your head towards the sun and the shadows will fall behind you.")
+            ))
+
+(defun live-welcome-message ()
+  (nth (random* (length live-welcome-messages)) live-welcome-messages))
+
+(setq initial-scratch-message (concat ";;     MM\"\"\"\"\"\"\"\"`M
+;;     MM  mmmmmmmM
+;;     M`      MMMM 88d8b.d8b. .d8888b. .d8888b. .d8888b.
+;;     MM  MMMMMMMM 88''88'`88 88'  `88 88'  `\"\" Y8ooooo.
+;;     MM  MMMMMMMM 88  88  88 88.  .88 88.  ...       88
+;;     MM        .M dP  dP  dP `88888P8 '88888P' '88888P'
+;;     MMMMMMMMMMMM
+;;
+;;         M\"\"MMMMMMMM M\"\"M M\"\"MMMMM\"\"M MM\"\"\"\"\"\"\"\"`M
+;;         M  MMMMMMMM M  M M  MMMMM  M MM  mmmmmmmM
+;;         M  MMMMMMMM M  M M  MMMMP  M M`      MMMM
+;;         M  MMMMMMMM M  M M  MMMM' .M MM  MMMMMMMM
+;;         M  MMMMMMMM M  M M  MMP' .MM MM  MMMMMMMM
+;;         M         M M  M M     .dMMM MM        .M
+;;         MMMMMMMMMMM MMMM MMMMMMMMMMM MMMMMMMMMMMM
+;;
+;;           http://github.com/overtone/emacs-live
+;;
+;; " (live-welcome-message) "
+
+") )
