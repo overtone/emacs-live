@@ -24,9 +24,10 @@
 ;;default live packs
 (let* ((live-dir (file-name-as-directory "live")))
   (setq live-packs (list (concat live-dir "foundation-pack")
-			 (concat live-dir "colour-pack")
-			 (concat live-dir "clojure-pack")
-			 (concat live-dir "lang-pack"))))
+                         (concat live-dir "colour-pack")
+                         (concat live-dir "clojure-pack")
+                         (concat live-dir "lang-pack")
+                         (concat live-dir "power-pack"))))
 
 ;; Helper fn for loading live packs
 
