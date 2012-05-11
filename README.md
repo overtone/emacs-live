@@ -1,5 +1,3 @@
-<img src="https://github.com/downloads/overtone/live-coding-emacs/improcess-logo-2.png" alt="Fuzzy Improcess Logo" title="Improcess" align="right" />
-
      MM""""""""`M
      MM  mmmmmmmM
      M`      MMMM 88d8b.d8b. .d8888b. .d8888b. .d8888b.
@@ -22,6 +20,8 @@
     This is the power of Emacs Live.
 
 # Emacs Live
+
+<img src="https://github.com/downloads/overtone/live-coding-emacs/improcess-logo-2.png" alt="Fuzzy Improcess Logo" title="Improcess" align="right" />
 
 An opinionated set of defaults for getting started with Emacs with a specific focus on live coding with Overtone. However, it also happens to be a jolly good generic Clojure hacking config.
 
