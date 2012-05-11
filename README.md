@@ -1,4 +1,4 @@
-x<img src="https://github.com/downloads/overtone/live-coding-emacs/improcess-logo-2.png" alt="Fuzzy Improcess Logo" title="Improcess" align="right" />
+<img src="https://github.com/downloads/overtone/live-coding-emacs/improcess-logo-2.png" alt="Fuzzy Improcess Logo" title="Improcess" align="right" />
 
      MM""""""""`M
      MM  mmmmmmmM
