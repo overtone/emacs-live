@@ -75,8 +75,8 @@ children of DIRECTORY."
                (if (> dir-count 1)
                    (format " in %d directories" dir-count) "")))))
 
-(defun recompile-libs ()
-  "Byte-compile all your dotfiles again."
+(defun live-recompile-packs ()
+  "Byte-compile all your packs"
   (interactive)
   (byte-recompile-directory-sl live-packs-dir 0 1 1))
 
