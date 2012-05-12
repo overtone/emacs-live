@@ -12,7 +12,7 @@
   "Cyberpunk colour theme by Sam Aaron."
   (interactive)
   (color-theme-install
-   '(color-theme-blackbeard
+   '(color-theme-cyberpunk
      ((background-color . "black")
       (background-mode . dark)
       (border-color . "black")

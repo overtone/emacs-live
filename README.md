@@ -68,7 +68,7 @@ lib dirs to your load path. See the section on helper fns below.
 
 Emacs live ships with a few packs:
 * **Foundation** A set of defaults to create a clutter free and friendly Emacs.
-* **Colour** Colour highlighting in two flavours - blackbeard and whitebeard.
+* **Colour** Colour highlighting in two flavours - cyberpunk and gandalf.
 * **Clojure** A set of goodies to get you hacking Clojure like a pro.
 * **Lang** A number of extra language modes for your joy.
 * **Power** A boost of fantastic functionality for your live-coding fingertips.
