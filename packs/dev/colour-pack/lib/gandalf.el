@@ -1,4 +1,8 @@
 ;; Gandalf Colour Theme
+;;
+;; "I will not say Do not weep, for not all tears are an evil."
+;;                              Gandalf.
+
 (require 'color-theme)
 
 ;;;###autoload
