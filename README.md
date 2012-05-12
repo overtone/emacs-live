@@ -14,10 +14,15 @@
          M         M M  M M     .dMMM MM        .M
          MMMMMMMMMMM MMMM MMMMMMMMMMM MMMMMMMMMMMM
 
-    The energy rushes through your fingertips. Sparks fly and you arch
-    your back as your spine takes on the excess surge.
+    Energy rushes through your fingertips. Sparks fly and you arch your
+    back as your spine takes on the excess surge. You open your eyes as
+    if for the first time. Colours appear more vibrant than you
+    remember.  You marvel as a swirl of syntactic and symantic
+    structures intertwine as they project out of the screen with a
+    fractal beauty. Meaning unfolds into meaning. You feel alive.
 
-    This is the power of Emacs Live.
+         "Power of the horse, full force!"
+                      The Space Stallions.
 
 # Emacs Live
 
