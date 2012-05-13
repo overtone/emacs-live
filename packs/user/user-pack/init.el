@@ -1,9 +1,7 @@
 ;; User pack init file
 ;;
 ;; User this file to initiate the pack configuration.
-;;
-;; For example:
-;;
-;; (live-load-config-file "my-config.el")
-;; (live-add-pack-lib "foobar")
-;; (require 'foobar)
+;; See README for more information.
+
+;; Load bindings config
+(live-load-config-file "bindings.el")
