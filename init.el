@@ -63,6 +63,11 @@
   (let* ((config-dir (live-pack-config-dir)))
     (load-file (concat config-dir f-name))))
 
+;; Load `~/user.el`.
+(let* ((pack-file (concat (file-name-as-directory "~/.emacs.d") "user.el")))
+  (if (file-exists-p pack-file)
+      (load-file pack-file)))
+
 ;; Load `~/.emacs-live.el`. This allows you to override variables such
 ;; as live-packs (allowing you to specify pack loading order)
 (let* ((pack-file (concat (file-name-as-directory "~") ".emacs-live.el")))
