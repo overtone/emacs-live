@@ -1,18 +1,4 @@
-     MM""""""""`M
-     MM  mmmmmmmM
-     M`      MMMM 88d8b.d8b. .d8888b. .d8888b. .d8888b.
-     MM  MMMMMMMM 88''88'`88 88'  `88 88'  `"" Y8ooooo.
-     MM  MMMMMMMM 88  88  88 88.  .88 88.  ...       88
-     MM        .M dP  dP  dP `88888P8 '88888P' '88888P'
-     MMMMMMMMMMMM
-
-         M""MMMMMMMM M""M M""MMMMM""M MM""""""""`M
-         M  MMMMMMMM M  M M  MMMMM  M MM  mmmmmmmM
-         M  MMMMMMMM M  M M  MMMMP  M M`      MMMM
-         M  MMMMMMMM M  M M  MMMM' .M MM  MMMMMMMM
-         M  MMMMMMMM M  M M  MMP' .MM MM  MMMMMMMM
-         M         M M  M M     .dMMM MM        .M
-         MMMMMMMMMMM MMMM MMMMMMMMMMM MMMMMMMMMMMM
+<img src="http://github.com/downloads/overtone/emacs-live/emacs-live.png" alt="Emacs Live Ascii Art" title = "Emacs Live" />
 
     Energy starts surging through your fingertips. Sparks fly, making
     the shadows grow and flicker ominously around you. You arch your
@@ -24,7 +10,9 @@
     You lean back and marvel as a shimmering swirl of syntactic and
     symantic structures project out of the screen and intertwine with a
     fractal beauty. You watch as meaning recursively unfolds into deeper
-    meaning live in front of your eyes. M-x start-hacking.
+    meaning live in front of your eyes. Your Emacs is alive.
+
+    M-x start-hacking.
 
 # Emacs Live
 
