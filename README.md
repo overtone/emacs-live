@@ -14,19 +14,24 @@
          M         M M  M M     .dMMM MM        .M
          MMMMMMMMMMM MMMM MMMMMMMMMMM MMMMMMMMMMMM
 
-    Energy rushes through your fingertips. Sparks fly and you arch your
-    back as your spine takes on the excess surge. You open your eyes as
-    if for the first time. Colours appear more vibrant than you
-    remember.  You marvel as a swirl of syntactic and symantic
-    structures intertwine as they project out of the screen with a
-    fractal beauty. Meaning unfolds into meaning. You feel alive.
+    Energy starts surging through your fingertips. Sparks fly, making
+    the shadows grow and flicker ominously around you. You arch your
+    back and open your eyes as if for the first time. The text appears
+    more vibrant and colourful than you remember. Your fingers dance on
+    the keyboard commanding the cursor with a joyful precision and
+    control.
 
-         "Power of the horse, full force!"
-                      The Space Stallions.
+    You lean back and marvel as a shimmering swirl of syntactic and
+    symantic structures project out of the screen and intertwine with a
+    fractal beauty. You watch as meaning recursively unfolds into deeper
+    meaning live in front of your eyes. M-x start-hacking.
 
 # Emacs Live
 
 An opinionated set of defaults for getting started with Emacs with a specific focus on live coding with Overtone. However, it also happens to be a jolly good generic Clojure hacking config.
+
+         "Power of the horse, full force!"
+                      The Space Stallions.
 
 ### Prerequisites
 
