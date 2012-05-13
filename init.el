@@ -22,12 +22,14 @@
 (make-directory live-backups-dir t)
 
 ;;default live packs
-(let* ((live-dir (file-name-as-directory "live")))
+(let* ((live-dir (file-name-as-directory "live"))
+       (user-dir (file-namd-as-directory "user")))
   (setq live-packs (list (concat live-dir "foundation-pack")
                          (concat live-dir "colour-pack")
                          (concat live-dir "clojure-pack")
                          (concat live-dir "lang-pack")
-                         (concat live-dir "power-pack"))))
+                         (concat live-dir "power-pack")
+                         (concat user-dir "user-pack"))))
 
 ;; Helper fn for loading live packs
 
