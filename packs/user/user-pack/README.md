@@ -16,7 +16,6 @@ have the file config/foo.el then you may load it in with:
 
     (live-load-config-file "foo.el")
 
-
 ### lib
 
  If you want to pull in external libraries into your pack, then you

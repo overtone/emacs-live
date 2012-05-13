@@ -1,4 +1,6 @@
-<img src="http://github.com/downloads/overtone/emacs-live/emacs-live.png" alt="Emacs Live Ascii Art" title = "Emacs Live" />
+<img
+src="http://github.com/downloads/overtone/emacs-live/emacs-live.png"
+alt="Emacs Live Ascii Art" title = "Emacs Live" />
 
     Energy starts surging through your fingertips. Sparks fly, making
     the shadows grow and flicker ominously around you. You arch your
@@ -16,14 +18,19 @@
 
 # Emacs Live
 
-An opinionated set of defaults for getting started with Emacs with a specific focus on live coding with Overtone. However, it also happens to be a jolly good generic Clojure hacking config.
+An opinionated set of defaults for getting started with Emacs with a
+specific focus on live coding with Overtone. However, it not only also
+happens to be a jolly good generic Clojure hacking config but a nice
+pack-oriented structure for building your own personalised config.
 
          "Power of the horse, full force!"
                       The Space Stallions.
 
 ### Prerequisites
 
-This dot-emacs config has only been tested with a terminal hosted Emacs ` 24.1.50.2` (pre-release). Issues and pull-requests for this and later versions will be happily accepted.
+Emacs live has only been tested with a terminal hosted Emacs `
+24.1.50.2` (pre-release). Issues and pull-requests for this and later
+versions will be happily accepted.
 
 ### Getting started
 
@@ -63,22 +70,62 @@ lib dirs to your load path. See the section on helper fns below.
 
 
 Emacs live ships with a few packs:
-* **Foundation** A set of defaults to create a clutter free and friendly Emacs.
-* **Colour** Colour highlighting in two flavours - cyberpunk and gandalf.
-* **Clojure** A set of goodies to get you hacking Clojure like a pro.
-* **Lang** A number of extra language modes for your joy.
-* **Power** A boost of fantastic functionality for your live-coding fingertips.
+
+#### Foundation
+
+A set of defaults to create a clutter free, friendly and more dynamic Emacs foundation. Also adds fuzzy matching autocomplete functionality for most of the Emacs minibuffer action - such as finding files, calling functions and switching buffers.
+
+#### Colour
+
+Colour highlighting in two flavours - cyberpunk and gandalf. User `color-theme-cyberpunk` and `color-theme-gandalf` to switch between the two themes. Currently cyberpunk has seen more love - patch requests accepted for appropriate improvements to Gandalf.
+
+#### Clojure
+
+A set of goodies to get you hacking Clojure like a pro.
+
+* Clojure Mode (with fancy (λ [a] (+ a 5)) and ƒ(+ % 5) prettifications)
+* Slime (for communicating with swank servers)
+* Auto completion (configured to work with slime for inline auto completion of documentation)
+* Tailor-made colour theme
+* Fancy highlighting of sexps on eval
+* Rainbow parens and delimiters (to allow you to easily navigate a sea of parens)
+
+#### Lang
+
+ A number of extra language modes for your joy. Languages include:
+
+* Markdown
+* Yaml
+* Ruby
+* SuperCollider
+
+#### Power
+
+A boost of fantastic functionality for your live-coding fingertips. Highlights include:
+
+* The amazing undo-tree (live-code with confidence!)
+* Textmate-like snippets
+* Refheap mode for pasting snippets to refheap.com
+* Quick jump mode for accessing previous locations
+* Ace jump mode for jumping directly to any symbol on the screen with 2 or three keystrokes.
 
 ### Loading Packs
 
-By default, Emacs live will load the `foundation`, `colour`,
-`clojure`, `lang` and `power` packs in that order. However, you may
-create a `~/.emacs-live.el` file to override this behaviour. Simply set
-the var live-packs to a list of symbols representing the packs you'd
-like to load up (the order will be honoured). For example to only load
-the foundation and colour packs:
+By default, Emacs live will load the packs in the following order:
+
+* live
+  - `foundation-pack`, `colour-pack`,`clojure-pack`, `lang-pack` and `power-pack`
+* user
+  - `user-pack`
+
+However, you may create a `~/.emacs-live.el` file to override this
+behaviour. Simply set the var live-packs to a list of symbols
+representing the packs you'd like to load up (the order will be
+honoured). For example to only load the foundation and colour packs:
 
     (setq live-packs '(live/foundation-pack live/colour-pack))
+
+The user-pack is initially empty, and you're encouraged to fill it out with your own configuration.
 
 ### Creating your own Packs
 
@@ -88,8 +135,7 @@ within your own live packs:
 * `live-pack-lib-dir` this returns the path of the lib dir for the current pack
 * `live-load-config-file` loads a config file located in the config dir of the current pack
 
-It is recommended that you place your own personal packs within `packs/user`.
-
+It is recommended that you place your own personal packs within `packs/user`. See the user-pack's README for more information.
 
 ## Feedback
 
