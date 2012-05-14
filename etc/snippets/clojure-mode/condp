@@ -1,0 +1,4 @@
+#name: condp
+# --
+(condp ${1:pred} ${2:expr}
+  $0)

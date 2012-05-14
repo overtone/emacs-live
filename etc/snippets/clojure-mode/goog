@@ -1,0 +1,23 @@
+# -*- coding: utf-8 -*-
+# name: goog
+# contributor: Yesudeep Mangalapilly <yesudeep@google.com>
+# key: goog
+# --
+;;; `(file-name-nondirectory (buffer-file-name (current-buffer)))` --- ${1:Short description.}
+;;
+;; Copyright ${2:`(nth 5 (decode-time))`} ${3:Google, Inc}.
+;; All Rights Reserved.
+;;
+;; Author: ${4:`user-mail-address`} (${5:`(user-full-name)`})
+
+;;; Commentary:
+;;
+;; $6
+
+;;; Code:
+;;
+
+$0
+
+
+;;; `(file-name-nondirectory (buffer-file-name (current-buffer)))` ends here

@@ -1,0 +1,4 @@
+#name: letfn
+# --
+(letfn [(${1:name) [${2:args}]
+          $0)])
