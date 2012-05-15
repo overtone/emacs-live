@@ -23,7 +23,7 @@
 
 ;;default live packs
 (let* ((live-dir (file-name-as-directory "live"))
-       (user-dir (file-namd-as-directory "user")))
+       (user-dir (file-name-as-directory "user")))
   (setq live-packs (list (concat live-dir "foundation-pack")
                          (concat live-dir "colour-pack")
                          (concat live-dir "clojure-pack")
