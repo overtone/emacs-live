@@ -12,7 +12,7 @@ alt="Emacs Live Ascii Art" title = "Emacs Live" />
     You lean back and marvel as a shimmering swirl of syntactic and
     symantic structures project out of the screen and intertwine with a
     fractal beauty. You watch as meaning recursively unfolds into deeper
-    meaning live in front of your eyes. Your Emacs is alive.
+    meaning live in front of your eyes. Your Emacs lives.
 
     M-x start-hacking.
 
@@ -23,8 +23,8 @@ specific focus on live coding with Overtone. However, it not only also
 happens to be a jolly good generic Clojure hacking config but a nice
 pack-oriented structure for building your own personalised config.
 
-         "Power of the horse, full force!"
-                      The Space Stallions.
+    "Power of the horse, full force!"
+                 The Space Stallions.
 
 ### Prerequisites
 
