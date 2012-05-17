@@ -12,31 +12,48 @@ alt="Emacs Live Ascii Art" title = "Emacs Live" />
     You lean back and marvel as a shimmering swirl of syntactic and
     symantic structures project out of the screen and intertwine with a
     fractal beauty. You watch as meaning recursively unfolds into deeper
-    meaning live in front of your eyes. Your Emacs lives.
+    meaning live in front of your eyes. You and your Emacs are alive.
 
     M-x start-hacking.
 
 # Emacs Live
 
-An opinionated set of defaults for getting started with Emacs with a
-specific focus on live coding with Overtone. However, it not only also
-happens to be a jolly good generic Clojure hacking config but a nice
-pack-oriented structure for building your own personalised config.
+An opinionated set of defaults for getting started with a specific focus on live coding with [Overtone](http://github.com/overtone/overtone). However, it's not just a one trick pony. It also happens to be:
+
+* a jolly good generic Clojure hacking config
+* a nice structured approach to organising your Emacs config
+* modular in that functionality is organised by discrete _packs_
+* a decent starting point for live coding in general
+* a goldmine of config snippets to plunder and add to your own config
+
+So, wherever you are in the multiverse, Emacs Live is ready to join you in battle against the evil friction of poor text editor workflows.
 
     "Power of the horse, full force!"
                  The Space Stallions.
 
 ### Prerequisites
 
-Emacs live has only been tested with a terminal hosted Emacs `
-24.1.50.2` (pre-release). Issues and pull-requests for this and later
-versions will be happily accepted.
+Emacs live has only been tested with a terminal hosted Emacs `24.1.50.2`
+(pre-release). Issues and pull-requests for this and later versions will
+be happily accepted.
 
-### Getting started
+### Getting Started
 
-1. Download the zip bundle and move and rename the folder to `~/.emacs.d`
-2. Launch Emacs
-3. Live code your hat off!
+1. Move aside `~/.emacs`, `~/.emacs.el` or `~/.emacs.d` if they currently exist.
+2. Download the zip bundle and move and rename the folder to `~/.emacs.d`
+3. Launch Emacs
+4. Live code your hat off!
+
+### Clojure Hacking
+
+If you wish to hack with Clojure projects such as Overtone, you'll need to install lein and Swank:
+
+1. Install [Leiningen 2](https://github.com/technomancy/leiningen/wiki/Upgrading)
+2. Create a file called `~/.lein/profiles.clj` with the following contents:
+
+    {:user {:plugins [[lein-swank "1.4.4"]]}}
+
+And you're ready to roll. Simply start swank in a Clojure project with `lein2 swank` and connect to it from Emacs with `M-x slime-connect` for full Emacs REPL/autocompletion joy.
 
 ### Screenshots
 
@@ -67,7 +84,6 @@ fns to make it easy for you to load config files and for you to add
 lib dirs to your load path. See the section on helper fns below.
 
 ### Shipped Packs
-
 
 Emacs live ships with a few packs:
 
