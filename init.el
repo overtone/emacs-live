@@ -67,6 +67,16 @@
   (let* ((config-dir (live-pack-config-dir)))
     (load-file (concat config-dir f-name))))
 
+(defun live-use-packs (pack-list)
+  "Use the packs in pack-list - overrides the defaults and any
+  previous packs added with live-add-packs."
+  (setq live-packs pack-list))
+
+(defun live-add-packs (pack-list)
+  "Add the list pack-list to end of the current list of packs to
+  load"
+  (setq live-packs (append live-packs pack-list)))
+
 ;; Load `~/.emacs-live.el`. This allows you to override variables such
 ;; as live-packs (allowing you to specify pack loading order)
 (let* ((pack-file (concat (file-name-as-directory "~") ".emacs-live.el")))
