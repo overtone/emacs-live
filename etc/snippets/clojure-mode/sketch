@@ -1,0 +1,15 @@
+#name: sketch
+# --
+(defn setup []
+  (background 20)
+  (smooth))
+
+(defn draw [])
+
+(defsketch ${1:sketch-name}
+  :title "${2:My Beautiful Sketch}"
+  :setup setup
+  :draw draw
+  :size [${3:500 300}]
+  :renderer :${4:opengl}
+  $5:target :perm-frame)$0
