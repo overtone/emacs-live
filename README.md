@@ -46,7 +46,7 @@ be happily accepted.
 
 ### Clojure Hacking
 
-If you wish to hack with Clojure projects such as Overtone, you'll need to install lein and Swank:
+If you wish to hack with Clojure projects such as Overtone and Quil, you'll need to install lein and Swank:
 
 1. Install [Leiningen 2](https://github.com/technomancy/leiningen/wiki/Upgrading)
 2. Create a file called `~/.lein/profiles.clj` with the following contents:
@@ -139,9 +139,15 @@ behaviour. Simply set the var live-packs to a list of symbols
 representing the packs you'd like to load up (the order will be
 honoured). For example to only load the foundation and colour packs:
 
-    (setq live-packs '(live/foundation-pack live/colour-pack))
+    (live-use-packs '(live/foundation-pack live/colour-pack))
 
-The user-pack is initially empty, and you're encouraged to fill it out with your own configuration.
+If just you wish to load your own packs after the default packs then simply use `live-add-packs`:
+
+    (live-add-packs '(~/.live-packs/yourname-pack))
+
+Packs are expected to reside in `~/.emacs.d/packs/` unless you specify them with absolute paths in which case the absolute path with be honoured.
+
+The user-pack is initially empty, and you're encouraged to copy it to an external directory, fill it out with your own configuration and add it with `live-add-packs`.
 
 ### Creating your own Packs
 
