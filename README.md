@@ -147,8 +147,6 @@ If just you wish to load your own packs after the default packs then simply use 
 
 Packs are expected to reside in `~/.emacs.d/packs/` unless you specify them with absolute paths in which case the absolute path with be honoured.
 
-The user-pack is initially empty, and you're encouraged to copy it to an external directory, fill it out with your own configuration and add it with `live-add-packs`.
-
 ### Creating your own Packs
 
 Emacs Live provides a couple of useful helper fns which you can use
@@ -157,7 +155,7 @@ within your own live packs:
 * `live-pack-lib-dir` this returns the path of the lib dir for the current pack
 * `live-load-config-file` loads a config file located in the config dir of the current pack
 
-It is recommended that you place your own personal packs within `packs/user`. See the user-pack's README for more information.
+It is recommended that you place your own personal packs in an external directory. See the `user/template-pack`'s README for more information.
 
 ## Feedback
 

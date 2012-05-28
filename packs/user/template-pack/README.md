@@ -1,6 +1,6 @@
 ## User Pack Template
 
-This is a template for your own user pack.
+This is a template for your own user (or other purpose) pack.
 
 ### init.el
 
