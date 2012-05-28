@@ -12,7 +12,9 @@ alt="Emacs Live Ascii Art" title = "Emacs Live" />
     You lean back and marvel as a shimmering swirl of syntactic and
     symantic structures project out of the screen and intertwine with a
     fractal beauty. You watch as meaning recursively unfolds into deeper
-    meaning live in front of your eyes. You and your Emacs are alive.
+    meaning live in front of your eyes. You feel a deep and lasting
+    synchronicity form as the boundaries between you and your Emacs
+    wash away. You and your Emacs Live.
 
     M-x start-hacking.
 
