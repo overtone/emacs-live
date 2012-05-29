@@ -1,0 +1,23 @@
+             M"""""`'"""`YM
+             M  mm.  mm.  M
+             M  MMM  MMM  M        dP.  .dP
+             M  MMM  MMM  M 888888  `8bd8'
+             M  MMM  MMM  M         .d88b.
+             M  MMM  MMM  M        dP'  `dP
+             MMMMMMMMMMMMMM
+
+Energy starts surging through your fingertips. Sparks fly, making
+the shadows grow and flicker ominously around you. You arch your
+back and open your eyes as if for the first time. The text appears
+more vibrant and colourful than you remember. Your fingers dance on
+the keyboard commanding the cursor with a joyful precision and
+control.
+
+You lean back and marvel as a shimmering swirl of syntactic and
+symantic structures project out of the screen and intertwine with a
+fractal beauty. You watch as meaning recursively unfolds into deeper
+meaning live in front of your eyes. You feel a deep and lasting
+synchronicity form as the boundaries between you and your Emacs
+wash away. You and your Emacs Live.
+
+M-x start-hacking.
