@@ -89,8 +89,8 @@ To see which files have been preserved:
 To revert back to your old Emacs configs simply:
 
     rm -rf ~/.emacs.d
-    mv /Users/sam/emacs-live-old-config/.emacs* ~/
-    rm -rf /Users/sam/emacs-live-old-config" > $old_config/README.md
+    mv $old_config/.emacs* ~/
+    rm -rf $old_config" > $old_config/README.md
 
             created_old_emacs_config_dir=true
         fi
