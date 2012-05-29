@@ -39,6 +39,12 @@ Emacs live has only been tested with a terminal hosted Emacs `24.1.50.2`
 (pre-release). Issues and pull-requests for this and later versions will
 be happily accepted.
 
+### Easy Install
+
+If you're the kind of shoot-from-the-hip person that doesn't mind executing random scripts from the interwebs, then the easiest way to install Emacs Live is to run the following (although I suggest you read through the script first):
+
+    bash <(curl -fsSL https://raw.github.com/overtone/emacs-live/master/installer/install-emacs-live.sh)
+
 ### Getting Started
 
 1. Move aside `~/.emacs`, `~/.emacs.el` or `~/.emacs.d` if they currently exist.
