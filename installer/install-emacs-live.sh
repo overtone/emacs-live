@@ -11,6 +11,7 @@
 # Directory to preserve any Emacs configs found
 old_config=~/emacs-live-old-config
 tmp_dir=~/.emacs-live-installer-tmp
+username=$(whoami)
 
 # Borrowed from the lein downloader
 HTTP_CLIENT=${HTTP_CLIENT:-"wget -O"}
@@ -141,15 +142,14 @@ To revert back to your old Emacs configs simply:
 modifications in a personal pack which I can create for you now."
     echo ""
     echo $(tput setaf 2)"What will happen:"
-    echo "* Your pack will be created and placed in ~/.live-packs/${username}-pack"
+    echo "* Your pack will be created and placed in ~/.live-packs/$username-pack"
     echo "* An Emacs Live config file will be created for you in ~/.emacs.live.el "$(tput sgr0)
     echo ""
     read -p $(tput setaf 3)"Would you like to create a personal pack? (Y/n) "$(tput sgr0)
 
     if [[ $REPLY =~ ^[^nN]*$ ]]; then
         mkdir -p ~/.live-packs/
-        username=$(whoami)
-        echo "(live-add-packs '(~/.live-packs/${username}-pack))" >> ~/.emacs-live.el
+        echo "(live-add-packs '(~/.live-packs/$username-pack))" >> ~/.emacs-live.el
         cp -R ~/.emacs.d/packs/template/user-template-pack/ ~/.live-packs/$username-pack
         echo ""
         echo $(tput setaf 2)"Personal Pack created"$(tput sgr0)
