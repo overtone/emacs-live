@@ -11,11 +11,11 @@
   (interactive)
   (color-theme-install
    '(color-theme-gandalf
-     ((background-color . "#AEAEAE")
+     ((background-color . "white")
       (background-mode . light)
       (border-color . "white")
       (cursor-color . "#96CBFE")
-      (foreground-color . "#EDEDED")
+      (foreground-color . "black")
       (mouse-color . "sienna1"))
      (default ((t (:background "white" :foreground "black"))))
      (blue ((t (:foreground "blue"))))
@@ -23,8 +23,8 @@
      (bold-italic ((t (:bold t))))
      (border-glyph ((t (nil))))
      (buffers-tab ((t (:background "white" :foreground "black"))))
-     (font-lock-builtin-face ((t (:foreground "black")))) ;; light blue
-     (font-lock-comment-face ((t (:italic t :foreground "black"))))
+     (font-lock-builtin-face ((t (:foreground "dark blue"))))
+     (font-lock-comment-face ((t (:italic t :foreground "gray3"))))
      (font-lock-constant-face ((t (:foreground "black"))))
      (font-lock-doc-string-face ((t (:foreground "black"))))
      (font-lock-function-name-face ((t (:foreground "black"))))
@@ -35,7 +35,7 @@
      (font-lock-regexp-grouping-backslash ((t (:foreground "black"))))
      (font-lock-regexp-grouping-construct ((t (:foreground "black"))))
 
-     (font-lock-string-face ((t (:foreground "black"))))
+     (font-lock-string-face ((t (:foreground "dark green"))))
 
      (font-lock-type-face ((t (:foreground "black"))))
      (font-lock-variable-name-face ((t (:foreground "#FF6400"))))
