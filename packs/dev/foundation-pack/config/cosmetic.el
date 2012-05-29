@@ -2,8 +2,7 @@
 (require 'ansi-color)
 (ansi-color-for-comint-mode-on)
 
-(setq visible-bell t
-      font-lock-maximum-decoration t
+(setq font-lock-maximum-decoration t
       color-theme-is-global t)
 
 ;; Line-wrapping
