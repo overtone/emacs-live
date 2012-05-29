@@ -42,7 +42,7 @@
      (font-lock-warning-face ((t (:bold t :foreground "black"))))
      (gui-element ((t (:background "#333333" :foreground "#96CBFE"))))
      (region ((t (:background "#253B76"))))
-     (mode-line ((t (:background "#333333" :foreground "#96CBFE"))))
+     (mode-line ((t (:background "deep pink" :foreground "white"))))
      (highlight ((t (:background "#222222"))))
      (Highline-face ((t (:background "SeaGreen"))))
      (italic ((t (nil))))
@@ -51,7 +51,8 @@
      (toolbar ((t (nil))))
      (underline ((nil (:underline nil))))
      (vertical-border ((t (:background "black" :foreground "#333333"))))
-     (zmacs-region ((t (:background "snow" :foreground "ble")))))))
+     (zmacs-region ((t (:background "snow" :foreground "ble"))))
+     (erc-default-face ((t (:foreground "dark green")))))))
 
 (custom-set-faces
  ;;magit colours
