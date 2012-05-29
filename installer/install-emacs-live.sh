@@ -56,6 +56,8 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
      # Download Emacs Live as a zipball
      echo ""
+     echo "Downloading Emacs Live..."
+     echo ""
      $HTTP_CLIENT $tmp_dir/live.zip https://github.com/overtone/emacs-live/zipball/master
 
      # Unzip zipball
@@ -70,72 +72,69 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         else
             echo ""
             echo $(tput setaf 1)
-            echo "Emacs config files detected. "
-            echo "============================"
-            echo ""
-            echo $(tput sgr0)
-            echo "These will be moved into the following dir for safekeeping"
-            echo $old_config
+            echo "======================================"
+            echo "     Emacs config files detected. "
+            echo "======================================$(tput sgr0)"
+
             mkdir -p $old_config
             echo "# Your Old Emacs Config Files
 
 This directory contains any Emacs configuration files that had existed prior
 to installing Emacs Live.
 
+To see which files have been preserved:
+
+    ls -allh $old_config
+
 To revert back to your old Emacs configs simply:
 
     rm -rf ~/.emacs.d
-    mv $old_config_root/* ~/
-    rmdir $old_config" > $old_config/README.md
+    mv /Users/sam/emacs-live-old-config/.emacs* ~/
+    rm -rf /Users/sam/emacs-live-old-config" > $old_config/README.md
 
             created_old_emacs_config_dir=true
         fi
     }
 
-    echo ""
-    echo ""
-
     if [ -e ~/.emacs.d/ ]; then
         create_old_dir
         echo $(tput setaf 1)
-        echo "------------------------------------------"
         echo "Found ~/.emacs.d config directory"
         echo "Moving to $old_config/.emacs.d"
         echo ""
         mv ~/.emacs.d $old_config/.emacs.d
         echo "------------------------------------------"
+        echo ""
         echo $(tput sgr0)
     fi
 
     if [ -e ~/.emacs.el ]; then
         create_old_dir
         echo $(tput setaf 1)
-        echo "------------------------------------------"
         echo "Found ~/.emacs.el config file."
         echo "Moving to $old_config/.emacs.el"
         echo ""
         mv ~/.emacs.el $old_config/.emacs.el
         echo "------------------------------------------"
+        echo ""
         echo $(tput sgr0)
     fi
 
     if [ -e ~/.emacs ]; then
         create_old_dir
         echo $(tput setaf 1)
-        echo "------------------------------------------"
         echo "Found ~/.emacs config file."
         echo "Moving to $old_config/.emacs"
         echo ""
         mv ~/.emacs $old_config/.emacs
         echo "------------------------------------------"
+        echo ""
         echo $(tput sgr0)
     fi
 
     mkdir ~/.emacs.d
     mv $tmp_dir/overtone*/* ~/.emacs.d
 
-    echo ""
-    echo ""
     echo $(tput setaf 5)
     cat $tmp_dir/outro.txt
     echo $(tput sgr0)
