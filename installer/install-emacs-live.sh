@@ -56,7 +56,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
      # Download Emacs Live as a zipball
      echo ""
-     echo "Downloading Emacs Live..."
+     echo $(tput setaf 2)"Downloading Emacs Live..."$(tput sgr0)
      echo ""
      $HTTP_CLIENT $tmp_dir/live.zip https://github.com/overtone/emacs-live/zipball/master
 
@@ -100,9 +100,9 @@ To revert back to your old Emacs configs simply:
         create_old_dir
         echo $(tput setaf 1)
         echo "Found ~/.emacs.d config directory"
-        echo "Moving to $old_config/.emacs.d"
         echo ""
         mv ~/.emacs.d $old_config/.emacs.d
+        echo "Moved to $old_config/.emacs.d"
         echo "------------------------------------------"
         echo ""
         echo $(tput sgr0)
@@ -112,9 +112,9 @@ To revert back to your old Emacs configs simply:
         create_old_dir
         echo $(tput setaf 1)
         echo "Found ~/.emacs.el config file."
-        echo "Moving to $old_config/.emacs.el"
         echo ""
         mv ~/.emacs.el $old_config/.emacs.el
+        echo "Moved to $old_config/.emacs.el"
         echo "------------------------------------------"
         echo ""
         echo $(tput sgr0)
@@ -124,9 +124,9 @@ To revert back to your old Emacs configs simply:
         create_old_dir
         echo $(tput setaf 1)
         echo "Found ~/.emacs config file."
-        echo "Moving to $old_config/.emacs"
         echo ""
         mv ~/.emacs $old_config/.emacs
+        echo "Moved to $old_config/.emacs"
         echo "------------------------------------------"
         echo ""
         echo $(tput sgr0)
@@ -134,7 +134,28 @@ To revert back to your old Emacs configs simply:
 
     mkdir ~/.emacs.d
     mv $tmp_dir/overtone*/* ~/.emacs.d
+    echo $(tput setaf 4)"Personal Pack"
+    echo "-------------"$(tput sgr0)
+    echo ""
+    echo "If you wish to personalise Emacs Live, it is recommended that you place your
+modifications in a personal pack which I can create for you now."
+    echo ""
+    echo $(tput setaf 2)"What will happen:"
+    echo "* Your pack will be created and placed in ~/.live-packs/${username}-pack"
+    echo "* An Emacs Live config file will be created for you in ~/.emacs.live.el "$(tput sgr0)
+    echo ""
+    read -p $(tput setaf 3)"Would you like to create a personal pack? (Y/n) "$(tput sgr0)
 
+    if [[ $REPLY =~ ^[^nN]*$ ]]; then
+        mkdir -p ~/.live-packs/
+        username=$(whoami)
+        echo "(live-add-packs '(~/.live-packs/${username}-pack))" >> ~/.emacs-live.el
+        cp -R ~/.emacs.d/packs/template/user-template-pack/ ~/.live-packs/$username-pack
+        echo ""
+        echo $(tput setaf 2)"Personal Pack created"$(tput sgr0)
+    fi
+
+    echo $(tput setaf 2)"Installation Completed"$(tput sgr0)
     echo $(tput setaf 5)
     cat $tmp_dir/outro.txt
     echo $(tput sgr0)
