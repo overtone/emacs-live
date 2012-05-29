@@ -47,8 +47,10 @@ If you're the kind of shoot-from-the-hip person that doesn't mind executing rand
 
 ### Getting Started
 
+The (only ever-so-slightly) more involved way to install is to follow these steps:
+
 1. Move aside `~/.emacs`, `~/.emacs.el` or `~/.emacs.d` if they currently exist.
-2. Download the zip bundle and move and rename the folder to `~/.emacs.d`
+2. Download the zip bundle (or clone the repository with git) and move and rename to `~/.emacs.d`
 3. Launch Emacs
 4. Live code your hat off!
 
