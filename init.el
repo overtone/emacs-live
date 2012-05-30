@@ -21,6 +21,9 @@
 (make-directory live-autosaves-dir t)
 (make-directory live-backups-dir t)
 
+;; Load manifest
+(load-file (concat live-root-dir "manifest.el"))
+
 ;;default live packs
 (let* ((live-dir (file-name-as-directory "live")))
   (setq live-packs (list (concat live-dir "foundation-pack")
@@ -30,6 +33,12 @@
                          (concat live-dir "power-pack"))))
 
 ;; Helper fn for loading live packs
+
+(defun live-version ()
+  (interactive)
+  (if (called-interactively-p 'interactive)
+      (message "%s" (concat "This is Emacs Live " live-version))
+    live-version))
 
 (defun live-pack-config-dir ()
   "Returns the path of the config dir for the current pack"
@@ -202,10 +211,10 @@ children of DIRECTORY."
 ;;         M  MMMMMMMM M  M M  MMMM' .M MM  MMMMMMMM
 ;;         M  MMMMMMMM M  M M  MMP' .MM MM  MMMMMMMM
 ;;         M         M M  M M     .dMMM MM        .M
-;;         MMMMMMMMMMM MMMM MMMMMMMMMMM MMMMMMMMMMMM
+;;         MMMMMMMMMMM MMMM MMMMMMMMMMM MMMMMMMMMMMM  Version " live-version "
 ;;
 ;;           http://github.com/overtone/emacs-live
 ;;
-;; " (live-welcome-message) "
+;; "                                                      (live-welcome-message) "
 
 ") )
