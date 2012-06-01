@@ -186,13 +186,20 @@ children of DIRECTORY."
         (live-pack-dirs))
 
 (defun live-user-first-name ()
-  (car  (split-string user-full-name)))
+  (capitalize (car (split-string user-full-name))))
+
+(defun live-user-first-name-p ()
+  (not (string-equal "" (live-user-first-name))))
 
 (setq live-welcome-messages
-      (list (concat "Hello " (live-user-first-name) ", somewhere in the world the sun is shining for you right now.")
-            (concat "Hello " (live-user-first-name) ", it's lovely to see you again. I do hope that you're well.")
-            (concat (live-user-first-name) ", turn your head towards the sun and the shadows will fall behind you.")
-            ))
+      (if (live-user-first-name-p)
+          (list (concat "Hello " (live-user-first-name) ", somewhere in the world the sun is shining for you right now.")
+                (concat "Hello " (live-user-first-name) ", it's lovely to see you again. I do hope that you're well.")
+                (concat (live-user-first-name) ", turn your head towards the sun and the shadows will fall behind you.")
+                )
+        (list  "Hello, somewhere in the world the sun is shining for you right now."
+               "Hello, it's lovely to see you again. I do hope that you're well."
+               "Turn your head towards the sun and the shadows will fall behind you.")))
 
 (defun live-welcome-message ()
   (nth (random* (length live-welcome-messages)) live-welcome-messages))
