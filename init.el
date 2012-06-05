@@ -186,9 +186,10 @@ children of DIRECTORY."
         (live-pack-dirs))
 
 (defun live-user-first-name ()
-  (if user-full-name
-      (capitalize (car (split-string user-full-name)))
-    ""))
+  (let* ((first-name (car (split-string user-full-name))))
+    (if first-name
+        (capitalize first-name)
+      "")))
 
 (defun live-user-first-name-p ()
   (not (string-equal "" (live-user-first-name))))
