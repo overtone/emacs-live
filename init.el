@@ -186,7 +186,9 @@ children of DIRECTORY."
         (live-pack-dirs))
 
 (defun live-user-first-name ()
-  (capitalize (car (split-string user-full-name))))
+  (if user-full-name
+      (capitalize (car (split-string user-full-name)))
+    ""))
 
 (defun live-user-first-name-p ()
   (not (string-equal "" (live-user-first-name))))
