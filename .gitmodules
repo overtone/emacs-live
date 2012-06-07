@@ -40,3 +40,6 @@
 [submodule "packs/dev/power-pack/vendor/submodules/scratch"]
 	path = packs/dev/power-pack/vendor/submodules/scratch
 	url = git://github.com/ieure/scratch-el.git
+[submodule "packs/dev/power-pack/vendor/submodules/yasnippet"]
+	path = packs/dev/power-pack/vendor/submodules/yasnippet
+	url = git://github.com/capitaomorte/yasnippet.git
