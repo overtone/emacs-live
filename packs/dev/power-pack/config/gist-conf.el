@@ -1,0 +1,5 @@
+(live-add-pack-lib "gist")
+(live-add-pack-lib "gh")
+(live-add-pack-lib "pcache")
+(live-add-pack-lib "logito")
+(require 'gist)

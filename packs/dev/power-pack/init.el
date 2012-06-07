@@ -9,3 +9,4 @@
 (live-load-config-file "refheap-conf.el")
 (live-load-config-file "scratch-conf.el")
 (live-load-config-file "highlight-tail-conf.el")
+(live-load-config-file "gist-conf.el")
