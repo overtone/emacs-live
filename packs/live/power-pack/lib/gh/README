@@ -1,0 +1,16 @@
+This is a (very early) GitHub client library for Emacs.
+
+Dependencies:
+- pcache.el : https://github.com/sigma/pcache
+- logito.el : https://github.com/sigma/logito
+
+The goal is to provide a consistent mapping for the various API versions (v2 and upcoming v3) so that client code might experience a smooth transition.
+
+This library also allows implementation of the various authentication schemes (password, API token, OAuth).
+
+Implementation is heavily based on EIEIO so that various components can be replaced easily.
+
+Current state:
+- basic API v3 handler
+- functional password-based authentication
+- basic but usable low-level Gist API

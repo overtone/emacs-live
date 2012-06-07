@@ -158,7 +158,8 @@
      (erc-underline-face ((t (:underline t))))
 
      (vhl/default-face ((t (:background "#333333"))))
-     (undo-tree-visualizer-active-branch-face ((t (:foreground "deep pink" :background "black")))))))
+     (undo-tree-visualizer-active-branch-face ((t (:foreground "deep pink" :background "black"))))
+     (hl-sexp-face ((t (:background "grey9")))))))
 
 
 

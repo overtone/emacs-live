@@ -2,7 +2,7 @@
 ;;
 ;;; Author: Steve Purcell <steve@sanityinc.com>
 ;;; URL: https://github.com/purcell/ac-slime
-;;; Version: 0.1
+;;; Version: DEV
 ;;
 ;;; Commentary:
 ;; Usage:
@@ -75,10 +75,10 @@
   "Add an optionally-fuzzy slime completion source to the
 front of `ac-sources' for the current buffer."
   (interactive)
-  (setq ac-sources (add-to-list 'ac-sources
-                                (if fuzzy
-                                    'ac-source-slime-fuzzy
-                                  'ac-source-slime-simple))))
+  (add-to-list 'ac-sources
+               (if fuzzy
+                   'ac-source-slime-fuzzy
+                 'ac-source-slime-simple)))
 
 
 (provide 'ac-slime)
