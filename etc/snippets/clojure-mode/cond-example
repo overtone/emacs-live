@@ -1,0 +1,9 @@
+#contributor : Sam Aaron <samaaron@gmail.com>
+# name: Example cond
+# key: cond.
+# group: examples
+# --
+(cond
+  (> mark 90) "top notch"
+  (> mark 50) "good"
+  :else "satisfactory")
