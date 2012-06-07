@@ -13,6 +13,10 @@ old_config=~/emacs-live-old-config
 tmp_dir=~/.emacs-live-installer-tmp
 username=$(whoami)
 
+# Check for the presence of git
+git --version 2>&1 >/dev/null # improvement by tripleee
+GIT_IS_AVAILABLE=$?
+
 # Borrowed from the lein downloader
 HTTP_CLIENT=${HTTP_CLIENT:-"wget -O"}
 if type -p curl >/dev/null 2>&1; then
@@ -51,11 +55,7 @@ echo ""
 
 read -p $(tput setaf 3)"Are you sure you would like to continue? (y/N) "$(tput sgr0)
 
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-
-     # User wishes to install
-
-     # Download Emacs Live as a zipball
+function download_tarball {
      echo ""
      echo $(tput setaf 2)"Downloading Emacs Live..."$(tput sgr0)
      echo ""
@@ -63,6 +63,26 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
      # Unzip zipball
      unzip $tmp_dir/live.zip -d $tmp_dir/
+}
+
+function git_clone {
+     echo ""
+     echo $(tput setaf 2)"Cloning Emacs Live..."$(tput sgr0)
+     echo ""
+    git clone https://github.com/overtone/emacs-live.git $tmp_dir/overtone-emacs-live
+}
+
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+
+     # User wishes to install
+
+     # Download Emacs Live with git (or as a tarball if git isn't on the system)
+
+    if [ $GIT_IS_AVAILABLE -eq 0 ]; then
+        git_clone
+    else
+        download_tarball
+    fi
 
     created_old_emacs_config_dir=false
 
@@ -135,6 +155,7 @@ To revert back to your old Emacs configs simply:
 
     mkdir ~/.emacs.d
     mv $tmp_dir/overtone*/* ~/.emacs.d
+    mv $tmp_dir/overtone*/.* ~/.emacs.d
     echo $(tput setaf 4)"Personal Pack"
     echo "-------------"$(tput sgr0)
     echo ""
