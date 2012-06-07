@@ -19,7 +19,7 @@
 ;;
 ;; First up, could you try running Emacs Live in safe mode:
 ;;
-;;    emacs --live-safe-mode flag
+;;    emacs --live-safe-mode
 ;;
 ;; This will only load the default packs. If the error no longer occurs
 ;; then the problem is probably in a pack that you are loading yourself.
