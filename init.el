@@ -3,6 +3,56 @@
 ;; This is where everything starts. Do you remember this place?
 ;; It remembers you...
 
+(add-to-list 'command-switch-alist
+             (cons "--live-safe-mode"
+                   (lambda (switch)
+                     nil)))
+
+(setq live-safe-modep
+      (if (member "--live-safe-mode" command-line-args)
+          "debug-mode-on"
+        nil))
+
+(setq initial-scratch-message "
+;; I'm sorry, Emacs Live failed to start correctly.
+;; Hopefully the issue will be simple to resolve.
+;;
+;; First up, could you try running Emacs Live in safe mode:
+;;
+;;    emacs --live-safe-mode flag
+;;
+;; This will only load the default packs. If the error no longer occurs
+;; then the problem is probably in a pack that you are loading yourself.
+;; If the problem still exists, it may be a bug in Emacs Live itself.
+;;
+;; In either case, you should try starting Emacs in debug mode to get
+;; more information regarding the error:
+;;
+;;    emacs --debug-init
+;;
+;; Please feel free to raise an issue on the Gihub tracker:
+;;
+;;    https://github.com/overtone/emacs-live/issues
+;;
+;; Alternatively, let us know in the mailing list:
+;;
+;;    http://groups.google.com/group/overtone
+;;
+;; Good luck, and thanks for using Emacs Live!
+;;
+;;                _.-^^---....,,--
+;;            _--                  --_
+;;           <          SONIC         >)
+;;           |       BOOOOOOOOM!       |
+;;            \._                   _./
+;;               ```--. . , ; .--'''
+;;                     | |   |
+;;                  .-=||  | |=-.
+;;                  `-=#$%&%$#=-'
+;;                     | ;  :|
+;;            _____.,-#%&$@%#&#~,._____
+")
+
 ;; Store live base dirs
 (setq live-root-dir (file-name-directory
                      (or (buffer-file-name) load-file-name)))
@@ -33,6 +83,12 @@
                          (concat live-dir "power-pack"))))
 
 ;; Helper fn for loading live packs
+
+(defun live-alist-keys (alist)
+  (mapcar (lambda (el) (car el)) alist))
+
+(defun live-alist-vals (alist)
+  (mapcar (lambda (el) (cadr el)) alist))
 
 (defun live-version ()
   (interactive)
@@ -94,8 +150,9 @@
 
 ;; Load `~/.emacs-live.el`. This allows you to override variables such
 ;; as live-packs (allowing you to specify pack loading order)
+;; Does not load if running in safe mode
 (let* ((pack-file (concat (file-name-as-directory "~") ".emacs-live.el")))
-  (if (file-exists-p pack-file)
+  (if (and (file-exists-p pack-file) (not live-safe-modep))
       (load-file pack-file)))
 
 (defun byte-recompile-directory-sl (directory &optional arg force follow-symlinks?)
@@ -221,10 +278,15 @@ children of DIRECTORY."
 ;;         M  MMMMMMMM M  M M  MMMM' .M MM  MMMMMMMM
 ;;         M  MMMMMMMM M  M M  MMP' .MM MM  MMMMMMMM
 ;;         M         M M  M M     .dMMM MM        .M
-;;         MMMMMMMMMMM MMMM MMMMMMMMMMM MMMMMMMMMMMM  Version " live-version "
-;;
+;;         MMMMMMMMMMM MMMM MMMMMMMMMMM MMMMMMMMMMMM  Version " live-version
+                                                                (if live-safe-modep
+                                                                    "
+;;                                                     --*SAFE MODE*--"
+                                                                  "
+;;"
+                                                                  ) "
 ;;           http://github.com/overtone/emacs-live
 ;;
 ;; "                                                      (live-welcome-message) "
 
-") )
+"))
