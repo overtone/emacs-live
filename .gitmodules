@@ -58,3 +58,6 @@
 [submodule "packs/dev/power-pack/vendor/submodules/logito"]
 	path = packs/dev/power-pack/vendor/submodules/logito
 	url = git://github.com/sigma/logito.git
+[submodule "packs/dev/foundation-pack/vendor/submodules/popwin"]
+	path = packs/dev/foundation-pack/vendor/submodules/popwin
+	url = git://github.com/m2ym/popwin-el.git
