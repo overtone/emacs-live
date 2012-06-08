@@ -2,6 +2,8 @@
 src="http://github.com/downloads/overtone/emacs-live/emacs-live.png"
 alt="Emacs Live Ascii Art" title = "Emacs Live" />
 
+<!-- TEST COMMENT -->
+
     Energy starts surging through your fingertips. Sparks fly, making
     the shadows grow and flicker ominously around you. You arch your
     back and open your eyes as if for the first time. The text appears
@@ -20,7 +22,7 @@ alt="Emacs Live Ascii Art" title = "Emacs Live" />
 
 # Emacs Live
 
-An opinionated set of defaults for getting started with a specific focus on live coding with [Overtone](http://github.com/overtone/overtone). However, it's not just a one trick pony. It also happens to be:
+An opinionated set of defaults for getting started with a specific focus on live coding with [Overtone](http://github.com/overtone/overtone) and [Quil](http://github.com/quil/quil). However, it's not just a one trick pony. It also happens to be:
 
 * a jolly good generic Clojure hacking config
 * a nice structured approach to organising your Emacs config
