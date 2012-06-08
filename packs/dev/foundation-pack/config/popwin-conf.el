@@ -6,4 +6,5 @@
       '(("*Help*") ("*Completions*" :noselect t)
         ("*compilation*" :noselect t)
         ("*Occur*" :noselect t)
-        ("\\*Slime Description.*" :noselect t :regexp t)))
+        ("\\*Slime Description.*" :noselect t :regexp t :position right :width 74)
+        ("*Ido Completions*" :noselect t)))
