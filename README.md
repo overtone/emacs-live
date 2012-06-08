@@ -1,6 +1,4 @@
-<img
-src="http://github.com/downloads/overtone/emacs-live/emacs-live.png"
-alt="Emacs Live Ascii Art" title = "Emacs Live" />
+<img src="http://github.com/downloads/overtone/emacs-live/emacs-live.png" />
 
 <!--
            MM""""""""`M
