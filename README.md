@@ -83,8 +83,10 @@ these steps:
 
 ### Clojure Hacking
 
-If you wish to hack with Clojure projects such as Overtone and Quil,
-you'll need to install lein and Swank:
+If you wish to hack with Clojure projects such as
+[Overtone](http://github.com/overtone/overtone) and
+[Quil](http://github.com/quil/quil) you'll need to install lein and
+Swank:
 
 1. Install [Leiningen 2](https://github.com/technomancy/leiningen/wiki/Upgrading)
 2. Create a file called `~/.lein/profiles.clj` with the following contents:
