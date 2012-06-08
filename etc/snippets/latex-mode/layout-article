@@ -1,0 +1,23 @@
+# contributor: Sam Aaron <samaaron@gmail.com>
+# name: layout-article
+# key: layout-article
+# --
+\documentclass[twoside, 10pt, a4paper, titlepage]{article}
+
+\usepackage[latin1]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[dvips]{graphicx}
+
+
+\title{}
+\author{}
+
+\begin{document}
+
+\maketitle
+
+
+\section{}
+
+
+\end{document}
