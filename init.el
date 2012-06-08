@@ -53,6 +53,42 @@
 ;;            _____.,-#%&$@%#&#~,._____
 ")
 
+(setq live-supported-emacsp t)
+
+(when (< emacs-major-version 24)
+  (setq live-supported-emacsp nil)
+  (setq initial-scratch-message (concat "
+;;                _.-^^---....,,--
+;;            _--                  --_
+;;           <          SONIC         >)
+;;           |       BOOOOOOOOM!       |
+;;            \._                   _./
+;;               ```--. . , ; .--'''
+;;                     | |   |
+;;                  .-=||  | |=-.
+;;                  `-=#$%&%$#=-'
+;;                     | ;  :|
+;;            _____.,-#%&$@%#&#~,._____
+;;
+;; I'm sorry, Emacs Live is only supported on Emacs 24+.
+;;
+;; You are running: " emacs-version "
+;;
+;; Please upgrade your Emacs for full compatibility.
+;;
+;; Latest versions of Emacs can be found here:
+;;
+;; OS X GUI     - http://emacsformacosx.com/builds
+;; OS X Console - via homebrew (http://mxcl.github.com/homebrew/)
+;;                brew install emacs --use-git-head --HEAD
+;; Windows      - http://alpha.gnu.org/gnu/emacs/windows/
+;; Debian Linux - http://emacs.naquadah.org/
+;; Other Linux  - Consult your package manager or compile from source
+  "))
+  (error (concat "Oops - your emacs isn't supported. Emacs Live only works on Emacs 24+ and you're running version: " emacs-version ". Please upgrade your Emacs and try again.")))
+
+
+
 ;; Store live base dirs
 (setq live-root-dir (file-name-directory
                      (or (buffer-file-name) load-file-name)))
@@ -264,7 +300,8 @@ children of DIRECTORY."
 (defun live-welcome-message ()
   (nth (random* (length live-welcome-messages)) live-welcome-messages))
 
-(setq initial-scratch-message (concat ";;     MM\"\"\"\"\"\"\"\"`M
+(when live-supported-emacsp
+  (setq initial-scratch-message (concat ";;     MM\"\"\"\"\"\"\"\"`M
 ;;     MM  mmmmmmmM
 ;;     M`      MMMM 88d8b.d8b. .d8888b. .d8888b. .d8888b.
 ;;     MM  MMMMMMMM 88''88'`88 88'  `88 88'  `\"\" Y8ooooo.
@@ -289,4 +326,4 @@ children of DIRECTORY."
 ;;
 ;; "                                                      (live-welcome-message) "
 
-"))
+")))
