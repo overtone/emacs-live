@@ -7,4 +7,6 @@
         ("*compilation*" :noselect t)
         ("*Occur*" :noselect t)
         ("\\*Slime Description.*" :noselect t :regexp t :position right :width 74)
-        ("*Ido Completions*" :noselect t)))
+        ("\\*Slime Inspector.*" :regexp t :height 30)
+        ("*Ido Completions*" :noselect t)
+        ("*eshell*" :height 30)))
