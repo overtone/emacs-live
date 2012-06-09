@@ -1,0 +1,11 @@
+(defun live-paredit-next-top-level-form ()
+  (interactive)
+  (while (ignore-errors (paredit-backward-up) t))
+  (paredit-forward)
+  (ignore-errors (search-forward "(")
+                 (backward-char)))
+
+(defun live-paredit-previous-top-level-form ()
+  (interactive)
+  (while (ignore-errors (paredit-backward-up) t))
+  (paredit-backward))
