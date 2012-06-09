@@ -9,4 +9,5 @@
         ("\\*Slime Description.*" :noselect t :regexp t :position right :width 74)
         ("\\*Slime Inspector.*" :regexp t :height 30)
         ("*Ido Completions*" :noselect t)
-        ("*eshell*" :height 30)))
+        ("*eshell*" :height 30)
+        ("*shell*" :height 30)))
