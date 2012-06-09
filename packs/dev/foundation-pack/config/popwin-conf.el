@@ -9,6 +9,7 @@
         ("\\*Slime Description.*" :noselect t :regexp t :position right :width 74)
         ("*magit-commit*" :noselect t :height 40 :width 80)
         ("*magit-diff*" :noselect t :height 40 :width 80)
+        ("*magit-edit-log*" :noselect t :height 15 :width 80)
         ("\\*Slime Inspector.*" :regexp t :height 30)
         ("*Ido Completions*" :noselect t)
         ("*eshell*" :height 30)
