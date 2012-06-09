@@ -4,57 +4,70 @@
 [submodule "packs/dev/foundation-pack/vendor/submodules/smex"]
         path = packs/dev/foundation-pack/vendor/submodules/smex
         url = git://github.com/nonsequitur/smex.git
+        ignore = untracked
 [submodule "packs/dev/clojure-pack/vendor/submodules/ac-slime"]
         path = packs/dev/clojure-pack/vendor/submodules/ac-slime
         url = git://github.com/purcell/ac-slime.git
 [submodule "packs/dev/clojure-pack/vendor/submodules/align-cljlet"]
         path = packs/dev/clojure-pack/vendor/submodules/align-cljlet
         url = git://github.com/gstamp/align-cljlet.git
+        ignore = untracked
 [submodule "packs/dev/clojure-pack/vendor/submodules/auto-complete"]
         path = packs/dev/clojure-pack/vendor/submodules/auto-complete
         url = git://github.com/m2ym/auto-complete.git
+        ignore = untracked
 [submodule "packs/dev/clojure-pack/vendor/submodules/clojure-mode"]
         path = packs/dev/clojure-pack/vendor/submodules/clojure-mode
         url = git://github.com/technomancy/clojure-mode.git
+        ignore = untracked
 [submodule "packs/dev/clojure-pack/vendor/submodules/slime"]
         path = packs/dev/clojure-pack/vendor/submodules/slime
         url = git://github.com/technomancy/slime.git
+        ignore = untracked
 [submodule "packs/dev/power-pack/vendor/submodules/volatile-highlights"]
         path = packs/dev/power-pack/vendor/submodules/volatile-highlights
         url = git://github.com/k-talo/volatile-highlights.el.git
 [submodule "packs/dev/power-pack/vendor/submodules/refheap"]
         path = packs/dev/power-pack/vendor/submodules/refheap
         url = git://github.com/Raynes/refheap.el.git
+        ignore = untracked
 [submodule "packs/dev/power-pack/vendor/submodules/undo-tree"]
         path = packs/dev/power-pack/vendor/submodules/undo-tree
         url = http://www.dr-qubit.org/git/undo-tree.git
 [submodule "packs/dev/lang-pack/vendor/submodules/actionscript-mode"]
         path = packs/dev/lang-pack/vendor/submodules/actionscript-mode
         url = git://github.com/austinhaas/actionscript-mode.git
+        ignore = untracked
 [submodule "packs/dev/lang-pack/vendor/submodules/scel"]
         path = packs/dev/lang-pack/vendor/submodules/scel
         url = git://github.com/samaaron/scel.git
+        ignore = untracked
 [submodule "packs/dev/lang-pack/vendor/submodules/yaml-mode"]
         path = packs/dev/lang-pack/vendor/submodules/yaml-mode
         url = git://github.com/yoshiki/yaml-mode.git
 [submodule "packs/dev/power-pack/vendor/submodules/scratch"]
         path = packs/dev/power-pack/vendor/submodules/scratch
         url = git://github.com/ieure/scratch-el.git
+        ignore = untracked
 [submodule "packs/dev/power-pack/vendor/submodules/yasnippet"]
         path = packs/dev/power-pack/vendor/submodules/yasnippet
         url = git://github.com/capitaomorte/yasnippet.git
 [submodule "packs/dev/foundation-pack/vendor/submodules/elisp-slime-nav"]
         path = packs/dev/foundation-pack/vendor/submodules/elisp-slime-nav
         url = git://github.com/purcell/elisp-slime-nav.git
+        ignore = untracked
 [submodule "packs/dev/power-pack/vendor/submodules/gist"]
         path = packs/dev/power-pack/vendor/submodules/gist
         url = git://github.com/defunkt/gist.el.git
+        ignore = untracked
 [submodule "packs/dev/power-pack/vendor/submodules/gh"]
         path = packs/dev/power-pack/vendor/submodules/gh
         url = git://github.com/sigma/gh.el.git
+        ignore = untracked
 [submodule "packs/dev/power-pack/vendor/submodules/pcache"]
 	path = packs/dev/power-pack/vendor/submodules/pcache
 	url = git://github.com/sigma/pcache.git
+        ignore = untracked
 [submodule "packs/dev/power-pack/vendor/submodules/logito"]
 	path = packs/dev/power-pack/vendor/submodules/logito
 	url = git://github.com/sigma/logito.git
