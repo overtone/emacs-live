@@ -8,4 +8,3 @@
 (live-load-config-file "clojure-conf.el")
 (live-load-config-file "slime-conf.el")
 (live-load-config-file "auto-complete-conf.el")
-(live-load-config-file "util-conf.el")
