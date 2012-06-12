@@ -40,13 +40,13 @@
     (modify-syntax-entry ?- "w" st)
     st))
 
-(defun transpose-words-with-hyphens (arg)
+(defun live-transpose-words-with-hyphens (arg)
   "Treat hyphens as a word character when transposing words"
   (interactive "*p")
   (with-syntax-table clojure-mode-with-hyphens-as-word-sep-syntax-table
     (transpose-words arg)))
 
-(define-key clojure-mode-map (kbd "M-t") 'transpose-words-with-hyphens)
+(define-key clojure-mode-map (kbd "M-t") 'live-transpose-words-with-hyphens)
 
 (setq auto-mode-alist (append '(("\\.cljs$" . clojure-mode))
                               auto-mode-alist))
