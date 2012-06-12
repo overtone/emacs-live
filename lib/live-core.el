@@ -56,7 +56,7 @@
   "Returns a list of absolute directories of all the registered packs"
   (mapcar (lambda (pack-name) (live-pack-dir pack-name)) live-packs))
 
-(defun byte-recompile-directory-sl (directory &optional arg force follow-symlinks?)
+(defun live-byte-recompile-directory-sl (directory &optional arg force follow-symlinks?)
   "Recompile every `.el' file in DIRECTORY that needs recompilation.
 This happens when a `.elc' file exists but is older than the `.el' file.
 Files in subdirectories of DIRECTORY are processed also.
@@ -113,7 +113,7 @@ children of DIRECTORY."
                         (not (auto-save-file-name-p source))
                         (not (string-equal dir-locals-file
                                            (file-name-nondirectory source))))
-                   (progn (case (byte-recompile-file source force arg)
+                   (progn (case (live-byte-recompile-file source force arg)
                             (no-byte-compile (setq skip-count (1+ skip-count)))
                             ((t) (setq file-count (1+ file-count)))
                             ((nil) (setq fail-count (1+ fail-count))))
@@ -135,7 +135,7 @@ children of DIRECTORY."
   "Byte-recompile all registered packs"
   (interactive)
   (mapcar (lambda (pack-dir)
-            (byte-recompile-directory-sl pack-dir 0 1 1))
+            (live-byte-recompile-directory-sl pack-dir 0 1 1))
           (live-pack-dirs)))
 
 (defun live-user-first-name ()
