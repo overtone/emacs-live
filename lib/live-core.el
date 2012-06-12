@@ -147,21 +147,20 @@ children of DIRECTORY."
 (defun live-user-first-name-p ()
   (not (string-equal "" (live-user-first-name))))
 
-(buffer-list)
-
-(buffer-file-name (car (buffer-list)))
-
 (defun live-filter (condp lst)
     (delq nil
-          (mapcar (lambda (x) (and (funcall condp x) x)) lst)))
+          (mapcar (lambda (x) (when (funcall condp x) x)) lst)))
+
+(defun live-list-buffer-paths ()
+  (mapcar (lambda (el) (buffer-name el)) (buffer-file-name)))
+
+(defun live-list-buffer-names ()
+  (live-filter 'identity (mapcar (lambda (el) (buffer-name el)) (buffer-list))))
 
 (defun live-file-open-as-buffer-p (path)
-  (if (member (file-truename path) (mapcar (lambda (b) (buffer-file-name b)) (buffer-list)))
+  (if (member (file-truename path) (live-list-buffer-paths))
       t
     nil))
 
-(defun live-find-buffer-by-path (path)
-  )
-
-(defun live-list-buffer-paths ()
-(file-truename "~/.overtone/log/overtone.log"))
+(defun live-empty-p (seq)
+  (eq 0 (length seq)))
