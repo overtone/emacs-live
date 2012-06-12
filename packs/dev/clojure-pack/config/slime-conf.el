@@ -24,6 +24,5 @@ then re-evaluating the slime buffer. Use this to remove old
 symbol definitions and reset the namespace to contain only what
 is defined in your current Emacs buffer."
   (interactive)
-  (save-buffer)
   (slime-interactive-eval (concat "(remove-ns '" (slime-current-package) ")"))
-  (slime-compile-and-load-file))
+  (slime-eval-buffer))
