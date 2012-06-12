@@ -31,3 +31,19 @@ in the sexp, not the end of the current one."
         (forward-sexp)
         (backward-sexp))
     (paredit-forward)))
+
+(defun live-paredit-forward-slurp-sexp-neatly ()
+  (interactive)
+  (save-excursion
+    (cond ((or (paredit-in-comment-p)
+               (paredit-in-char-p))
+           (error "Invalid context for slurping S-expressions."))
+          ((paredit-in-string-p)
+           (paredit-forward-slurp-into-string))
+          (t
+
+           (save-excursion
+             (paredit-forward-up)
+             (paredit-backward-down)
+             (paredit-forward-slurp-sexp)
+             (live-delete-horizontal-space-except-one))))))
