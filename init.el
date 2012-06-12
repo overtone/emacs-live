@@ -78,16 +78,14 @@
 ;;
 ;; Latest versions of Emacs can be found here:
 ;;
-;; OS X GUI     - http://emacsformacosx.com/builds
+;; OS X GUI     - http://emacsformacosx.com/
 ;; OS X Console - via homebrew (http://mxcl.github.com/homebrew/)
-;;                brew install emacs --use-git-head --HEAD
+;;                brew install emacs
 ;; Windows      - http://alpha.gnu.org/gnu/emacs/windows/
-;; Debian Linux - http://emacs.naquadah.org/
-;; Other Linux  - Consult your package manager or compile from source
-  "))
+;; Linux        - Consult your package manager or compile from source
+
+"))
   (error (concat "Oops - your emacs isn't supported. Emacs Live only works on Emacs 24+ and you're running version: " emacs-version ". Please upgrade your Emacs and try again.")))
-
-
 
 ;; Store live base dirs
 (setq live-root-dir (file-name-directory
