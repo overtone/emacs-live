@@ -20,6 +20,14 @@
   "Feels more natural to move to the beginning of the next item
 in the sexp, not the end of the current one."
   (interactive)
-  (paredit-forward)
-  (paredit-forward)
-  (paredit-backward))
+  (if (and (not (paredit-in-string-p))
+           (save-excursion
+             (ignore-errors
+               (forward-sexp)
+               (forward-sexp)
+               t)))
+      (progn
+        (forward-sexp)
+        (forward-sexp)
+        (backward-sexp))
+    (paredit-forward)))
