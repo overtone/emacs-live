@@ -88,8 +88,7 @@
   (error (concat "Oops - your emacs isn't supported. Emacs Live only works on Emacs 24+ and you're running version: " emacs-version ". Please upgrade your Emacs and try again.")))
 
 ;; Store live base dirs
-(setq live-root-dir (file-name-directory
-                     (or (buffer-file-name) load-file-name)))
+(setq live-root-dir user-emacs-directory)
 
 (setq
  live-tmp-dir      (file-name-as-directory (concat live-root-dir "tmp"))
