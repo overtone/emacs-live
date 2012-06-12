@@ -16,6 +16,7 @@
 (live-load-config-file "recentf-conf.el")
 (live-load-config-file "elisp-slime-nav-conf.el")
 (live-load-config-file "popwin-conf.el")
+(live-load-config-file "shell-conf.el")
 
 (when (eq system-type 'darwin)
   (live-load-config-file "osx.el"))
