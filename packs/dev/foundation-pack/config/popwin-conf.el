@@ -15,7 +15,7 @@
         ("\\*Slime Inspector.*" :regexp t :height 30)
         ("*Ido Completions*" :noselect t :height 30)
         ("*eshell*" :height 30)
-        ("*ansi-term*" :height 30)
+        ("\\*ansi-term\\*.*" :regexp t :height 30)
         ("*shell*" :height 30)))
 
 
