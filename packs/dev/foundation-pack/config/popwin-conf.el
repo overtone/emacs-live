@@ -16,7 +16,8 @@
         ("*Ido Completions*" :noselect t :height 30)
         ("*eshell*" :height 30)
         ("\\*ansi-term\\*.*" :regexp t :height 30)
-        ("*shell*" :height 30)))
+        ("*shell*" :height 30)
+        (".*overtone.log" :regexp t :height 30)))
 
 
 (defun live-show-messages ()
