@@ -9,7 +9,11 @@
   (while (ignore-errors (paredit-backward-up) t))
   (paredit-forward)
   (ignore-errors (search-forward "(")
-                 (backward-char)))
+                 (backward-char))
+  (while (and (paredit-in-comment-p)
+              (not (eobp)))
+      (ignore-errors (search-forward "(")
+                     (backward-char))))
 
 (defun live-paredit-previous-top-level-form ()
   (interactive)
@@ -46,4 +50,9 @@ in the sexp, not the end of the current one."
              (paredit-forward-up)
              (paredit-backward-down)
              (paredit-forward-slurp-sexp)
-             (live-delete-horizontal-space-except-one))))))
+             (live-delete-horizontal-space-except-one)))))
+  (when (not (save-excursion
+               (ignore-errors
+                 (backward-sexp)
+                 t)))
+    (delete-horizontal-space)))
