@@ -152,7 +152,10 @@ children of DIRECTORY."
           (mapcar (lambda (x) (when (funcall condp x) x)) lst)))
 
 (defun live-list-buffer-paths ()
-  (mapcar (lambda (el) (buffer-name el)) (buffer-file-name)))
+  (mapcar #'file-truename
+          (live-filter 'identity
+                       (mapcar (lambda (b) (buffer-file-name b))
+                               (buffer-list)))))
 
 (defun live-list-buffer-names ()
   (live-filter 'identity (mapcar (lambda (el) (buffer-name el)) (buffer-list))))
@@ -161,6 +164,13 @@ children of DIRECTORY."
   (if (member (file-truename path) (live-list-buffer-paths))
       t
     nil))
+
+(defun live-find-buffer-by-path (path)
+  (car (live-filter (lambda (b)
+                      (equal (file-truename path)
+                             (file-truename (or (buffer-file-name b)
+                                                "/dev/null"))))
+                    (buffer-list))))
 
 (defun live-empty-p (seq)
   (eq 0 (length seq)))
