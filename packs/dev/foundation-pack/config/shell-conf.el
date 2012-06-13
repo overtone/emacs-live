@@ -1,3 +1,5 @@
+(require 'term)
+
 (defcustom eshell-directory-name
   (let* ((dir (concat live-tmp-dir "eshell")))
     (make-directory dir t)
@@ -84,7 +86,7 @@ it. Returns the buffer name of the newly created terminal."
 
 (defun live-show-ansi-terminal ()
   (interactive)
-  (when (live-empty-p (live-ansi-terminal-buffers))
+  (when (live-empty-p (live-ansi-terminal-buffer-names))
     (live-ansi-term live-ansi-terminal-path))
 
   (when (not live-current-ansi-term)
