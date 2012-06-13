@@ -1,0 +1,6 @@
+#contributor : Sam Aaron <samaaron@gmail.com>
+# name: Example reduce
+# key: reduce.
+# group: examples
+# --
+(reduce (fn [res el] (+ res el)) 0 [1 2 3 4 5])$0
