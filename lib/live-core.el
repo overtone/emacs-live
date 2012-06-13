@@ -113,7 +113,7 @@ children of DIRECTORY."
                         (not (auto-save-file-name-p source))
                         (not (string-equal dir-locals-file
                                            (file-name-nondirectory source))))
-                   (progn (case (live-byte-recompile-file source force arg)
+                   (progn (case (byte-recompile-file source force arg)
                             (no-byte-compile (setq skip-count (1+ skip-count)))
                             ((t) (setq file-count (1+ file-count)))
                             ((nil) (setq fail-count (1+ fail-count))))
