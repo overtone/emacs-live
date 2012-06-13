@@ -45,8 +45,6 @@
       (set-window-start w2 s1)
       (setq i (1+ i)))))))
 
-(defun live-delete-horizontal-space-except-one ()
+(defun live-delete-whitespace-except-one ()
   (interactive)
-  (when (string-match "[ \t\n]" (string (char-after)))
-    (delete-horizontal-space)
-    (insert " ")))
+  (just-one-space -1))
