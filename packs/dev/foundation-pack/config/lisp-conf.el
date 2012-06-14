@@ -9,12 +9,11 @@
   (add-hook (intern (concat (symbol-name x) "-mode-hook")) 'rainbow-delimiters-mode))
 
 (defun live-lisp-describe-thing-at-point ()
-          "Show the documentation of the Elisp function and variable near point.
-        This checks in turn:
-        -- for a function name where point is
-        -- for a variable name where point is
-        -- for a surrounding function call
-        "
+  "Show the documentation of the Elisp function and variable near point.
+   This checks in turn:
+     -- for a function name where point is
+     -- for a variable name where point is
+     -- for a surrounding function call"
           (interactive)
           (let (sym)
             ;; sigh, function-at-point is too clever.  we want only the first half.
