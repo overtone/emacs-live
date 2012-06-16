@@ -11,8 +11,9 @@
 
 (defun live-paredit-previous-top-level-form ()
   (interactive)
-  (while (ignore-errors (paredit-backward-up) t))
-  (paredit-backward))
+  (if (ignore-errors (paredit-backward-up) t)
+      (while (ignore-errors (paredit-backward-up) t))
+    (paredit-backward)))
 
 (defun live-paredit-forward ()
   "Feels more natural to move to the beginning of the next item
