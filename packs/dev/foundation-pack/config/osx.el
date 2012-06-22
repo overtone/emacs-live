@@ -28,3 +28,6 @@
   (dolist (path '("/usr/local/bin" "/opt/local/bin" "/opt/local/sbin") (setenv "PATH" (concat osx-paths (getenv "PATH"))))
     (push path exec-path)
     (setq osx-paths (concat (concat path ":") osx-paths))))
+
+;; Ignore .DS_Store files with ido mode
+(add-to-list 'ido-ignore-files "\\.DS_Store")
