@@ -57,7 +57,7 @@ read -p $(tput setaf 3)"Are you sure you would like to continue? (y/N) "$(tput s
 
 function download_tarball {
      echo ""
-     echo $(tput setaf 2)"Downloading Emacs Live..."$(tput sgr0)
+     echo $(tput setaf 2)"--> Downloading Emacs Live..."$(tput sgr0)
      echo ""
      $HTTP_CLIENT $tmp_dir/live.zip https://github.com/overtone/emacs-live/zipball/master
 
@@ -67,7 +67,7 @@ function download_tarball {
 
 function git_clone {
      echo ""
-     echo $(tput setaf 2)"Cloning Emacs Live..."$(tput sgr0)
+     echo $(tput setaf 2)"--> Cloning Emacs Live..."$(tput sgr0)
      echo ""
     git clone https://github.com/overtone/emacs-live.git $tmp_dir/overtone-emacs-live
 }
@@ -173,10 +173,10 @@ modifications in a personal pack which I can create for you now."
         echo "(live-add-packs '(~/.live-packs/$username-pack))" >> ~/.emacs-live.el
         cp -R ~/.emacs.d/packs/template/user-template-pack/ ~/.live-packs/$username-pack
         echo ""
-        echo $(tput setaf 2)"Personal Pack created"$(tput sgr0)
+        echo $(tput setaf 2)"--> Personal Pack created"$(tput sgr0)
     fi
 
-    echo $(tput setaf 2)"Installation Completed"$(tput sgr0)
+    echo $(tput setaf 2)"--> Installation Completed"$(tput sgr0)
     echo $(tput setaf 5)
     cat $tmp_dir/outro.txt
     echo $(tput sgr0)
@@ -185,5 +185,5 @@ modifications in a personal pack which I can create for you now."
     rm -rf $tmp_dir
 
 else
-  echo "Installation aborted."
+  echo "--> Installation aborted."
 fi
