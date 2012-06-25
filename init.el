@@ -51,6 +51,9 @@
 ;;                  `-=#$%&%$#=-'
 ;;                     | ;  :|
 ;;            _____.,-#%&$@%#&#~,._____
+;;      May these instructions help you raise
+;;                  Emacs Live
+;;                from the ashes
 ")
 
 (setq live-supported-emacsp t)
