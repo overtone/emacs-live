@@ -1,0 +1,23 @@
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+Status: 200 OK
+Content-Length: 479
+
+{
+  "login": "github",
+  "id": 1,
+  "url": "https://api.github.com/orgs/1",
+  "avatar_url": "https://github.com/images/error/octocat_happy.gif",
+  "name": "github",
+  "company": "GitHub",
+  "blog": "https://github.com/blog",
+  "location": "San Francisco",
+  "email": "octocat@github.com",
+  "public_repos": 2,
+  "public_gists": 1,
+  "followers": 20,
+  "following": 0,
+  "html_url": "https://github.com/octocat",
+  "created_at": "2008-01-14T04:33:35Z",
+  "type": "Organization"
+}
