@@ -1,9 +1,14 @@
 ;;use file path to ensure buffer name uniqueness
 (require 'uniquify)
 (setq uniquify-buffer-name-style 'forward)
+(setq uniquify-separator "/")
+(setq uniquify-after-kill-buffer-p t)
+(setq uniquify-ignore-buffers-re "^\\*")
 
 ;;store history of recently opened files
 (require 'recentf)
+(setq recentf-save-file (concat live-tmp-dir "recentf")
+      recentf-max-saved-items 200)
 (recentf-mode t)
 
 ;;When you visit a file, point goes to the last place where it was
@@ -58,3 +63,13 @@
 ;;remove all trailing whitespace and trailing blank lines before
 ;;saving the file
 (add-hook 'before-save-hook 'whitespace-cleanup)
+
+;; savehist keeps track of some history
+(setq savehist-additional-variables
+      ;; search entries
+      '(search ring regexp-search-ring)
+      ;; save every minute
+      savehist-autosave-interval 60
+      ;; keep the home clean
+      savehist-file (concat live-tmp-dir "savehist"))
+(savehist-mode t)
