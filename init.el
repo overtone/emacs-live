@@ -153,8 +153,9 @@
                "Hello, it's lovely to see you again. I do hope that you're well."
                "Turn your head towards the sun and the shadows will fall behind you.")))
 
+
 (defun live-welcome-message ()
-  (nth (random* (length live-welcome-messages)) live-welcome-messages))
+  (nth (random (length live-welcome-messages)) live-welcome-messages))
 
 (when live-supported-emacsp
   (setq initial-scratch-message (concat ";;
