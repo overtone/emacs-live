@@ -26,3 +26,15 @@ is defined in your current Emacs buffer."
   (interactive)
   (slime-interactive-eval (concat "(remove-ns '" (slime-current-package) ")"))
   (slime-eval-buffer))
+
+
+
+(defun live-windows-hide-eol ()
+ "Do not show ^M in files containing mixed UNIX and DOS line endings."
+ (interactive)
+ (setq buffer-display-table (make-display-table))
+ (aset buffer-display-table ?\^M []))
+
+
+(when (eq system-type 'windows-nt)
+  (add-hook 'slime-repl-mode-hook 'live-windows-hide-eol ))
