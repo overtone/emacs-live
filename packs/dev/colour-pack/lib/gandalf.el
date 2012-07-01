@@ -52,7 +52,15 @@
      (underline ((nil (:underline nil))))
      (vertical-border ((t (:background "black" :foreground "#333333"))))
      (zmacs-region ((t (:background "snow" :foreground "ble"))))
-     (erc-default-face ((t (:foreground "dark green")))))))
+     (erc-default-face ((t (:foreground "dark green"))))
+
+     ; NICK: add ido, and a bit of minibuffer colour.
+     (ido-first-match ((t (:foreground "black" :background "grey80"))))
+     (ido-only-match ((t (:foreground "black" :background "grey80"))))
+     (ido-subdir ((t (:foreground "dark goldenrod" :background "grey80"))))
+     (ido-indicator ((t (:foreground "black" :background "deep pink"))))
+     (minibuffer-prompt ((t (:foreground "dark green" :background "grey70"))))
+     )))
 
 (custom-set-faces
  ;;magit colours
