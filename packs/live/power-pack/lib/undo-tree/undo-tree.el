@@ -3,7 +3,7 @@
 ;; Copyright (C) 2009-2012  Free Software Foundation, Inc
 
 ;; Author: Toby Cubitt <toby-undo-tree@dr-qubit.org>
-;; Version: 0.5.2
+;; Version: 0.5.3
 ;; Keywords: convenience, files, undo, redo, history, tree
 ;; URL: http://www.dr-qubit.org/emacs.php
 ;; Repository: http://www.dr-qubit.org/git/undo-tree.git
@@ -689,6 +689,12 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.5.3
+;; * modified `undo-list-transfer-to-tree' and `undo-list-pop-changeset' to
+;;   cope better if undo boundary before undo-tree-canary is missing
+;;   (e.g. org-mode's `org-self-insert-cluster-for-undo' removes this undo
+;;   boundary)
 ;;
 ;; Version 0.5.2
 ;; * added `~' to end of default history save-file name
@@ -1673,7 +1679,8 @@ Comparison is done with `eq'."
 	       (undo-tree-move-GC-elts-to-pool (car p))
 	       (while (and discard-pos (integerp (car buffer-undo-list)))
 		 (setq buffer-undo-list (cdr buffer-undo-list)))
-	       (car buffer-undo-list))
+	       (and (car buffer-undo-list)
+		    (not (eq (car buffer-undo-list) 'undo-tree-canary))))
         (setcdr p (list (pop buffer-undo-list)))
 	(setq p (cdr p)))
       changeset)))
@@ -1711,7 +1718,8 @@ Comparison is done with `eq'."
   (when (null buffer-undo-list)
     (setq buffer-undo-list '(nil undo-tree-canary)))
 
-  (unless (eq (cadr buffer-undo-list) 'undo-tree-canary)
+  (unless (or (eq (cadr buffer-undo-list) 'undo-tree-canary)
+	      (eq (car buffer-undo-list) 'undo-tree-canary))
     ;; create new node from first changeset in `buffer-undo-list', save old
     ;; `buffer-undo-tree' current node, and make new node the current node
     (let* ((node (undo-tree-make-node nil (undo-list-pop-changeset)))
@@ -1727,7 +1735,8 @@ Comparison is done with `eq'."
       ;; if no undo history has been discarded from `buffer-undo-list' since
       ;; last transfer, splice new tree fragment onto end of old
       ;; `buffer-undo-tree' current node
-      (if (eq (cadr buffer-undo-list) 'undo-tree-canary)
+      (if (or (eq (cadr buffer-undo-list) 'undo-tree-canary)
+	      (eq (car buffer-undo-list) 'undo-tree-canary))
 	  (progn
 	    (setf (undo-tree-node-previous node) splice)
 	    (push node (undo-tree-node-next splice))

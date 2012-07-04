@@ -45,7 +45,7 @@ in the sexp, not the end of the current one."
              (paredit-forward-up)
              (paredit-backward-down)
              (paredit-forward-slurp-sexp)
-             (live-delete-whitespace-except-one)))))
+             (just-one-space)))))
   (when (not (save-excursion
                (ignore-errors
                  (backward-sexp)

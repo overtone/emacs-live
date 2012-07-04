@@ -75,6 +75,8 @@
   (when (functionp 'slime-mode)
     (slime-mode -1)))
 
+(put-clojure-indent 'this-as 'defun)
+
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.cljs$" . clojurescript-mode))
 

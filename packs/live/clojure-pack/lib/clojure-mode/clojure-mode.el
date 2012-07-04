@@ -295,17 +295,24 @@ elements of a def* forms."
                   changed t)))))
     changed))
 
+(defun clojure-find-block-comment-start (limit)
+  "Search for (comment...) or #_ style block comments and put
+  point at the beginning of the expression."
+  (let ((pos (re-search-forward "\\((comment\\>\\|#_\\)" limit t)))
+    (when pos
+      (forward-char (- (length (match-string 1))))
+      pos)))
+
 (defun clojure-font-lock-extend-region-comment ()
   "Move fontification boundaries to always contain
-  entire (comment ..) sexp. Does not work if you have a
+  entire (comment ..) and #_ sexp. Does not work if you have a
   white-space between ( and comment, but that is omitted to make
   this run faster."
   (let ((changed nil))
     (goto-char font-lock-beg)
     (condition-case nil (beginning-of-defun) (error nil))
-    (let ((pos (re-search-forward "(comment\\>" font-lock-end t)))
+    (let ((pos (clojure-find-block-comment-start font-lock-end)))
       (when pos
-        (forward-char -8)
         (when (< (point) font-lock-beg)
           (setq font-lock-beg (point)
                 changed t))
@@ -316,15 +323,16 @@ elements of a def* forms."
     changed))
 
 (defun clojure-font-lock-mark-comment (limit)
-  "Marks all (comment ..) forms with font-lock-comment-face."
+  "Marks all (comment ..) and #_ forms with font-lock-comment-face."
   (let (pos)
     (while (and (< (point) limit)
-                (setq pos (re-search-forward "(comment\\>" limit t)))
+                (setq pos (clojure-find-block-comment-start limit)))
       (when pos
-        (forward-char -8)
         (condition-case nil
-            (add-text-properties (1+ (point)) (progn
-                                                (forward-sexp) (1- (point)))
+            (add-text-properties (point)
+                                 (progn
+                                   (forward-sexp)
+                                   (point))
                                  '(face font-lock-comment-face multiline t))
           (error (forward-char 8))))))
   nil)
@@ -552,7 +560,7 @@ elements of a def* forms."
 
       ;;Java interop highlighting
       ("\\<\\.-?[a-z][a-zA-Z0-9]*\\>" 0 font-lock-preprocessor-face) ;; .foo .barBaz .qux01 .-flibble .-flibbleWobble
-      ("\\<[A-Z][a-zA-Z0-9]*/[a-zA-Z0-9/$_]+\\>" 0 font-lock-preprocessor-face) ;; Foo Bar$Baz Qux_
+      ("\\<[A-Z][a-zA-Z0-9_]*[a-zA-Z0-9/$_]+\\>" 0 font-lock-preprocessor-face) ;; Foo Bar$Baz Qux_ World_OpenUDP
       ("\\<[a-zA-Z]+\\.[a-zA-Z0-9._]*[A-Z]+[a-zA-Z0-9/.$]*\\>" 0 font-lock-preprocessor-face) ;; Foo/Bar foo.bar.Baz foo.Bar/baz
       ("[a-z]*[A-Z]+[a-z][a-zA-Z0-9$]*\\>" 0 font-lock-preprocessor-face) ;; fooBar
       ("\\<[A-Z][a-zA-Z0-9$]*\\.\\>" 0 font-lock-preprocessor-face))) ;; Foo. BarBaz. Qux$Quux. Corge9.
