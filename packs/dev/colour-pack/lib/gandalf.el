@@ -11,10 +11,10 @@
   (interactive)
   (color-theme-install
    '(color-theme-gandalf
-     ((background-color . "white")
+     ((background-color . "grey95")
       (background-mode . light)
-      (border-color . "white")
-      (cursor-color . "#96CBFE")
+      (border-color . "grey95")
+      (cursor-color . "darkred")
       (foreground-color . "black")
       (mouse-color . "sienna1"))
      (default ((t (:background "white" :foreground "black"))))
@@ -41,8 +41,8 @@
      (font-lock-variable-name-face ((t (:foreground "#FF6400"))))
      (font-lock-warning-face ((t (:bold t :foreground "black"))))
      (gui-element ((t (:background "#333333" :foreground "#96CBFE"))))
-     (region ((t (:background "#253B76"))))
-     (mode-line ((t (:background "deep pink" :foreground "white"))))
+     (region ((t (:background "#758BC6"))))
+     (mode-line ((t (:background "grey40" :foreground "white"))))
      (highlight ((t (:background "#222222"))))
      (Highline-face ((t (:background "SeaGreen"))))
      (italic ((t (nil))))
@@ -52,7 +52,16 @@
      (underline ((nil (:underline nil))))
      (vertical-border ((t (:background "black" :foreground "#333333"))))
      (zmacs-region ((t (:background "snow" :foreground "ble"))))
-     (erc-default-face ((t (:foreground "dark green")))))))
+     (erc-default-face ((t (:foreground "dark green"))))
+
+     ; NICK: add ido, and a bit of minibuffer colour.
+     (ido-first-match ((t (:foreground "black" :background "grey70"))))
+     (ido-only-match ((t (:foreground "black" :background "grey95"))))
+     (ido-subdir ((t (:foreground "white" :background "#758BC6"))))
+     (ido-indicator ((t (:foreground "black" :background "deep pink"))))
+     (minibuffer-prompt ((t (:foreground "dark blue" :background "grey85"))))
+     ))
+  )
 
 (custom-set-faces
  ;;magit colours
