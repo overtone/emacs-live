@@ -80,7 +80,7 @@
      (ac-candidate-face ((t (:background "gray60" :foreground "black"))))
      (ac-selection-face ((t (:background "deep pink" :foreground "black"))))
      (popup-isearch-match ((t (:background "black" :foreground "deep pink"))))
-     (popup-tip-face ((t (:background "#333333" :foreground "whitepnpnn"))))
+     (popup-tip-face ((t (:background "#333333" :foreground "white"))))
      (popup-scroll-bar-foreground-face ((t (:background "#0A0A0A"))))
      (popup-scroll-bar-background-face ((t (:background "#333333"))))
 
