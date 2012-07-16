@@ -41,6 +41,9 @@
       confirm-nonexistent-file-or-buffer nil)
 
 ;;set all coding systems to utf-8
+(setq utf-translate-cjk-mode nil) ; disable CJK coding/encoding (Chinese/Japanese/Korean characters)
+(set-language-environment 'utf-8)
+(set-default-coding-systems 'utf-8)
 (setq locale-coding-system 'utf-8)
 (set-terminal-coding-system 'utf-8)
 (set-keyboard-coding-system 'utf-8)
