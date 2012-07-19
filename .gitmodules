@@ -18,10 +18,6 @@
         path = packs/dev/clojure-pack/vendor/submodules/auto-complete
         url = git://github.com/m2ym/auto-complete.git
         ignore = untracked
-[submodule "packs/dev/clojure-pack/vendor/submodules/clojure-mode"]
-        path = packs/dev/clojure-pack/vendor/submodules/clojure-mode
-        url = git://github.com/technomancy/clojure-mode.git
-        ignore = untracked
 [submodule "packs/dev/clojure-pack/vendor/submodules/slime"]
         path = packs/dev/clojure-pack/vendor/submodules/slime
         url = git://github.com/technomancy/slime.git
