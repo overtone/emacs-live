@@ -44,9 +44,9 @@
 
 (defun live-pack-dir (pack)
   "Determine a pack name's absolute path"
-  (let* ((pack-name (if (symbolp pack-name)
-                        (symbol-name pack-name)
-                      pack-name))
+  (let* ((pack-name (if (symbolp pack)
+                        (symbol-name pack)
+                      pack))
          (pack-name-dir (if (file-name-absolute-p pack-name)
                             (file-name-as-directory pack-name)
                           (file-name-as-directory (concat live-packs-dir pack-name)))))
