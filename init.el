@@ -88,8 +88,12 @@
 ;; Linux        - Consult your package manager or compile from source
 
 "))
-  (error (concat "Oops - your emacs isn't supported. Emacs Live only works on Emacs 24+ and you're running version: " emacs-version ". Please upgrade your Emacs and try again.")))
+  (let* ((old-file (concat (file-name-as-directory "~") ".emacs-old.el")))
+    (if (file-exists-p old-file)
+      (load-file old-file)
+      (error (concat "Oops - your emacs isn't supported. Emacs Live only works on Emacs 24+ and you're running version: " emacs-version ". Please upgrade your Emacs and try again, or define ~/.emacs-old.el for a fallback")))))
 
+(when live-supported-emacsp
 ;; Store live base dirs
 (setq live-root-dir user-emacs-directory)
 
@@ -185,3 +189,4 @@
 ;; "                                                      (live-welcome-message) "
 
 ")))
+)
