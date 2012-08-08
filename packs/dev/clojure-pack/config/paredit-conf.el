@@ -85,7 +85,10 @@ in the sexp, not the end of the current one."
     (backward-char)
     (live-paredit-delete-horizontal-space)
     (while
-        (eq (char-before) ?\))
+        (or
+         (eq (char-before) ?\))
+         (eq (char-before) ?\})
+         (eq (char-before) ?\]))
       (backward-char)
       (live-paredit-delete-horizontal-space))))
 
