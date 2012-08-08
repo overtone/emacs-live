@@ -58,10 +58,10 @@
       (backward-word)
       (mark-word)
       (delete-region (region-beginning) (region-end)))
-    (insert "<WAITING FOR MIDI CONTROLLER MOVEMENTs>")
+    (insert "<WAITING FOR MIDI CONTROLLER MOVEMENT>")
     (let ((new-overlay (make-overlay m (point))))
       (let ((new-overlay-sym (live-add-live-control-overlay new-overlay)))
-        (overlay-put new-overlay 'face '(:background "blue"))
+        (overlay-put new-overlay 'face '(:background "deep pink"))
         (overlay-put new-overlay 'evaporate t)
         (overlay-put new-overlay 'modification-hooks
                      '(live-control-overlay-modified))
