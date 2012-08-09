@@ -30,6 +30,12 @@ need to do the following:
     sudo apt-get update
     sudo apt-get install emacs-snapshot
 
-## Fedora, Arch, Gentoo, etc
+## Fedora
+
+To get Emacs version 24 on Fedora, do the following:
+
+    sudo yum install emacs
+
+## Arch, Gentoo, etc
 
 TODO

@@ -48,3 +48,10 @@
 (defun live-delete-whitespace-except-one ()
   (interactive)
   (just-one-space -1))
+
+
+(defun live-backwards-kill-line ()
+  "Kill all characters on current line before point. Same as
+  passing 0 as an argument to kill-line"
+  (interactive)
+  (kill-line 0))

@@ -6,7 +6,7 @@
 ;; URL: http://emacswiki.org/cgi-bin/wiki/ClojureTestMode
 ;; Version: 1.6.0
 ;; Keywords: languages, lisp, test
-;; Package-Requires: ((slime "20091016") (clojure-mode "1.7"))
+;; Package-Requires: ((clojure-mode "1.7"))
 
 ;; This file is not part of GNU Emacs.
 
@@ -106,6 +106,9 @@
 ;;  * Support narrowing.
 ;;  * Fix a bug in clojure-test-mode-test-one-in-ns.
 
+;; 1.7.0 ???
+;;  * Compatibility with nrepl.el
+
 ;;; TODO:
 
 ;; * Prefix arg to jump-to-impl should open in other window
@@ -119,8 +122,9 @@
 
 (require 'clojure-mode)
 (require 'cl)
-(require 'slime)
 (require 'which-func)
+(require 'nrepl nil t)
+(require 'slime nil t)
 
 ;; Faces
 
@@ -164,17 +168,30 @@
 
 ;; Support Functions
 
-(defun clojure-test-eval (string &optional handler)
-  (slime-eval-async `(swank:eval-and-grab-output ,string)
-                    (or handler #'identity)))
+(defun clojure-test-make-handler (value-handler)
+  (let ((out-handler (lambda (_ out)
+                       (with-current-buffer (nrepl-repl-buffer)
+                         (setq ooo out)
+                         (insert out)))))
+    (nrepl-make-response-handler (current-buffer)
+                                 (lambda (buffer value)
+                                   (setq vvv value)
+                                   (message "value: %s" vvv)
+                                   (funcall value-handler value))
+                                 out-handler out-handler nil)))
 
-(defun clojure-test-eval-sync (string)
-  (slime-eval `(swank:eval-and-grab-output ,string)))
+(defun clojure-test-eval (string &optional handler)
+  (if (get-buffer "*nrepl-connection*")
+      (nrepl-send-string string (or (nrepl-current-ns) "user")
+                         (clojure-test-make-handler (or handler #'identity)))
+    (slime-eval-async `(swank:eval-and-grab-output ,string)
+      (or handler #'identity))))
 
 (defun clojure-test-load-reporting ()
   "Redefine the test-is report function to store results in metadata."
-  (when (eq (compare-strings "clojure" 0 7 (slime-connection-name) 0 7) t)
-    (clojure-test-eval-sync
+  (when (or (get-buffer "*nrepl-connection*")
+            (eq (compare-strings "clojure" 0 7 (slime-connection-name) 0 7) t))
+    (clojure-test-eval
      "(ns clojure.test.mode
         (:use [clojure.test :only [file-position *testing-vars* *test-out*
                                    join-fixtures *report-counters* do-report
@@ -217,13 +234,13 @@
             ;; Otherwise, just test every var in the namespace.
             (clojure-test-mode-test-one-var ns test-name))
           (do-report {:type :end-test-ns, :ns ns-obj}))
-        (do-report (assoc @*report-counters* :type :summary)))) ")))
+        (do-report (assoc @*report-counters* :type :summary))))")))
 
 (defun clojure-test-get-results (result)
   (clojure-test-eval
    (concat "(map #(cons (str (:name (meta %)))
                 (:status (meta %))) (vals (ns-interns '"
-           (slime-current-package) ")))")
+           (clojure-find-ns) ")))")
    #'clojure-test-extract-results))
 
 (defun clojure-test-echo-results ()
@@ -326,14 +343,12 @@ Retuns the problem overlay if such a position is found, otherwise nil."
     (clojure-test-clear
      (lambda (&rest args)
        ;; clojure-test-eval will wrap in with-out-str
-       (slime-eval-async `(swank:load-file
-                           ,(slime-to-lisp-filename
-                             (expand-file-name (buffer-file-name))))
+       (clojure-test-eval (format "(clojure.core/load-file %s)"
+                                  (expand-file-name (buffer-file-name)))
                          (lambda (&rest args)
-                           (slime-eval-async '(swank:interactive-eval
-                                               "(binding [clojure.test/report
-                                               clojure.test.mode/report]
-                                                (clojure.test/run-tests))")
+                           (clojure-test-eval "(binding [clojure.test/report
+                                                         clojure.test.mode/report]
+                                                 (clojure.test/run-tests))"
                                              #'clojure-test-get-results)))))))
 (defun clojure-test-run-test ()
   "Run the test at point."
@@ -343,15 +358,13 @@ Retuns the problem overlay if such a position is found, otherwise nil."
    (lambda (&rest args)
      (let* ((f (which-function))
             (test-name (if (listp f) (first f) f)))
-       (slime-eval-async
-        `(swank:interactive-eval
-          ,(format "(binding [clojure.test/report clojure.test.mode/report]
-                        (load-file \"%s\")
-                        (clojure.test.mode/clojure-test-mode-test-one-in-ns '%s '%s)
-                        (cons (:name (meta (var %s))) (:status (meta (var %s)))))"
-                   (buffer-file-name)
-                   (slime-current-package) test-name
-                   test-name test-name))
+       (clojure-test-eval
+        (format "(binding [clojure.test/report clojure.test.mode/report]
+                   (load-file \"%s\")
+                   (clojure.test.mode/clojure-test-mode-test-one-in-ns '%s '%s)
+                   (cons (:name (meta (var %s))) (:status (meta (var %s)))))"
+                (buffer-file-name) (clojure-find-ns)
+                test-name test-name test-name)
         (lambda (result-str)
           (let ((result (read result-str)))
             (if (cdr result)
@@ -425,9 +438,10 @@ Retuns the problem overlay if such a position is found, otherwise nil."
 (define-minor-mode clojure-test-mode
   "A minor mode for running Clojure tests."
   nil " Test" clojure-test-mode-map
-  (when (slime-connected-p)
+  (when (or (get-buffer "*nrepl-connection*") (slime-connected-p))
     (clojure-test-load-reporting)))
 
+(add-hook 'nrepl-connected-hook 'clojure-test-load-reporting)
 (add-hook 'slime-connected-hook 'clojure-test-load-reporting)
 
 ;;;###autoload
@@ -439,6 +453,7 @@ with a \"test.\" bit on it."
       (when (and ns (string-match "test\\(\\.\\|$\\)" ns))
         (save-window-excursion
           (clojure-test-mode t)))))
+
   (add-hook 'clojure-mode-hook 'clojure-test-maybe-enable))
 
 (provide 'clojure-test-mode)

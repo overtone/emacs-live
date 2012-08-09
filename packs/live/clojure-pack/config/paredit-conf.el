@@ -52,25 +52,7 @@ in the sexp, not the end of the current one."
                  t)))
     (delete-horizontal-space)))
 
-(defun live-paredit-reindent-defun (&optional argument)
-  "Reindent the definition that the point is on. If the point is
-  in a string or a comment, fill the paragraph instead, and with
-  a prefix argument, justify as well. Doesn't mess about with
-  Clojure fn arglists when filling-paragraph in docstrings."
-  (interactive "P")
-  (cond ((paredit-in-comment-p) (fill-paragraph argument))
-        ((paredit-in-string-p) (progn
-                                 (save-excursion
-                                   (paredit-forward-up)
-                                   (insert "\n"))
-                                 (fill-paragraph argument)
-                                 (save-excursion
-                                   (paredit-forward-up)
-                                   (delete-char 1))))
-        (t (save-excursion
-             (end-of-defun)
-             (beginning-of-defun)
-             (indent-sexp)))))
+
 
 (defun live-paredit-forward-kill-sexp (&optional arg)
   (interactive "p")
@@ -83,3 +65,52 @@ in the sexp, not the end of the current one."
   (cond ((or (paredit-in-comment-p)
              (paredit-in-string-p)) (backward-kill-word (or arg 1)))
         (t (backward-kill-sexp (or arg 1)))))
+
+(defun live-paredit-backward-kill ()
+  (interactive)
+  (let ((m (point-marker)))
+    (paredit-backward-up)
+    (forward-char)
+    (delete-region (point) m)))
+
+(defun live-paredit-delete-horizontal-space ()
+  (interactive)
+  (just-one-space -1)
+  (paredit-backward-delete))
+
+(defun live-paredit-tidy-trailing-parens ()
+  (interactive)
+  (save-excursion
+    (while (ignore-errors (paredit-forward-up) t))
+    (backward-char)
+    (live-paredit-delete-horizontal-space)
+    (while
+        (or
+         (eq (char-before) ?\))
+         (eq (char-before) ?\})
+         (eq (char-before) ?\]))
+      (backward-char)
+      (live-paredit-delete-horizontal-space))))
+
+(defun live-paredit-reindent-defun (&optional argument)
+  "Reindent the definition that the point is on. If the point is
+  in a string or a comment, fill the paragraph instead, and with
+  a prefix argument, justify as well. Doesn't mess about with
+  Clojure fn arglists when filling-paragraph in docstrings.
+
+  Also tidies up trailing parens when in a lisp form"
+  (interactive "P")
+  (cond ((paredit-in-comment-p) (fill-paragraph argument))
+        ((paredit-in-string-p) (progn
+                                 (save-excursion
+                                   (paredit-forward-up)
+                                   (insert "\n"))
+                                 (fill-paragraph argument)
+                                 (save-excursion
+                                   (paredit-forward-up)
+                                   (delete-char 1))))
+        (t (progn (save-excursion
+                    (end-of-defun)
+                    (beginning-of-defun)
+                    (indent-sexp))
+                  (live-paredit-tidy-trailing-parens)))))

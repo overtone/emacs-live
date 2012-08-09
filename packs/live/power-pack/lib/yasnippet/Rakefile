@@ -3,7 +3,7 @@
 require 'fileutils'
 
 def find_version
-  File.read("yasnippet.el") =~ /;; Package-version: *([0-9.]+?) *$/
+  File.read("yasnippet.el", :encoding => "UTF-8") =~ /;; Package-version: *([0-9.]+?) *$/
   $version = $1
 end
 find_version
@@ -30,7 +30,7 @@ task :package do
   FileUtils.cp_r files, release_dir
   File.open(File.join(release_dir,'yasnippet-pkg.el'), 'w') do |file|
     file.puts <<END
-(define-package "yasnippet-mode"
+(define-package "yasnippet"
                 "#{$version}"
                 "A template system for Emacs")
 END

@@ -1,8 +1,6 @@
 ;;; yasnippet.el --- Yet another snippet extension for Emacs.
 
-;; Copyright 2008 pluskid
-;;           2009 pluskid, João Távora
-;;           2010,2011,2012 João Távora
+;; Copyright (C) 2008-2012 Free Software Foundation, Inc.
 ;; Authors: pluskid <pluskid@gmail.com>,  João Távora <joaotavora@gmail.com>
 ;; Version: 0.7.0
 ;; Package-version: 0.7.0
@@ -11,20 +9,18 @@
 ;; URL: http://github.com/capitaomorte/yasnippet
 ;; EmacsWiki: YaSnippetMode
 
-;; This file is free software; you can redistribute it and/or modify
+;; This program is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
-;; the Free Software Foundation; either version 2, or (at your option)
-;; any later version.
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
 
-;; This file is distributed in the hope that it will be useful,
+;; This program is distributed in the hope that it will be useful,
 ;; but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs; see the file COPYING.  If not, write to
-;; the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 ;;
@@ -1590,7 +1586,9 @@ TEMPLATES is a list of `yas/template'."
         (keyboard-quit))))
 
 (defun yas/ido-prompt (prompt choices &optional display-fn)
-  (when (fboundp 'ido-completing-read)
+  (when (and (fboundp 'ido-completing-read)
+	     (or (>= emacs-major-version 24)
+		 ido-mode))
     (yas/completing-prompt prompt choices display-fn #'ido-completing-read)))
 
 (eval-when-compile (require 'dropdown-list nil t))
@@ -1632,8 +1630,10 @@ TEMPLATES is a list of `yas/template'."
                                'require-match
                                nil
                                nil)))
-    (when chosen
-      (nth (position chosen formatted-choices :test #'string=) filtered-choices))))
+    (let ((position (or (and chosen
+                             (position chosen formatted-choices :test #'string=))
+                        0)))
+      (nth position filtered-choices))))
 
 (defun yas/no-prompt (prompt choices &optional display-fn)
   (first choices))
@@ -1672,8 +1672,9 @@ Optional USE-JIT use jit-loading of snippets."
   "Recursively load snippet templates from DIRECTORY."
   (unless (file-exists-p (concat directory "/" ".yas-skip"))
     (if (and (not no-compiled-snippets)
-             (load (expand-file-name ".yas-compiled-snippets" directory) 'noerror (<= yas/verbosity 2)))
-        (yas/message 2 "Loading much faster .yas-compiled-snippets from %s" directory)
+             (progn (yas/message 2 "Loading compiled snippets from %s" directory) t)
+             (load (expand-file-name ".yas-compiled-snippets" directory) 'noerror (<= yas/verbosity 3)))
+      (yas/message 2 "Loading snippet files from %s" directory)
       (yas/load-directory-2 directory mode-sym))))
 
 (defun yas/load-directory-2 (directory mode-sym)
@@ -1707,15 +1708,21 @@ Optional USE-JIT use jit-loading of snippets."
         (dolist (directory (reverse (yas/snippet-dirs)))
           (cond ((file-directory-p directory)
                  (yas/load-directory directory (not nojit))
-                 (yas/message 3 "Loaded %s" directory))
+                 (if nojit
+                     (yas/message 3 "Loaded %s" directory)
+                   (yas/message 3 "Prepared just-in-time loading for %s" directory)))
                 (t
                  (push (yas/message 0 "Check your `yas/snippet-dirs': %s is not a directory" directory) errors))))
       (call-interactively 'yas/load-directory))
     errors))
 
 (defun yas/reload-all (&optional interactive)
-  "Reload all snippets and rebuild the YASnippet menu."
-  (interactive "P")
+  "Reload all snippets and rebuild the YASnippet menu.
+
+When called interactively force immediate reload of all known
+snippets under `yas/snippet-dirs', otherwise use just-in-time
+loading."
+  (interactive "p")
   (catch 'abort
     (let ((errors)
           (snippet-editing-buffers
@@ -1728,7 +1735,7 @@ Optional USE-JIT use jit-loading of snippets."
       (when snippet-editing-buffers
           (if interactive
               (if (y-or-n-p "Some buffers editing live snippets, close them and proceed with reload?")
-                  (mapcar #'kill-buffer snippet-editing-buffers)
+                  (mapc #'kill-buffer snippet-editing-buffers)
                 (yas/message 1 "Aborted reload...")
                 (throw 'abort nil))
             ;; in a non-interactive use, at least set
@@ -1762,14 +1769,16 @@ Optional USE-JIT use jit-loading of snippets."
       ;;
       (yas/trigger-key-reload)
 
-      (yas/message 3 "Reloaded everything...%s." (if errors " (some errors, check *Messages*)" "")))))
+      (yas/message 3 "Reloaded everything%s...%s."
+                   (if interactive "" " (snippets will load just-in-time)")
+                   (if errors " (some errors, check *Messages*)" "")))))
 
 (defun yas/load-pending-jits ()
   (when yas/minor-mode
     (dolist (mode (yas/modes-to-activate))
       (let ((forms (gethash mode yas/scheduled-jit-loads)))
         (dolist (form forms)
-          (yas/message  3 "Loading snippets for %s, just in time: %s!" mode form)
+          (yas/message  3 "Loading for `%s', just-in-time: %s!" mode form)
           (eval form))
         (remhash mode yas/scheduled-jit-loads)))))
 
@@ -4291,3 +4300,6 @@ handle the end-of-buffer error fired in it by calling
 (provide 'yasnippet)
 
 ;;; yasnippet.el ends here
+;; Local Variables:
+;; coding: utf-8
+;; End:

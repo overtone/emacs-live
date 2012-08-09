@@ -68,6 +68,8 @@
 ;;; Code:
 
 (require 'cl)
+(require 'tramp)
+(require 'inf-lisp)
 
 (defgroup clojure-mode nil
   "A mode for Clojure"
@@ -108,7 +110,6 @@ Clojure to load that file."
     (define-key map "\C-c\C-l" 'clojure-load-file)
     (define-key map "\C-c\C-r" 'lisp-eval-region)
     (define-key map "\C-c\C-z" 'clojure-display-inferior-lisp-buffer)
-    (define-key map (kbd "RET") 'reindent-then-newline-and-indent)
     (define-key map (kbd "C-c t") 'clojure-jump-to-test)
     (define-key map (kbd "C-c M-q") 'clojure-fill-docstring)
     map)
@@ -188,13 +189,14 @@ if that value is non-nil."
 
   (clojure-mode-font-lock-setup)
 
-  (run-mode-hooks 'clojure-mode-hook)
-  (run-hooks 'prog-mode-hook)
+  (add-hook 'paredit-mode-hook
+            (lambda ()
+              (when (>= paredit-version 21)
+                (define-key clojure-mode-map "{" 'paredit-open-curly)
+                (define-key clojure-mode-map "}" 'paredit-close-curly))))
 
-  ;; Enable curly braces when paredit is enabled in clojure-mode-hook
-  (when (and (featurep 'paredit) paredit-mode (>= paredit-version 21))
-    (define-key clojure-mode-map "{" 'paredit-open-curly)
-    (define-key clojure-mode-map "}" 'paredit-close-curly)))
+  (run-mode-hooks 'clojure-mode-hook)
+  (run-hooks 'prog-mode-hook))
 
 (defun clojure-display-inferior-lisp-buffer ()
   "Display a buffer bound to `inferior-lisp-buffer'."
@@ -349,7 +351,8 @@ elements of a def* forms."
                               "defalias" "defhinted" "defmacro-"
                               "defn-memo" "defnk" "defonce-"
                               "defstruct-" "defunbound" "defunbound-"
-                              "defvar" "defvar-"))
+                              "defvar" "defvar-"
+                              "definst" "defsynth" "defcgen"))
                 ;; Function declarations.
                 "\\)\\>"
                 ;; Any whitespace
@@ -558,13 +561,29 @@ elements of a def* forms."
       ("#?^\\sw+" 0 font-lock-preprocessor-face)
       ("\\<io\\!\\>" 0 font-lock-warning-face)
 
-      ;;Java interop highlighting
-      ("\\<\\.-?[a-z][a-zA-Z0-9]*\\>" 0 font-lock-preprocessor-face) ;; .foo .barBaz .qux01 .-flibble .-flibbleWobble
-      ("\\<[A-Z][a-zA-Z0-9_]*[a-zA-Z0-9/$_]+\\>" 0 font-lock-preprocessor-face) ;; Foo Bar$Baz Qux_ World_OpenUDP
-      ("\\<[a-zA-Z]+\\.[a-zA-Z0-9._]*[A-Z]+[a-zA-Z0-9/.$]*\\>" 0 font-lock-preprocessor-face) ;; Foo/Bar foo.bar.Baz foo.Bar/baz
-      ("[a-z]*[A-Z]+[a-z][a-zA-Z0-9$]*\\>" 0 font-lock-preprocessor-face) ;; fooBar
-      ("\\<[A-Z][a-zA-Z0-9$]*\\.\\>" 0 font-lock-preprocessor-face))) ;; Foo. BarBaz. Qux$Quux. Corge9.
+      ;;Interop Matching
 
+      ;; Should match:
+      ;; .foo .barBaz .qux01 .-flibble .-flibbleWobble Foo Bar$Baz Qux_ World_OpenUDP Foo/Bar foo.bar.Baz foo.Bar/baz Foo. BarBaz. Qux$Quux. Corge9. Foo/barBaz. fooBar
+
+      ;; Shouldn't match:
+      ;; FOO bar bar-baz clojure.repl/source
+
+      ;; Foo. BarBaz. Qux$Quux. Corge9. Foo/barBaz.
+      ("\\<[A-Z][a-zA-Z0-9$./]*\\.\\>" 0 font-lock-preprocessor-face)
+
+      ;; .foo .barBaz .qux01 .-flibble .-flibbleWobble
+      ("\\<\\.-?[a-z][a-zA-Z0-9]*\\>" 0 font-lock-preprocessor-face)
+
+      ;; Foo Bar$Baz Qux_ World_OpenUDP Foo/Bar
+      ("\\<[A-Z][a-zA-Z0-9/$_]*[a-z]+[a-zA-Z0-9/$_]*\\>" 0 font-lock-preprocessor-face)
+
+      ;; foo.bar.Baz foo.Bar/baz
+      ("\\<[a-z]+\\.[a-zA-Z0-9._]*[A-Z]+[a-zA-Z0-9/.$]*\\>" 0 font-lock-preprocessor-face)
+
+      ;; fooBar
+      ("[a-z]*[A-Z]+[a-z][a-zA-Z0-9$]*\\>" 0 font-lock-preprocessor-face)
+      ))
 
   "Default expressions to highlight in Clojure mode.")
 
@@ -650,11 +669,14 @@ This function also returns nil meaning don't specify the indentation."
                    (eq (char-after (elt state 1)) ?\())
               (+ (current-column) 2) ;; this is probably inside a defn
             (current-column)))
-      (let ((function (buffer-substring (point)
-                                        (progn (forward-sexp 1) (point))))
-            (open-paren (elt state 1))
-            method)
-        (setq method (get (intern-soft function) 'clojure-indent-function))
+      (let* ((function (buffer-substring (point)
+                                         (progn (forward-sexp 1) (point))))
+             (open-paren (elt state 1))
+             (method nil)
+             (function-tail (first
+                             (last
+                              (split-string (substring-no-properties function) "/")))))
+        (setq method (get (intern-soft function-tail) 'clojure-indent-function))
 
         (cond ((member (char-after open-paren) '(?\[ ?\{))
                (goto-char open-paren)
@@ -1011,7 +1033,7 @@ Localhost is assumed."
 should connect to for remote projects that are opened via tramp.
 
 The arguments are dir, hostname, and port.  The return value should be an `alist` of the form
-(:cmd \"command string\" :hostname \"hostname\" :port 1234)"
+  (:cmd \"command string\" :hostname \"hostname\" :port 1234)"
   :type 'function
   :group 'clojure-mode)
 
@@ -1132,13 +1154,13 @@ The arguments are dir, hostname, and port.  The return value should be an `alist
 
     (when (and (functionp 'slime-disconnect)
                (slime-current-connection)
-               ;; TODO: ask for permission once jack-in supports multiple connections
-               ;; (and (interactive-p) (y-or-n-p "Close old connections first? "))
-               )
-      (slime-disconnect))
-    (clojure-kill-swank-buffer swank-buffer-name)
-    (clojure-jack-in-start-process connection-name swank-buffer-name dir hostname))
-  (message "Starting swank server..."))
+               (and (called-interactively-p 'any)
+                    (y-or-n-p "Close old connections first? ")))
+      (slime-disconnect)
+      (clojure-kill-swank-buffer swank-buffer-name))
+    (clojure-jack-in-start-process connection-name swank-buffer-name
+                                   dir hostname)
+    (message "Starting swank server...")))
 
 (defun clojure-find-ns ()
   (let ((regexp clojure-namespace-name-regex))
