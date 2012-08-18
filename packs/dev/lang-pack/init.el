@@ -1,6 +1,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Language Pack
-
+(live-load-config-file "js2-mode-conf.el")
 (live-load-config-file "yaml-conf.el")
 (live-load-config-file "ioke-conf.el")
 (live-load-config-file "auto-modes.el")
