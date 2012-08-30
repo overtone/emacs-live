@@ -2,6 +2,7 @@
 
 (require 'mwe-log-commands)
 (require 'ace-jump-mode)
+(require 'iy-go-to-char)
 
 (live-load-config-file "volatile-highlights-conf.el")
 (live-load-config-file "yasnippet-conf.el")
