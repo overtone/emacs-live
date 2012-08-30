@@ -140,11 +140,10 @@
 (defun* eval-sexp-fu-flash (bounds &optional (face eval-sexp-fu-flash-face) (eface eval-sexp-fu-flash-error-face))
   "BOUNS is either the cell or the function returns, such that (BEGIN . END).
 Reurn the 4 values; bounds, highlighting, un-highlighting and error flashing procedure. This function is convenient to use with `define-eval-sexp-fu-flash-command'."
-  (when (ignore-errors (preceding-sexp))
-    (flet ((bounds () (if (functionp bounds) (funcall bounds) bounds)))
-      (let ((b (bounds)) (buf (current-buffer)))
-        (when b
-          (funcall eval-sexp-fu-flash-function b face eface buf))))))
+  (flet ((bounds () (if (functionp bounds) (funcall bounds) bounds)))
+    (let ((b (bounds)) (buf (current-buffer)))
+      (when b
+        (funcall eval-sexp-fu-flash-function b face eface buf)))))
 (defun eval-sexp-fu-flash-default (bounds face eface buf)
   "Create all of the actual flashing implementations. See also `eval-sexp-fu-flash'."
   (lexical-let ((bounds bounds) (face face) (eface eface) (buf buf))
