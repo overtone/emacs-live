@@ -2,7 +2,9 @@
 
 
 (when (not (file-exists-p (concat (live-pack-lib-dir) "js2-mode.elc")))
-  (byte-compile-file (concat (live-pack-lib-dir) "js2-mode.el")))
+  (byte-compile-file (concat (live-pack-lib-dir) "js2-mode.el"))
+  (delete-other-windows))
+
 
 (require 'js2-mode)
 
