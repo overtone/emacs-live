@@ -79,5 +79,8 @@
         url = git://github.com/m2ym/popwin-el.git
         ignore = untracked
 [submodule "packs/dev/clojure-pack/vendor/submodules/clojure-mode"]
-	path = packs/dev/clojure-pack/vendor/submodules/clojure-mode
-	url = git://github.com/samaaron/clojure-mode.git
+        path = packs/dev/clojure-pack/vendor/submodules/clojure-mode
+        url = git://github.com/samaaron/clojure-mode.git
+[submodule "packs/dev/git-pack/vendor/submodules/magit"]
+	path = packs/dev/git-pack/vendor/submodules/magit
+	url = git://github.com/magit/magit.git
