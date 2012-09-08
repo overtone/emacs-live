@@ -39,9 +39,19 @@ is defined in your current Emacs buffer."
 (when (eq system-type 'windows-nt)
   (add-hook 'slime-repl-mode-hook 'live-windows-hide-eol ))
 
-;; Use clojure-mode SLIME Description popup buffer
+;; Use clojure font-lock colors in  SLIME Description popup buffer
+
 (add-hook 'slime-popup-buffer-mode-hook
           (lambda ()
             (when (string-match "<clojure>\\*$"
                                 (buffer-name))
-              (clojure-mode))))
+              (setq font-lock-defaults
+                    '(clojure-font-lock-keywords    ; keywords
+                      nil nil
+                      (("+-*/.<>=!?$%_&~^:@" . "w")) ; syntax alist
+                      nil
+                      (font-lock-mark-block-function . mark-defun)
+                      (font-lock-syntactic-face-function
+                       . lisp-font-lock-syntactic-face-function)))
+              (font-lock-fontify-buffer))))
+
