@@ -38,3 +38,10 @@ is defined in your current Emacs buffer."
 
 (when (eq system-type 'windows-nt)
   (add-hook 'slime-repl-mode-hook 'live-windows-hide-eol ))
+
+;; Use clojure-mode SLIME Description popup buffer
+(add-hook 'slime-popup-buffer-mode-hook
+          (lambda ()
+            (when (string-match "<clojure>\\*$"
+                                (buffer-name))
+              (clojure-mode))))
