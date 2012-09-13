@@ -1,6 +1,8 @@
 ;; OS X specific configuration
 ;; ---------------------------
 
+(setq default-input-method "MacOSX")
+
 ;; Make cut and paste work with the OS X clipboard
 
 (defun live-copy-from-osx ()
