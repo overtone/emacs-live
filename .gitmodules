@@ -73,3 +73,9 @@
 [submodule "packs/dev/clojure-pack/vendor/submodules/clojure-mode"]
         path = packs/dev/clojure-pack/vendor/submodules/clojure-mode
         url = git://github.com/samaaron/clojure-mode.git
+[submodule "packs/dev/clojure-pack/vendor/submodules/nrepl"]
+	path = packs/dev/clojure-pack/vendor/submodules/nrepl
+	url = git://github.com/emacsmirror/nrepl.git
+[submodule "packs/dev/clojure-pack/vendor/submodules/ac-nrepl"]
+	path = packs/dev/clojure-pack/vendor/submodules/ac-nrepl
+	url = git://github.com/purcell/ac-nrepl.git
