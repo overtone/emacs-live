@@ -19,8 +19,9 @@
         ("*shell*" :height 30)
         (".*overtone.log" :regexp t :height 30)
         ("*gists*" :height 30)
-        ("*sldb.*":regexp t :height 30)))
-
+        ("*sldb.*":regexp t :height 30)
+        ("*nREPL error*" :height 30)
+        ("*nREPL doc*" :height 30)))
 
 (defun live-show-messages ()
   (interactive)
