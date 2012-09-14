@@ -182,11 +182,11 @@ fingertips. Highlights include:
 
 By default, Emacs live will load the packs in the following order:
 
-* live
-  - `foundation-pack`, `colour-pack`,`clojure-pack`, `lang-pack` and
-    `power-pack`
-* user
-  - `user-pack`
+1. `live/foundation-pack`
+2. `live/colour-pack`
+3. `live/clojure-pack`
+4. `live/lang-pack`
+5.  `live/power-pack`
 
 However, you may create a `~/.emacs-live.el` file to override this
 behaviour. Simply set the var live-packs to a list of symbols

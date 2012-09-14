@@ -74,8 +74,11 @@
         path = packs/dev/clojure-pack/vendor/submodules/clojure-mode
         url = git://github.com/samaaron/clojure-mode.git
 [submodule "packs/dev/clojure-pack/vendor/submodules/nrepl"]
-	path = packs/dev/clojure-pack/vendor/submodules/nrepl
-	url = git://github.com/emacsmirror/nrepl.git
+        path = packs/dev/clojure-pack/vendor/submodules/nrepl
+        url = git://github.com/emacsmirror/nrepl.git
 [submodule "packs/dev/clojure-pack/vendor/submodules/ac-nrepl"]
-	path = packs/dev/clojure-pack/vendor/submodules/ac-nrepl
-	url = git://github.com/purcell/ac-nrepl.git
+        path = packs/dev/clojure-pack/vendor/submodules/ac-nrepl
+        url = git://github.com/purcell/ac-nrepl.git
+[submodule "packs/dev/git-pack/vendor/submodules/magit"]
+        path = packs/dev/git-pack/vendor/submodules/magit
+        url = git://github.com/magit/magit.git
