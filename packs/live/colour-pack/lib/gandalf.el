@@ -60,18 +60,19 @@
      (ido-subdir ((t (:foreground "white" :background "#758BC6"))))
      (ido-indicator ((t (:foreground "black" :background "deep pink"))))
      (minibuffer-prompt ((t (:foreground "dark blue" :background "grey85"))))
+
+     ;; magit
+     (magit-item-highlight ((t (:background "gray15"))))
+     (magit-diff-add ((t (:foreground "chartreuse3"))))
+     (magit-diff-del ((t (:foreground "violet red"))))
+     (magit-section-type ((t (:foreground "deep pink"))))
+     (magit-diff-hunk-header ((t (:foreground "orange"))))
+     (magit-branch ((t (:foreground "DarkGoldenRod"))))
+     
      ))
   )
 
 (custom-set-faces
- ;;magit colours
- '(magit-item-highlight ((((class color) (background dark)) (:background "gray15"))))
- '(magit-diff-add  ((((class color) (background dark)) (:foreground "chartreuse3"))))
- '(magit-diff-del ((((class color) (background dark)) (:foreground "violet red"))))
- '(magit-section-title ((((class color) (background dark)) (:foreground "deep pink"))))
- '(magit-diff-hunk-header ((((class color) (background dark)) (:foreground "orange"))))
- '(magit-branch ((((class color) (background dark)) (:foreground "gold"))))
-
  ;;nXhtml colours
  '(mumamo-background-chunk-major ((((class color) (background dark)) (:background "black"))))
  '(mumamo-background-chunk-submode1 ((((class color) (background dark)) (:background "black"))))

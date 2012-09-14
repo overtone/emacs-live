@@ -30,14 +30,7 @@
   (add-to-list 'ac-modes mode))
 
 
-;;ac-slime auto-complete plugin
-(live-add-pack-lib "ac-slime")
-(require 'ac-slime)
-(add-hook 'slime-mode-hook 'set-up-slime-ac)
-(add-hook 'slime-repl-mode-hook 'set-up-slime-ac)
-(add-hook 'slime-repl-mode-hook 'auto-complete-mode)
-
-;;Key triggers
+;;;;Key triggers
 (define-key ac-completing-map (kbd "C-M-n") 'ac-next)
 (define-key ac-completing-map (kbd "C-M-p") 'ac-previous)
 (define-key ac-completing-map "\t" 'ac-complete)
