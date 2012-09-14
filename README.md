@@ -85,17 +85,13 @@ these steps:
 
 If you wish to hack with Clojure projects such as
 [Overtone](http://github.com/overtone/overtone) and
-[Quil](http://github.com/quil/quil) you'll need to install lein and
-Swank:
+[Quil](http://github.com/quil/quil) you'll need to install
+[Leiningen 2](https://github.com/technomancy/leiningen/wiki/Upgrading)
+and you're ready to roll.
 
-1. Install [Leiningen 2](https://github.com/technomancy/leiningen/wiki/Upgrading)
-2. Create a file called `~/.lein/profiles.clj` with the following contents:
-
-    {:user {:plugins [[lein-swank "1.4.4"]]}}
-
-And you're ready to roll. Simply start swank in a Clojure project with
-`lein2 swank` and connect to it from Emacs with `M-x slime-connect` for
-full Emacs REPL/autocompletion joy.
+Simply start a repl in a Clojure project with `lein2 repl` and connect
+to it from Emacs with `M-x nrepl` (supplying the correct port) for full
+Emacs REPL/autocompletion joy.
 
 ### Screenshots
 
@@ -149,8 +145,8 @@ accepted for appropriate improvements to Gandalf.
 A set of goodies to get you hacking Clojure like a pro.
 
 * Clojure Mode (with fancy (λ [a] (+ a 5)) and ƒ(+ % 5) prettifications)
-* Slime (for communicating with swank servers)
-* Auto completion (configured to work with slime for inline auto
+* nREPL.el (for communicating with nREPL servers)
+* Auto completion (configured to work with nREPL for inline auto
   completion of documentation)
 * Tailor-made colour theme
 * Fancy highlighting of sexps on eval
