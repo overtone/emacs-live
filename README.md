@@ -64,7 +64,7 @@ executing random scripts from the interwebs, then the easiest way to
 install Emacs Live is to run the following which will safely preserve
 any Emacs configs you already have:
 
-    bash <(curl -fsSL https://raw.github.com/overtone/emacs-live/master/installer/install-emacs-live.sh)
+    bash <(curl -fksSL https://raw.github.com/overtone/emacs-live/master/installer/install-emacs-live.sh)
 
 Note: you should always read through random scripts before executing
 them!
