@@ -23,7 +23,7 @@ if type -p curl >/dev/null 2>&1; then
     if [ "$https_proxy" != "" ]; then
         CURL_PROXY="-x $https_proxy"
     fi
-    HTTP_CLIENT="curl $CURL_PROXY -f -L -o"
+    HTTP_CLIENT="curl $CURL_PROXY -f -k -L -o"
 fi
 
 if [[ -e $old_config ]]; then
