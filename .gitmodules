@@ -82,3 +82,6 @@
 [submodule "packs/dev/clojure-pack/vendor/submodules/nrepl-eval-sexp-fu"]
         path = packs/dev/clojure-pack/vendor/submodules/nrepl-eval-sexp-fu
         url = git://github.com/samaaron/nrepl-eval-sexp-fu.git
+[submodule "packs/dev/clojure-pack/vendor/submodules/nrepl"]
+	path = packs/dev/clojure-pack/vendor/submodules/nrepl
+	url = git://github.com/kingtim/nrepl.el.git
