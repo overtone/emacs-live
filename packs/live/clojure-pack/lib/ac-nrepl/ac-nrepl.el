@@ -39,6 +39,15 @@
 ;;     (eval-after-load "auto-complete"
 ;;       '(add-to-list 'ac-modes 'nrepl-mode))
 
+;; If you want to trigger auto-complete using TAB in nrepl buffers, you may
+;; want to use auto-complete in your `completion-at-point-functions':
+
+;;     (defun set-auto-complete-as-completion-at-point-function ()
+;;       (setq completion-at-point-functions '(auto-complete)))
+;;     (add-hook 'auto-complete-mode-hook 'set-auto-complete-as-completion-at-point-function)
+;;
+;;     (add-hook 'nrepl-mode-hook 'set-auto-complete-as-completion-at-point-function)
+;;     (add-hook 'nrepl-interaction-mode-hook 'set-auto-complete-as-completion-at-point-function)
 
 ;;; Code:
 
@@ -57,8 +66,10 @@
   (if (fboundp 'nrepl-completion-complete-core-fn)
       (nrepl-completion-complete-core-fn ac-prefix)
     ;; TODO: remove the following once nrepl-completion-complete-core-fn is in stable nrepl release
-    (let ((form (format "(complete.core/completions \"%s\" *ns*)" ac-prefix)))
-      (car (read-from-string (plist-get (nrepl-send-string-sync form (nrepl-current-ns)) :value))))))
+    (let* ((form (format "(complete.core/completions \"%s\" *ns*)" ac-prefix))
+           (response (plist-get (nrepl-send-string-sync form (nrepl-current-ns)) :value)))
+      (when response
+        (car (read-from-string response))))))
 
 (defun ac-nrepl-documentation (symbol)
   "Return documentation for the given SYMBOL, if available."

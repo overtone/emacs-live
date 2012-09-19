@@ -36,6 +36,16 @@ active. To do this, put the following code in your emacs init file to
      (eval-after-load "auto-complete"
        '(add-to-list 'ac-modes 'nrepl-mode))
 
+If you want to trigger `auto-complete` using TAB in nrepl buffers, you may
+want to put `auto-complete` into your `completion-at-point-functions`:
+
+    (defun set-auto-complete-as-completion-at-point-function ()
+      (setq completion-at-point-functions '(auto-complete)))
+    (add-hook 'auto-complete-mode-hook 'set-auto-complete-as-completion-at-point-function)
+
+    (add-hook 'nrepl-mode-hook 'set-auto-complete-as-completion-at-point-function)
+    (add-hook 'nrepl-interaction-mode-hook 'set-auto-complete-as-completion-at-point-function)
+
 Usage
 =====
 

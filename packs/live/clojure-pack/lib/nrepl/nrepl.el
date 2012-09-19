@@ -5,7 +5,7 @@
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Phil Hagelberg <technomancy@gmail.com>
 ;; URL: http://www.github.com/kingtim/nrepl.el
-;; Version: 0.1.4
+;; Version: 0.1.5
 ;; Keywords: languages, clojure, nrepl
 ;; Package-Requires: ((clojure-mode "1.11"))
 
@@ -66,7 +66,7 @@
   :type 'hook
   :group 'nrepl)
 
-(defvar nrepl-version "0.1.4-preview"
+(defvar nrepl-version "0.1.5-preview"
   "The current nrepl version.")
 
 (defface nrepl-prompt-face
@@ -108,6 +108,10 @@
 ;; buffer local declarations
 (defvar nrepl-session nil
   "Current nREPL session id.")
+
+(defvar nrepl-tooling-session nil
+  "Current nREPL tooling session id.
+To be used for tooling calls (i.e. completion, eldoc, etc)")
 
 (defvar nrepl-input-start-mark)
 
@@ -161,6 +165,7 @@ joined together.")
 
 (nrepl-make-variables-buffer-local
  'nrepl-session
+ 'nrepl-tooling-session
  'nrepl-input-start-mark
  'nrepl-prompt-start-mark
  'nrepl-request-counter
@@ -329,7 +334,8 @@ joined together.")
                       var)))
     (nrepl-send-string form
                        (nrepl-jump-to-def-handler (current-buffer))
-                       nrepl-buffer-ns)))
+                       nrepl-buffer-ns
+                       (nrepl-current-tooling-session))))
 
 (defun nrepl-jump (query)
   (interactive "P")
@@ -344,7 +350,8 @@ joined together.")
   (let ((strlst (plist-get
                  (nrepl-send-string-sync
                   (format "(complete.core/completions \"%s\" *ns*)" str)
-                  nrepl-buffer-ns)
+                  nrepl-buffer-ns
+                  (nrepl-current-tooling-session))
                  :value)))
     (when strlst
       (car (read-from-string strlst)))))
@@ -389,7 +396,8 @@ joined together.")
         (nrepl-send-string form
                            (nrepl-eldoc-handler (current-buffer)
                                                 thing)
-                           nrepl-buffer-ns))))
+                           nrepl-buffer-ns
+                           (nrepl-current-tooling-session)))))
 
 (defun nrepl-turn-on-eldoc-mode ()
   (make-local-variable 'eldoc-documentation-function)
@@ -1138,6 +1146,10 @@ buffer."
   (with-current-buffer "*nrepl-connection*"
     nrepl-session))
 
+(defun nrepl-current-tooling-session ()
+  (with-current-buffer "*nrepl-connection*"
+    nrepl-tooling-session))
+
 (defun nrepl-send-request (request callback)
   (let* ((request-id (number-to-string (incf nrepl-request-counter)))
          (message (nrepl-bencode (append (list "id" request-id) request))))
@@ -1160,15 +1172,15 @@ buffer."
                             "interrupt-id" pending-request-id)
                       callback))
 
-(defun nrepl-eval-request (input &optional ns)
+(defun nrepl-eval-request (input &optional ns session)
   (append (if ns (list "ns" ns))
           (list
            "op" "eval"
-           "session" (nrepl-current-session)
+           "session" (or session (nrepl-current-session))
            "code" input)))
 
-(defun nrepl-send-string (input callback &optional ns)
-  (nrepl-send-request (nrepl-eval-request input ns) callback))
+(defun nrepl-send-string (input callback &optional ns session)
+  (nrepl-send-request (nrepl-eval-request input ns session) callback))
 
 (defun nrepl-sync-request-handler (buffer)
   (nrepl-make-response-handler buffer
@@ -1195,12 +1207,16 @@ The result is a plist with keys :value, :stderr and :stdout."
   (with-current-buffer "*nrepl-connection*"
     (setq nrepl-sync-response nil)
     (nrepl-send-request request (nrepl-sync-request-handler (current-buffer)))
-    (while (null nrepl-sync-response)
-      (accept-process-output nil 0 5))
+    (while (or (null nrepl-sync-response)
+               (null (plist-get nrepl-sync-response :done)))
+      (accept-process-output nil 0.005))
     nrepl-sync-response))
 
-(defun nrepl-send-string-sync (input &optional ns)
-  (nrepl-send-request-sync (nrepl-eval-request input ns)))
+(defun nrepl-send-string-sync (input &optional ns session)
+  (nrepl-send-request-sync (nrepl-eval-request input ns session)))
+
+(defalias 'nrepl-eval 'nrepl-send-string-sync)
+(defalias 'nrepl-eval-async 'nrepl-send-string)
 
 (defun nrepl-send-input (&optional newline)
   "Goto to the end of the input and send the current input.
@@ -1446,7 +1462,8 @@ the buffer should appear."
   (setq nrepl-ido-ns ns)
   (nrepl-send-string (prin1-to-string (nrepl-ido-form nrepl-ido-ns))
                      (nrepl-ido-read-var-handler ido-callback (current-buffer))
-                     nrepl-buffer-ns))
+                     nrepl-buffer-ns
+                     (nrepl-current-tooling-session)))
 
 (defun nrepl-operator-before-point ()
   (ignore-errors
@@ -1470,7 +1487,8 @@ symbol at point, or if QUERY is non-nil."
         (doc-buffer (nrepl-popup-buffer "*nREPL doc*" t)))
     (nrepl-send-string form
                        (nrepl-popup-eval-out-handler doc-buffer)
-                       nrepl-buffer-ns)))
+                       nrepl-buffer-ns
+                       (nrepl-current-tooling-session))))
 
 (defun nrepl-doc (query)
   "Open a window with the docstring for the given entry.
@@ -1575,7 +1593,19 @@ under point, prompts for a var."
 ;;; client
 (defun nrepl-create-nrepl-buffer (process)
   (nrepl-init-repl-buffer process
-                          (switch-to-buffer-other-window (generate-new-buffer-name "*nrepl*"))))
+    (let ((buf (generate-new-buffer-name "*nrepl*")))
+      (switch-to-buffer-other-window buf)
+      buf)))
+
+
+(defun nrepl-new-tooling-session-handler (process)
+  (lexical-let ((process process))
+    (lambda (response)
+      (nrepl-dbind-response response (id new-session)
+        (cond (new-session
+               (with-current-buffer (process-buffer process)
+                 (setq nrepl-tooling-session new-session)
+                 (remhash id nrepl-requests))))))))
 
 (defun nrepl-new-session-handler (process &optional create-nrepl-buffer-p)
   (lexical-let ((process process)
@@ -1591,6 +1621,10 @@ under point, prompts for a var."
                    (nrepl-create-nrepl-buffer process))
                  (run-hooks 'nrepl-connected-hook))))))))
 
+(defun nrepl-init-client-sessions (process)
+  (nrepl-create-client-session (nrepl-new-session-handler process t))
+  (nrepl-create-client-session (nrepl-new-tooling-session-handler process)))
+
 (defun nrepl-connect (host port)
   (message "Connecting to nREPL on %s:%s..." host port)
   (let ((process (open-network-stream "nrepl" "*nrepl-connection*" host
@@ -1598,7 +1632,7 @@ under point, prompts for a var."
     (set-process-filter process 'nrepl-net-filter)
     (set-process-sentinel process 'nrepl-sentinel)
     (set-process-coding-system process 'utf-8-unix 'utf-8-unix)
-    (nrepl-create-client-session (nrepl-new-session-handler process t))
+    (nrepl-init-client-sessions process)
     process))
 
 
@@ -1611,4 +1645,9 @@ under point, prompts for a var."
   (nrepl-connect host port))
 
 (provide 'nrepl)
+
+;; Local Variables:
+;; byte-compile-warnings: (not cl-functions)
+;; End:
+
 ;;; nrepl.el ends here
