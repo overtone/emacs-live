@@ -3,7 +3,7 @@
 ;; Copyright (C) 2009-2012  Free Software Foundation, Inc
 
 ;; Author: Toby Cubitt <toby-undo-tree@dr-qubit.org>
-;; Version: 0.5.4
+;; Version: 0.5.5
 ;; Keywords: convenience, files, undo, redo, history, tree
 ;; URL: http://www.dr-qubit.org/emacs.php
 ;; Repository: http://www.dr-qubit.org/git/undo-tree.git
@@ -718,202 +718,6 @@
 ;; the undo tree, they *never* modify existing undo history. So you can always
 ;; return to previous buffer states by switching to a previous branch of the
 ;; tree.
-
-
-
-;;; Change Log:
-;;
-;; Version 0.5.4
-;; * support compression of undo history files if
-;;   `undo-tree-make-history-save-file-name' has been redefined or advised in
-;;   .emacs to return a compressed filename extension
-;; * install history auto-save hooks globally, otherwise
-;;   `undo-tree-load-history-hook' doesn't run because file has already been
-;;   loaded before `undo-tree-mode' has installed the hook function
-;;
-;; Version 0.5.3
-;; * modified `undo-list-transfer-to-tree' and `undo-list-pop-changeset' to
-;;   cope better if undo boundary before undo-tree-canary is missing
-;;   (e.g. org-mode's `org-self-insert-cluster-for-undo' removes this undo
-;;   boundary)
-;; * added `undo-tree-history-directory-alist', the undo history file analogue
-;;   of `backup-directory-alist'
-;;
-;; Version 0.5.2
-;; * added `~' to end of default history save-file name
-;; * avoid error in `undo-tree-save-history' when undo is disabled in buffer
-;;   or buffer has no undo information to save
-;;
-;; Version 0.5.1
-;; * remove now unnecessary compatibility hack for `called-interactively-p'
-;;
-;; Version 0.5
-;; * implemented diff display in visualizer, toggled on and off using
-;;   `undo-tree-visualizer-toggle-diff'
-;; * added `undo-tree-visualizer-diff' customization option, to display diff
-;;   by default
-;; * added `called-interactively-p', `registerv-make', `registerv-data',
-;;   `diff-no-select' and `diff-file-local-copy' compatibility hacks for
-;;   older Emacsen
-;; * split out core of `undo-tree-undo' and `undo-tree-redo' into internal
-;;   `undo-tree-undo-1' and `undo-tree-redo-1' functions, which now take an
-;;   additional optional argument to preserve timestamps
-;; * preserve timestamps when generating diff for visualizer diff view
-;; * fixed bug in `undo-tree-visualizer-select-left' and
-;;   `undo-tree-visualizer-select-right' when using selection mode whilst
-;;   timestamps are displayed
-;; * fixed bug in `undo-tree-draw-node' caused by new registerv structure,
-;;   which prevented registers from being displayed in visualizer
-;; * added `undo-tree-visualizer-relative-timestamps' option to make
-;;   visualizer  display timestamps relative to current time
-;; * use a function `undo-tree-make-history-save-file-name' function to
-;;   generate history save filename, allowing save file to be customized by
-;;   overriding this function
-;; * clear visualizer data / kill visualizer in `undo-tree-save-history'
-;;   before saving history to file, otherwise markers in visualizer meta-data
-;;   cause read errors in `undo-tree-load-history'
-;; * make `undo-tree-visualizer-timestamps' into defcustom, to allow
-;;   timestamps to be displayed by default
-;; * use `undo-tree-visualizer-selected-node' to store currently selected node
-;;   in visualizer selection mode, instead of relying on point location, to
-;;   avoid errors if point was moved manually
-;; * added `undo-tree-visualizer-abort' command to quit visualizer and return
-;;   to original state, stored in `undo-tree-visualizer-initial-node'
-;;
-;; Version 0.4
-;; * implemented persistent history storage: `undo-tree-save-history' and
-;;   `undo-tree-load-history' save and restore an undo tree to file, enabling
-;;   `undo-tree-auto-save-history' causes history to be saved and restored
-;;   automatically when saving or loading files
-;; * renamed internal `make-undo-tree-<struct>' functions to
-;;   `undo-tree-make-<struct>' to avoid polluting name-space
-;; * create proper registerv structure using `registerv-make' when storing
-;;   undo state in registers in `undo-tree-save-state-to-register' (and
-;;   `undo-tree-restore-state-from-register')
-;; * suppress branch point messages when undo/redoing from `undo-tree-set'
-;; * make various interactive commands signal an error if buffer is read-only
-;; * let-bind `inhibit-read-only' instead of setting and restoring
-;;   `buffer-read-only'
-;; * use non-nil `undo-tree-inhibit-kill-visualizer' instead of
-;;   `undo-in-progress' to inhibit `undo-tree-kill-visualizer', so that
-;;   undoing and redoing in parent buffer also kill visualizer
-;;
-;; Version 0.3.5
-;; * improved `undo-tree-switch-branch': display current branch number in
-;;   prompt, switch to other branch without prompting when there are only two,
-;;   and display message indicating new branch number after switching
-;;
-;; Version 0.3.4
-;; * set `permanent-local' property on `buffer-undo-tree', to prevent history
-;;   being discarded when switching major-mode
-;; * added `undo-tree-enable-undo-in-region' customization option to allow
-;;   undo-in-region to be disabled.
-;; * fixed bug in `undo-list-pop-changeset' which, through a subtle chain of
-;;   consequences, occasionally caused undo-tree-mode to lose large amounts of
-;;   undo history (thanks to Magnar Sveen for his sterling efforts in helping
-;;   track this down!)
-;;
-;; Version 0.3.3;
-;; * added `term-mode' to `undo-tree-incompatible-major-modes'
-;;
-;; Version 0.3.2
-;; * added additional check in `undo-list-GCd-marker-elt-p' to guard against
-;;   undo elements being mis-identified as marker elements
-;; * fixed bug in `undo-list-transfer-to-tree'
-;;
-;; Version 0.3.1
-;; * use `get-buffer-create' when creating the visualizer buffer in
-;;   `undo-tree-visualize', to fix bug caused by `global-undo-tree-mode' being
-;;   enabled in the visualizer when `default-major-mode' is set to something
-;;   other than `fundamental-mode' (thanks to Michael Heerdegen for suggesting
-;;   this fix)
-;; * modified `turn-on-undo-tree-mode' to avoid turning on `undo-tree-mode' if
-;;   the buffer's `major-mode' implements its own undo system, by checking
-;;   whether `undo' is remapped, the default "C-/" or "C-_" bindings have been
-;;   overridden,  or the `major-mode' is listed in
-;;   `undo-tree-incompatible-major-modes'
-;; * discard position entries from `buffer-undo-list' changesets created by
-;;   undoing or redoing, to ensure point is always moved to where the change
-;;   is (standard Emacs `undo' also does this)
-;; * fixed `undo-tree-draw-node' to use correct faces and indicate registers
-;;   when displaying timestamps in visualizer
-;;
-;; Version 0.3
-;; * implemented undo-in-region
-;; * fixed bugs in `undo-list-transfer-to-tree' and
-;;   `undo-list-rebuild-from-tree' which caused errors when undo history was
-;;   empty or disabled
-;; * defun `region-active-p' if not already defined, for compatibility with
-;;   older Emacsen
-;;
-;; Version 0.2.1
-;; * modified `undo-tree-node' defstruct and macros to allow arbitrary
-;;   meta-data to be stored in a plist associated with a node, and
-;;   reimplemented storage of visualizer data on top of this
-;; * display registers storing undo-tree state in visualizer
-;; * implemented keyboard selection in visualizer
-;; * rebuild `buffer-undo-list' from tree when disabling `undo-tree-mode'
-;;
-;; Version 0.2
-;; * added support for marker undo entries
-;;
-;; Version 0.1.7
-;; * pass null argument to `kill-buffer' call in `undo-tree-visualizer-quit',
-;;   since the argument's not optional in earlier Emacs versions
-;; * added match for "No further redo information" to
-;;   `debug-ignored-errors' to prevent debugger being called on this error
-;; * made `undo-tree-visualizer-quit' select the window displaying the
-;;   visualizer's parent buffer, or switch to the parent buffer if no window
-;;   is displaying it
-;; * fixed bug in `undo-tree-switch-branch'
-;; * general code tidying and reorganisation
-;; * fixed bugs in history-discarding logic
-;; * fixed bug in `undo-tree-insert' triggered by `undo-tree-visualizer-set'
-;;   by ensuring mark is deactivated
-;;
-;; Version 0.1.6
-;; * added `undo-tree-mode-lighter' customization option to allow the
-;;   mode-line lighter to be changed
-;; * bug-fix in `undo-tree-discard-node'
-;; * added `undo-tree-save-state-to-register' and
-;;   `undo-tree-restore-state-from-register' commands and keybindings for
-;;   saving/restoring undo-tree states using registers
-;;
-;; Version 0.1.5
-;; * modified `undo-tree-visualize' to mark the visualizer window as
-;;   soft-dedicated, and changed `undo-tree-visualizer-quit' to use
-;;   `kill-buffer', so that the visualizer window is deleted along with its
-;;   buffer if the visualizer buffer was displayed in a new window, but not if
-;;   it was displayed in an existing window.
-;;
-;; Version 0.1.4
-;; * modified `undo-tree-undo' and `undo-tree-redo' to always replace
-;;   redo/undo entries with new ones generated by `primitive-undo', as the new
-;;   changesets will restore the point more reliably
-;;
-;; Version 0.1.3
-;; * fixed `undo-tree-visualizer-quit' to remove `after-change-functions'
-;;   hook there, rather than in `undo-tree-kill-visualizer'
-;;
-;; Version 0.1.2
-;; * fixed keybindings
-;; * renamed `undo-tree-visualizer-switch-previous-branch' and
-;;   `undo-tree-visualizer-switch-next-branch' to
-;;   `undo-tree-visualizer-switch-branch-left' and
-;;   `undo-tree-visualizer-switch-branch-right'
-;;
-;; Version 0.1.1
-;; * prevented `undo-tree-kill-visualizer' from killing visualizer when
-;;   undoing/redoing from the visualizer, which completely broke the
-;;   visualizer!
-;; * changed one redo binding, so that at least one set of undo/redo bindings
-;;   works in a terminal
-;; * bound vertical scrolling commands in `undo-tree-visualizer-map', in case
-;;   they aren't bound globally
-;; * added missing :group argument to `defface's
-;;
-;; Version 0.1
-;; * initial release
 
 
 
@@ -1676,6 +1480,26 @@ Comparison is done with `eq'."
      (make-symbol (format "undo-tree-id%d" num))))
 
 
+(defun undo-tree-decircle (tree)
+  ;; Nullify PREVIOUS links of undo-tree-nodes, to make undo-tree data
+  ;; structure non-circular.
+  (undo-tree-mapc
+   (lambda (node)
+     (dolist (n (undo-tree-node-next node))
+       (setf (undo-tree-node-previous n) nil)))
+   tree))
+
+
+(defun undo-tree-recircle (tree)
+  ;; Recreate PREVIOUS links of undo-tree-nodes, to restore circular undo-tree
+  ;; data structure.
+  (undo-tree-mapc
+   (lambda (node)
+     (dolist (n (undo-tree-node-next node))
+       (setf (undo-tree-node-previous n) node)))
+   tree))
+
+
 
 
 ;;; =====================================================================
@@ -1788,6 +1612,10 @@ Comparison is done with `eq'."
 
 (defun undo-list-transfer-to-tree ()
   ;; Transfer entries accumulated in `buffer-undo-list' to `buffer-undo-tree'.
+
+  ;; `undo-list-transfer-to-tree' should never be called when undo is disabled
+  ;; (i.e. `buffer-undo-tree' is t)
+  (assert (not (eq buffer-undo-tree t)))
 
   ;; if `buffer-undo-tree' is empty, create initial undo-tree
   (when (null buffer-undo-tree) (setq buffer-undo-tree (make-undo-tree)))
@@ -1926,9 +1754,10 @@ Comparison is done with `eq'."
 	  (decf (undo-tree-size buffer-undo-tree)
 		(+ (undo-list-byte-size (undo-tree-node-undo node))
 		   (undo-list-byte-size (undo-tree-node-redo node))))
-	  ;; discard new root's undo data
+	  ;; discard new root's undo data and PREVIOUS link
 	  (setf (undo-tree-node-undo node) nil
-		(undo-tree-node-redo node) nil)
+		(undo-tree-node-redo node) nil
+		(undo-tree-node-previous node) nil)
           ;; if new root has branches, or new root is current node, next node
           ;; to discard is oldest leaf, otherwise it's new root
           (if (or (> (length (undo-tree-node-next node)) 1)
@@ -3050,6 +2879,10 @@ Argument is a character, naming the register."
 
 
 
+
+;;; =====================================================================
+;;;                       Persistent storage
+
 (defun undo-tree-make-history-save-file-name (file)
   "Create the undo history file name for FILE.
 Normally this is the file's name with `.' prepended and
@@ -3074,13 +2907,14 @@ Otherwise, prompt for one.
 If OVERWRITE is non-nil, any existing file will be overwritten
 without asking for confirmation."
   (interactive)
+  (when (eq buffer-undo-list t) (error "No undo information in this buffer"))
   (undo-list-transfer-to-tree)
   (when (and buffer-undo-tree (not (eq buffer-undo-tree t)))
     (condition-case nil
 	(undo-tree-kill-visualizer)
       (error (undo-tree-clear-visualizer-data buffer-undo-tree)))
     (let ((buff (current-buffer))
-	  (tree (copy-undo-tree buffer-undo-tree)))
+	  tree)
       ;; get filename
       (unless filename
 	(setq filename
@@ -3090,20 +2924,29 @@ without asking for confirmation."
       (when (or (not (file-exists-p filename))
 		overwrite
 		(yes-or-no-p (format "Overwrite \"%s\"? " filename)))
-	;; discard undo-tree object pool before saving
-	(setf (undo-tree-object-pool tree) nil)
-	;; print undo-tree to file
-	;; NOTE: We use `with-temp-buffer' instead of `with-temp-file' to
-	;;       allow `auto-compression-mode' to take effect, in case user
-	;;       has overridden or advised the default
-	;;       `undo-tree-make-history-save-file-name' to add a compressed
-	;;       file extension.
-	(with-auto-compression-mode
-	  (with-temp-buffer
-	    (prin1 (sha1 buff) (current-buffer))
-	    (terpri (current-buffer))
-	    (let ((print-circle t)) (prin1 tree (current-buffer)))
-	    (write-region nil nil filename)))))))
+	(unwind-protect
+	    (progn
+	      ;; transform undo-tree into non-circular structure, and make
+	      ;; temporary copy
+	      (undo-tree-decircle buffer-undo-tree)
+	      (setq tree (copy-undo-tree buffer-undo-tree))
+	      ;; discard undo-tree object pool before saving
+	      (setf (undo-tree-object-pool tree) nil)
+	      ;; print undo-tree to file
+	      ;; NOTE: We use `with-temp-buffer' instead of `with-temp-file'
+	      ;;       to allow `auto-compression-mode' to take effect, in
+	      ;;       case user has overridden or advised the default
+	      ;;       `undo-tree-make-history-save-file-name' to add a
+	      ;;       compressed file extension.
+	      (with-auto-compression-mode
+		(with-temp-buffer
+		  (prin1 (sha1 buff) (current-buffer))
+		  (terpri (current-buffer))
+		  (let ((print-circle t)) (prin1 tree (current-buffer)))
+		  (write-region nil nil filename))))
+	  ;; restore circular undo-tree data structure
+	  (undo-tree-recircle buffer-undo-tree))
+	))))
 
 
 
@@ -3160,17 +3003,21 @@ signaling an error if file is not found."
       ;; initialise empty undo-tree object pool
       (setf (undo-tree-object-pool tree)
 	    (make-hash-table :test 'eq :weakness 'value))
+      ;; restore circular undo-tree data structure
+      (undo-tree-recircle tree)
       (setq buffer-undo-tree tree))))
 
 
 
 ;; Versions of save/load functions for use in hooks
 (defun undo-tree-save-history-hook ()
-  (when (and undo-tree-mode undo-tree-auto-save-history)
+  (when (and undo-tree-mode undo-tree-auto-save-history
+	     (not (eq buffer-undo-list t)))
     (undo-tree-save-history nil t) nil))
 
 (defun undo-tree-load-history-hook ()
-  (when (and undo-tree-mode undo-tree-auto-save-history)
+  (when (and undo-tree-mode undo-tree-auto-save-history
+	     (not (eq buffer-undo-list t)))
     (undo-tree-load-history nil t)))
 
 

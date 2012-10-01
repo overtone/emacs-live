@@ -67,7 +67,7 @@
       (nrepl-completion-complete-core-fn ac-prefix)
     ;; TODO: remove the following once nrepl-completion-complete-core-fn is in stable nrepl release
     (let* ((form (format "(complete.core/completions \"%s\" *ns*)" ac-prefix))
-           (response (plist-get (nrepl-send-string-sync form (nrepl-current-ns)) :value)))
+           (response (plist-get (nrepl-send-string-sync form nrepl-buffer-ns) :value)))
       (when response
         (car (read-from-string response))))))
 
@@ -79,8 +79,8 @@
     (replace-regexp-in-string
      "^\\(  \\|-------------------------\r?\n\\)" ""
      (plist-get (nrepl-send-string-sync
-                 (format "(clojure.repl/doc %s)" symbol)
-                 (nrepl-current-ns))
+                 (format "(try (eval '(clojure.repl/doc %s)) (catch Exception e (println \"Error getting docs. Namespace?\")))" symbol)
+                 nrepl-buffer-ns)
                 :stdout)))))
 
 (defun ac-nrepl-symbol-start-pos ()

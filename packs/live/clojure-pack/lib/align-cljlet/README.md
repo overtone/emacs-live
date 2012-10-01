@@ -21,6 +21,7 @@ Forms currently handled:
  * loop
  * with-open
  * literal hashes {}
+ * defroute
 
 If there are let pairs together on the same line the code will refuse
 to align them. For example, the following will not align:
@@ -28,8 +29,12 @@ to align them. For example, the following will not align:
     (let [apple 2 pair 3
           peach 23] ...)
 
-will not be aligned
- 
+will not be aligned.
+
+# Custom variables:
+
+`defroute-columns` The number of columns to align in a defroute form.
+
 # Known limitations:
 
 * This program requires clojure mode to be running in order to
@@ -41,6 +46,8 @@ To use align-cljlet.el, add it to your load-path and include the
 following to your .emacs configuration.
 
 (require 'align-cljlet)
+
+Alternatively you may install this package from Marmalade.
 
 # Usage:
 

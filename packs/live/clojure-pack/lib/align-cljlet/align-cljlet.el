@@ -3,7 +3,7 @@
 ;; Copyrigth (C) 2011  Glen Stampoultzis
 
 ;; Author: Glen Stampoultzis <gstamp(at)gmail.com>
-;; Version: 0.1
+;; Version: 0.2
 ;; Package-Requires: ((clojure-mode "1.11.5"))
 ;; Keywords; clojure, align, let
 ;; URL: https://github.com/gstamp/align-cljlet
@@ -45,6 +45,7 @@
 ;; 14-Jan-2011 - Initial release
 ;; 23-Jan-2011 - Bug fixes and code cleanup.
 ;; 02-Apr-2012 - Package up for Marmalade
+;; 30-Aug-2012 - Support for aligning defroute.
 ;;
 ;;; Known limitations:
 ;;
@@ -67,7 +68,15 @@
 ;;
 ;; You may wish to bind this to a specific key.
 ;;
+;; Contains one custom variable called defroute-columns which is
+;; used to determine how many columns to align in a defroute call.
+;; Defaults to 1.
+;;
 
+(defcustom defroute-columns 1
+  "The number of columns to align in a defroute call"
+  :type 'integer
+  :group 'align-cljlet)
 
 (defun acl-found-alignable-form ()
   "Check if we are currently looking at a let form"
@@ -86,6 +95,7 @@
              (string-match " *binding" name)
              (string-match " *loop" name)
              (string-match " *with-open" name)
+             (string-match " *defroutes" name)
              )))
       (if (looking-at "{")
           t))))
@@ -126,6 +136,46 @@
       (forward-sexp)
       (- (current-column) col))))
 
+(defun acl-has-next-sexp ()
+  "Checks if there is another sexp after the point"
+  (save-excursion
+    (condition-case nil
+        (progn
+          (forward-sexp)
+          't)
+      ('error nil))))
+
+(defun acl-next-sexp ()
+  "Goes to the next sexp, returning true or false if there is no next"
+
+  (condition-case nil
+      (progn
+        (forward-sexp 2)
+        (backward-sexp)
+        't)
+    ('error nil)))
+
+(defun acl-calc-route-widths ()
+  "Calculate the widths required to align a defroutes macro"
+  (save-excursion
+    (let ((width1 0)
+          (width2 0)
+          (width3 0))
+      (while (progn
+               (down-list)
+               (if (> (acl-get-width) width1)
+                   (setq width1 (acl-get-width)))
+               ;; next column
+               (if (and (acl-next-sexp) (> (acl-get-width) width2))
+                   (setq width2 (acl-get-width)))
+               ;; next column
+               (if (and (acl-next-sexp) (> (acl-get-width) width3))
+                   (setq width3 (acl-get-width)))
+
+               (up-list)
+               (acl-has-next-sexp)))
+      (list width1 width2 width3))))
+
 (defun acl-calc-width ()
   "Calculate the width needed for all the definitions in the form"
   (save-excursion
@@ -149,21 +199,42 @@
 
 (defun acl-respace-single-let (max-width)
   "Respace the current definition"
+  (acl-respace-subform (list max-width)))
+
+(defun acl-respace-subform (widths)
+  "Respace a defroute subform using the widths given. Point must
+be positioned on the first s-exp in the subform."
   (save-excursion
-    (let (col current-width difference)
-      (setq col (current-column))
-      (forward-sexp)
-      (forward-sexp)
-      (backward-sexp)
-      (setq current-width (- (- (current-column) col) 1)
-            difference    (- max-width current-width))
+    (while widths
+      (let (col
+            current-width
+            difference
+            (max-width (car widths)))
+        (setq col (current-column))
+        (if (acl-next-sexp)
+            (progn
+              (setq current-width (- (- (current-column) col) 1)
+                    difference    (- max-width current-width))
+              (cond ((> difference 0)
+                     (insert (make-string difference ? )))
+                    ((< difference 0)
+                     (delete-backward-char (abs difference)))))))
       
-      (cond ((> difference 0)
-             (insert (make-string difference ? )))
-            ((< difference 0)
-             (delete-backward-char (abs difference))))
-      
-      )))
+      (setq widths (cdr widths)))
+    )
+  )
+
+(defun acl-respace-defroute-form (widths)
+  "Respace the entire defroute definition. Point must be
+positioned on the defroute form."
+  (let ((begin (point)))
+    (while (progn
+             (down-list)
+             (acl-respace-subform widths)
+             (up-list)
+             (acl-has-next-sexp)
+             ))
+    (indent-region begin (point))))
 
 (defun acl-respace-form (width)
   "Respace the entire definition"
@@ -173,16 +244,29 @@
              (acl-goto-next-pair)))
     (indent-region begin (point))))
 
+(defun acl-take-n (n xs)
+  "Take n elements from a list returning a new list"
+  (butlast xs (- (length xs) n)))
+
 (defun acl-align-form ()
-  (if (not (looking-at "{"))
-      ;; move to start of [
-      (down-list 2)
-    (down-list 1))
-  
-  (if (acl-lines-correctly-paired)
-      (let ((w (acl-calc-width)))
-        (acl-respace-form w)
-        )))
+  "Determine what type of form we are currently positioned at and align it"
+  (if (looking-at "( *defroutes")
+      (progn
+        (down-list 1)
+        (forward-sexp 3)
+        (backward-sexp)                 ; this position's us back at the start of the
+                                        ; first form.
+        (acl-respace-defroute-form (acl-take-n defroute-columns (acl-calc-route-widths))))
+    (progn
+      (if (not (looking-at "{"))
+          ;; move to start of [
+          (down-list 2)
+        (down-list 1))
+      
+      (if (acl-lines-correctly-paired)
+          (let ((w (acl-calc-width)))
+            (acl-respace-form w)
+            )))))
 
 ;; Borrowed from align-let.el:
 (defun acl-backward-to-code ()
@@ -215,10 +299,5 @@ from `beginning-of-defun'.  If it finds nothing then just go to
         (acl-align-form))))
 
 (provide 'align-cljlet)
-
-(defun delme ()
-  (interactive)
-  (up-list -1)
-  )
 
 ;;; align-cljlet.el ends here
