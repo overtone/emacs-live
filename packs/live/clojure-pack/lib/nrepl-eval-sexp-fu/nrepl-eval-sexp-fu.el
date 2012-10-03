@@ -337,11 +337,12 @@ such that ignores any prefix arguments."
     (nrepl-eval-sexp-fu-flash (save-excursion
                           (backward-char)
                           (bounds-of-thing-at-point 'sexp))))
-  (define-nrepl-eval-sexp-fu-flash-command nrepl-eval-defun
+  (define-nrepl-eval-sexp-fu-flash-command nrepl-eval-expression-at-point
     (nrepl-eval-sexp-fu-flash (save-excursion
-                          (nrepl-end-of-defun)
-                          (nrepl-beginning-of-defun)
+                          (end-of-defun)
+                          (beginning-of-defun)
                           (bounds-of-thing-at-point 'sexp))))
+
   (progn
     ;; Defines:
     ;; `nrepl-eval-sexp-fu-nrepl-eval-expression-inner-list',
