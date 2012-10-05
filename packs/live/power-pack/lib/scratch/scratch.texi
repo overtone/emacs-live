@@ -1,0 +1,52 @@
+\input texinfo.tex    @c -*-texinfo-*-
+@c %**start of header
+@setfilename scratch.info
+@settitle Scratch User Manual
+@documentencoding utf-8
+@c %**end of header
+
+@dircategory Emacs
+@direntry
+* Scratch: (scratch).        Scratch buffers that inherit modes
+@end direntry
+
+@copying
+Copyright @copyright{} 2010, Christopher Browne
+
+@quotation
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.2 or
+any later version published by the Free Software Foundation; with no
+Invariant Sections, with no Front-Cover Texts, and with no Back-Cover
+Texts.
+@end quotation
+@end copying
+
+@node Top
+@top Scratch User Manual
+
+Scratch is an extension to Emacs that enables one to create scratch
+buffers that are in the same mode as the current buffer.  This is
+notably useful when working on code in some language; you may grab
+code into a scratch buffer, and, by virtue of this extension, do so
+using the Emacs formatting rules for that language.
+
+@menu
+* Introduction::                
+* Acknowledgments::             
+@end menu
+
+@node Introduction
+@chapter Introduction
+
+With Scratch, you can switch to a buffer using the same mode as your
+present buffer.
+
+@node Acknowledgments
+@chapter Acknowledgments
+
+Scratch was written by Ian Eure.
+
+Documentation by Christopher Browne.
+
+@bye

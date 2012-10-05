@@ -852,13 +852,13 @@ Undo-tree history is saved to a file called
 file itself.
 
 WARNING! `undo-tree-auto-save-history' will not work properly in
-Emacs versions prior to 24.1.50.1, so it cannot be enabled via
+Emacs versions prior to 24.3, so it cannot be enabled via
 the customization interface in versions earlier than that one. To
 ignore this warning and enable it regardless, set
 `undo-tree-auto-save-history' to a non-nil value outside of
 customize."
   :group 'undo-tree
-  :type (if (version-list-< (version-to-list emacs-version) '(24 1 50 1))
+  :type (if (version-list-< (version-to-list emacs-version) '(24 3))
 	    '(choice (const :tag "<disabled>" nil))
 	  'boolean))
 
@@ -1284,13 +1284,13 @@ in visualizer."
   (let ((len (length (undo-tree-make-visualizer-data))))
     `(and (vectorp ,v) (= (length ,v) ,len))))
 
-(defmacro undo-tree-node-clear-visualizer-data (node)
-  `(setf (undo-tree-node-meta-data ,node)
-	 (delq nil
-	       (delq :visualizer
-		     (plist-put (undo-tree-node-meta-data ,node)
-				:visualizer nil)))))
-
+(defun undo-tree-node-clear-visualizer-data (node)
+  (let ((plist (undo-tree-node-meta-data node)))
+    (if (eq (car plist) :visualizer)
+	(setf (undo-tree-node-meta-data node) (nthcdr 2 plist))
+      (while (and plist (not (eq (cadr plist) :visualizer)))
+	(setq plist (cdr plist)))
+      (if plist (setcdr plist (nthcdr 3 plist))))))
 
 (defmacro undo-tree-node-lwidth (node)
   `(let ((v (plist-get (undo-tree-node-meta-data ,node) :visualizer)))

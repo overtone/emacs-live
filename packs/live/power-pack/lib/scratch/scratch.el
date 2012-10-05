@@ -1,10 +1,10 @@
 ;;; scratch.el --- Mode-specific scratch buffers
 
 ;; Author: Ian Eure <ian.eure@gmail.com>
-
+;; Version: 1.1
 ;; Keywords: editing
 
-;; Copyright (c) 2009-1020, 2010 Ian Eure <ian.eure@gmail.com>
+;; Copyright (c) 2009-1020, 2010, 2012 Ian Eure <ian.eure@gmail.com>
 ;; All rights reserved.
 
 ;; Redistribution and use in source and binary forms, with or without
@@ -43,6 +43,9 @@
 
 ;; 2010-08-16 Ian Eure
 ;;   Broke out into its own file.
+
+;; 2012-08-30 Ian Eure
+;;   Dump current region into new scratch buffer
 
 ;;; Code:
 
@@ -86,6 +89,7 @@ for those buffers."
                (push (substring name 0 -5) modes)))))
         modes)))
 
+;;;###autoload
 (defun scratch (&optional arg)
   "Get a scratch buffer for the current mode."
   (interactive "p")
@@ -106,10 +110,15 @@ for those buffers."
     (cond ((bufferp buf)
            (pop-to-buffer buf))
           (t
-           (setq buf (get-buffer-create name))
-           (pop-to-buffer buf)
-           (let ((scratch-buffer t))
-             (funcall mode))
-           (setq scratch-buffer t)))))
+           (let ((contents (when (region-active-p)
+                             (buffer-substring (region-beginning)
+                                               (region-end)))))
+             (setq buf (get-buffer-create name))
+             (pop-to-buffer buf)
+             (let ((scratch-buffer t))
+               (funcall mode))
+             (when contents (save-excursion (insert contents)))
+             (setq scratch-buffer t))))))
 
 (provide 'scratch)
+;;; scratch.el ends here

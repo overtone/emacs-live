@@ -9,7 +9,7 @@
 ;; Phil Hagelberg
 ;; Dan McKinley
 ;; Yann Hodique <yann.hodique@gmail.com>
-;; Version: 1.0.1
+;; Version: 1.0.2
 ;; Created: 21 Jul 2008
 ;; Keywords: gist git github paste pastie pastebin
 ;; Package-Requires: ((eieio "1.3") (gh "0.5.3") (tabulated-list "0"))
@@ -89,8 +89,10 @@ they're posted.")
 (defvar gist-list-db nil)
 
 (defvar gist-id nil)
+(make-variable-buffer-local 'gist-id)
 
 (defvar gist-filename nil)
+(make-variable-buffer-local 'gist-filename)
 
 (defun gist-get-api (&optional sync)
   (gh-gist-api "api" :sync sync :cache t :num-retries 1))
@@ -247,12 +249,16 @@ for the gist."
           (with-current-buffer buffer
             (delete-region (point-min) (point-max))
             (insert (oref f :content))
-            (when (fboundp mode)
-              (funcall mode))
-            ;; set minor mode
-            (gist-mode 1)
-            (setq gist-id id
-                  gist-filename (oref f :filename))
+            (let ((fname (oref f :filename)))
+              ;; set major mode
+              (setq buffer-file-name fname)
+              (if (fboundp mode)
+                  (funcall mode)
+                (normal-mode))
+              ;; set minor mode
+              (gist-mode 1)
+              (setq gist-id id
+                    gist-filename fname))
             (set-buffer-modified-p nil))
           (setq result buffer))))
     (if multi
@@ -431,9 +437,7 @@ for the gist."
 (define-minor-mode gist-mode
   "Minor mode for buffers containing gists files"
   :lighter " gist"
-  :map 'gist-mode-map
-  (make-local-variable 'gist-id)
-  (make-local-variable 'gist-filename))
+  :map 'gist-mode-map)
 
 ;;; Dired integration
 

@@ -1,10 +1,10 @@
 ;;; smex.el --- M-x interface with Ido-style fuzzy matching.
 
-;; Copyright (C) 2009, 2010 Cornelius Mika
+;; Copyright (C) 2009-2012 Cornelius Mika
 ;;
 ;; Author: Cornelius Mika <cornelius.mika@gmail.com>
 ;; URL: http://github.com/nonsequitur/smex/
-;; Version: 1.1.2
+;; Version: 2.0
 ;; Keywords: convenience, usability
 
 ;; This file is not part of GNU Emacs.
@@ -27,14 +27,11 @@
 ;;; Code:
 
 (require 'ido)
-;; Provides `union', `dolist' and `delete-if'.
-(require 'cl)
 
 (defgroup smex nil
   "M-x interface with Ido-style fuzzy matching and ranking heuristics."
   :group 'extensions
   :group 'convenience
-  :version "1.1"
   :link '(emacs-library-link :tag "Lisp File" "smex.el"))
 
 (defcustom smex-auto-update t
@@ -73,6 +70,7 @@ Set this to nil to disable fuzzy matching."
   :type 'boolean
   :group 'smex)
 
+(defvar smex-initialized-p nil)
 (defvar smex-cache)
 (defvar smex-ido-cache)
 (defvar smex-data)
@@ -83,11 +81,15 @@ Set this to nil to disable fuzzy matching."
 ;;--------------------------------------------------------------------------------
 ;; Smex Interface
 
+;;;###autoload
 (defun smex ()
   (interactive)
+  (unless smex-initialized-p
+    (smex-initialize))
   (if (smex-already-running)
       (smex-update-and-rerun)
-    (and smex-auto-update (smex-detect-new-commands)
+    (and smex-auto-update
+         (smex-detect-new-commands)
          (smex-update))
     (smex-read-and-run smex-ido-cache)))
 
@@ -106,6 +108,7 @@ Set this to nil to disable fuzzy matching."
           (funcall action chosen-item))
       (unwind-protect
           (progn (setq prefix-arg current-prefix-arg)
+                 (setq this-command chosen-item)
                  (command-execute chosen-item 'record))
         (smex-rank chosen-item)
         (smex-show-key-advice chosen-item)
@@ -117,10 +120,10 @@ Set this to nil to disable fuzzy matching."
 (defun smex-major-mode-commands ()
   "Like `smex', but limited to commands that are relevant to the active major mode."
   (interactive)
-  (let ((commands (union (extract-commands-from-keymap (current-local-map))
-                         (extract-commands-from-features major-mode))))
+  (let ((commands (delete-dups (append (extract-commands-from-keymap (current-local-map))
+                                       (extract-commands-from-features major-mode)))))
     (setq commands (smex-sort-according-to-cache commands))
-    (setq commands (mapcar (lambda (command) (symbol-name command)) commands))
+    (setq commands (mapcar #'symbol-name commands))
     (smex-read-and-run commands)))
 
 (defun smex-completing-read (choices initial-input)
@@ -129,7 +132,8 @@ Set this to nil to disable fuzzy matching."
         (ido-enable-prefix nil)
         (ido-enable-flex-matching smex-flex-matching)
         (ido-max-prospects 10))
-    (ido-completing-read (smex-prompt-with-prefix-arg) choices nil nil initial-input)))
+    (ido-completing-read (smex-prompt-with-prefix-arg) choices nil nil
+                         initial-input nil (car choices))))
 
 (defun smex-prompt-with-prefix-arg ()
   (if (not current-prefix-arg)
@@ -146,6 +150,7 @@ Set this to nil to disable fuzzy matching."
 
 (defun smex-prepare-ido-bindings ()
   (define-key ido-completion-map (kbd "C-h f") 'smex-describe-function)
+  (define-key ido-completion-map (kbd "C-h w") 'smex-where-is)
   (define-key ido-completion-map (kbd "M-.") 'smex-find-function)
   (define-key ido-completion-map (kbd "C-a") 'move-beginning-of-line))
 
@@ -217,36 +222,39 @@ Set this to nil to disable fuzzy matching."
   (run-with-idle-timer idle-time t
                        '(lambda () (if (smex-detect-new-commands) (smex-update)))))
 
-(defun smex-detect-legacy-save-file ()
-  "The default value of `smex-save-file' was changed in between releases.
-This function provides temporary means to aid the transition."
-  (unless (file-readable-p smex-save-file)
-    (let ((legacy-save-file "~/smex.save"))
-      (when (file-readable-p legacy-save-file)
-        (message (format "%s not found. Falling back to %s"
-                         smex-save-file legacy-save-file))
-        (setq smex-save-file legacy-save-file)))))
-
 ;;;###autoload
 (defun smex-initialize ()
   (interactive)
   (unless ido-mode (smex-initialize-ido))
-  (smex-detect-legacy-save-file)
-  (let ((save-file (expand-file-name smex-save-file)))
-    (if (file-readable-p save-file)
-        (with-temp-buffer
-          (insert-file-contents save-file)
-          (setq smex-history (read (current-buffer))
-                smex-data (read (current-buffer))))
-      (setq smex-history nil smex-data nil))
-    (smex-detect-new-commands)
-    (smex-rebuild-cache)
-    (add-hook 'kill-emacs-hook 'smex-save-to-file)))
+  (smex-load-save-file)
+  (smex-detect-new-commands)
+  (smex-rebuild-cache)
+  (add-hook 'kill-emacs-hook 'smex-save-to-file)
+  (setq smex-initialized-p t))
 
 (defun smex-initialize-ido ()
   "Sets up a minimal Ido environment for `ido-completing-read'."
   (ido-init-completion-maps)
   (add-hook 'minibuffer-setup-hook 'ido-minibuffer-setup))
+
+(defun smex-load-save-file ()
+  "Loads `smex-history' and `smex-data' from `smex-save-file'"
+  (let ((save-file (expand-file-name smex-save-file)))
+    (if (file-readable-p save-file)
+        (with-temp-buffer
+          (insert-file-contents save-file)
+          (condition-case nil
+              (setq smex-history (read (current-buffer))
+                    smex-data    (read (current-buffer)))
+            (error (if (save-file-not-empty-p)
+                       (error "Invalid data in smex-save-file (%s). Can't restore history."
+                              smex-save-file)
+                     (if (not (boundp 'smex-history)) (setq smex-history))
+                     (if (not (boundp 'smex-data))    (setq smex-data))))))
+      (setq smex-history nil smex-data nil))))
+
+(defsubst save-file-not-empty-p ()
+  (string-match-p "\[^[:space:]\]" (buffer-string)))
 
 (defun smex-save-history ()
   "Updates `smex-history'"
@@ -380,6 +388,10 @@ Returns nil when reaching the end of the list."
                            (describe-function chosen)
                            (pop-to-buffer "*Help*"))))
 
+(defun smex-where-is ()
+  (interactive)
+  (smex-do-with-selected-item 'where-is))
+
 (defun smex-find-function ()
   (interactive)
   (smex-do-with-selected-item 'find-function))
@@ -405,13 +417,17 @@ Returns nil when reaching the end of the list."
 (defun smex-key-advice (command)
   (let ((keys (where-is-internal command)))
     (if smex-key-advice-ignore-menu-bar
-        (setq keys (delete-if
-                    (lambda (vect) (equal (aref vect 0) 'menu-bar))
-                    keys)))
+        (setq keys (smex-filter-out-menu-bar-bindings keys)))
     (if keys
         (format "You can run the command `%s' with %s"
                 command
                 (mapconcat 'key-description keys ", ")))))
+
+(defsubst smex-filter-out-menu-bar-bindings (keys)
+  (delq nil (mapcar (lambda (key-vec)
+                      (unless (equal (aref key-vec 0) 'menu-bar)
+                        key-vec))
+                    keys)))
 
 (defun smex-unlogged-message (string)
   "Bypasses logging in *Messages*"
@@ -436,13 +452,13 @@ Returns nil when reaching the end of the list."
   (let ((library-path (symbol-file mode))
         (mode-name (symbol-name mode))
         commands)
-    
+
     (string-match "\\(.+?\\)\\(-mode\\)?$" mode-name)
     ;; 'lisp-mode' -> 'lisp'
     (setq mode-name (match-string 1 mode-name))
     (if (string= mode-name "c") (setq mode-name "cc"))
     (setq mode-name (regexp-quote mode-name))
-    
+
     (dolist (feature load-history)
       (let ((feature-path (car feature)))
         (when (and feature-path (or (equal feature-path library-path)
@@ -466,9 +482,11 @@ sorted by frequency of use."
                                             command-item))
                                         smex-data))))
     (view-buffer-other-window "*Smex: Unbound Commands*")
-    (toggle-read-only nil)
-    (erase-buffer)
-    (ido-pp 'unbound-commands)
+    (setq buffer-read-only t)
+    (let ((inhibit-read-only t))
+      (erase-buffer)
+      (ido-pp 'unbound-commands))
+    (set-buffer-modified-p nil)
     (goto-char (point-min))))
 
 (provide 'smex)

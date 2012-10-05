@@ -98,7 +98,9 @@
 (defmethod gh-oauth-auth-new ((api gh-oauth-api) &optional scopes)
   (gh-api-authenticated-request
    api (gh-object-reader (oref api auth-cls)) "POST"
-   (format "/authorizations") (list (cons 'scopes scopes))))
+   (format "/authorizations") (list (cons 'scopes scopes)
+                                    (cons 'note (format "gh.el - %s"
+                                                        (system-name))))))
 
 (defmethod gh-oauth-auth-update ((api gh-oauth-api) id &optional scopes)
   (gh-api-authenticated-request

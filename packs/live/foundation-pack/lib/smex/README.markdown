@@ -1,4 +1,4 @@
-![Smex](http://sites.google.com/site/cumulatm/home/smex-logo.png)
+![Smex](https://sites.google.com/site/cumulatm/home/smex-logo.png)
 
 ## Smex
 
@@ -6,7 +6,7 @@ Smex is a M-x enhancement for Emacs. Built on top of Ido, it provides
 a convenient interface to your recently and most frequently used
 commands. And to all the other commands, too.
 
-![Smex](http://sites.google.com/site/cumulatm/home/SmexScreenshotImage.png)
+![Smex](https://sites.google.com/site/cumulatm/home/SmexScreenshotImage.png)
 
 ## Get started
 
@@ -16,11 +16,12 @@ commands. And to all the other commands, too.
 
 * To auto-start Smex every time you open Emacs add these lines to your .emacs file:
 
-        (require 'smex)
-        (smex-initialize)
-        
+        (require 'smex) ; Not needed if you use package.el
+        (smex-initialize) ; Can be omitted. This might cause a (minimal) delay
+                          ; when Smex is auto-initialized on its first run.
+
 * Bind some keys:
-   
+
         (global-set-key (kbd "M-x") 'smex)
         (global-set-key (kbd "M-X") 'smex-major-mode-commands)
         ;; This is your old M-x.
@@ -48,6 +49,8 @@ are relevant to the active major mode. Try it with Dired or Magit.
 currently selected command.
 
 `M-.` jumps to the definition of the selected command.
+
+`C-h w` shows the key bindings for the selected command. (Via `where-is`.)
 
 ### Accessing new commands
 Before accepting user input, Smex checks for new command definitions
@@ -80,6 +83,24 @@ Set `smex-prompt-string` for a custom prompt.
 
 ### Ignore menu bar bindings
 Enable `smex-key-advice-ignore-menu-bar` to ignore clues to menu bar bindings.
+
+## Changelog
+
+### 2.0
+  * Remove `smex-detect-legacy-save-file`.
+    Only relevant (but a breaking change) when you rely on a long deprecated default
+    value of smex-save-file.
+  * Ignore smex-save-file when it's empty instead of raising an error.
+    Warn on invalid data in smex-save-file. Fixes [issue #23]
+    (https://github.com/nonsequitur/smex/issues/23/).
+
+### 1.1.4
+  * Allow running `where-is` on the selected command.
+  * Fix compatibility with ido-ubiquitous.
+
+### 1.1.3
+  * Add auto-initialization.
+  * Minor fixes.
 
 ## Appendix
 
