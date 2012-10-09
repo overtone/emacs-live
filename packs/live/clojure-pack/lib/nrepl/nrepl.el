@@ -55,6 +55,7 @@
 (require 'ansi-color)
 (require 'eldoc)
 (require 'cl)
+(require 'easymenu)
 
 (defgroup nrepl nil
   "Interaction with the Clojure nREPL Server."
@@ -354,8 +355,6 @@ joined together.")
 
 (defalias 'nrepl-jump-back 'pop-tag-mark)
 
-(defvar nrepl-completion-fn 'nrepl-completion-complete-core-fn)
-
 (defun nrepl-completion-complete-core-fn (str)
   "Return a list of completions using complete.core/completions."
   (let ((strlst (plist-get
@@ -367,12 +366,29 @@ joined together.")
     (when strlst
       (car (read-from-string strlst)))))
 
+(defun nrepl-completion-complete-op-fn (str)
+  "Return a list of completions using the nREPL \"complete\" op."
+  (lexical-let ((strlst (plist-get
+                         (nrepl-send-request-sync
+                          (list "op" "complete"
+                                "session" (nrepl-current-tooling-session)
+                                "ns" nrepl-buffer-ns
+                                "symbol" str))
+                         :value)))
+    (when strlst
+      (car strlst))))
+
+(defun nrepl-dispatch-complete-symbol (str)
+  (if (nrepl-op-supported-p "complete")
+      (nrepl-completion-complete-op-fn str)
+    (nrepl-completion-complete-core-fn str)))
+
 (defun nrepl-complete-at-point ()
   (let ((sap (symbol-at-point)))
     (when (and sap (not (in-string-p)))
       (let ((bounds (bounds-of-thing-at-point 'symbol)))
         (list (car bounds) (cdr bounds)
-              (completion-table-dynamic nrepl-completion-fn))))))
+              (completion-table-dynamic #'nrepl-dispatch-complete-symbol))))))
 
 (defun nrepl-eldoc-format-thing (thing)
   (propertize thing 'face 'font-lock-function-name-face))
@@ -1009,6 +1025,25 @@ This function is meant to be used in hooks to avoid lambda
     (define-key map (kbd "C-c C-b") 'nrepl-interrupt)
     map))
 
+(easy-menu-define nrepl-interaction-mode-menu nrepl-interaction-mode-map
+  "Menu for nREPL interaction mode"
+  '("nREPL"
+    ["Jump" nrepl-jump]
+    ["Jump back" nrepl-jump-back]
+    ["Complete symbol" complete-symbol]
+    ["Eval expression at point" nrepl-eval-expression-at-point]
+    ["Eval last expression" nrepl-eval-last-expression]
+    ["Eval region" nrepl-eval-region]
+    ["Eval ns form" nrepl-eval-ns-form]
+    ["Macroexpand-1 last expression" nrepl-macroexpand-1-last-expression]
+    ["Macroexpand-all last expression" nrepl-macroexpand-all-last-expression]
+    ["Set ns" nrepl-set-ns]
+    ["Display documentation" nrepl-doc]
+    ["Switch to REPL" nrepl-switch-to-repl-buffer]
+    ["Load current buffer" nrepl-load-current-buffer]
+    ["Load file" nrepl-load-file]
+    ["Interrupt" nrepl-interrupt]))
+
 (defvar nrepl-mode-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map clojure-mode-map)
@@ -1034,6 +1069,18 @@ This function is meant to be used in hooks to avoid lambda
     (define-key map (kbd "C-c C-p") 'nrepl-previous-prompt)
     (define-key map (kbd "C-c C-b") 'nrepl-interrupt)
     map))
+
+(easy-menu-define nrepl-mode-menu nrepl-mode-map
+  "Menu for nREPL mode"
+  '("nREPL"
+    ["Jump" nrepl-jump]
+    ["Jump back" nrepl-jump-back]
+    ["Complete symbol" complete-symbol]
+    ["Display documentation" nrepl-doc]
+    ["Clear output" nrepl-clear-output]
+    ["Clear buffer" nrepl-clear-buffer]
+    ["Kill input" nrepl-kill-input]
+    ["Interrupt" nrepl-interrupt]))
 
 (defun clojure-enable-nrepl ()
   (nrepl-interaction-mode 1))
@@ -1445,7 +1492,7 @@ balanced."
       (recenter -1))))
 
 (defun nrepl-grab-old-input (replace)
-  "Resend the old REPL input at point.  
+  "Resend the old REPL input at point.
 If replace is non-nil the current input is replaced with the old
 input; otherwise the new input is appended.  The old input has the
 text property `nrepl-old-input'."
@@ -1459,9 +1506,9 @@ text property `nrepl-old-input'."
                (unless (eq (char-before) ?\ )
                  (insert " "))))
       (delete-region (point) (point-max))
-      (save-excursion 
+      (save-excursion
         (insert old-input)
-        (when (equal (char-before) ?\n) 
+        (when (equal (char-before) ?\n)
           (delete-char -1)))
       (forward-char offset))))
 
@@ -1687,7 +1734,7 @@ under point, prompts for a var."
 
 (defun nrepl-load-file-op (filename)
   (nrepl-send-load-file (nrepl-file-string filename)
-                        (file-name-directory filename)
+                        filename
                         (file-name-nondirectory filename)))
 
 (defun nrepl-load-file-core (filename)
@@ -1888,7 +1935,7 @@ restart the server."
 ;;;###autoload
 (defun nrepl (host port)
   (interactive (list (read-from-minibuffer "Host: " nrepl-host)
-                     (read-from-minibuffer "Port: ")))
+                     (string-to-number (read-from-minibuffer "Port: "))))
   (nrepl-connect host port))
 
 (provide 'nrepl)

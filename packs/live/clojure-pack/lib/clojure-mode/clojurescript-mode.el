@@ -39,6 +39,12 @@
 
 (require 'clojure-mode)
 
+(eval-when-compile
+  (defvar paredit-mode)
+  (defvar paredit-version))
+
+(declare-function slime-mode "slime.el")
+
 (defvar clojurescript-home
   (getenv "CLOJURESCRIPT_HOME")
   "Path to ClojureScript home directory")
@@ -65,7 +71,9 @@
 
 (defun clojurescript-eval-last-expression ()
   (interactive)
-  (let ((expr (slime-last-expression)))
+  (let ((expr (buffer-substring-no-properties
+               (save-excursion (backward-sexp) (point))
+               (point))))
     (comint-send-string (inferior-lisp-proc) (concat expr "\n"))))
 
 (defun clojurescript-compile-and-load-file ()

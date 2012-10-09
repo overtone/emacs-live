@@ -120,11 +120,19 @@
 
 ;;; Code:
 
-(require 'clojure-mode)
 (require 'cl)
+(require 'clojure-mode)
 (require 'which-func)
 (require 'nrepl nil t)
 (require 'slime nil t)
+
+(declare-function nrepl-repl-buffer            "nrepl.el")
+(declare-function nrepl-make-response-handler  "nrepl.el")
+(declare-function nrepl-send-string            "nrepl.el")
+(declare-function nrepl-current-ns             "nrepl.el")
+(declare-function slime-eval-async             "slime.el")
+(declare-function slime-connection-name        "slime.el")
+(declare-function slime-connected-p            "slime.el")
 
 ;; Faces
 
@@ -171,12 +179,9 @@
 (defun clojure-test-make-handler (value-handler)
   (let ((out-handler (lambda (_ out)
                        (with-current-buffer (nrepl-repl-buffer)
-                         (setq ooo out)
                          (insert out)))))
     (nrepl-make-response-handler (current-buffer)
                                  (lambda (buffer value)
-                                   (setq vvv value)
-                                   (message "value: %s" vvv)
                                    (funcall value-handler value))
                                  out-handler out-handler nil)))
 
@@ -278,7 +283,8 @@
 
 (defun clojure-test-highlight-problem (line event message)
   (save-excursion
-    (goto-line line)
+    (goto-char (point-min))
+    (forward-line (1- line))
     (let ((beg (point)))
       (end-of-line)
       (let ((overlay (make-overlay beg (point))))
@@ -325,9 +331,10 @@ Retuns the problem overlay if such a position is found, otherwise nil."
           (if (> 0 clojure-test-ns-segment-position)
               (1- (+ (length segments) clojure-test-ns-segment-position))
             clojure-test-ns-segment-position))
-         (before (subseq segments 0 test-position))
-         (after (subseq segments (1+ test-position)))
-         (impl-segments (append before after)))
+         (before (subseq segments 0 clojure-test-ns-segment-position))
+         (after (subseq segments clojure-test-ns-segment-position))
+	 (newfile (replace-regexp-in-string "_test$" "" (car after)))
+         (impl-segments (append before (list newfile))))
     (mapconcat 'identity impl-segments "/")))
 
 ;; Commands
@@ -343,7 +350,7 @@ Retuns the problem overlay if such a position is found, otherwise nil."
     (clojure-test-clear
      (lambda (&rest args)
        ;; clojure-test-eval will wrap in with-out-str
-       (clojure-test-eval (format "(clojure.core/load-file %s)"
+       (clojure-test-eval (format "(clojure.core/load-file \"%s\")"
                                   (expand-file-name (buffer-file-name)))
                          (lambda (&rest args)
                            (clojure-test-eval "(binding [clojure.test/report
@@ -428,7 +435,7 @@ Retuns the problem overlay if such a position is found, otherwise nil."
     (define-key map (kbd "C-c C-'") 'clojure-test-show-result)
     (define-key map (kbd "C-c '")   'clojure-test-show-result)
     (define-key map (kbd "C-c k")   'clojure-test-clear)
-    (define-key map (kbd "C-c t")   'clojure-test-jump-to-implementation)
+    (define-key map (kbd "C-c C-s") 'clojure-jump-between-tests-and-code)
     (define-key map (kbd "M-p")     'clojure-test-previous-problem)
     (define-key map (kbd "M-n")     'clojure-test-next-problem)
     map)
@@ -457,4 +464,9 @@ with a \"test.\" bit on it."
   (add-hook 'clojure-mode-hook 'clojure-test-maybe-enable))
 
 (provide 'clojure-test-mode)
+
+;; Local Variables:
+;; byte-compile-warnings: (not cl-functions)
+;; End:
+
 ;;; clojure-test-mode.el ends here

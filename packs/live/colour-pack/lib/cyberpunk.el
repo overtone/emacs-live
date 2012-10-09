@@ -56,6 +56,7 @@
      (lazy-highlight ((t (:background "yellow" :foreground "black"))))
      (query-replace ((t (:background "#333333"))))
      (Highline-face ((t (:background "SeaGreen"))))
+     (hl-line ((t (:background "#333333"))))
      (italic ((t (nil))))
      (left-margin ((t (nil))))
      (text-cursor ((t (:background "yellow" :foreground "black"))))
