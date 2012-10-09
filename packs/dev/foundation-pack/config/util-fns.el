@@ -55,3 +55,12 @@
   passing 0 as an argument to kill-line"
   (interactive)
   (kill-line 0))
+
+(defun live-end-of-buffer-p ()
+  "Predicate fn to determine whether point is at the end of the
+   buffer"
+  (let ((p (point)))
+    (save-excursion
+      (let (deactivate-mark)
+        (end-of-buffer)
+        (= p (point))))))

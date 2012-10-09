@@ -114,3 +114,14 @@ in the sexp, not the end of the current one."
                     (beginning-of-defun)
                     (indent-sexp))
                   (live-paredit-tidy-trailing-parens)))))
+
+
+(defun live-paredit-forward-down ()
+  "Doesn't freeze Emacs if attempted to be called at end of
+   buffer. Otherwise similar to paredit-forward-down."
+  (interactive)
+  (if (save-excursion
+          (forward-comment (buffer-size))
+          (not (live-end-of-buffer-p)))
+      (paredit-forward-down)
+    (error "unexpected end of buffer")))

@@ -35,3 +35,17 @@
 (add-hook 'nrepl-interaction-mode-hook 'ac-nrepl-setup)
 (eval-after-load "auto-complete"
   '(add-to-list 'ac-modes 'nrepl-mode))
+
+
+;;; Monkey Patch nREPL with better behaviour:
+
+(defun nrepl-region-for-expression-at-point ()
+   "Return the start and end position of defun at point."
+   (save-excursion
+     (save-match-data
+       (ignore-errors (live-paredit-forward-down))
+       (paredit-forward-up)
+       (while (ignore-errors (paredit-forward-up) t))
+       (let ((end (point)))
+         (backward-sexp)
+         (list (point) end)))))
