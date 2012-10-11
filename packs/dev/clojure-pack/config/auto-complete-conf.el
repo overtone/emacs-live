@@ -2,7 +2,7 @@
 (live-add-pack-lib "auto-complete")
 (require 'auto-complete)
 (require 'auto-complete-config)
-(ac-config-default)
+
 (ac-flyspell-workaround)
 (add-to-list 'ac-dictionary-directories (concat (live-pack-lib-dir) "auto-complete/dict"))
 
@@ -20,7 +20,6 @@
                ac-source-words-in-buffer
                ac-source-words-in-same-mode-buffers
                ac-source-words-in-all-buffer
-               ac-source-yasnippet
                ac-source-semantic))
 
 (dolist (mode '(magit-log-edit-mode log-edit-mode org-mode text-mode haml-mode
