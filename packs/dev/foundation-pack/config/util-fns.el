@@ -59,8 +59,4 @@
 (defun live-end-of-buffer-p ()
   "Predicate fn to determine whether point is at the end of the
    buffer"
-  (let ((p (point)))
-    (save-excursion
-      (let (deactivate-mark)
-        (end-of-buffer)
-        (= p (point))))))
+  (<= (buffer-size) (point)))
