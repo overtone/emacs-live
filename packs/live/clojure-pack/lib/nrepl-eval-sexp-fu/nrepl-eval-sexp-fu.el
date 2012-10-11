@@ -82,6 +82,7 @@
 
 (eval-when-compile (require 'cl))
 (require 'highlight)
+(require 'paredit)
 
 (defgroup nrepl-eval-sexp-fu nil
   "Tiny functionality enhancements for evaluating sexps."
@@ -121,19 +122,19 @@
   :type 'function
   :group 'nrepl-eval-sexp-fu)
 
-(defun esf-hl-highlight-bounds (bounds face buf)
+(defun nesf-hl-highlight-bounds (bounds face buf)
   (with-current-buffer buf
     (hlt-highlight-region (car bounds) (cdr bounds) face)))
-(defun esf-hl-unhighlight-bounds (bounds buf)
+(defun nesf-hl-unhighlight-bounds (bounds buf)
   (with-current-buffer buf
     (hlt-unhighlight-region (car bounds) (cdr bounds))))
-(defun esf-flash-error-bounds (bounds buf face)
+(defun nesf-flash-error-bounds (bounds buf face)
   (when face
     (let ((flash-error
            (lambda (bounds buf face)
-             (esf-hl-highlight-bounds bounds face buf)
+             (nesf-hl-highlight-bounds bounds face buf)
              (run-at-time nrepl-eval-sexp-fu-flash-error-duration nil
-                          'esf-hl-unhighlight-bounds
+                          'nesf-hl-unhighlight-bounds
                           bounds buf))))
       (run-with-idle-timer (max nrepl-eval-sexp-fu-flash-error-duration
                                 nrepl-eval-sexp-fu-flash-duration)
@@ -150,9 +151,9 @@ Reurn the 4 values; bounds, highlighting, un-highlighting and error flashing pro
   "Create all of the actual flashing implementations. See also `nrepl-eval-sexp-fu-flash'."
   (lexical-let ((bounds bounds) (face face) (eface eface) (buf buf))
     (values bounds
-            (apply-partially 'esf-hl-highlight-bounds bounds face buf)
-            (apply-partially 'esf-hl-unhighlight-bounds bounds buf)
-            (apply-partially 'esf-flash-error-bounds bounds buf eface))))
+            (apply-partially 'nesf-hl-highlight-bounds bounds face buf)
+            (apply-partially 'nesf-hl-unhighlight-bounds bounds buf)
+            (apply-partially 'nesf-flash-error-bounds bounds buf eface))))
 
 (defcustom nrepl-eval-sexp-fu-flash-doit-function 'nrepl-eval-sexp-fu-flash-doit-simple
   "*Function to use for flashing the sexps.
@@ -174,17 +175,17 @@ Please see the actual implementations:
        (funcall do-it-thunk)
     (run-at-time nrepl-eval-sexp-fu-flash-duration nil unhi)))
 
-(defmacro esf-konstantly (v)
+(defmacro nesf-konstantly (v)
   `(lambda (&rest _it) ,v))
-(defmacro esf-unwind-protect-with-tracking (normallyp body unwind)
+(defmacro nesf-unwind-protect-with-tracking (normallyp body unwind)
   (declare (indent 2))
   `(let (,normallyp)
      (unwind-protect
           (prog1 ,body
             (setq ,normallyp t))
        ,unwind)))
-(defun esf-flash-doit (do-it-thunk hi unhi eflash)
-  (esf-unwind-protect-with-tracking ret
+(defun nesf-flash-doit (do-it-thunk hi unhi eflash)
+  (nesf-unwind-protect-with-tracking ret
       (nrepl-eval-sexp-fu-flash-doit do-it-thunk hi unhi)
     (unless ret
       (funcall eflash))))
@@ -204,7 +205,7 @@ See also `nrepl-eval-sexp-fu-flash'."
      (if nrepl-eval-sexp-fu-flash-mode
          (multiple-value-bind (bounds hi unhi eflash) ,form
            (if bounds
-               (esf-flash-doit (esf-konstantly ad-do-it) hi unhi eflash)
+               (nesf-flash-doit (nesf-konstantly ad-do-it) hi unhi eflash)
              ad-do-it))
        ad-do-it)))
 (define-minor-mode nrepl-eval-sexp-fu-flash-mode
@@ -217,14 +218,14 @@ See also `nrepl-eval-sexp-fu-flash'."
   (nrepl-eval-sexp-fu-flash-mode 1))
 
 ;;; eval-inner- stuff.
-(defun esf-funcall-and-eval-last-sexp (before eval-last-sexp)
+(defun nesf-funcall-and-eval-last-sexp (before eval-last-sexp)
   "Call 0 arg procedure BEFORE then call interactive command EVAL-LAST-SEXP."
   (save-excursion
     (funcall before)
     (call-interactively eval-last-sexp)))
 
 (require 'rx)
-(defun esf-forward-inner-sexp0 ()
+(defun nesf-forward-inner-sexp0 ()
   (flet ((poss ()
            (let
                ((prev (save-excursion (backward-sexp) (forward-sexp) (point)))
@@ -244,75 +245,85 @@ See also `nrepl-eval-sexp-fu-flash'."
                             (t (backward-sexp)))
                       (forward-sexp))
                      (t (backward-sexp) (forward-sexp))))))))
-(defun esf-forward-inner-sexp ()
+(defun nesf-forward-inner-sexp ()
   (condition-case nil
-      (esf-forward-inner-sexp0)
+      (nesf-forward-inner-sexp0)
     (scan-error nil)))
-(defun esf-backward-up-inner-list0 (steps)
+(defun nesf-backward-up-inner-list0 (steps)
   (unless steps (setq steps 1))
   (when (looking-at (rx (syntax open-parenthesis))) (decf steps))
   (dotimes (_ steps) (backward-up-list)))
-(defun esf-backward-up-inner-list (steps)
+(defun nesf-backward-up-inner-list (steps)
   (condition-case nil
-      (esf-backward-up-inner-list0 steps)
+      (nesf-backward-up-inner-list0 steps)
     (scan-error nil)))
-(defun esf-end-of-backward-up-inner-list (steps)
-  (esf-backward-up-inner-list steps)
-  (esf-forward-inner-sexp))
+(defun nesf-end-of-backward-up-inner-list (steps)
+  (nesf-backward-up-inner-list steps)
+  (nesf-forward-inner-sexp))
 
 (defun nrepl-eval-sexp-fu-eval-sexp-inner-list (&optional arg)
   "Evaluate the list _currently_ pointed at as sexp; print value in minibuffer.
 
 Interactivelly with numeric prefix argument, call to `backward-up-list' happens several times. This function is an \"Evaluate this N lists, please.\" thing."
   (interactive "P")
-  (esf-funcall-and-eval-last-sexp (apply-partially
-                                   'esf-end-of-backward-up-inner-list arg)
-                                  'esf-eval-last-sexp))
+  (nesf-funcall-and-eval-last-sexp (apply-partially
+                                   'nesf-end-of-backward-up-inner-list arg)
+                                  'nesf-eval-last-sexp))
 (defun nrepl-eval-sexp-fu-eval-sexp-inner-sexp ()
   "Evaluate the sexp _currently_ pointed; print value in minibuffer."
   (interactive)
-  (esf-funcall-and-eval-last-sexp 'esf-forward-inner-sexp 'esf-eval-last-sexp))
+  (nesf-funcall-and-eval-last-sexp 'nesf-forward-inner-sexp 'nesf-eval-last-sexp))
 
-(defmacro define-esf-eval-last-sexp-1 (command-name eval-last-sexp)
+(defmacro define-nesf-eval-last-sexp-1 (command-name eval-last-sexp)
   "Define an interactive command COMMAND-NAME kind of EVAL-LAST-SEXP
 such that ignores any prefix arguments."
   `(defun ,command-name ()
      (interactive)
      (let (current-prefix-arg)
        (call-interactively ',eval-last-sexp))))
-(define-esf-eval-last-sexp-1 esf-eval-last-sexp eval-last-sexp)
+(define-nesf-eval-last-sexp-1 nesf-eval-last-sexp eval-last-sexp)
 
 ;; Piece of code which defines the above inner-{sexp,list} functions.
 ;; This makes it possible to batch install the
 ;; nrepl-eval-sexp-fu-eval-sexp-inner-{sexp,list} with below form.
 ;; * (define-nrepl-eval-sexp-fu-eval-sexp nrepl-eval-sexp-fu-eval-sexp eval-last-sexp)
 ;; Used by making the `nrepl-eval-last-expression' variant functions.
-(defmacro define-esf-eval-sexp* (eval-last-sexp inner-sexp inner-list)
+(defmacro define-nesf-eval-sexp* (eval-last-sexp inner-sexp inner-list)
   "Based on EVAL-LAST-SEXP, define INNER-SEXP and INNER-LIST interactive commands."
   (declare (indent 1))
   `(progn
      (defun ,inner-sexp ()
        (interactive)
-       (esf-funcall-and-eval-last-sexp 'esf-forward-inner-sexp
+       (nesf-funcall-and-eval-last-sexp 'nesf-forward-inner-sexp
                                        ',eval-last-sexp))
      (defun ,inner-list (&optional arg)
        (interactive "P")
-       (esf-funcall-and-eval-last-sexp (apply-partially
-                                        'esf-end-of-backward-up-inner-list arg)
+       (nesf-funcall-and-eval-last-sexp (apply-partially
+                                        'nesf-end-of-backward-up-inner-list arg)
                                        ',eval-last-sexp))))
 (defmacro define-nrepl-eval-sexp-fu-eval-sexp (command-name-prefix eval-last-sexp)
-  "Define -inner-sexp and -inner-list interactive commands prefixed by COMMAND-NAME-PREFIX based on EVAL-LAST-SEXP. Actual work is done by `define-esf-eval-sexp*'."
-  (let ((esf-eval-last-sexp-1
-         (intern (format "esf-%s-1" (symbol-name eval-last-sexp)))))
+  "Define -inner-sexp and -inner-list interactive commands prefixed by COMMAND-NAME-PREFIX based on EVAL-LAST-SEXP. Actual work is done by `define-nesf-eval-sexp*'."
+  (let ((nesf-eval-last-sexp-1
+         (intern (format "nesf-%s-1" (symbol-name eval-last-sexp)))))
     `(progn
-       (define-esf-eval-last-sexp-1 ,esf-eval-last-sexp-1 ,eval-last-sexp)
-       (define-esf-eval-sexp* ,esf-eval-last-sexp-1
+       (define-nesf-eval-last-sexp-1 ,nesf-eval-last-sexp-1 ,eval-last-sexp)
+       (define-nesf-eval-sexp* ,nesf-eval-last-sexp-1
          ,@(mapcar (lambda (post)
                      (intern (concat (symbol-name command-name-prefix) post)))
                    '("-inner-sexp" "-inner-list"))))))
 
+(defun nesf-paredit-forward-down ()
+  "Doesn't freeze Emacs if attempted to be called at end of
+   buffer. Otherwise similar to paredit-forward-down."
+  (interactive)
+  (if (save-excursion
+          (forward-comment (buffer-size))
+          (not (live-end-of-buffer-p)))
+      (paredit-forward-down)
+    (error "unexpected end of buffer")))
+
 ;;; initialize.
-(defun esf-initialize ()
+(defun nesf-initialize ()
   (define-nrepl-eval-sexp-fu-flash-command eval-last-sexp
     (nrepl-eval-sexp-fu-flash (save-excursion
                           (backward-char)
@@ -328,20 +339,28 @@ such that ignores any prefix arguments."
       (define-nrepl-eval-sexp-fu-flash-command eek-eval-last-sexp
         (nrepl-eval-sexp-fu-flash (cons (save-excursion (eek-backward-sexp))
                                   (point)))))))
-(defun esf-initialize-nrepl ()
+(defun nesf-initialize-nrepl ()
   (define-nrepl-eval-sexp-fu-flash-command nrepl-eval-last-expression
     (nrepl-eval-sexp-fu-flash (save-excursion
-                          (backward-char)
-                          (bounds-of-thing-at-point 'sexp))))
+                                (backward-char)
+                                (bounds-of-thing-at-point 'sexp))))
   (define-nrepl-eval-sexp-fu-flash-command nrepl-pprint-eval-last-expression
     (nrepl-eval-sexp-fu-flash (save-excursion
-                          (backward-char)
-                          (bounds-of-thing-at-point 'sexp))))
+                                (backward-char)
+                                (bounds-of-thing-at-point 'sexp))))
   (define-nrepl-eval-sexp-fu-flash-command nrepl-eval-expression-at-point
-    (nrepl-eval-sexp-fu-flash (save-excursion
-                          (end-of-defun)
-                          (beginning-of-defun)
-                          (bounds-of-thing-at-point 'sexp))))
+    (nrepl-eval-sexp-fu-flash      (when (not (and (live-paredit-top-level-p)
+                                                   (save-excursion
+                                                     (ignore-errors (forward-char))
+                                                     (live-paredit-top-level-p))))
+                                     (save-excursion
+                                       (save-match-data
+                                         (ignore-errors (live-paredit-forward-down))
+                                         (paredit-forward-up)
+                                         (while (ignore-errors (paredit-forward-up) t))
+                                         (let ((end (point)))
+                                           (backward-sexp)
+                                           (cons (point) end)))))))
 
   (progn
     ;; Defines:
@@ -349,56 +368,56 @@ such that ignores any prefix arguments."
     ;; `nrepl-eval-sexp-fu-nrepl-eval-expression-inner-sexp'
     ;; and the pprint variants respectively.
     (define-nrepl-eval-sexp-fu-eval-sexp nrepl-eval-sexp-fu-nrepl-eval-expression
-        nrepl-eval-last-expression)
+      nrepl-eval-last-expression)
     (define-nrepl-eval-sexp-fu-eval-sexp nrepl-eval-sexp-fu-nrepl-pprint-eval-expression
-        nrepl-pprint-eval-last-expression)))
+      nrepl-pprint-eval-last-expression)))
 
 (eval-when (load eval)
-  (esf-initialize)
+  (nesf-initialize)
   (eval-after-load 'nrepl
-    '(esf-initialize-nrepl)))
+    '(nesf-initialize-nrepl)))
 
 (dont-compile
   (when (fboundp 'expectations)
     (expectations
-      (desc "esf-forward-inner-sexp0")
+      (desc "nesf-forward-inner-sexp0")
       (expect ?p
         (with-temp-buffer
           (emacs-lisp-mode)
           (insert "s+exp")
           (goto-char (point-min))
-          (esf-forward-inner-sexp0)
+          (nesf-forward-inner-sexp0)
           (char-before)))
       (expect ?p
         (with-temp-buffer
           (emacs-lisp-mode)
           (insert "s+exp")
           (goto-char (1+ (point-min)))
-          (esf-forward-inner-sexp0)
+          (nesf-forward-inner-sexp0)
           (char-before)))
       (expect ?\)
         (with-temp-buffer
           (emacs-lisp-mode)
           (insert "s(exp)")
           (goto-char (1+ (point-min)))
-          (esf-forward-inner-sexp0)
+          (nesf-forward-inner-sexp0)
           (char-before)))
-      (desc "esf-forward-inner-sexp0 same line, but far near the next")
+      (desc "nesf-forward-inner-sexp0 same line, but far near the next")
       ;; Always previous, is this OK?
       (expect ?0
         (with-temp-buffer
           (emacs-lisp-mode)
           (insert "sexp0   sexp1")
           (goto-char (+ (point-min) 7))
-          (esf-forward-inner-sexp0)
+          (nesf-forward-inner-sexp0)
           (char-before)))
-      (desc "esf-forward-inner-sexp0 across lines")
+      (desc "nesf-forward-inner-sexp0 across lines")
       (expect ?0
         (with-temp-buffer
           (emacs-lisp-mode)
           (insert "sexp0\n\n\n\nsexp1")
           (goto-char (point-min))
-          (esf-forward-inner-sexp0)
+          (nesf-forward-inner-sexp0)
           (char-before)))
       (expect ?0
         (with-temp-buffer
@@ -406,7 +425,7 @@ such that ignores any prefix arguments."
           (insert "sexp0\n\n\n\nsexp1")
           (goto-char (point-min))
           (forward-line)
-          (esf-forward-inner-sexp0)
+          (nesf-forward-inner-sexp0)
           (char-before)))
       (expect ?1
         (with-temp-buffer
@@ -414,7 +433,7 @@ such that ignores any prefix arguments."
           (insert "sexp0\n\n\n\nsexp1")
           (goto-char (point-min))
           (forward-line 3)
-          (esf-forward-inner-sexp0)
+          (nesf-forward-inner-sexp0)
           (char-before)))
       (expect ?1
         (with-temp-buffer
@@ -422,7 +441,7 @@ such that ignores any prefix arguments."
           (insert "sexp0\n\n\n\nsexp1")
           (goto-char (point-min))
           (forward-line 3)
-          (esf-forward-inner-sexp0)
+          (nesf-forward-inner-sexp0)
           (char-before)))
       (expect ?1
         (with-temp-buffer
@@ -430,9 +449,9 @@ such that ignores any prefix arguments."
           (insert "sexp0\n\n\n\nsexp1")
           (goto-char (point-min))
           (forward-line 4)
-          (esf-forward-inner-sexp0)
+          (nesf-forward-inner-sexp0)
           (char-before)))
-      (desc "esf-forward-inner-sexp0 across lines (equal delta)")
+      (desc "nesf-forward-inner-sexp0 across lines (equal delta)")
       ;; Always previous lines', is this OK?
       (expect ?0
         (with-temp-buffer
@@ -440,31 +459,31 @@ such that ignores any prefix arguments."
           (insert "sexp0\n\n\n\nsexp1")
           (goto-char (point-min))
           (forward-line 2)
-          (esf-forward-inner-sexp0)
+          (nesf-forward-inner-sexp0)
           (char-before)))
-      (desc "esf-forward-inner-sexp0 no more")
+      (desc "nesf-forward-inner-sexp0 no more")
       (expect ?0
         (with-temp-buffer
           (emacs-lisp-mode)
           (insert "sexp0\n\n")
           (goto-char (point-max))
-          (esf-forward-inner-sexp0)
+          (nesf-forward-inner-sexp0)
           (char-before)))
-      (desc "esf-forward-inner-sexp0 no less")
+      (desc "nesf-forward-inner-sexp0 no less")
       (expect ?0
         (with-temp-buffer
           (emacs-lisp-mode)
           (insert "\n\nsexp0")
           (goto-char (point-min))
-          (esf-forward-inner-sexp0)
+          (nesf-forward-inner-sexp0)
           (char-before)))
-      (desc "esf-forward-inner-sexp0 no any")
+      (desc "nesf-forward-inner-sexp0 no any")
       (expect 5
         (with-temp-buffer
           (emacs-lisp-mode)
           (insert "\n\n\n\n")
           (goto-char (point-min))
-          (esf-forward-inner-sexp0)
+          (nesf-forward-inner-sexp0)
           (point)))
       )))
 
