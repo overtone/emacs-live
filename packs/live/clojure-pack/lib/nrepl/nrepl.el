@@ -174,6 +174,25 @@ joined together.")
 (defun nrepl-make-variables-buffer-local (&rest variables)
   (mapcar #'make-variable-buffer-local variables))
 
+(defun nrepl-reset-buffer-local-vars ()
+  (interactive)
+  (setq nrepl-ops nil
+        nrepl-session nil
+        nrepl-tooling-session nil
+        nrepl-input-start-mark nil
+        nrepl-prompt-start-mark nil
+        nrepl-request-counter 0
+        nrepl-requests (make-hash-table :test 'equal)
+        nrepl-old-input-counter 0
+        nrepl-buffer-ns "user"
+        nrepl-input-history '()
+        nrepl-input-history-items-added 0
+        nrepl-current-input-history-index nil
+        nrepl-output-start nil
+        nrepl-output-end nil
+        nrepl-syn-response nil))
+
+
 (nrepl-make-variables-buffer-local
  'nrepl-ops
  'nrepl-session
