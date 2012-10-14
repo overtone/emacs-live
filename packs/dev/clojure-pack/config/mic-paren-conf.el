@@ -1,3 +1,4 @@
-;;mic-paren conf
 
 (require 'mic-paren)
+
+(paren-activate)
