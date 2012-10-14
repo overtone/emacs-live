@@ -8,3 +8,4 @@
 (live-load-config-file "markdown-conf.el")
 (live-load-config-file "supercollider-conf.el")
 (live-load-config-file "actionscript-conf.el")
+(live-load-config-file "js2-conf.el")
