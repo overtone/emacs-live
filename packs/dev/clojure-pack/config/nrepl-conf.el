@@ -57,3 +57,9 @@
       (let ((end (point)))
         (backward-sexp)
         (list (point) end)))))
+
+;; Teach nrepl connection fn about a default port
+(defun nrepl (host port)
+  (interactive (list (read-from-minibuffer "Host: " nrepl-host)
+                     (string-to-number (read-from-minibuffer "Port: " "6678"))))
+  (nrepl-connect host port))
