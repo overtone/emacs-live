@@ -62,6 +62,9 @@
   :prefix "nrepl-"
   :group 'applications)
 
+(defvar nrepl-version "0.1.5-preview"
+  "The current nrepl version.")
+
 (defcustom nrepl-connected-hook nil
   "List of functions to call when connecting to the nREPL server."
   :type 'hook
@@ -72,8 +75,10 @@
    :type 'string
    :group 'nrepl)
 
-(defvar nrepl-version "0.1.5-preview"
-  "The current nrepl version.")
+(defcustom nrepl-port nil
+   "The default port to connect to."
+   :type 'string
+   :group 'nrepl)
 
 (defvar nrepl-connection-buffer "*nrepl-connection*")
 (defvar nrepl-server-buffer "*nrepl-server*")
@@ -360,8 +365,8 @@ joined together.")
   "Return a list of completions using complete.core/completions."
   (let ((strlst (plist-get
                  (nrepl-send-string-sync
-                  (format "(complete.core/completions \"%s\" *ns*)" str)
-                  (nrepl-current-ns)
+                  (format "(require 'complete.core) (complete.core/completions \"%s\" *ns*)" str)
+                  nrepl-buffer-ns
                   (nrepl-current-tooling-session))
                  :value)))
     (when strlst
@@ -449,7 +454,8 @@ joined together.")
                 (stderr-handler stderr-handler)
                 (done-handler done-handler))
     (lambda (response)
-      (nrepl-dbind-response response (value ns out err status id ex root-ex)
+      (nrepl-dbind-response response (value ns out err status id ex root-ex
+                                      session)
         (cond (value
                (with-current-buffer buffer
                  (if ns
@@ -466,7 +472,7 @@ joined together.")
                (if (member "interrupted" status)
                    (message "Evaluation interrupted."))
                (if (member "eval-error" status)
-                   (funcall nrepl-err-handler buffer ex root-ex))
+                   (funcall nrepl-err-handler buffer ex root-ex session))
                (if (member "namespace-not-found" status)
                    (message "Namespace not found."))
                (if (member "need-input" status)
@@ -548,8 +554,7 @@ joined together.")
                                  (nrepl-emit-into-popup-buffer buffer str))
                                '()))
 
-(defun nrepl-default-err-handler (buffer ex root-ex)
-  ;; TODO: use pst+ here for colorization. currently breaks bencode.
+(defun nrepl-default-err-handler (buffer ex root-ex session)
   ;; TODO: use ex and root-ex as fallback values to display when pst/print-stack-trace-not-found
   (if (or nrepl-popup-stacktraces
           (not (eq 'nrepl-mode
@@ -561,7 +566,7 @@ joined together.")
                            (nrepl-make-response-handler
                             (nrepl-popup-buffer nrepl-error-buffer)
                             nil
-                            'nrepl-emit-into-color-buffer nil nil)))
+                            'nrepl-emit-into-color-buffer nil nil) nil session))
     ;; TODO: maybe put the stacktrace in a tmp buffer somewhere that the user
     ;; can pull up with a hotkey only when interested in seeing it?
     ))
@@ -1939,8 +1944,8 @@ restart the server."
 
 ;;;###autoload
 (defun nrepl (host port)
-  (interactive (list (read-from-minibuffer "Host: " nrepl-host)
-                     (string-to-number (read-from-minibuffer "Port: "))))
+  (interactive (list (read-string "Host: " nrepl-host nil nrepl-host)
+                     (string-to-number (read-string "Port: " nrepl-port nil nrepl-port))))
   (nrepl-connect host port))
 
 (provide 'nrepl)

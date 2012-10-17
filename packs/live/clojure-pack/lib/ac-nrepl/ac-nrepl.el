@@ -6,7 +6,7 @@
 ;; URL: https://github.com/purcell/ac-nrepl
 ;; Keywords: languages, clojure, nrepl
 ;; Version: 0.1
-;; Package-Requires: ((nrepl "0.1"))
+;; Package-Requires: ((nrepl "0.1") (auto-complete "1.4"))
 
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU General Public License
@@ -61,64 +61,97 @@
     (error nil)))
 
 (defun ac-nrepl-candidates* (clj)
-  "Return filtered completion candidates returned by evaluating clj"
-  (let* ((response (plist-get (nrepl-send-string-sync clj nrepl-buffer-ns) :value)))
+  "Return completion candidates produced by evaluating CLJ."
+  (let ((response (plist-get (nrepl-send-string-sync clj (nrepl-current-ns)) :value)))
     (when response
       (car (read-from-string response)))))
 
-(defun ac-nrepl-filtered-clj (clj)
-  (concat "(filter #(.startsWith % \"" ac-prefix "\")" (format clj ac-prefix) ")"))
-
 (defun ac-nrepl-unfiltered-clj (clj)
+  "Return a version of CLJ with the completion prefix inserted."
   (format clj ac-prefix))
 
+(defun ac-nrepl-filtered-clj (clj)
+  "Build an expression which extracts the prefixed values from CLJ."
+  (concat "(filter #(.startsWith % \"" ac-prefix "\")"
+          (ac-nrepl-unfiltered-clj clj) ")"))
+
 (defun ac-nrepl-candidates-ns ()
+  "Return namespace candidates."
   (ac-nrepl-candidates*
    (ac-nrepl-filtered-clj "(complete.core/namespaces *ns*)")))
 
 (defun ac-nrepl-candidates-vars ()
+  "Return var candidates."
   (ac-nrepl-candidates*
-   (ac-nrepl-filtered-clj "(complete.core/ns-vars *ns*)")))
+   (ac-nrepl-filtered-clj "(let [prefix \"%s\"]
+    (if-not (.contains prefix \"/\")
+      (complete.core/ns-vars *ns*)
+      (let [ns-alias (symbol (first (.split prefix \"/\")))
+            core     (find-ns 'clojure.core)]
+        (if-let [ns (or (get (ns-aliases *ns*) ns-alias)
+                        (find-ns ns-alias))]
+          (let [vars (complete.core/ns-vars ns)
+                vars (if (= core ns)
+                       vars
+                       (remove (into #{} (complete.core/ns-vars core)) vars))]
+            (map (fn [x] (str ns-alias \"/\" x)) vars))
+           '()))))")))
 
 (defun ac-nrepl-candidates-ns-classes ()
+  "Return namespaced class candidates."
   (ac-nrepl-candidates*
    (ac-nrepl-filtered-clj "(complete.core/ns-classes *ns*)")))
 
 (defun ac-nrepl-fetch-all-classes ()
+  "Return all class candidates."
   (ac-nrepl-candidates*
-   (ac-nrepl-unfiltered-clj  "(concat @complete.core/nested-classes
-                                      @complete.core/top-level-classes)")))
+   (ac-nrepl-unfiltered-clj "(concat @complete.core/nested-classes
+                                     @complete.core/top-level-classes)")))
 
-(defvar ac-nrepl-all-classes-cache
-  '())
+(defvar ac-nrepl-all-classes-cache nil
+  "Cached list of all classes loaded in the JVM backend.")
+
+;;;###autoload
+(defun ac-nrepl-clear-class-cache ()
+  "Clear the class cache to prevent stale results."
+  (setq ac-nrepl-all-classes-cache nil))
+
+;;;###autoload
+(add-hook 'nrepl-connected-hook 'ac-nrepl-clear-class-cache)
 
 (defun ac-nrepl-cache-all-classes ()
-  (message "Listing all matching JVM classes...")
+  "Return a cached list of all class names loaded in the JVM backend."
   (if (eq '() ac-nrepl-all-classes-cache)
-      (setq ac-nrepl-all-classes-cache (ac-nrepl-fetch-all-classes))
+    (progn
+      (message "Caching matching JVM classes...")
+      (setq ac-nrepl-all-classes-cache (ac-nrepl-fetch-all-classes)) )
     ac-nrepl-all-classes-cache))
 
 (defun ac-nrepl-candidates-all-classes ()
-  (if (string-match-p (regexp-quote ".") ac-prefix)
-      (ac-nrepl-cache-all-classes)
-    '()))
+  "Return java method candidates."
+  (when (string-match-p "^[a-zA-Z]+[a-zA-Z0-9$_]*\\.[a-zA-Z0-9$_.]*$" ac-prefix)
+    (ac-nrepl-cache-all-classes)))
 
 (defun ac-nrepl-candidates-java-methods ()
+  "Return java method candidates."
   (ac-nrepl-candidates*
-   (ac-nrepl-filtered-clj "(for [class (vals (ns-imports *ns*))
-                                 method (.getMethods class)
-                                 :when (not (java.lang.reflect.Modifier/isStatic (.getModifiers method)))]
-                             (str \".\" (.getName method) \" [\"(.getName class)\"]\"))")))
+   (ac-nrepl-filtered-clj
+    "(for [class (vals (ns-imports *ns*))
+           method (.getMethods class)
+           :when (not (java.lang.reflect.Modifier/isStatic (.getModifiers method)))]
+       (str \".\" (.getName method) \" [\"(.getName class)\"]\"))")))
 
 (defun ac-nrepl-candidates-static-methods ()
+  "Return static method candidates."
   (ac-nrepl-candidates*
-   (ac-nrepl-filtered-clj "(let [prefix \"%s\"]
-                           (if-not (.contains prefix \"a\")
-                             '()
-                              (let [scope (symbol (first (.split prefix \"/\")))]
-                                (map (fn [memb] (str scope \"/\" memb))
-                                     (when-let [class (complete.core/resolve-class scope)]
-                                       (complete.core/static-members class))))))  ")))
+   (ac-nrepl-filtered-clj
+    "(let [prefix \"%s\"]
+       (if-not (.contains prefix \"/\")
+         '()
+          (let [scope (symbol (first (.split prefix \"/\")))]
+            (map (fn [memb] (str scope \"/\" memb))
+                 (when-let [class (complete.core/resolve-class scope)]
+                   (complete.core/static-members class))))))  ")))
 
 (defun ac-nrepl-documentation (symbol)
   "Return documentation for the given SYMBOL, if available."
@@ -129,7 +162,7 @@
      "^\\(  \\|-------------------------\r?\n\\)" ""
      (plist-get (nrepl-send-string-sync
                  (format "(try (eval '(clojure.repl/doc %s)) (catch Exception e (println \"\")))" symbol)
-                 nrepl-buffer-ns)
+                 (nrepl-current-ns))
                 :stdout)))))
 
 (defun ac-nrepl-symbol-start-pos ()
@@ -151,70 +184,67 @@
   :group 'auto-complete)
 
 ;;;###autoload
-(defvar ac-source-nrepl-ns
-  '((candidates . ac-nrepl-candidates-ns)
-    (available . ac-nrepl-available-p)
+(defconst ac-nrepl-source-defaults
+  '((available . ac-nrepl-available-p)
     (candidate-face . ac-nrepl-candidate-face)
     (selection-face . ac-nrepl-selection-face)
     (prefix . ac-nrepl-symbol-start-pos)
-    (symbol . "n")
     (document . ac-nrepl-documentation))
+  "Defaults common to the various completion sources.")
+
+;;;###autoload
+(defvar ac-source-nrepl-ns
+  (append
+   '((candidates . ac-nrepl-candidates-ns)
+     (symbol . "n"))
+   ac-nrepl-source-defaults)
   "Auto-complete source for nrepl ns completion.")
 
+;;;###autoload
 (defvar ac-source-nrepl-vars
-  '((candidates . ac-nrepl-candidates-vars)
-    (available . ac-nrepl-available-p)
-    (candidate-face . ac-nrepl-candidate-face)
-    (selection-face . ac-nrepl-selection-face)
-    (prefix . ac-nrepl-symbol-start-pos)
-    (symbol . "v")
-    (document . ac-nrepl-documentation))
+  (append
+   '((candidates . ac-nrepl-candidates-vars)
+     (symbol . "v"))
+   ac-nrepl-source-defaults)
   "Auto-complete source for nrepl var completion.")
 
+;;;###autoload
 (defvar ac-source-nrepl-ns-classes
-  '((candidates . ac-nrepl-candidates-ns-classes)
-    (available . ac-nrepl-available-p)
-    (candidate-face . ac-nrepl-candidate-face)
-    (selection-face . ac-nrepl-selection-face)
-    (prefix . ac-nrepl-symbol-start-pos)
-    (symbol . "c")
-    (document . ac-nrepl-documentation))
+  (append
+   '((candidates . ac-nrepl-candidates-ns-classes)
+     (symbol . "c"))
+   ac-nrepl-source-defaults)
   "Auto-complete source for nrepl ns-specific class completion.")
 
+;;;###autoload
 (defvar ac-source-nrepl-all-classes
-  '((candidates . ac-nrepl-candidates-all-classes)
-    (available . ac-nrepl-available-p)
-    (candidate-face . ac-nrepl-candidate-face)
-    (selection-face . ac-nrepl-selection-face)
-    (prefix . ac-nrepl-symbol-start-pos)
-    (symbol . "c")
-    (document . ac-nrepl-documentation))
+  (append
+   '((candidates . ac-nrepl-candidates-all-classes)
+     (symbol . "c"))
+   ac-nrepl-source-defaults)
   "Auto-complete source for nrepl all class completion.")
 
 (defun ac-nrepl-delete-java-class-hint ()
+  "Remove the java class hint at point."
   (let ((beg (point)))
     (search-backward " [")
     (delete-region beg (point))))
 
+;;;###autoload
 (defvar ac-source-nrepl-java-methods
-  '((candidates . ac-nrepl-candidates-java-methods)
-    (available . ac-nrepl-available-p)
-    (candidate-face . ac-nrepl-candidate-face)
-    (selection-face . ac-nrepl-selection-face)
-    (prefix . ac-nrepl-symbol-start-pos)
-    (symbol . "m")
-    (document . ac-nrepl-documentation)
-    (action . ac-nrepl-delete-java-class-hint))
+  (append
+   '((candidates . ac-nrepl-candidates-java-methods)
+     (symbol . "m")
+     (action . ac-nrepl-delete-java-class-hint))
+   ac-nrepl-source-defaults)
   "Auto-complete source for nrepl java method completion.")
 
+;;;###autoload
 (defvar ac-source-nrepl-static-methods
-  '((candidates . ac-nrepl-candidates-static-methods)
-    (available . ac-nrepl-available-p)
-    (candidate-face . ac-nrepl-candidate-face)
-    (selection-face . ac-nrepl-selection-face)
-    (prefix . ac-nrepl-symbol-start-pos)
-    (symbol . "s")
-    (document . ac-nrepl-documentation))
+  (append
+   '((candidates . ac-nrepl-candidates-static-methods)
+     (symbol . "s"))
+   ac-nrepl-source-defaults)
   "Auto-complete source for nrepl java static method completion.")
 
 

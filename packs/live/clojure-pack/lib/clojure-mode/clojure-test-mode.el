@@ -134,6 +134,7 @@
 (declare-function slime-connection-name        "slime.el")
 (declare-function slime-connected-p            "slime.el")
 
+
 ;; Faces
 
 (defface clojure-test-failure-face
@@ -333,7 +334,7 @@ Retuns the problem overlay if such a position is found, otherwise nil."
             clojure-test-ns-segment-position))
          (before (subseq segments 0 clojure-test-ns-segment-position))
          (after (subseq segments clojure-test-ns-segment-position))
-	 (newfile (replace-regexp-in-string "_test$" "" (car after)))
+         (newfile (replace-regexp-in-string "_test$" "" (car after)))
          (impl-segments (append before (list newfile))))
     (mapconcat 'identity impl-segments "/")))
 

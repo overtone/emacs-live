@@ -57,3 +57,5 @@
       (let ((end (point)))
         (backward-sexp)
         (list (point) end)))))
+
+(setq nrepl-port "6678")
