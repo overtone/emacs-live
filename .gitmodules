@@ -12,7 +12,7 @@
         ignore = untracked
 [submodule "packs/dev/clojure-pack/vendor/submodules/auto-complete"]
         path = packs/dev/clojure-pack/vendor/submodules/auto-complete
-        url = git://github.com/m2ym/auto-complete.git
+        url = git://github.com/auto-complete/auto-complete.git
         ignore = untracked
 [submodule "packs/dev/power-pack/vendor/submodules/volatile-highlights"]
         path = packs/dev/power-pack/vendor/submodules/volatile-highlights
