@@ -1,4 +1,12 @@
+(live-add-pack-lib "fuzzy-el")
+(live-add-pack-lib "popup-el")
+
+(require 'popup)
+(require 'fuzzy)
+
 ;;auto-complete mode
+
+
 (live-add-pack-lib "auto-complete")
 (require 'auto-complete)
 (require 'auto-complete-config)

@@ -88,3 +88,9 @@
 [submodule "packs/dev/lang-pack/vendor/submodules/js2"]
 	path = packs/dev/lang-pack/vendor/submodules/js2
 	url = git://github.com/mooz/js2-mode.git
+[submodule "packs/dev/clojure-pack/vendor/submodules/popup-el"]
+	path = packs/dev/clojure-pack/vendor/submodules/popup-el
+	url = git://github.com/auto-complete/popup-el.git
+[submodule "packs/dev/clojure-pack/vendor/submodules/fuzzy-el"]
+	path = packs/dev/clojure-pack/vendor/submodules/fuzzy-el
+	url = git://github.com/auto-complete/fuzzy-el.git
