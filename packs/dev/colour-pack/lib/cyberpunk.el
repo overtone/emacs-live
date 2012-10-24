@@ -161,7 +161,11 @@
 
      (vhl/default-face ((t (:background "#333333"))))
      (undo-tree-visualizer-active-branch-face ((t (:foreground "deep pink" :background "black"))))
-     (hl-sexp-face ((t (:background "grey9")))))))
+     (hl-sexp-face ((t (:background "grey9"))))
+
+     (browse-kill-ring-current-entry-face ((t (:background "#333333"))))
+     ))
+  )
 
 
 

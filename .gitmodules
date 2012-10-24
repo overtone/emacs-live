@@ -83,14 +83,17 @@
         path = packs/dev/clojure-pack/vendor/submodules/nrepl-eval-sexp-fu
         url = git://github.com/samaaron/nrepl-eval-sexp-fu.git
 [submodule "packs/dev/clojure-pack/vendor/submodules/nrepl"]
-	path = packs/dev/clojure-pack/vendor/submodules/nrepl
-	url = git://github.com/samaaron/nrepl.el.git
+        path = packs/dev/clojure-pack/vendor/submodules/nrepl
+        url = git://github.com/samaaron/nrepl.el.git
 [submodule "packs/dev/lang-pack/vendor/submodules/js2"]
-	path = packs/dev/lang-pack/vendor/submodules/js2
-	url = git://github.com/mooz/js2-mode.git
+        path = packs/dev/lang-pack/vendor/submodules/js2
+        url = git://github.com/mooz/js2-mode.git
 [submodule "packs/dev/clojure-pack/vendor/submodules/popup-el"]
-	path = packs/dev/clojure-pack/vendor/submodules/popup-el
-	url = git://github.com/auto-complete/popup-el.git
+        path = packs/dev/clojure-pack/vendor/submodules/popup-el
+        url = git://github.com/auto-complete/popup-el.git
 [submodule "packs/dev/clojure-pack/vendor/submodules/fuzzy-el"]
-	path = packs/dev/clojure-pack/vendor/submodules/fuzzy-el
-	url = git://github.com/auto-complete/fuzzy-el.git
+        path = packs/dev/clojure-pack/vendor/submodules/fuzzy-el
+        url = git://github.com/auto-complete/fuzzy-el.git
+[submodule "packs/dev/power-pack/vendor/submodules/browse-kill-ring"]
+        path = packs/dev/power-pack/vendor/submodules/browse-kill-ring
+        url = git://github.com/samaaron/browse-kill-ring.git
