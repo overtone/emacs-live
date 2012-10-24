@@ -3,6 +3,7 @@
 ;; Copyright (C) 2012  Steve Purcell <steve@sanityinc.com>
 
 ;; Author: Steve Purcell <steve@sanityinc.com>
+;;         Sam Aaron <samaaron@gmail.com>
 ;; URL: https://github.com/purcell/ac-nrepl
 ;; Keywords: languages, clojure, nrepl
 ;; Version: 0.1

@@ -63,6 +63,7 @@
 
 ;; User definable variables
 
+;;;###autoload
 (defgroup yaml nil
   "Support for the YAML serialization format"
   :group 'languages
@@ -79,7 +80,8 @@
   :group 'yaml)
 
 (defcustom yaml-backspace-function 'backward-delete-char-untabify
-  "*Function called by `yaml-electric-backspace' when deleting backwards."
+  "*Function called by `yaml-electric-backspace' when deleting backwards.
+It will receive one argument, the numeric prefix value."
   :type 'function
   :group 'yaml)
 
@@ -113,7 +115,7 @@ that key is pressed to begin a block literal."
 
 ;; Constants
 
-(defconst yaml-mode-version "0.0.7" "Version of `yaml-mode.'")
+(defconst yaml-mode-version "0.0.7" "Version of `yaml-mode'.")
 
 (defconst yaml-blank-line-re "^ *$"
   "Regexp matching a line containing only (valid) whitespace.")
@@ -160,12 +162,12 @@ that key is pressed to begin a block literal."
   (concat yaml-scalar-context-re
           "\\(?:" yaml-tag-re "\\)?"
           yaml-block-literal-base-re)
-  "Regexp matching a line beginning a YAML block literal")
+  "Regexp matching a line beginning a YAML block literal.")
 
 (defconst yaml-nested-sequence-re
   (concat "^\\(?: *- +\\)+"
           "\\(?:" yaml-bare-scalar-re " *:\\(?: +.*\\)?\\)?$")
-  "Regexp matching a line containing one or more nested YAML sequences")
+  "Regexp matching a line containing one or more nested YAML sequences.")
 
 (defconst yaml-constant-scalars-re
   (concat "\\(?:^\\|\\(?::\\|-\\|,\\|{\\|\\[\\) +\\) *"
@@ -178,7 +180,7 @@ that key is pressed to begin a block literal."
              "true" "True" "TRUE" "false" "False" "FALSE"
              "on" "On" "ON" "off" "Off" "OFF") t)
           " *$")
-  "Regexp matching certain scalar constants in scalar context")
+  "Regexp matching certain scalar constants in scalar context.")
 
 
 ;; Mode setup
@@ -196,7 +198,7 @@ that key is pressed to begin a block literal."
   (define-key yaml-mode-map "\C-j" 'newline-and-indent))
 
 (defvar yaml-mode-syntax-table nil
-  "Syntax table in use in yaml-mode buffers.")
+  "Syntax table in use in `yaml-mode' buffers.")
 (if yaml-mode-syntax-table
     nil
   (setq yaml-mode-syntax-table (make-syntax-table))
@@ -406,7 +408,7 @@ margin."
   yaml-mode-version)
 
 ;;;###autoload
-(add-to-list 'auto-mode-alist '("\\.yml$" . yaml-mode))
+(add-to-list 'auto-mode-alist '("\\.ya?ml$" . yaml-mode))
 
 (provide 'yaml-mode)
 

@@ -18,15 +18,15 @@ Auto Complete Mode User Manual
 Introduction
 ------------
 
-Auto Complete Mode (aka `auto-complete.el`, `auto-complete-mode`) is a extension that automates and advances completion-system of [GNU Emacs][]. This is superior than old system:
+Auto Complete Mode (aka `auto-complete.el`, `auto-complete-mode`) is an extension that automates and advances the completion-system of [GNU Emacs][]. It is superior to the old system. Features include:
 
 * Visual interface
-* Reduce overhead of completion by using statistic method
+* Reduce overhead of completion by using a statistical method
 * Extensibility
 
-This user manual covers from how to install and how to use to how to extend. Please contact me if you have question.
+This user manual covers from how to install and use to how to extend. Please contact me if you have any questions.
 
-Auto Complete Mode is licensed under the term of [GPLv3][]. And this document is licensed under the term of [GFDL][].
+Auto Complete Mode is licensed under the terms of [GPLv3][]. And this document is licensed under the term of [GFDL][].
 
 Downloads
 ---------
@@ -44,9 +44,9 @@ Installation
 
 ### Installation Script ###
 
-It is easy to install by using a installation script called `etc/install.el` that is located in the package directory.
+It is easy to install by using an installation script called `etc/install.el` that is located in the package directory.
 
-Type `M-x load-file RET` in the running Emacs or newly launched Emacs. Note that if you want to upgrade `auto-complete-mode`, you have to install in **a newly launched Emacs with `-q` option**. Then input a file name to load which is a path string with adding `/etc/install.el` to the package directory. For example, if the package directory is `~/tmp/auto-complete-1.2`, the file name will be `~/tmp/auto-complete-1.2/etc/install.el`.
+Type `M-x load-file RET` in a running or newly-launched Emacs. Note that if you want to upgrade `auto-complete-mode`, you have to install in **a newly launched Emacs with the `-q` option**. Then input a file name to load which is a path string with adding `/etc/install.el` to the package directory. For example, if the package directory is `~/tmp/auto-complete-1.2`, the file name will be `~/tmp/auto-complete-1.2/etc/install.el`.
 
 Then input a directory where Auto Complete will be installed. You need to add a directory to `load-path` later if `load-path` doesn't include the directory. The directory is to be `~/.emacs.d` by default.
 
@@ -69,13 +69,13 @@ If you don't have GNU Make, run emacs like:
     Add the following code to your .emacs:
     
     (add-to-list 'load-path "~/.emacs.d")    ; This may not be appeared if you have already added.
-    (add-to-list 'ac-dictionary-directories "~/.emacs.d/ac-dict")
     (require 'auto-complete-config)
+    (add-to-list 'ac-dictionary-directories "~/.emacs.d/ac-dict")
     (ac-config-default)
 
 ### Manual Installation ###
 
-It is also possible to install manually if you follow a directory configuration. First, do byte-compile all `.el` files in the package directory. You may use `Makefile` in UNIX OS.
+It is also possible to install manually if you follow a directory configuration. First, byte-compile all `.el` files in the package directory. You may use `Makefile` in UNIX OS.
 
     $ make byte-compile
 
@@ -85,11 +85,11 @@ Then copy all `.el` files and `.elc` files to a directory which is added to `loa
 
     $ cp *.el *.elc ~/.emacs.d
 
-And then install dictionary files. They are optional to run Auto Complete Mode, but you should install if you don't have any reason. Dictionary files are located in called `dict` directory, it is needed that they are installed to a directory which is `auto-complete.el` has been installed. If you installed `auto-complete.el` to a directory called `~/.emacs.d`, you also have to install dictionary files to `~/.emacs.d`. Please be careful not to overwrite existed files. It may be rare case, but the installation script above avoids overwrite by renaming `dict` directory to `ac-dict` directory.
+And then install dictionary files. They are optional to run Auto Complete Mode, but you should install if you don't have any reason. Dictionary files are located in called `dict` directory, it is needed that they are installed to a directory which is `auto-complete.el` has been installed. If you installed `auto-complete.el` to a directory called `~/.emacs.d`, you also have to install dictionary files to `~/.emacs.d`. Please be careful not to overwrite existed files. It may be a rare case, but the installation script above avoids overwrite by renaming `dict` directory to `ac-dict` directory.
 
     $ cp -r dict ~/.emacs.d
 
-Finally add the following code to `.emacs`.
+Finally add the following code to `.emacs`:
 
     (add-to-list 'ac-dictionary-directories "~/.emacs.d/dict")
     (require 'auto-complete-config)
@@ -101,7 +101,7 @@ If you haven't added the directory to `load-path`, you need to add the following
 
 ### Check ###
 
-Type some characters in \*scratch\* buffer in a restarted Emacs or newly launched Emacs. It is successful if you see completion menu. If you have error or no completion is started, it is failure maybe. Please contact me in such case with confirmation following:
+Type some characters in \*scratch\* buffer in a restarted or newly-launched Emacs. Installation has been successful if you see a completion menu. If you have an error or no completion is started, it could be a failure. Please contact me in such case with confirmation following:
 
 * Using correct `load-path`?
 
@@ -118,11 +118,11 @@ Type some characters in \*scratch\* buffer in a restarted Emacs or newly launche
 Basic Usage
 -----------
 
-First, in a meaning, `auto-complete-mode` has no "usage". Because `auto-complete-mode` is designed to fade into Emacs editing system. Users will be received a highly-developed completion-system automatically without any difficulty. Ultimately, a goal of `auto-complete-mode` is to provide a system that does what users want without any command, but it is impossible to accomplish 100% accuracy actually. So there is "usage" to cover that points.
+First, in a meaning, `auto-complete-mode` has no "usage". Because `auto-complete-mode` is designed to fade into the Emacs editing system. Users will receive a highly-developed completion system automatically without any difficulty. Ultimately, a goal of `auto-complete-mode` is to provide a system that does what users want without any command, but it is impossible to accomplish 100% accuracy actually. So there is "usage" to cover those points.
 
 ### Input Characters ###
 
-Inputting characters is basic. Any completion will never be shown without any character. So when completion will be started, in other others, what character causes completion to be started? It is good question but it is difficult to answer here. In simple words, completion will be started when just character is inserted. See [`ac-trigger-commands`](#) for more details.
+Inputting characters is basic. Completions will never be shown without any character. So when completion will be started, what character causes completion to be started? It is a good question but it is difficult to answer here. In simple words, completion will be started when a character is inserted. See [`ac-trigger-commands`](#) for more details.
 
 ![Inputting Characters](ac.png)
 
@@ -132,17 +132,17 @@ After completion is started, completion by TAB will be enabled temporarily. Comp
 
 * Case that only one candidate remains
 
-  If only on candidate remains, the candidate will be used to complete.
+  If only one candidate remains, the candidate will be used to complete.
 
-* Case that there is common part among candidates
+* Case that there is a common part among candidates
 
-  For example, if all candidates start with "set", it means they have common part "set". So TAB completes "set" at first.
+  For example, if all candidates start with "set", it means they have a common part "set". So TAB completes "set" at first.
 
 * Otherwise
 
   Otherwise, select candidates in cycle by typing TAB.
 
-It may be different a little according to settings, but basically completion by TAB works as we wrote above. A reason why TAB has several meanings is that we want users to do anything with TAB.
+It may be a little different according to settings, but basically completion by TAB works as we wrote above. A reason why TAB has several meanings is that we want users to do anything with TAB.
 
 ### Completion by RET ###
 
@@ -155,21 +155,21 @@ It is necessary to type TAB a few times for completion by TAB. Completion by RET
 
 ### Candidate Selection ###
 
-Following `auto-complete-mode` philosophy, it is not recommended to select candidates. Because, it means it has been failed to guess completion, and also it requires for users to do candidate selection which is a high cost operation. We think there is so many cases that requires to do candidate selection, because completion by TAB will help candidate selection somehow and in recent version, a statistic method contributes to make a candidate suggestion more accurate. However, actually, this is such cases. So we also think it is not bad idea to remember how to select candidates.
+Following the `auto-complete-mode` philosophy, it is not recommended to manually select candidates. That means it has been failed to guess the completion, and also it requires users to do candidate selection which is a high cost operation. We think there are so many cases that requires to do candidate selection, because completion by TAB will help candidate selection somehow and in recent versions, a statistical method contributes to make a candidate suggestion more accurate. However, actually, this is such cases. So we also think it is not bad idea to remember how to select candidates.
 
-Selecting candidates is not a complex operation. You can select candidates forward or backward by cursor key or `M-p` and `M-n`. According to setting, a behavior of completion by TAB will be changed as a behavior of completion by RET. See [`ac-dwim`](#) for more details.
+Selecting candidates is not a complex operation. You can select candidates forward or backward by cursor key or `M-p` and `M-n`. According to settings, a behavior of completion by TAB will be changed as a behavior of completion by RET. See [`ac-dwim`](#) for more details.
 
-There is other ways to select candidates. `M-1` to select candidate 1, `M-2` to select candidate 2, and so on.
+There are other ways to select candidates. `M-1` to select candidate 1, `M-2` to select candidate 2, and so on.
 
 ### Help ###
 
-`auto-complete-mode` has two type of help functionalities called *Quick Help* and *Buffer Help*. They are different in a point of displaying. Quick help will appear at the side of completion menu, so you can easily see that, but there is a problem if there is no space to displaying the help. Quick help will be shown automatically. To use quick help, you need to set [`ac-use-quick-help`](#) to `t`. Delay time show quick help is given by [`ac-quick-help-delay`](#).
+`auto-complete-mode` has two types of help functionalities called *Quick Help* and *Buffer Help*. They are different in a point of displaying. Quick help will appear at the side of completion menu, so you can easily see that, but there is a problem if there is no space to display the help. Quick help will be shown automatically. To use quick help, you need to set [`ac-use-quick-help`](#) to `t`. Delay time to show quick help is given by [`ac-quick-help-delay`](#).
 
-On other side, buffer help will not be shown without any instructions from users. Buffer help literally display a help in a buffer of other window. It costs much to see than quick help, but it has more readability. To show buffer help, press `C-?` or `f1`. By pressing `C-M-v` or `C-M-S-v` after showing buffer help, you can scroll forward or backward for help buffer. Other commands will be fallbacked and buffer help will be closed.
+On the other side, buffer help will not be shown without any instructions from users. Buffer help literally displays help in a buffer in another window. It costs more to see than quick help, but it has more readability. To show buffer help, press `C-?` or `f1`. By pressing `C-M-v` or `C-M-S-v` after showing buffer help, you can scroll forward or backward through the help buffer. Other commands will be fallbacked and buffer help will be closed.
 
 ### Summary ###
 
-Completion will be started by inserting characters. After completion is started, operations in the following table will be enabled temporarily. After completion is finished, these operations will be disable.
+Completion will be started by inserting characters. After completion is started, operations in the following table will be enabled temporarily. After completion is finished, these operations will be disabled.
 
 | Key       | Command     | Description               |
 |-----------|-------------|---------------------------|
@@ -179,14 +179,14 @@ Completion will be started by inserting characters. After completion is started,
 | up, M-p   | ac-previous | Select previous candidate |
 | C-?, f1   | ac-help     | Show buffer help          |
 
-To stop completion, use `C-g` simply.
+To stop completion, simply use `C-g`.
 
 Advanced Usage
 --------------
 
 ### `auto-complete` command ###
 
-Basically there is assumption that `auto-complete-mode` will be started automatically, but there is also exception. For example, that is a case that an user wants to complete without inserting any character or a case not to start `auto-complete-mode` automatically by settings. A command called `auto-complete` is useful in such cases, which is used with key binding in general. The following code changes a default completion command to more advanced feature that `auto-complete-mode` provides.
+Basically there is an assumption that `auto-complete-mode` will be started automatically, but there is also exception. For example, that is a case that an user wants to complete without inserting any character or a case not to start `auto-complete-mode` automatically by settings. A command called `auto-complete` is useful in such cases, which is used with key binding in general. The following code changes a default completion command to more advanced feature that `auto-complete-mode` provides.
 
     (define-key ac-mode-map (kbd "M-TAB") 'auto-complete)
 
@@ -206,13 +206,13 @@ So, as of `auto-complete` command, it is a little different from an original aut
 
 ### Completion by Fuzzy Matching ###
 
-In a case that there is no candidates by `auto-complete` command or a case that `ac-fuzzy-complete` command is executed, `auto-complete-mode` attempts to complete with fuzzy matching instead of usual exact matching. Parameters of fuzzy matching has already been optimized for use, so users don't need to change them. However if you want to know the internals, see `fuzzy.el`. Using completion by fuzzy matching, typo will be fixed as a series of completion. For instance, input "messaeg" in a buffer, and then do `M-x auto-complete` or `M-x ac-fuzzy-complete`. The cursor color will be changed to red if completion has been successful, and then you can continue to complete with regarding of "messaeg" as "message". It is not bad idea to bind `auto-complete` command to some key in a meaning of handling such cases.
+In a case that there are no candidates by `auto-complete` command or the case where `ac-fuzzy-complete` command is executed, `auto-complete-mode` attempts to complete with fuzzy matching instead of the usual exact matching. Parameters of fuzzy matching have already been optimized for use, so users don't need to change them. However if you want to know the internals, see `fuzzy.el`. Using completion by fuzzy matching, typos will be fixed as a series of completion. For instance, input "messaeg" in a buffer, and then do `M-x auto-complete` or `M-x ac-fuzzy-complete`. The cursor color will be changed to red if completion has been successful, and then you can continue to complete, regarding "messaeg" as "message". It is not a bad idea to bind `auto-complete` command to some key to handle such cases.
 
 ![Fuzzy matching](ac-fuzzy.png)
 
 ### Filtering Completion Candidates ###
 
-You can start filtering by `C-s`. The cursor color will be changed to blue. Then input characters to filter. It is possible to do completion by TAB or select candidates, which changes the cursor color to original so that telling filtering completion candidates has done. The filtering string will be restored when `C-s` again. To delete the filter string, press `DEL` or `C-h`. Other general operations is not allowed there.
+You can start filtering by `C-s`. The cursor color will change to blue. Then input characters to filter. It is possible to do completion by TAB or select candidates, which changes the cursor color to original so that telling filtering completion candidates has done. The filtering string will be restored when `C-s` again. To delete the filter string, press `DEL` or `C-h`. Other general operations is not allowed there.
 
 ![Filtering](ac-isearch.png)
 
@@ -222,7 +222,7 @@ It is difficult what key `auto-complete` command is bound to. It should be bound
 
     (ac-set-trigger-key "TAB")
 
-Trigger key will be enabled after inserting characters. Otherwise it is dealt as an usual command (TAB will be indent). Generally, trigger key is used with `auto-auto-start` being `nil`.
+Trigger key will be enabled after inserting characters. Otherwise it is dealt as an usual command (TAB will be indent). Generally, trigger key is used with `ac-auto-start` being `nil`.
 
     (setq ac-auto-start nil)
 
@@ -275,15 +275,15 @@ As same as user defined dictionary, after editing and adding dictionary, you sho
 Source
 ------
 
-*Source* is a concept that insures a extensibility of `auto-complete-mode`. Simply saying, source is a description about:
+*Source* is a concept that ensures the extensibility of `auto-complete-mode`. Simply saying, source is a description of:
 
 * How to generate completion candidates
 * How to complete
 * How to show
 
-Anybody who know about Emacs Lisp a little can define a source easily. See [extend](#Extend) for how to define a source. Here we can explain how to use builtin sources.
+Anybody who knows a little Emacs Lisp  can define a source easily. See [extend](#Extend) for how to define a source. Here we will explain how to use built-in sources.
 
-Usually a name of source starts with `ac-source-`. So you can list up sources with `apropos` (`M-x apropos RET ^ac-source-`). You may see `ac-source-filename` and `ac-source-dictionary` which are entities of sources.
+Usually a source name starts with `ac-source-`. So you can list sources with `apropos` (`M-x apropos RET ^ac-source-`). You may see `ac-source-filename` and `ac-source-dictionary` which are entities of sources.
 
 ### Using Source ###
 
@@ -302,7 +302,7 @@ If you wrote `(ac-config-default)` in your `.emacs`, it is rare to change a sour
 
 As you see, `ac-sources` in \*scratch\* buffer has six sources. We explain each source for detail, you can guess meanings of sources. It is worth to remember that `ac-sources` is a buffer local variable, which means each `ac-sources` for buffers will be different.
 
-Here is an example. Think you are at \*scratch\* buffer. As we said, this buffer has many sources. Some people think it is too many. So try to change `ac-sources` to reduce functionalities. It is easy to change. Just evaluate the following code in \*scratch\* buffer or with `M-:`:
+Here is an example. Imagine you are at the \*scratch\* buffer. As we said, this buffer has many sources. Some people think there are too many. So try to change `ac-sources` to reduce functionality. It is easy to change. Just evaluate the following code in the \*scratch\* buffer or with `M-:`:
 
     (setq ac-sources '(ac-source-symbols ac-source-words-in-same-mode-buffers))
 
@@ -313,7 +313,7 @@ This example changes `ac-source` setting and enable only symbol completion and w
     
     (add-hook 'emacs-lisp-mode-hook 'my-ac-emacs-lisp-mode)
 
-If a code `(ac-config-default)` is written in `.emacs`, the code above may not be worked correctly. It is because of `(ac-config-default)` will overwrite the setting. In such case, you can redefine a function which is used in `(ac-config-default)`. The function name is `ac-emacs-lisp-mode-setup` in `emacs-lisp-mode`. See `auto-complete-config.el` for more details.
+If the code `(ac-config-default)` is written in `.emacs`, the code above may not work correctly. This is because `(ac-config-default)` will overwrite the setting. In such case, you can redefine a function which is used in `(ac-config-default)`. The function name is `ac-emacs-lisp-mode-setup` in `emacs-lisp-mode`. See `auto-complete-config.el` for more details.
 
     (defun ac-emacs-lisp-mode-setup ()
       (setq ac-sources '(ac-source-symbols ac-source-words-in-same-mode-buffers)))
@@ -327,7 +327,7 @@ By the way, how can we change a setting for all buffers? We use `setq-default` t
 
     (setq-default ac-sources '(ac-source-words-in-all-buffer))
 
-There is other ways to do that. `(ac-config-default)` changes the default value of `ac-sources` by registering a hook for `auto-complete-mode`. The registered function is `ac-common-setup` that adds `ac-source-filename` to the first of `ac-sources` by default. So all `auto-complete-mode` enabled buffer will have `ac-source-filename` at the first of `ac-sources`. A reason why adding to the first is relating to [omni completion](#Omni_Completion). Anyway you don't care about it here. So if you want to change `ac-sources` of all buffer, you can redefine `ac-common-setup` function to do that.
+There are other ways to do that. `(ac-config-default)` changes the default value of `ac-sources` by registering a hook for `auto-complete-mode`. The registered function is `ac-common-setup` that adds `ac-source-filename` to the first of `ac-sources` by default. So all `auto-complete-mode` enabled buffer will have `ac-source-filename` at the first of `ac-sources`. A reason why adding to the first is relating to [omni completion](#Omni_Completion). Anyway you don't care about it here. So if you want to change `ac-sources` of all buffer, you can redefine `ac-common-setup` function to do that.
 
     ;; Add ac-source-dictionary to ac-sources of all buffer
     (defun ac-common-setup ()
@@ -369,6 +369,10 @@ A source for completing files in a current directory. It may be useful with `esh
 
 A source for completing Emacs Lisp functions. It is available only after `(`.
 
+#### `ac-source-ghc-mod` ####
+
+A source for [ghc-mod](http://www.mew.org/~kazu/proj/ghc-mod/en/).
+
 #### `ac-source-gtags` ####
 
 A source for completing tags of [Global](http://www.tamacom.com/global.html).
@@ -380,6 +384,10 @@ A source for completing `imenu` nodes. See `info emacs imenu` for details.
 #### `ac-source-semantic` ####
 
 A source for [Semantic](http://cedet.sourceforge.net/semantic.shtml). It can be used for completing member name for C/C++.
+
+#### `ac-source-slime` ####
+
+A source for [SLIME](http://common-lisp.net/project/slime/).
 
 #### `ac-source-semantic-raw` ####
 
@@ -517,14 +525,14 @@ Default is `smart`.
 
 ### Stop completion automatically after inserting specific words ###
 
-Set `ac-ignores` to words that stops completion automatically. In ruby, some people want to stop completion automatically after inserting "end":
+Set `ac-stop-words` to words that stops completion automatically. In ruby, some people want to stop completion automatically after inserting "end":
 
     (add-hook 'ruby-mode-hook
               (lambda ()
-                (make-local-variable 'ac-ignores)
-                (add-to-list 'ac-ignores "end")))
+                (make-local-variable 'ac-stop-words)
+                (add-to-list 'ac-stop-words "end")))
 
-Note that `ac-ignores` is not a buffer local variable, so you need to make it buffer local with `make-local-variable` if it is buffer specific setting.
+Note that `ac-stop-words` is not a buffer local variable, so you need to make it buffer local with `make-local-variable` if it is buffer specific setting.
 
 ### Change colors ###
 
@@ -595,6 +603,17 @@ You may bind keys to these command like:
 
 If [pos-tip.el](http://www.emacswiki.org/emacs-en/PosTip) is installed, `auto-complete-mode` uses its native rendering engine for displaying quick help instead of legacy one.
 
+Third-party Extensions
+----------------------
+
+### SLIME ###
+
+See [ac-slime](https://github.com/purcell/ac-slime) page.
+
+### Scala ###
+
+See [ENSIME](https://github.com/aemoncannon/ensime) page.
+
 Configuration
 -------------
 
@@ -660,6 +679,10 @@ Specify an integer of lines of completion menu.
 
 Specify an integer of lines of quick help.
 
+### `ac-quick-help-prefer-pos-tip` ###
+
+Whether or not auto-complete prefers native tooltip with pos-tip than overlap popup for displaying quick help. If non-nil, you also need to install [pos-tip.el](http://www.emacswiki.org/emacs/PosTip) so that displaying tooltip can work well.
+
 ### `ac-candidate-limit` ###
 
 Limit a number of candidates. Specifying an integer, the value will be a limit of candidates. `nil` means no limit.
@@ -671,6 +694,10 @@ Specify major modes as a list of symbols that will be enabled automatically if `
 ### `ac-compatible-packages-regexp` ###
 
 Specify a regexp that identifies starting completion or not for that package.
+
+### `ac-non-trigger-commands` ###
+
+Specify commands as a list of symbols that does NOT starts completion automatically.
 
 ### `ac-trigger-commands` ###
 
@@ -688,9 +715,13 @@ Specify a [trigger key](#Trigger_Key).
 
 Specify how completion will be started. `t` means always starting completion automatically. `nil` means never started automatically. An integer means completion will not be started until the value is more than a length of the completion target string.
 
-### `ac-ignores` ###
+### `ac-stop-words` ###
 
 Specify a list of strings that stops completion.
+
+### `ac-use-dictionary-as-stop-words` ###
+
+Specify whether auto-complete uses dictionaries as stop words.
 
 ### `ac-ignore-case` ###
 
@@ -973,6 +1004,10 @@ Specify a list of features (which are `require`d) that the source is depending.
 
 Specify a function or an expression that describe the source is available or not.
 
+#### `document` ####
+
+Specify a function or an expression that returns documentation of the candidate.
+
 ### Variables ###
 
 Here is a list of often used variables.
@@ -1046,11 +1081,17 @@ We don't good answers now, but you may shot the troubles by changing font size w
 Known Bugs
 ----------
 
-### Auto completion will not be started in a buffer `flyspell-mode` enabled ###
+### Auto completion will not be started in a buffer `flyspell-mode` enabled ### {#flyspell-mode-bug}
 
 A way of delaying processes of `flyspell-mode` disables auto completion. You can avoid this problem by `M-x ac-flyspell-workaround`. You can write the following code into your `~/.emacs`.
 
     (ac-flyspell-workaround)
+
+### `linum-mode` tries to display the line numbers even for the comletion menu ### {#linum-mode-bug}
+
+linum-mode tries to add the line numbers even for the comletion menu. To stop that annoying behavior, do `M-x ac-linum-workaround` or add the following code into your `~/.emacs`.
+
+    (ac-linum-workaround)
 
 Reporting Bugs
 --------------

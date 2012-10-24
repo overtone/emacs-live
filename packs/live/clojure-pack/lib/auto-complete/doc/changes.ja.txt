@@ -10,6 +10,32 @@ Auto Complete Mode 変更点
 
 [ユーザーマニュアル](manual.ja.txt)も参照してください。
 
+v1.4の変更点 {#Changes_v1.4}
+------------
+
+### 新しいオプション ### {#New_Options_v1.4}
+
+* [`ac-use-dictionary-as-stop-words`](manual.ja.txt#ac-use-dictionary-as-stop-words)
+* [`ac-non-trigger-commands`](manual.ja.txt#ac-non-trigger-commands)
+
+### 新しい情報源 ### {#New_Sources_v1.4}
+
+* [`ac-source-ghc-mod`](manual.ja.txt#ac-source-ghc-mod)
+* [`ac-source-slime`](manual.ja.txt#ac-source-slime)
+
+### 新しい辞書 ### {#New_Dictionaries_v1.4}
+
+* erlang-mode
+* ada-mode
+
+### 修正されたバグ ### {#Fixed_Bugs_v1.4}
+
+* 頻度計算で稀に起こるエラー
+* 辞書のキャッシュ戦略の改善
+* help-modeがおかしくなる問題を修正 ("help-setup-xref: Symbol's value as variable is void: help-xref-following")
+* auto-completeがWindows上でpos-tipを使えなかった問題を修正
+* [linum-modeの表示に関するバグの回避策を追加](manual.ja.txt#linum-mode-bug)
+
 v1.3.1の変更点 {#Changes_v1.3.1}
 ------------
 

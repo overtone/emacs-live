@@ -63,6 +63,12 @@ for the completed symbol should also be displayed.
 [marmalade]: http://marmalade-repo.org
 [melpa]: http://melpa.milkbox.net
 
+Acknowledgements
+================
+
+Many thanks to the following contributors:
+
+* [Sam Aaron](https://github.com/samaaron)
 
 
 <hr>

@@ -4,7 +4,7 @@
 
 ;; Author: Tomohiro Matsuyama <m2ym.pub@gmail.com>
 ;; Keywords: convenience
-;; Version: 1.3.1
+;; Version: 1.4
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
 
 ;;; Commentary:
 
-;; 
+;;
 
 ;;; Code:
 
@@ -90,7 +90,7 @@
 
 (defun ac-gtags-candidate ()
   (ignore-errors
-    (split-string (shell-command-to-string (format "global -ci %s" ac-prefix)) "\n")))
+    (split-string (shell-command-to-string (format "global -ciq %s" ac-prefix)) "\n")))
 
 (ac-define-source gtags
   '((candidates . ac-gtags-candidate)
@@ -141,17 +141,26 @@
 
 (defun ac-yasnippet-candidates ()
   (with-no-warnings
-    (if (fboundp 'yas/get-snippet-tables)
-        ;; >0.6.0
-        (apply 'append (mapcar 'ac-yasnippet-candidate-1 (yas/get-snippet-tables major-mode)))
-      (let ((table
-             (if (fboundp 'yas/snippet-table)
-                 ;; <0.6.0
-                 (yas/snippet-table major-mode)
-               ;; 0.6.0
-               (yas/current-snippet-table))))
-        (if table
-            (ac-yasnippet-candidate-1 table))))))
+    (cond (;; 0.8 onwards
+           (fboundp 'yas-active-keys)
+           (all-completions ac-prefix (yas-active-keys)))
+          (;; >0.6.0
+           (fboundp 'yas/get-snippet-tables)
+           (apply 'append (mapcar 'ac-yasnippet-candidate-1
+                                  (condition-case nil
+                                      (yas/get-snippet-tables major-mode)
+                                    (wrong-number-of-arguments
+                                     (yas/get-snippet-tables)))))
+           )
+          (t
+           (let ((table
+                  (if (fboundp 'yas/snippet-table)
+                      ;; <0.6.0
+                      (yas/snippet-table major-mode)
+                    ;; 0.6.0
+                    (yas/current-snippet-table))))
+             (if table
+                 (ac-yasnippet-candidate-1 table)))))))
 
 (ac-define-source yasnippet
   '((depends yasnippet)
@@ -166,17 +175,29 @@
 (defun ac-semantic-candidates (prefix)
   (with-no-warnings
     (delete ""            ; semantic sometimes returns an empty string
-            (mapcar 'semantic-tag-name
+            (mapcar (lambda (elem)
+                      (cons (semantic-tag-name elem)
+                            (semantic-tag-clone elem)))
                     (ignore-errors
                       (or (semantic-analyze-possible-completions
                            (semantic-analyze-current-context))
                           (senator-find-tag-for-completion prefix)))))))
 
+(defun ac-semantic-doc (symbol)
+  (with-no-warnings
+    (let* ((proto (semantic-format-tag-summarize-with-file symbol nil t))
+           (doc (semantic-documentation-for-tag symbol))
+           (res proto))
+      (when doc
+        (setq res (concat res "\n\n" doc)))
+      res)))
+
 (ac-define-source semantic
   '((available . (or (require 'semantic-ia nil t)
                      (require 'semantic/ia nil t)))
     (candidates . (ac-semantic-candidates ac-prefix))
-    (prefix . c-dot-ref)
+    (document . ac-semantic-doc)
+    (prefix . cc-member)
     (requires . 0)
     (symbol . "m")))
 
@@ -184,6 +205,7 @@
   '((available . (or (require 'semantic-ia nil t)
                      (require 'semantic/ia nil t)))
     (candidates . (ac-semantic-candidates ac-prefix))
+    (document . ac-semantic-doc)
     (symbol . "s")))
 
 ;; eclim
@@ -368,29 +390,44 @@
   "Current editing property.")
 
 (defun ac-css-prefix ()
-  (when (save-excursion (re-search-backward "\\_<\\(.+?\\)\\_>\\s *:.*\\=" nil t))
+  (when (save-excursion (re-search-backward "\\_<\\(.+?\\)\\_>\\s *:[^;]*\\=" nil t))
     (setq ac-css-property (match-string 1))
     (or (ac-prefix-symbol) (point))))
 
 (defun ac-css-property-candidates ()
-  (or (loop with list = (assoc-default ac-css-property ac-css-property-alist)
-            with seen = nil
-            with value
-            while (setq value (pop list))
-            if (symbolp value)
-            do (unless (memq value seen)
-                 (push value seen)
-                 (setq list
-                       (append list
-                               (or (assoc-default value ac-css-value-classes)
-                                   (assoc-default (symbol-name value) ac-css-property-alist)))))
-            else collect value)
-      ac-css-pseudo-classes))
+  (let ((list (assoc-default ac-css-property ac-css-property-alist)))
+    (if list
+        (loop with seen
+              with value
+              while (setq value (pop list))
+              if (symbolp value)
+              do (unless (memq value seen)
+                   (push value seen)
+                   (setq list
+                         (append list
+                                 (or (assoc-default value ac-css-value-classes)
+                                     (assoc-default (symbol-name value) ac-css-property-alist)))))
+              else collect value)
+      ac-css-pseudo-classes)))
 
-(defvar ac-source-css-property
+(ac-define-source css-property
   '((candidates . ac-css-property-candidates)
     (prefix . ac-css-prefix)
     (requires . 0)))
+
+;; slime
+(ac-define-source slime
+  '((depends slime)
+    (candidates . (car (slime-simple-completions ac-prefix)))
+    (symbol . "s")
+    (cache)))
+
+;; ghc-mod
+(ac-define-source ghc-mod
+  '((depends ghc)
+    (candidates . (ghc-select-completion-symbol))
+    (symbol . "s")
+    (cache)))
 
 
 
@@ -455,7 +492,8 @@
 ;;;; Default settings
 
 (defun ac-common-setup ()
-  (add-to-list 'ac-sources 'ac-source-filename))
+  ;(add-to-list 'ac-sources 'ac-source-filename)
+  )
 
 (defun ac-emacs-lisp-mode-setup ()
   (setq ac-sources (append '(ac-source-features ac-source-functions ac-source-yasnippet ac-source-variables ac-source-symbols) ac-sources)))
@@ -463,9 +501,7 @@
 (defun ac-cc-mode-setup ()
   (setq ac-sources (append '(ac-source-yasnippet ac-source-gtags) ac-sources)))
 
-(defun ac-ruby-mode-setup ()
-  (make-local-variable 'ac-ignores)
-  (add-to-list 'ac-ignores "end"))
+(defun ac-ruby-mode-setup ())
 
 (defun ac-css-mode-setup ()
   (setq ac-sources (append '(ac-source-css-property) ac-sources)))

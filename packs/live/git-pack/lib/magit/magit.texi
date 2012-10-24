@@ -1,0 +1,1271 @@
+\input texinfo.tex    @c -*-texinfo-*-
+@c %**start of header
+@setfilename magit.info
+@settitle Magit User Manual
+@documentencoding utf-8
+@c %**end of header
+
+@dircategory Emacs
+@direntry
+* Magit: (magit).        Using Git from Emacs with Magit.
+@end direntry
+
+@copying
+Copyright @copyright{} 2008, 2009, 2010, 2011 Magit contributors. (See
+the header of magit.el for the lengthy list of Magit contributors.)
+
+@quotation
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.2 or
+any later version published by the Free Software Foundation; with no
+Invariant Sections, with no Front-Cover Texts, and with no Back-Cover
+Texts.
+@end quotation
+@end copying
+
+@node Top
+@top Magit User Manual
+
+Magit is an interface to the version control system Git, implemented
+as an extension to Emacs.  Magit supports GNU Emacs version 22 or
+later.  It may work with other emacsen, but Magit developers do not
+intend to investigate and fix bugs that only appear in unsupported
+versions.  Patches to fix bugs in other emacsen or volunteers to
+maintain compatibility are still welcome.
+
+@menu
+* Introduction::
+* Acknowledgments::
+* Sections::
+* Status::
+* Untracked files::
+* Staging and Committing::
+* History::
+* Reflogs::
+* Commit Buffer::
+* Diffing::
+* Tagging::
+* Resetting::
+* Stashing::
+* Branching::
+* The Branch Manager::
+* Wazzup::
+* Merging::
+* Rebasing::
+* Interactive Rebasing::
+* Rewriting::
+* Pushing and Pulling::
+* Bisecting::
+* Submodules::
+* Using Magit Extensions::
+* Using Git Directly::
+* Customization::
+* Frequently Asked Questions::
+@end menu
+
+@node Introduction
+@chapter Introduction
+
+With Magit, you can inspect and modify your Git repositories with
+Emacs.  You can review and commit the changes you have made to the
+tracked files, for example, and you can browse the history of past
+changes.  There is support for cherry picking, reverting, merging,
+rebasing, and other common Git operations.
+
+Magit is not a complete interface to Git; it just aims to make the
+most common Git operations convenient.  Thus, Magit will likely not
+save you from learning Git itself.
+
+This manual provides a tour of all Magit features.  It does not give an
+introduction to version control in general, or to Git in particular.
+
+The main entry point to Magit is @kbd{M-x magit-status}, which will
+put you in Magit's status buffer.  You will be using it frequently, so
+it is probably a good idea to bind @code{magit-status} to a key of
+your choice.
+
+In addition to the status buffer, Magit will also create buffers that
+show lists of commits, buffers with diffs, and other kinds of buffers.
+All these buffers are in @code{magit-mode} and have the same key
+bindings.  Not all commands make sense in all contexts, but a given
+key will always do the same thing in all Magit buffers.
+
+Naturally, Magit runs the @code{git} command to do most of the work.
+The @code{*magit-process*} buffer contains the transcript of the most
+recent command.  You can switch to it with @kbd{$}.
+
+@node Acknowledgments
+@chapter Acknowledgments
+
+Marius Vollmer started the whole project.  Thanks !
+
+From day one of the first Magit announcement, John Wiegley has
+contributed numerous fixes, UI improvements, and new features.
+Thanks!
+
+Linh Dang and Christian Neukirchen also contributed from day one.
+Thanks!
+
+Phil Hagelberg joined a few days later.  Thanks!
+
+Alex Ott contributed support for git svn.  Thanks!
+
+Marcin Bachry contributed bug fixes and support for decorated logs.
+Thanks!
+
+Alexey Voinov fixed bugs.  Thanks!
+
+Rémi Vanicat helped with Tramp support.  Thanks!
+
+@node Sections
+@chapter Sections
+
+All Magit buffers are structured into nested 'sections'.  These
+sections can be hidden and shown individually.  When a section is
+hidden, only its first line is shown and all its children are
+completely invisible.
+
+The most fine-grained way to control the visibility of sections is the
+@kbd{TAB} key.  It will to toggle the current section (the section
+that contains point) between being hidden and being shown.
+
+Typing @kbd{S-TAB} toggles the visibility of the children of the
+current section.  When all of them are shown, they will all be hidden.
+Otherwise, when some or all are hidden, they will all be shown.
+
+The digit keys @kbd{1}, @kbd{2}, @kbd{3}, and @kbd{4} control the
+visibility of sections based on levels.  Hitting @kbd{2}, for example,
+will show sections on levels one and two, and will hide sections on
+level 3.  However, only sections that are a parent or child of the
+current section are affected.
+
+For example, when the current section is on level 3 and you hit
+@kbd{1}, the grand-parent of the current section (which is on level
+one) will be shown, and the parent of the current section (level 2)
+will be hidden.  The visibility of no other section will be changed.
+
+This sounds a bit complicated, but you'll figure it out.
+
+Using @kbd{M-1}, @kbd{M-2}, @kbd{M-3}, and @kbd{M-4} is similar to the
+unmodified digits, but now all sections on the respective level are
+affected, regardless of whether or not they are related to the current
+section.
+
+For example, @kbd{M-1} will only show the first lines of the top-level
+sections and will hide everything else.  Typing @kbd{M-4} on the other
+hand will show everything.
+
+Because of the way the status buffer is set up, some changes to
+section visibility are more common than others.  Files are on level 2
+and diff hunks are on level 4.  Thus, you can type @kbd{2} to collapse
+the diff of the current file, and @kbd{M-2} to collapse all files.
+This returns the status buffer to its default setup and is a quick way
+to unclutter it after drilling down into the modified files.
+
+Because @kbd{2} and @kbd{M-2} are so common in the status buffer, they
+are bound to additional, more mnemonic keys: @kbd{M-h} (hide) and
+@kbd{M-H} (hide all).  Likewise @kbd{4} and @kbd{M-4} are also
+available as @kbd{M-s} (show) and @kbd{M-S} (show all).
+
+In other buffers than the status buffer, @kbd{M-h}, @kbd{M-H},
+@kbd{M-s}, and @kbd{M-S} might work on different levels than on 2 and
+4, but they keep their general meaning: @kbd{M-H} hides all detail,
+and @kbd{M-S} shows everything.
+
+@node Status
+@chapter Status
+
+Running @kbd{M-x magit-status} displays the main interface of Magit,
+the status buffer.  You can have multiple status buffers active at the
+same time, each associated with its own Git repository.
+
+When invoking @kbd{M-x magit-status} from within a Git repository, it
+will switch to the status buffer of that repository.  Otherwise, it
+will prompt for a directory.  With a prefix argument, it will always
+prompt.
+
+You can set @code{magit-repo-dirs} to customize how
+@code{magit-status} asks for the repository to work on.  When
+@code{magit-repo-dirs} is nil, @code{magit-status} will simply ask for
+a directory.
+
+If you specify a directory that is not a Git repository, @kbd{M-x
+magit-status} will offer to initialize it as one.
+
+When @code{magit-repo-dirs} is not nil, it is treated as a list of
+directory names, and @code{magit-status} will find all Git
+repositories in those directories and offer them for completion.
+(Magit will only look @code{magit-repo-dirs-depth} levels deep,
+however.)
+
+With two prefix arguments, @code{magit-status} will always prompt for
+a raw directory.
+
+Thus, you would normally set @code{magit-repo-dirs} to the places
+where you keep most of your Git repositories and switch between them
+with @kbd{C-u M-x magit-status}.  If you want to go to a repository
+outside of your normal working areas, or if you want to create a new
+repository, you would use @kbd{C-u C-u M-x magit-status}.
+
+You need to explicitly refresh the status buffer when you have made
+changes to the repository from outside of Emacs.  You can type @kbd{g}
+in the status buffer itself, or just use @kbd{M-x magit-status}
+instead of @kbd{C-x b} when switching to it.  You also need to refresh
+the status buffer in this way after saving a file in Emacs.
+
+The header at the top of the status buffer shows a short summary of
+the repository state: where it is located, which branch is checked
+out, etc.  Below the header are a number of sections that show details
+about the working tree and the staging area.  You can hide and show
+them as described in the previous section.
+
+The first section shows @emph{Untracked files}, if there are any.  See
+@ref{Untracked files} for more details.
+
+The next two sections show your local changes.  They are explained
+fully in the next chapter, @ref{Staging and Committing}.
+
+If the current branch is associated with a remote tracking branch, the
+status buffer shows the differences between the current branch and the
+tracking branch.  See @ref{Pushing and Pulling} for more information.
+
+During a history rewriting session, the status buffer shows the
+@emph{Pending changes} and @emph{Pending commits} sections.  See
+@ref{Rewriting} for more details.
+
+@node Untracked files
+@chapter Untracked files
+
+Untracked files are shown in the @emph{Untracked files} section.
+
+You can add an untracked file to the staging area with @kbd{s}.  If
+point is on the @emph{Untracked files} section title when you hit
+@kbd{s}, all untracked files are staged.
+
+Typing @kbd{C-u S} anywhere will also stage all untracked files,
+together with all changes to the tracked files.
+
+You can instruct Git to ignore them by typing @kbd{i}.  This will add
+the filename to the @code{.gitignore} file.  Typing @kbd{C-u i} will ask
+you for the name of the file to ignore.  This is useful to ignore whole
+directories, for example.  In this case, the minibuffer's future history
+(accessible with @kbd{M-n}) contains predefined values (such as
+wildcards) that might be of interest. If prefix argument is negative
+(for example after typing @kbd{C-- i}), the prompt proposes wildcard by
+default.  The @kbd{I} command is similar to @kbd{i} but will add the
+file to @code{.git/info/exclude} instead.
+
+To delete an untracked file forever, use @kbd{k}.  If point is on the
+@emph{Untracked files} section title when you hit @kbd{k}, all
+untracked files are deleted.
+
+@node Staging and Committing
+@chapter Staging and Committing
+
+Comitting with Git is a two step process: first you add the changes
+you want to commit to a 'staging area', and then you commit them to
+the repository.  This allows you to only commit a subset of your local
+changes.
+
+Magit allows you to ignore the staging area if you wish.  As long as
+your staging area is unused, Magit will show your uncomitted changes
+in a section named @emph{Changes}.
+
+When the staging area is in use, Magit uses two sections:
+@emph{Unstaged changes} and @emph{Staged changes}.  The @emph{Staged
+changes} section shows the changes that will be included in the next
+commit, while the @emph{Unstaged changes} section shows the changes
+that will be left out.
+
+To move an unstaged hunk into the staging area, move point into the
+hunk and type @kbd{s}.  Likewise, to unstage a hunk, move point into
+it and type @kbd{u}.  If point is in a diff header when you type
+@kbd{s} or @kbd{u}, all hunks belonging to that diff are moved at the
+same time.
+
+If the region is active when you type @kbd{s} or @kbd{u}, only the
+changes in the region are staged or unstaged.  (This works line by
+line: if the beginning of a line is in the region it is included in
+the changes, otherwise it is not.)
+
+To change the size of the hunks, you can type @kbd{+} or @kbd{-} to
+increase and decrease, respectively.  Typing @kbd{0} will
+reset the hunk size to the default.
+
+Typing @kbd{C-u s} will ask you for a name of a file to be staged, for
+example to stage files that are hidden.
+
+To move all hunks of all diffs into the staging area in one go, type
+@kbd{S}.  To unstage everything, type @kbd{U}.
+
+Typing @kbd{C-u S} will stage all untracked files in addition to the
+changes to tracked files.
+
+You can discard uncommitted changes by moving point into a hunk and
+typing @kbd{k}.  The changes to discard are selected as with @kbd{s}
+and @kbd{u}.
+
+Before committing, you should write a short description of the
+changes.
+
+Type @kbd{c} to pop up a buffer where you can write your change
+description.  Once you are happy with the description, type @kbd{C-c
+C-c} in that buffer to perform the commit.
+
+If you want to write changes in a @file{ChangeLog} file, you can use
+@kbd{C-x 4 a} on a diff hunk.
+
+Typing @kbd{c} when the staging area is unused is a special situation.
+Normally, the next commit would be empty, but you can configure Magit
+to do something more useful by customizing the
+@code{magit-commit-all-when-nothing-staged} variable.  One choice is
+to instruct the subsequent @kbd{C-c C-c} to commit all changes.
+Another choice is stage everything at the time of hitting @kbd{c}.
+
+You can type @kbd{C-c C-a} in the buffer with the change description
+to toggle a flag that determines whether the next commit will
+@emph{amend} the current commit in HEAD.
+
+Typing @kbd{C-c C-s} will toggle the @code{--signoff} option.  The
+default is determined by the @code{magit-commit-signoff} customization
+variable.
+
+Typing @kbd{C-c C-e} will toggle the @code{--allow-empty} option.  This
+allows you to make commits that serve as notes, without including any
+changes.
+
+Typing @kbd{C-c C-t} will toggle the option to specify the name and
+email address for the commit's author.  The default is determined by
+the @code{user.name} and @code{user.email} git configuration settings.
+
+If you change your mind and don't want to go ahead with your commit
+while you are in the @code{*magit-log-edit*} buffer, you can just
+switch to another buffer, continue editing there, staging and
+unstaging things until you are happy, and then return to the
+@code{*magit-log-edit*} buffer, maybe via @kbd{C-x b}, or by hitting
+@kbd{c} again in a Magit buffer.
+
+If you want to erase the @code{*magit-log-edit*} buffer and bury it,
+you can hit @kbd{C-c C-k} in it.
+
+Typing @kbd{C} will also pop up the change description buffer, but in
+addition, it will try to insert a ChangeLog-style entry for the change
+that point is in.
+
+@node History
+@chapter History
+
+To show the repository history of your current head, type @kbd{l l}.  A
+new buffer will be shown that displays the history in a terse form.
+The first paragraph of each commit message is displayed, next to a
+representation of the relationships between commits.
+
+To show the repository history between two branches or between any two
+points of the history, type @kbd{l r l}.  You will be prompted to enter
+references for starting point and ending point of the history range; you
+can use auto-completion to specify them.  A typical use case for ranged
+history log display would be @kbd{l r l master RET new-feature RET} that
+will display commits on the new-feature branch that are not in master;
+these commits can then be inspected and cherry-picked, for example.
+
+More thorough filtering can be done by supplying @kbd{l} with one or
+more suffix arguments, as displayed in its popup.  @kbd{=g} ('Grep')
+for example, limits the output to commits of which the log message
+matches a specific string/regex.
+
+Typing @kbd{l L} (or @kbd{l C-u L}) will show the log in a more verbose
+form.
+
+Magit will show only @code{magit-log-cutoff-length} entries. @kbd{e}
+will show twice as many entries. @kbd{C-u e} will show all entries,
+and given a numeric prefix argument, @kbd{e} will add this number of
+entries.
+
+You can move point to a commit and then cause various things to happen
+with it.  (The following commands work in any list of commits, such as
+the one shown in the @emph{Unpushed commits} section.)
+
+Typing @kbd{RET} will pop up more information about the current commit
+and move point into the new buffer.  @xref{Commit Buffer}.  Typing
+@kbd{SPC} and @kbd{DEL} will also show the information, but will
+scroll the new buffer up or down (respectively) when typed again.
+
+Typing @kbd{a} will apply the current commit to your current branch.
+This is useful when you are browsing the history of some other branch
+and you want to `cherry-pick' some changes from it.  A typical
+situation is applying selected bug fixes from the development version
+of a program to a release branch.  The cherry-picked changes will not
+be committed automatically; you need to do that explicitly.
+
+Typing @kbd{A} will cherry-pick the current commit and will also
+commit the changes automatically when there have not been any
+conflicts.
+
+Typing @kbd{v} will revert the current commit.  Thus, it will apply
+the changes made by that commit in reverse.  This is obviously useful
+to cleanly undo changes that turned out to be wrong.  As with @kbd{a},
+you need to commit the changes explicitly.
+
+Typing @kbd{C-w} will copy the sha1 of the current commit into the
+kill ring.
+
+Typing @kbd{=} will show the differences from the current commit to
+the @dfn{marked} commit.
+
+You can mark the current commit by typing @kbd{.}.  When the current
+commit is already marked, typing @kbd{.} will unmark it.  To unmark
+the marked commit no matter where point is, use @kbd{C-u .}.
+
+Some commands, such as @kbd{=}, will use the current commit and the
+marked commit as implicit arguments.  Other commands will offer the
+marked commit as a default when prompting for their arguments.
+
+@node Reflogs
+@chapter Reflogs
+
+You can use @kbd{l h} and @kbd{l H} to browse your @emph{reflog}, the
+local history of changes made to your repository heads.  Typing
+@kbd{H} will ask for a head, while @kbd{l h} will show the reflog of
+@code{HEAD}.
+
+The resulting buffer is just like the buffer produced by @kbd{l l} and
+@kbd{l L} that shows the commit history.
+
+@node Commit Buffer
+@chapter Commit Buffer
+
+When you view a commit (perhaps by selecting it in the log buffer,
+@ref{History}), the ``commit buffer'' is displayed, showing you
+information about the commit and letting you interact with it.
+
+By placing your cursor within the diff or hunk and typing @kbd{a}, you
+can apply the same patch to your working copy.  This is useful when
+you want to copy a change from another branch, but don't necessarily
+want to cherry-pick the whole commit.
+
+By typing @kbd{v} you can apply the patch in reverse, removing all the
+lines that were added and adding all the lines that were removed.
+This is a convenient way to remove a change after determining that it
+introduced a bug.
+
+If the commit message refers to any other commits in the repository by
+their unique hash, the hash will be highlighted and you will be able
+to visit the referenced commit either by clicking on it or by moving
+your cursor onto it and pressing @kbd{RET}.
+
+The commit buffer maintains a history of the commits it has shown.
+After visiting a referenced commit you can type @kbd{C-c C-b} to get
+back to where you came from.  To go forward in the history, type
+@kbd{C-c C-f}.  There are also @code{[back]} and @code{[forward]}
+buttons at the bottom of the buffer.
+
+@node Diffing
+@chapter Diffing
+
+Magit typically shows diffs in the ``unified'' format.
+
+In any buffer that shows a diff, you can type @kbd{e} anywhere within
+the diff to show the two versions of the file in Ediff.  If the diff
+is of a file in the status buffer that needs to be merged, you will be
+able to use Ediff as an interactive merge tool.  Otherwise, Ediff will
+simply show the two versions of the file.
+
+To show the changes from your working tree to another revision, type
+@kbd{d}.  To show the changes between two arbitrary revisions, type
+@kbd{D}.
+
+You can use @kbd{a} within the diff output to apply the changes to
+your working tree.  As usual when point is in a diff header for a
+file, all changes for that file are applied, and when it is in a hunk,
+only that hunk is.  When the region is active, the applied changes are
+restricted to that region.
+
+Typing @kbd{v} will apply the selected changes in reverse.
+
+@node Tagging
+@chapter Tagging
+
+Typing @kbd{t t} will make a lighweight tag.  Typing @kbd{t a} will
+make an annotated tag.  It will put you in the normal
+@code{*magit-log-edit} buffer for writing commit messages, but typing
+@kbd{C-c C-c} in it will make the tag instead.  This is controlled by
+the @code{Tag} field that will be added to the @code{*magit-log-edit*}
+buffer.  You can edit it, if you like.
+
+@node Resetting
+@chapter Resetting
+
+Once you have added a commit to your local repository, you can not
+change that commit anymore in any way.  But you can reset your current
+head to an earlier commit and start over.
+
+If you have published your history already, rewriting it in this way
+can be confusing and should be avoided.  However, rewriting your local
+history is fine and it is often cleaner to fix mistakes this way than
+by reverting commits (with @kbd{v}, for example).
+
+Typing @kbd{x} will ask for a revision and reset your current head to
+it.  No changes will be made to your working tree and staging area.
+Thus, the @emph{Staged changes} section in the status buffer will show
+the changes that you have removed from your commit history.  You can
+commit the changes again as if you had just made them, thus rewriting
+history.
+
+Typing @kbd{x} while point is in a line that describes a commit will
+offer this commit as the default revision to reset to.  Thus, you can
+move point to one of the commits in the @emph{Unpushed commits}
+section and hit @kbd{x RET} to reset your current head to it.
+
+Type @kbd{X} to reset your working tree and staging area to the most
+recently committed state.  This will discard your local modifications,
+so be careful.
+
+You can give a prefix to @kbd{x} if you want to reset both the current
+head and your working tree to a given commit.  This is the same as
+first using an unprefixed @kbd{x} to reset only the head, and then
+using @kbd{X}.
+
+@node Stashing
+@chapter Stashing
+
+You can create a new stash with @kbd{z z}.  Your stashes will be listed
+in the status buffer, and you can apply them with @kbd{a} and pop them
+with @kbd{A}.  To drop a stash, use @kbd{k}.
+
+With a prefix argument, both @kbd{a} and @kbd{A} will attempt to
+reinstate the index as well as the working tree from the stash.
+
+Typing @kbd{z -k z} will create a stash just like @kbd{z z}, but will
+leave the changes in your working tree and index. This makes it easier
+to, for example, test multiple variations of the same change.
+
+If you just want to make quick snapshots in between edits, you can use
+@kbd{z s}, which automatically enters a timestamp as description, and
+keeps your working tree and index intact by default.
+
+You can visit and show stashes in the usual way: Typing @kbd{SPC} and
+@kbd{DEL} will pop up a buffer with the description of the stash and
+scroll it, typing @kbd{RET} will move point into that buffer. Using
+@kbd{C-u RET} will move point into that buffer in other window.
+
+@node Branching
+@chapter Branching
+
+The current branch is indicated in the header of the status buffer.
+You can switch to a different branch by typing @kbd{b b}.  This will
+immediately checkout the branch into your working copy, so you
+shouldn't have any local modifications when switching branches.
+
+If you try to switch to a remote branch, Magit will offer to create a
+local tracking branch for it instead.  This way, you can easily start
+working on new branches that have appeared in a remote repository.
+
+Typing @kbd{b b} while point is at a commit description will offer
+that commit as the default to switch to.  This will result in a
+detached head.
+
+
+Typing  @kbd{b m} will let you rename a branch. Unless a branch with the same
+name already exists, obviously...
+
+
+To create a new branch and switch to it immediately, type @kbd{b n}.
+
+
+To delete a branch, type @kbd{b d}. If you're currently on that
+branch, Magit will offer to switch to the 'master' branch.
+
+Deleting a branch is only possible if it's already fully merged into
+HEAD or its upstream branch. Unless you type @kbd{b D}, that is.
+Here be dragons...
+
+
+Typing @kbd{b v} will list the local and remote branches in a new buffer
+called @code{*magit-branches*} from which you can work with them. See
+@ref{The Branch Manager} for more details.
+
+
+@node The Branch Manager
+@chapter The Branch Manager
+
+The Branch Manager is a separate buffer called @code{*magit-branches*}
+with its own local key map. The buffer contains both local and remote
+branches. The current local branch is marked by a ``*'' in front of
+the name.
+
+To check out a branch, move your cursor to the desired branch and
+press @kbd{RET}.
+
+Typing @kbd{k} will delete the branch in the current line, and
+@kbd{C-u k} deletes it even if it hasn't been merged into the current
+local branch. Deleting works for both local and remote branches.
+
+By typing @kbd{T} on a local branch, you can change which remote branch it's set to track.
+
+@node Wazzup
+@chapter Wazzup
+
+Typing @kbd{w} will show a summary of how your other branches relate
+to the current branch.
+
+For each branch, you will get a section that lists the commits in that
+branch that are not in the current branch.  The sections are initially
+collapsed; you need to explicitly open them with @kbd{TAB} (or
+similar) to show the lists of commits.
+
+When point is on a @emph{N unmerged commits in ...} title, the
+corresponding branch will be offered as the default for a merge.
+
+Hitting @kbd{i} on a branch title will ignore this branch in the
+wazzup view.  You can use @kbd{C-u w} to show all branches, including
+the ignored ones.  Hitting @kbd{i} on an already ignored branch in
+that view will unignore it.
+
+@node Merging
+@chapter Merging
+
+Magit offers two ways to merge branches: manual and automatic.  A
+manual merge will apply all changes to your working tree and staging
+area, but will not commit them, while an automatic merge will go ahead
+and commit them immediately.
+
+Type @kbd{m m} to initiate merge.
+
+After initiating a merge, the header of the status buffer might remind
+you that the next commit will be a merge commit (with more than one
+parent).  If you want to abort a manual merge, just do a hard reset to
+HEAD with @kbd{X}.
+
+Merges can fail if the two branches you want to merge introduce
+conflicting changes.  In that case, the automatic merge stops before the
+commit, essentially falling back to a manual merge.  You need to resolve
+the conflicts for example with @kbd{e} and stage the resolved files, for
+example with @kbd{S}.
+
+You can not stage individual hunks one by one as you resolve them, you
+can only stage whole files once all conflicts in them have been
+resolved.
+
+@node Rebasing
+@chapter Rebasing
+
+Typing @kbd{R} in the status buffer will initiate a rebase or, if one
+is already in progress, ask you how to continue.
+
+When a rebase is stopped in the middle because of a conflict, the
+header of the status buffer will indicate how far along you are in the
+series of commits that are being replayed.  When that happens, you
+should resolve the conflicts and stage everything and hit @kbd{R c} to
+continue the rebase.  Alternatively, hitting @kbd{c} or @kbd{C} while
+in the middle of a rebase will also ask you whether to continue the
+rebase.
+
+Of course, you can initiate a rebase in any number of ways, by
+configuring @code{git pull} to rebase instead of merge, for example.
+Such a rebase can be finished with @kbd{R} as well.
+
+@node Interactive Rebasing
+@chapter Interactive Rebasing
+
+Typing @kbd{E} in the status buffer will initiate an interactive
+rebase. This is equivalent to running @code{git rebase --interactive}
+at the command line. The @file{git-rebase-todo} file will be opened in
+an Emacs buffer for you to edit. This file is opened using
+@code{emacsclient}, so just edit this file as you normally would, then
+call the @code{server-edit} function (typically bound to @kbd{C-x #})
+to tell Emacs you are finished editing, and the rebase will proceed as
+usual.
+
+If you have loaded @file{rebase-mode.el} (which is included in the
+Magit distribution), the @file{git-rebase-todo} buffer will be in
+@code{rebase-mode}. This mode disables normal text editing but instead
+provides single-key commands (shown in the buffer) to perform all the
+edits that you would normally do manually, including changing the
+operation to be performed each commit (``pick'', ``squash'', etc.),
+deleting (commenting out) commits from the list, and reordering
+commits. You can finish editing the buffer and proceed with the rebase
+by pressing @kbd{C-c C-c}, which is bound to @code{server-edit} in
+this mode, and you can abort the rebase with @kbd{C-c C-k}, just like
+when editing a commit message in Magit.
+
+@node Rewriting
+@chapter Rewriting
+
+As hinted at earlier, you can rewrite your commit history.  For
+example, you can reset the current head to an earlier commit with
+@kbd{x}.  This leaves the working tree unchanged, and the status
+buffer will show all the changes that have been made since that new
+value of the current head.  You can commit these changes again,
+possibly splitting them into multiple commits as you go along.
+
+Amending your last commit is a common special case of rewriting
+history like this.
+
+Another common way to rewrite history is to reset the head to an
+earlier commit, and then to cherry pick the previous commits in a
+different order.  You could pick them from the reflog, for example.
+
+Magit has several commands that can simplify the book keeping
+associated with rewriting.  These commands all start with the @kbd{r}
+prefix key.
+
+Typing @kbd{r b} will start a rewrite operation.  You will be prompted
+for a @emph{base} commit.  This commit and all subsequent commits up
+until the current head are then put in a list of @emph{Pending
+commits}, after which the current head will be reset to the
+@emph{parent} of the base commit.  This can be configured to behave
+like @code{git rebase}, i.e. exclude the selected base commit from the
+rewrite operation, with the @code{magit-rewrite-inclusive} variable.
+
+You would then typically use @kbd{a} and @kbd{A} to cherry pick
+commits from the list of pending commits in the desired order, until
+all have been applied.  Magit shows which commits have been applied by
+changing their marker from @code{*} to @code{.}.
+
+Using @kbd{A} will immediately commit the commit (as usual).  If you
+want to combine multiple previous commits into a single new one, use
+@kbd{a} to apply them all to your working tree, and then commit them
+together.
+
+Magit has no explicit support for rewriting merge commits.  It will
+happily include merge commits in the list of pending commits, but
+there is no way of replaying them automatically.  You have to redo the
+merge explicitly.
+
+You can also use @kbd{v} to revert a commit when you have changed your
+mind.  This will change the @code{.} mark back to @code{*}.
+
+Once you are done with the rewrite, type @kbd{r s} to remove the book
+keeping information from the status buffer.
+
+If you rather wish to start over, type @kbd{r a}.  This will abort the
+rewriting, resetting the current head back to the value it had before
+the rewrite was started with @kbd{r b}.
+
+Typing @kbd{r f} will @emph{finish} the rewrite: it will apply all
+unused commits one after the other, as if you would us @kbd{A} with
+all of them.
+
+You can change the @kbd{*} and @kbd{.} marks of a pending commit
+explicitly with @kbd{r *} and @kbd{r .}.
+
+In addition to a list of pending commits, the status buffer will show
+the @emph{Pending changes}.  This section shows the diff between the
+original head and the current head.  You can use it to review the
+changes that you still need to rewrite, and you can apply hunks from
+it, like from any other diff.
+
+@node Pushing and Pulling
+@chapter Pushing and Pulling
+
+Magit will run @code{git push} when you type @kbd{P P}.  If you give
+a prefix argument to @kbd{P P}, you will be prompted for the repository
+to push to.  When no default remote repository has been configured yet
+for the current branch, you will be prompted as well.  Typing @kbd{P P}
+will only push the current branch to the remote.  In other words, it
+will run @code{git push <remote> <branch>}.  The branch will be created
+in the remote if it doesn't exist already.  The local branch will be
+configured so that it pulls from the new remote branch. If you give
+a double prefix argument to @kbd{P P}, you will be prompted in addition
+for the target branch to push to.  In other words, it will run @code{git
+push <remote> <branch>:<target>}.
+
+Typing @kbd{f f} will run @code{git fetch}.  It will prompt for the name
+of the remote to update if there is no default one.  Typing @kbd{f o}
+will always prompt for the remote.  Typing @kbd{F F} will run @code{git
+pull}.  When you don't have a default branch configured to be pulled
+into the current one, you will be asked for it.
+
+If there is a default remote repository for the current branch, Magit
+will show that repository in the status buffer header.
+
+In this case, the status buffer will also have a @emph{Unpushed
+commits} section that shows the commits on your current head that are
+not in the branch named @code{<remote>/<branch>}.  This section works
+just like the history buffer: you can see details about a commit with
+@kbd{RET}, compare two of them with @kbd{.} and @kbd{=}, and you can
+reset your current head to one of them with @kbd{x}, for example. If
+you want to push the changes then type @kbd{P P}.
+
+When the remote branch has changes that are not in the current branch,
+Magit shows them in a section called @emph{Unpulled changes}.  Typing
+@kbd{F F} will fetch and merge them into the current branch.
+
+@node Submodules
+@chapter Submodules
+
+@table @kbd
+@item M u
+Update the submodules, with a prefix argument it will initializing.
+
+@item M i
+Initialize the submodules.
+
+@item M b
+Update and initialize the submodules in one go.
+
+@item M s
+Synchronizes submodules' remote URL configuration setting to the value
+specified in .gitmodules.
+@end table
+
+
+@node Bisecting
+@chapter Bisecting
+
+Magit supports bisecting by showing how many revisions and steps are
+left to be tested in the status buffer. You can control the bisect
+session from both the status and from log buffers with the @kbd{B} key
+menu.
+
+Typing @kbd{B s} will start a bisect session.  You will be prompted
+for a revision that is known to be bad (defaults to @emph{HEAD}) and
+for a revision that is known to be good (defaults to the revision at
+point if there is one). git will select a revision for you to test,
+and Magit will update its status buffer accordingly.
+
+You can tell git that the current revision is good with @kbd{B g},
+that it is bad with @kbd{B b} or that git should skip it with @kbd{B
+k}. You can also tell git to go into full automatic mode by giving it
+the name of a script to run for each revision to test with @kbd{B u}.
+
+The current status can be shown as a log with @kbd{B l}. It contains
+the revisions that have already been tested and your decisions about
+their state.
+
+The revisions left to test can be visualized in gitk with @kbd{B v}.
+
+When you're finished bisecting you have to reset the session with
+@kbd{B r}.
+
+
+@node Using Magit Extensions
+@chapter Magit Extensions
+
+@menu
+* Activating extensions::
+* Interfacing with Subversion::
+* Interfacing with Topgit::
+* Interfacing with StGit::
+* Developing Extensions::
+@end menu
+
+@node Activating extensions
+@section Activating extensions
+
+Magit comes with a couple of shipped extensions that allow interaction
+with @code{git-svn}, @code{topgit} and @code{stgit}. See following
+sections for specific details on how to use them.
+
+Extensions can be activated globally or on a per-repository basis. Since
+those extensions are implemented as minor modes, one can use for example
+@kbd{M-x magit-topgit-mode} to toggle the @code{topgit} extension,
+making the corresponding section and commands (un)available.
+
+In order to do that automatically (and for every repository), one can
+use for example:
+
+@example
+(add-hook 'magit-mode-hook 'turn-on-magit-topgit)
+@end example
+
+Magit also allows configuring different extensions, based on the git
+repository configuration.
+
+@example
+(add-hook 'magit-mode-hook 'magit-load-config-extensions)
+@end example
+
+This will read git configuration variables and activate the
+relevant extensions.
+
+For example, after running the following commands, the @code{topgit}
+extension will be loaded for every repository, while the @code{svn} one
+will be loaded only for the current one.
+
+@example
+$ git config --global --add magit.extension topgit
+$ git config --add magit.extension svn
+@end example
+
+Note the @code{--add} flag, which means that each extension gets its own
+line in the @code{config} file.
+
+@node Interfacing with Subversion
+@section Interfacing with Subversion
+
+Typing @kbd{N r} runs @code{git svn rebase}, typing @kbd{N c} runs
+@code{git svn dcommit} and typing @kbd{N f} runs @code{git svn fetch}.
+
+@kbd{N s} will prompt you for a (numeric, Subversion) revision and
+then search for a corresponding Git sha1 for the commit. This is
+limited to the path of the remote Subversion repository. With a prefix
+(@kbd{C-u N s} the user will also be prompted for a branch to search
+in.
+
+@node Interfacing with Topgit
+@section Interfacing with Topgit
+
+Topgit (http://repo.or.cz/r/topgit.git) is a patch queue manager that
+aims at being close as possible to raw Git, which makes it easy to use
+with Magit. In particular, it does not require to use a different set of
+commands for ``commit'', ``update'',… operations.
+
+@file{magit-topgit.el} provides basic integration with Magit, mostly by
+providing a ``Topics'' section.
+
+Topgit branches can be created the regular way, by using a ``t/'' prefix
+by convention. So, creating a ``t/foo'' branch will actually populate
+the ``Topics'' section with one more branch after committing
+@file{.topdeps} and @file{.topmsg}.
+
+Also, the way we pull (see @ref{Pushing and Pulling}) such a branch is
+slightly different, since it requires updating the various dependencies
+of that branch. This should be mostly transparent, except in case
+of conflicts.
+
+@node Interfacing with StGit
+@section Interfacing with StGit
+
+StGit (http://www.procode.org/stgit) is a Python application providing
+similar functionality to Quilt (i.e. pushing/popping patches to/from a
+stack) on top of Git. These operations are performed using Git commands
+and the patches are stored as Git commit objects, allowing easy merging
+of the StGit patches into other repositories using standard Git
+functionality.
+
+@file{magit-stgit.el} provides basic integration with Magit, mostly by
+providing a ``Series'' section, whose patches can be seen as regular
+commits through the ``visit'' action.
+
+You can change the current patch in a series with the ``apply'' action,
+as well as you can delete them using the ``discard'' action.
+
+Additionally, the @code{magit-stgit-refresh} and
+@code{magit-stgit-rebase} commands let you perform the respective StGit
+operations.
+
+@node Developing Extensions
+@section Developing Extensions
+
+Magit provides a generic mechanism to allow cooperation with Git-related
+systems, such as foreign VCS, patch systems,…
+
+In particular it allows to:
+
+@itemize @bullet
+@item
+Define sections to display specific informations about the current state
+of the repository, and place them relatively to existing sections.
+
+@code{magit-define-inserter} automagically defines two hooks called
+@code{magit-before-insert-SECTION-hook} and
+@code{magit-after-insert-SECTION-hook} that allow to generate and place
+more sections.
+
+In the following example, we use the builtin ``stashes'' section to
+place our own ``foo'' one.
+
+@example
+(magit-define-inserter foo ()
+  (magit-git-section 'foo
+                     "Foo:" 'foo-wash-function
+                     "foo" "arg1" "arg2"))
+(add-hook 'magit-after-insert-stashes-hook 'magit-insert-foo)
+@end example
+
+@item
+Define new types of objects in those sections.
+
+The function @code{foo-wash-function} defined above post-processes each
+line of the output of the ``git foo arg1 arg2'' command, and is able to
+associate a type to certain lines.
+
+A simple implementation could be:
+
+@example
+(defun foo-wash-function ()
+  (let ((foo (buffer-substring (line-beginning-position) (line-end-position))))
+    (goto-char (line-beginning-position))
+    (magit-with-section foo 'foo
+      (magit-set-section-info foo)
+      (forward-line))))
+@end example
+
+In this case, every line of the command output is transformed into an
+object of type @code{'foo}.
+
+@item
+Alter behavior of generic commands to dispatch them correctly to the
+relevant system, optionally making use of the newly defined types.
+
+@example
+(magit-add-action (item info "discard")
+  ((foo)
+   (do-something-meaningful-for-discarding-a-foo)))
+@end example
+
+This will alter the behavior of @kbd{k}, when applied to those objects.
+
+@item
+Plug a different logic into basic commands, to reflect the presence of
+the extension.
+
+@code{magit-define-command} automagically defines
+a @code{magit-CMD-command-hook} that can contain a list of functions to
+call before the actual core code. Execution stops after the first hook
+that returns a non-nil value. This leaves room for extension logic.
+
+@example
+(add-hook 'magit-create-branch-command-hook 'foo-create-branch)
+@end example
+
+The function @code{foo-create-branch} will be called each time an
+attempt is made to create a branch, and can, for example, react to
+a certain name convention.
+
+@item
+Define new commands and associated menu.
+
+This part is not really specific to extensions, except that menus take
+place in the ``Extensions'' submenu.
+
+@end itemize
+
+It is suggested that Magit extensions authors stick to the convention of
+making extensions minor modes. This has many advantages, including the
+fact that users are able to toggle extensions, and that it's easy to
+configure a specific set of extensions for a given repository.
+
+Shipped extensions can serve as an example of how to develop
+new extensions.
+
+Basically a @code{foo} extension should provide a @code{magit-foo-mode}
+minor mode, as well as a @code{turn-on-magit-foo} function.  The main
+task of the minor mode is to register/unregister the various hooks that
+the extension requires. The registered actions on the other hand can be
+left alone and activated globally, since they can be run only on
+displayed items, which won't happen when the minor mode is off.
+
+Don't forget to call @code{magit-refresh} when the minor mode is toggled
+interactively, so that the relevant sections can be shown or hidden.
+
+@node Using Git Directly
+@chapter Using Git Directly
+
+For situations when Magit doesn't do everything you need, you can run
+raw Git commands using @kbd{:}.  This will prompt for a Git command, run
+it, and refresh the status buffer.  The output can be viewed by typing
+@kbd{$}.
+
+
+@node Customization
+@chapter Customization
+
+The following variables can be used to adapt Magit to your workflow:
+
+@table @code
+
+@item magit-git-executable
+The name of the Git executable.
+
+@item magit-git-standard-options
+Standard options when running Git.
+
+@item magit-repo-dirs
+Directories containing Git repositories.
+
+Magit will look into these directories for Git repositories and offer
+them as choices for @code{magit-status}.
+
+@item magit-repo-dirs-depth
+The maximum depth to look for Git repos.
+
+When looking for a Git repository below the directories in
+@code{magit-repo-dirs}, Magit will only descend this many levels deep.
+
+@item magit-save-some-buffers
+Non-nil means that @code{magit-status} will save modified buffers
+before running.  Setting this to @code{t} will ask which buffers to
+save, setting it to @code{'dontask} will save all modified buffers
+without asking.
+
+@item magit-save-some-buffers-predicate
+Specifies a predicate function on @code{magit-save-some-buffers} to
+determine which unsaved buffers should be prompted for saving.
+
+@item magit-commit-all-when-nothing-staged
+Determines what @code{magit-log-edit} does when nothing is staged.
+Setting this to @code{nil} will make it do nothing, setting it to
+@code{t} will arrange things so that the actual commit command will
+use the @code{--all} option, setting it to @code{'ask} will first ask
+for confirmation whether to do this, and setting it to
+@code{'ask-stage} will cause all changes to be staged, after a
+confirmation.
+
+@item magit-commit-signoff
+When performing @code{git commit} adds @code{--signoff}.
+
+@item magit-log-cutoff-length
+The maximum number of commits to show in the @code{log} and
+@code{whazzup} buffers.
+
+@item magit-log-infinite-length
+Number of log used to show as maximum for
+@code{magit-log-cutoff-length}.
+
+@item magit-log-auto-more
+Insert more log entries automatically when moving past the last entry.
+
+Only considered when moving past the last entry with @code{magit-goto-next-section}.
+
+@item magit-process-popup-time
+Popup the process buffer if a command takes longer than this many
+seconds.
+
+@item magit-revert-item-confirm
+Require acknowledgment before reverting an item.
+
+@item magit-log-edit-confirm-cancellation
+Require acknowledgment before canceling the log edit buffer.
+
+@item magit-remote-ref-format
+What format to use for autocompleting refs, in pariticular for
+remotes.
+
+Autocompletion is used by functions like @code{magit-checkout},
+@code{magit-interactive-rebase} and others which offer branch name
+completion.
+
+The value @code{'name-then-remote} means remotes will be of the form
+@code{name (remote)}, while the value @code{'remote-slash-name} means
+that they'll be of the form @code{remote/name}. I.e. something that's
+listed as @code{remotes/upstream/next} by @code{git branch -l -a} will
+be @code{upstream/next}.
+
+@item magit-process-connection-type
+Connection type used for the git process.
+
+@code{nil} mean pipe, it is usually faster and more efficient, and
+work on cygwin.  @code{t} mean pty, it enable magit to prompt for
+passphrase when needed.
+
+@item magit-completing-read-function
+Function to be called when requesting input from the user.
+
+@item magit-create-branch-behaviour
+Where magit will create a new branch if not supplied a branchname or
+ref.
+
+The value @code{'at-head} means a new branch will be created at the
+tip of your current branch, while the value @code{'at-point} means
+magit will try to find a valid reference at point...
+
+@item magit-status-buffer-switch-function
+Function for @code{magit-status} to use for switching to the status
+buffer.
+
+The function is given one argument, the status buffer.
+
+@item magit-rewrite-inclusive
+Whether magit includes the selected base commit in a rewrite
+operation.
+
+@code{t} means both the selected commit as well as any subsequent
+commits will be rewritten. This is magit's default behaviour,
+equivalent to @code{git rebase -i $@{REV~1@}}
+
+@verbatim
+  A'---B'---C'---D'
+  ^
+@end verbatim
+
+@code{nil} means the selected commit will be literally used as
+@code{base}, so only subsequent commits will be rewritten. This is
+consistent with git-rebase, equivalent to @code{git rebase -i
+$@{REV@}}, yet more cumbersome to use from the status buffer.
+
+@verbatim
+  A---B'---C'---D'
+  ^
+@end verbatim
+
+@item magit-topgit-executable
+The name of the TopGit executable.
+
+@item magit-topgit-branch-prefix
+Convention prefix for topic branch creation.
+
+@end table
+
+@node Frequently Asked Questions
+@chapter Frequently Asked Questions
+
+@menu
+* FAQ - Changes::
+* FAQ 1 - Troubleshooting::
+* FAQ 2 - Display issues::
+@end menu
+
+@node FAQ - Changes
+@section Changes
+
+@itemize @bullet
+
+@item
+v1.1: Changed the way extensions work. Previously, they were enabled
+unconditionally once the library was loaded. Now they are minor modes
+that need to be activated explicitly (potentially on a per-repository
+basis). See @ref{Activating extensions}.
+
+@end itemize
+
+@node FAQ 1 - Troubleshooting
+@section Troubleshooting
+
+@menu
+* FAQ 1-1::    How do I get raw error messages from git?
+@end menu
+
+@node FAQ 1-1
+@subsection Question 1.1
+
+How do I get raw error messages from git?
+
+@subsubheading Answer
+
+If a command goes wrong, you can hit @kbd{$} to access the git process
+buffer. There, the entire trace for the latest operation is available.
+
+@node FAQ 2 - Display issues
+@section Display issues
+
+@menu
+* FAQ 2-1::    How do I fix international characters display?
+@end menu
+
+@node FAQ 2-1
+@subsection Question 2.1
+
+How do I fix international characters display?
+
+@subsubheading Answer
+
+Please make sure your Magit buffer uses a compatible coding system.
+In the particular case of file names, git itself quotes them by
+default. You can disable this with one of the following approaches:
+
+@example
+$ git config core.quotepath false
+@end example
+
+or
+
+@example
+(setq magit-git-standard-options (append magit-git-standard-options
+                                         '("-c" "core.quotepath=false")))
+@end example
+
+The latter might not work in old versions of git.
+
+@bye
