@@ -21,6 +21,10 @@
 (setq ac-use-menu-map t)
 (setq ac-quick-help-delay 1)
 (setq ac-quick-help-height 60)
+(setq ac-disable-inline t)
+(setq ac-show-menu-immediately-on-auto-complete t)
+(setq ac-auto-start 2)
+(setq ac-minimum-candidates-len 0)
 
 (set-default 'ac-sources
              '(ac-source-dictionary
