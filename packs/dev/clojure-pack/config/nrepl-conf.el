@@ -35,9 +35,9 @@
 (add-hook 'nrepl-interaction-mode-hook 'ac-nrepl-setup)
 
 
-;; (eval-after-load "auto-complete"
-;;   '(add-to-list 'ac-modes 'nrepl-mode))
-
+ (eval-after-load "auto-complete"
+   '(add-to-list 'ac-modes 'nrepl-mode))
+   (add-to-list 'ac-modes 'nrepl-mode)
 
 ;;; Monkey Patch nREPL with better behaviour:
 
