@@ -30,7 +30,6 @@
              '(ac-source-dictionary
                ac-source-words-in-buffer
                ac-source-words-in-same-mode-buffers
-               ac-source-words-in-all-buffer
                ac-source-semantic
                ac-source-yasnippet))
 
