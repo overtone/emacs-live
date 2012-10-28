@@ -81,6 +81,8 @@
      (ac-completion-face ((t (:foreground "darkgray" :underline t))))
      (ac-candidate-face ((t (:background "gray60" :foreground "black"))))
      (ac-selection-face ((t (:background "deep pink" :foreground "black"))))
+     (ac-yasnippet-candidate-face ((t (:background "gray60" :foreground "black"))))
+     (ac-yasnippet-selection-face ((t (:background "deep pink" :foreground "black"))))
      (popup-isearch-match ((t (:background "black" :foreground "deep pink"))))
      (popup-tip-face ((t (:background "#333333" :foreground "white"))))
      (popup-scroll-bar-foreground-face ((t (:background "#0A0A0A"))))
