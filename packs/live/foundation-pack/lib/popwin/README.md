@@ -88,20 +88,21 @@ like:
 
 Keymap:
 
-    | Key    | Command                    |
-    |--------+----------------------------|
-    | b, C-b | popwin:popup-buffer        |
-    | M-b    | popwin:popup-buffer-tail   |
-    | o, C-o | popwin:display-buffer      |
-    | p, C-p | popwin:display-last-buffer |
-    | f, C-f | popwin:find-file           |
-    | M-f    | popwin:find-file-tail      |
-    | s, C-s | popwin:select-popup-window |
-    | M-s    | popwin:stick-popup-window  |
-    | 0      | popwin:close-popup-window  |
-    | m, C-m | popwin:messages            |
-    | u, C-u | popwin:universal-display   |
-    | 1      | popwin:one-window          |
+    | Key    | Command                               |
+    |--------+---------------------------------------|
+    | b      | popwin:popup-buffer                   |
+    | l      | popwin:popup-last-buffer              |
+    | o      | popwin:display-buffer                 |
+    | C-b    | popwin:switch-to-last-buffer          |
+    | C-p    | popwin:original-pop-to-last-buffer    |
+    | C-o    | popwin:original-display-last-buffer   |
+    | SPC    | popwin:select-popup-window            |
+    | s      | popwin:stick-popup-window             |
+    | 0      | popwin:close-popup-window             |
+    | f, C-f | popwin:find-file                      |
+    | e      | popwin:messages                       |
+    | C-u    | popwin:universal-display              |
+    | 1      | popwin:one-window                     |
 
 Special Display Config
 ----------------------

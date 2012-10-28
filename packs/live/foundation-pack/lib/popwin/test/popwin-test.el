@@ -92,6 +92,14 @@
     (should (eq (length (window-list)) 2))
     (should (popwin-test:front-buffer-p buf2))))
 
+(ert-deftest dedicated-stick ()
+  (popwin-test:common
+    (popwin:popup-buffer buf2 :dedicated t :stick t)
+    (other-window 1)
+    (popwin:close-popup-window-if-necessary)
+    (should (eq (length (window-list)) 2))
+    (should (popwin-test:front-buffer-p buf2))))
+
 (ert-deftest popup ()
   (popwin-test:common
     (should-not (eq (length (window-list)) 2))
@@ -258,12 +266,12 @@
   (popwin-test:common
     (let ((popwin:special-display-config '(("*buf1*"))))
       (popwin:display-buffer buf1))
-    (should (eq popwin:last-display-buffer buf1))
+    (should (eq (car popwin:popup-last-config) buf1))
     (popwin:close-popup-window)
     (switch-to-buffer buf2)
     (should-not (popwin-test:front-buffer-p buf1))
     (should-not (eq (length (window-list)) 2))
-    (popwin:display-last-buffer)
+    (popwin:popup-last-buffer)
     (should (popwin-test:front-buffer-p buf1))
     (should (eq (length (window-list)) 2))))
 
@@ -387,6 +395,41 @@
      (popwin:close-popup-window)
      (should (eq (current-buffer) buf1))
      (should (= old-point (point))))))
+
+(ert-deftest popwin-restore-window-start ()
+  (popwin-test:common
+   (insert "foo\nbar\n")
+   (set-window-start nil (point-max))
+   (popwin:popup-buffer buf2)
+   (popwin:close-popup-window)
+   (should (eq (current-buffer) buf1))
+   (should (eq (window-start) (point-max)))))
+
+(ert-deftest popwin-original-display-last-buffer ()
+  (popwin-test:common
+   (popwin:popup-buffer buf2)
+   (should (eq popwin:popup-buffer buf2))
+   (popwin:original-display-last-buffer)
+   (should (null popwin:popup-buffer))
+   (delete-other-windows)
+   (popwin:original-display-last-buffer)
+   (should (null popwin:popup-buffer))))
+
+(ert-deftest popwin-original-pop-to-last-buffer ()
+  (popwin-test:common
+   (popwin:popup-buffer buf2)
+   (should (eq popwin:popup-buffer buf2))
+   (popwin:original-pop-to-last-buffer)
+   (should (null popwin:popup-buffer))
+   (should (eq (current-buffer) buf2))))
+
+(ert-deftest popwin-switch-to-last-buffer ()
+  (popwin-test:common
+   (popwin:popup-buffer buf2)
+   (should (eq popwin:popup-buffer buf2))
+   (popwin:switch-to-last-buffer)
+   (should (null popwin:popup-buffer))
+   (should (eq (current-buffer) buf2))))
 
 ;; test-case M-x occur and M-x next-error
 ;; test-case M-x dired and o

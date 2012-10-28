@@ -21,12 +21,15 @@
 (setq ac-use-menu-map t)
 (setq ac-quick-help-delay 1)
 (setq ac-quick-help-height 60)
+(setq ac-disable-inline t)
+(setq ac-show-menu-immediately-on-auto-complete t)
+(setq ac-auto-start 2)
+(setq ac-candidate-menu-min 0)
 
 (set-default 'ac-sources
              '(ac-source-dictionary
                ac-source-words-in-buffer
                ac-source-words-in-same-mode-buffers
-               ac-source-words-in-all-buffer
                ac-source-semantic
                ac-source-yasnippet))
 
