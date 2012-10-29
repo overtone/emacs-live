@@ -64,7 +64,7 @@
 
 (defun ac-nrepl-candidates* (clj)
   "Return completion candidates produced by evaluating CLJ."
-  (let ((response (plist-get (nrepl-send-string-sync clj (nrepl-current-ns)) :value)))
+  (let ((response (plist-get (nrepl-send-string-sync (concat "(require 'complete.core) " clj) (nrepl-current-ns)) :value)))
     (when response
       (car (read-from-string response)))))
 

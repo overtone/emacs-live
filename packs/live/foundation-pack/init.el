@@ -1,6 +1,7 @@
 (require 'dircolors)
 (require 'smooth-scrolling)
 (require 'buffer-move)
+(require 'find-file-in-project)
 
 (live-load-config-file "backup-dir-conf.el")
 (live-load-config-file "util-fns.el")
