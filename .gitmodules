@@ -97,3 +97,6 @@
 [submodule "packs/dev/power-pack/vendor/submodules/browse-kill-ring"]
         path = packs/dev/power-pack/vendor/submodules/browse-kill-ring
         url = git://github.com/samaaron/browse-kill-ring.git
+[submodule "packs/dev/power-pack/vendor/submodules/expand-region"]
+	path = packs/dev/power-pack/vendor/submodules/expand-region
+	url = git://github.com/magnars/expand-region.el.git
