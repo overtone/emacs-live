@@ -57,4 +57,3 @@
         (list (point) end)))))
 
 (setq nrepl-port "6678")
-(setq nrepl-server-command (concat nrepl-lein-command " repl"))
