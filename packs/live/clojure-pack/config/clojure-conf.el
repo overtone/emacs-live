@@ -28,8 +28,6 @@
 
 (add-hook 'clojure-mode-hook
           (lambda ()
-            (enable-paredit-mode)
-            (rainbow-delimiters-mode)
             (setq buffer-save-without-query t)))
 
 ;;command to align let statements
@@ -54,6 +52,6 @@
 (setq auto-mode-alist (append '(("\\.cljs$" . clojure-mode))
                               auto-mode-alist))
 
-(dolist (x '(scheme emacs-lisp lisp))
+(dolist (x '(scheme emacs-lisp lisp clojure))
   (add-hook (intern (concat (symbol-name x) "-mode-hook")) 'enable-paredit-mode)
   (add-hook (intern (concat (symbol-name x) "-mode-hook")) 'rainbow-delimiters-mode))
