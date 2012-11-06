@@ -22,13 +22,10 @@
 ;; domain name
 (setq system-name (car (split-string system-name "\\.")))
 
-;; On OS X Emacs doesn't use the shell PATH if it's not started from
-;; the shell.
-;; If you're using homebrew or port, modifying the PATH is essential.
-(let (osx-paths)
-  (dolist (path '("/usr/local/bin" "/opt/local/bin" "/opt/local/sbin") (setenv "PATH" (concat osx-paths (getenv "PATH"))))
-    (push path exec-path)
-    (setq osx-paths (concat (concat path ":") osx-paths))))
+;; Ensure the exec-path honours the shell PATH
+(live-add-pack-lib "exec-path-from-shell")
+(require 'exec-path-from-shell)
+(exec-path-from-shell-initialize)
 
 ;; Ignore .DS_Store files with ido mode
 (add-to-list 'ido-ignore-files "\\.DS_Store")

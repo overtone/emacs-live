@@ -100,3 +100,6 @@
 [submodule "packs/dev/power-pack/vendor/submodules/expand-region"]
 	path = packs/dev/power-pack/vendor/submodules/expand-region
 	url = git://github.com/magnars/expand-region.el.git
+[submodule "packs/dev/foundation-pack/vendor/submodules/exec-path-from-shell"]
+	path = packs/dev/foundation-pack/vendor/submodules/exec-path-from-shell
+	url = git://github.com/purcell/exec-path-from-shell.git
