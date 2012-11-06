@@ -1,3 +1,5 @@
+(require 'idomenu)
+
 (ido-mode t)
 (setq ido-enable-prefix nil
       ido-enable-flex-matching t

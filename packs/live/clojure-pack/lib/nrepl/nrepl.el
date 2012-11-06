@@ -1420,7 +1420,7 @@ buffer."
            "code" input)))
 
 (defun nrepl-send-string (input callback &optional ns session)
-  (let ((ns (if (string-match "\w*\(ns " input)
+  (let ((ns (if (string-match "[[:space:]]*\(ns\\([[:space:]]*$\\|[[:space:]]+\\)" input)
                 "user"
               ns)))
 
