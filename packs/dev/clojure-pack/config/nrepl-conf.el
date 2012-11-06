@@ -39,6 +39,7 @@
 
 ;;; Monkey Patch nREPL with better behaviour:
 
+;;; Region discovery fix
 (defun nrepl-region-for-expression-at-point ()
   "Return the start and end position of defun at point."
   (when (and (live-paredit-top-level-p)
@@ -55,5 +56,22 @@
       (let ((end (point)))
         (backward-sexp)
         (list (point) end)))))
+
+;;; Windows M-. navigation fix
+(defun nrepl-jump-to-def (var)
+  "Jump to the definition of the var at point."
+  (let ((form (format "((clojure.core/juxt
+                         (comp (fn [s] (if (clojure.core/re-find #\"[Ww]indows\" (System/getProperty \"os.name\"))
+                                           (.replace s \"file:/\" \"file:\")
+                                           s))
+                               clojure.core/str
+                               clojure.java.io/resource :file)
+                         (comp clojure.core/str clojure.java.io/file :file) :line)
+                        (clojure.core/meta (clojure.core/resolve '%s)))"
+                      var)))
+    (nrepl-send-string form
+                       (nrepl-jump-to-def-handler (current-buffer))
+                       (nrepl-current-ns)
+                       (nrepl-current-tooling-session))))
 
 (setq nrepl-port "6678")
