@@ -74,4 +74,4 @@
                        (nrepl-current-ns)
                        (nrepl-current-tooling-session))))
 
-(setq nrepl-port "6678")
+(setq nrepl-port "4555")
