@@ -1,5 +1,33 @@
 (require 'cl)
 
+(defun live-filter (condp lst)
+    (delq nil
+          (mapcar (lambda (x) (when (funcall condp x) x)) lst)))
+
+(defun live-list-buffer-paths ()
+  (mapcar #'file-truename
+          (live-filter 'identity
+                       (mapcar (lambda (b) (buffer-file-name b))
+                               (buffer-list)))))
+
+(defun live-list-buffer-names ()
+  (live-filter 'identity (mapcar (lambda (el) (buffer-name el)) (buffer-list))))
+
+(defun live-file-open-as-buffer-p (path)
+  (if (member (file-truename path) (live-list-buffer-paths))
+      t
+    nil))
+
+(defun live-find-buffer-by-path (path)
+  (car (live-filter (lambda (b)
+                      (equal (file-truename path)
+                             (file-truename (or (buffer-file-name b)
+                                                "/dev/null"))))
+                    (buffer-list))))
+
+(defun live-empty-p (seq)
+  (eq 0 (length seq)))
+
 (defun live-alist-keys (alist)
   (mapcar (lambda (el) (car el)) alist))
 
@@ -39,20 +67,37 @@
   previous packs added with live-add-packs."
   (setq live-packs pack-list))
 
+(defun live-use-dev-packs ()
+  "Reset all packs to the list of dev packs"
+  (setq live-packs live-dev-pack-list))
+
+(defun live-prepend-packs (pack-list)
+  "Add the list pack-list to the beginning of the current list of
+  packs to load"
+  (setq live-packs (append pack-list live-packs)))
+
 (defun live-add-packs (pack-list)
   "Add the list pack-list to end of the current list of packs to
   load"
   (setq live-packs (append live-packs pack-list)))
 
+(defun live-append-packs (pack-list)
+  "Add the list pack-list to end of the current list of packs to
+  load"
+  (setq live-packs (append live-packs pack-list)))
+
+(defun live-pack-name-as-str (pack)
+  (if (symbolp pack)
+      (symbol-name pack)
+    pack))
+
 (defun live-ignore-packs (pack-list)
   "Do not load any of the packs in pack-list"
-  (setq live-packs (set-difference live-packs pack-list)))
+  (setq live-packs (live-filter (lambda (l) (not (member l (mapcar #'live-pack-name-as-str pack-list)))) (mapcar #'live-pack-name-as-str live-packs))))
 
 (defun live-pack-dir (pack)
   "Determine a pack name's absolute path"
-  (let* ((pack-name (if (symbolp pack)
-                        (symbol-name pack)
-                      pack))
+  (let* ((pack-name (live-pack-name-as-str pack))
          (pack-name-dir (if (file-name-absolute-p pack-name)
                             (file-name-as-directory pack-name)
                           (file-name-as-directory (concat live-packs-dir pack-name)))))
@@ -152,31 +197,3 @@ children of DIRECTORY."
 
 (defun live-user-first-name-p ()
   (not (string-equal "" (live-user-first-name))))
-
-(defun live-filter (condp lst)
-    (delq nil
-          (mapcar (lambda (x) (when (funcall condp x) x)) lst)))
-
-(defun live-list-buffer-paths ()
-  (mapcar #'file-truename
-          (live-filter 'identity
-                       (mapcar (lambda (b) (buffer-file-name b))
-                               (buffer-list)))))
-
-(defun live-list-buffer-names ()
-  (live-filter 'identity (mapcar (lambda (el) (buffer-name el)) (buffer-list))))
-
-(defun live-file-open-as-buffer-p (path)
-  (if (member (file-truename path) (live-list-buffer-paths))
-      t
-    nil))
-
-(defun live-find-buffer-by-path (path)
-  (car (live-filter (lambda (b)
-                      (equal (file-truename path)
-                             (file-truename (or (buffer-file-name b)
-                                                "/dev/null"))))
-                    (buffer-list))))
-
-(defun live-empty-p (seq)
-  (eq 0 (length seq)))
