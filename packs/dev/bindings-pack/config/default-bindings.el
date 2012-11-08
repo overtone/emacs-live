@@ -1,0 +1,214 @@
+;; Default Emacs Live bindings
+
+
+;; C-c Groups
+;;
+;;e - eval and replace
+;;b - winner undo
+;;f - winner redo
+;;l - lispy shortcuts (i.e. paredit and clojure specific fns)
+;;m - emacs eval shortcuts
+;;t - text shortcuts
+;;i - utf8 char shortcuts
+;;j - quick-jump shortcuts
+;;d - diff shortcuts
+;;p - project shortcuts
+;;s - show popupwindows
+;;w - window and buffer shortcuts
+
+;; Should be able to eval-and-replace anywhere.
+(global-set-key (kbd "C-c e") 'eval-and-replace)
+
+;; winner undo and redo
+(global-set-key (kbd "C-c b") 'winner-undo)
+(global-set-key (kbd "C-c f") 'winner-redo)
+
+;;text manipulation shortcuts
+(global-set-key (kbd "C-c t b")     'untabify-buffer)
+(global-set-key (kbd "C-c t r")     'untabify)
+
+;;emacs-lisp shortcuts
+(global-set-key (kbd "C-c m s")     'eval-and-replace) ;swap
+(global-set-key (kbd "C-c m b")     'eval-buffer)
+(global-set-key (kbd "C-c m e")     'eval-last-sexp)
+(global-set-key (kbd "C-c m i")     'eval-expression)
+(global-set-key (kbd "C-c m d")     'eval-defun)
+(global-set-key (kbd "C-c m n")     'eval-print-last-sexp)
+(global-set-key (kbd "C-c m r")     'eval-region)
+
+;;funky characters
+(global-set-key (kbd "C-c i l") (lambda () (interactive) (insert "λ")))
+(global-set-key (kbd "C-c i n") (lambda () (interactive) (insert "ℕ")))
+(global-set-key (kbd "C-c i i") (lambda () (interactive) (insert "∞")))
+(global-set-key (kbd "C-c i .") (lambda () (interactive) (insert "×")))
+(global-set-key (kbd "C-c i 0") (lambda () (interactive) (insert "∅")))
+(global-set-key (kbd "C-c i u") (lambda () (interactive) (insert "∪")))
+(global-set-key (kbd "C-c i s") (lambda () (interactive) (insert "♯")))
+(global-set-key (kbd "C-c i p") (lambda () (interactive) (insert "£")))
+
+(global-set-key (kbd "C-c j p") 'quick-jump-go-back)
+(global-set-key (kbd "C-c j b") 'quick-jump-go-back)
+(global-set-key (kbd "C-c j m") 'quick-jump-push-marker)
+(global-set-key (kbd "C-c j n") 'quick-jump-go-forward)
+(global-set-key (kbd "C-c j f") 'quick-jump-go-forward)
+(global-set-key (kbd "C-c j c") 'quick-jump-clear-all-marker)
+
+;;diff shortcuts
+(global-set-key (kbd "C-c d f") 'diff-buffer-with-file)
+
+;;mk-project shortcuts
+(global-set-key (kbd "C-c p l") 'project-load)
+(global-set-key (kbd "C-c p u") 'project-unload)
+(global-set-key (kbd "C-c p c") 'project-compile)
+(global-set-key (kbd "C-c p g") 'project-grep)
+(global-set-key (kbd "C-c p a") 'project-ack)
+(global-set-key (kbd "C-c p o") 'project-multi-occur)
+(global-set-key (kbd "C-c p f") 'project-find-file-ido)
+(global-set-key (kbd "C-c p i") 'project-index)
+(global-set-key (kbd "C-c p t") 'project-tags)
+(global-set-key (kbd "C-c p d") 'project-dired)
+(global-set-key (kbd "C-c p s") 'project-status)
+
+(global-set-key (kbd "C-c s t") 'live-show-ansi-terminal)
+(global-set-key (kbd "C-c s n") 'live-new-ansi-terminal)
+(global-set-key (kbd "C-c s m") 'live-show-messages)
+
+;;window and buffer movement
+(global-set-key (kbd "C-c w s") 'swap-windows)
+(global-set-key (kbd "C-c w r") 'rotate-windows)
+(global-set-key (kbd "C-c w p")  'buf-move-up)
+(global-set-key (kbd "C-c w n")  'buf-move-down)
+(global-set-key (kbd "C-c w b")  'buf-move-left)
+(global-set-key (kbd "C-c w f")  'buf-move-right)
+(global-set-key (kbd "C-c w .") 'shrink-window-horizontally)
+(global-set-key (kbd "C-c w ,") 'enlarge-window-horizontally)
+(global-set-key (kbd "C-c w /") (lambda () (interactive) (enlarge-window -1)))
+(global-set-key (kbd "C-c w '") (lambda () (interactive) (enlarge-window 1)))
+
+;;paredit
+(define-key paredit-mode-map (kbd "C-c l k") 'paredit-splice-sexp-killing-forward)
+(define-key paredit-mode-map (kbd "C-c l w") 'paredit-splice-sexp-killing-backward)
+(define-key paredit-mode-map (kbd "C-c l l") 'align-cljlet)
+(define-key paredit-mode-map (kbd "C-c l t") 'fill-paragraph)
+(define-key paredit-mode-map (kbd "C-M-e") 'paredit-backward-barf-sexp)
+(define-key paredit-mode-map (kbd "C-M-s") 'paredit-backward-slurp-sexp)
+(define-key paredit-mode-map (kbd "C-M-j") 'live-paredit-forward-slurp-sexp-neatly)
+(define-key paredit-mode-map (kbd "C-M-y") 'paredit-forward-barf-sexp)
+(define-key paredit-mode-map (kbd "C-M-z") 'align-cljlet)
+(define-key paredit-mode-map (kbd "M-s") 'paredit-split-sexp)
+(define-key paredit-mode-map (kbd "M-j") 'paredit-join-sexps)
+(define-key paredit-mode-map (kbd "M-P") 'live-paredit-previous-top-level-form)
+(define-key paredit-mode-map (kbd "M-N") 'live-paredit-next-top-level-form)
+(define-key paredit-mode-map (kbd "C-M-f") 'live-paredit-forward)
+(define-key paredit-mode-map (kbd "M-q") 'live-paredit-reindent-defun)
+(define-key paredit-mode-map (kbd "M-d") 'live-paredit-forward-kill-sexp)
+(define-key paredit-mode-map (kbd "M-w") 'live-paredit-backward-kill-sexp)
+(define-key paredit-mode-map (kbd "M-k") 'live-paredit-backward-kill)
+(define-key paredit-mode-map (kbd "M-\\") 'live-paredit-delete-horizontal-space)
+
+;;browse kill ring (visual paste)
+(global-set-key (kbd "M-y") 'browse-kill-ring)
+
+;;make C-] and M-] cut and copy respectively
+(global-set-key (kbd "C-]") 'kill-region)
+(global-set-key (kbd "M-]") 'kill-ring-save)
+
+;; paste
+(global-set-key (kbd "M-v")  'yank)
+
+;; undo
+(global-set-key (kbd "C-M-_") 'undo-tree-undo)
+
+;;mark current function
+(global-set-key (kbd "C-x C-p")  'mark-defun)
+
+;;use delete-horizontal-space to completely nuke all whitespace
+(global-set-key (kbd "M-SPC ")   'live-delete-whitespace-except-one)
+
+;;make ^h delete rather than help
+(global-set-key (kbd "C-h") 'delete-backward-char)
+(define-key paredit-mode-map (kbd "C-h") 'paredit-backward-delete)
+
+;;redefine help shortcut
+(global-set-key (kbd "M-h") 'help-command)
+
+;;allow the deletion of words:
+;;backward kill word (forward kill word is M-d)
+(global-set-key (kbd "C-w") 'backward-kill-word)
+(define-key paredit-mode-map (kbd "C-w") 'paredit-backward-kill-word)
+
+;;delete current word
+(global-set-key (kbd "M-w") (lambda () (interactive) (backward-word) (kill-word 1)))
+
+;;kill line backwards
+(global-set-key (kbd "M-k") 'live-backwards-kill-line)
+
+;;kill regions
+(global-set-key (kbd "C-x C-k") 'kill-region)
+
+;;set the mark
+(global-set-key (kbd "C-SPC") 'set-mark-command)
+
+;;repeat previous command
+(global-set-key (kbd "C-v") 'repeat)
+
+;;scroll other window
+(global-set-key (kbd "C-M-]") 'scroll-other-window)
+(global-set-key (kbd "C-M-[") 'scroll-other-window-down)
+
+
+
+;;fast vertical naviation
+(global-set-key  (kbd "M-U") (lambda () (interactive) (previous-line 10)))
+(global-set-key  (kbd "M-D") (lambda () (interactive) (next-line 10)))
+(global-set-key  (kbd "M-p") 'outline-previous-visible-heading)
+(global-set-key  (kbd "M-n") 'outline-next-visible-heading)
+
+;;requires cua-mode for rectangle selection
+(global-set-key (kbd "§") 'cua-set-rectangle-mark)
+
+;; Align your code in a pretty way.
+(global-set-key (kbd "C-x \\") 'align-regexp)
+
+;; comment region
+(global-set-key (kbd "M-/") 'comment-or-uncomment-region)
+
+(global-set-key (kbd "C-s") 'isearch-forward)
+(global-set-key (kbd "C-r") 'isearch-backward)
+(global-set-key (kbd "C-M-s") 'isearch-forward-regexp)
+(global-set-key (kbd "C-M-r") 'isearch-backward-regexp)
+
+;; Jump to a definition in the current file.
+(global-set-key (kbd "C-x C-i") 'idomenu)
+
+;; File
+(global-set-key (kbd "C-x M-f") 'ido-find-file-other-window)
+(global-set-key (kbd "C-x C-M-f") 'find-file-in-project)
+(global-set-key (kbd "C-x f") 'recentf-ido-find-file)
+(global-set-key (kbd "C-x C-r") 'ido-recentf-open)
+(global-set-key (kbd "M-`") 'file-cache-minibuffer-complete)
+(global-set-key (kbd "C-x C-b") 'ibuffer)
+
+;; Window switching.
+(global-set-key (kbd "C-x O") (lambda () (interactive) (other-window -1))) ;; back one
+(global-set-key (kbd "C-x C-o") (lambda () (interactive) (other-window 2))) ;; forward two
+
+;; If you want to be able to M-x without meta
+(global-set-key (kbd "C-x C-m") 'execute-extended-command)
+
+;; Magit
+(global-set-key (kbd "C-x g") 'magit-status)
+
+;; Activate occur easily inside isearch
+(define-key isearch-mode-map (kbd "C-o")
+  (lambda () (interactive)
+    (let ((case-fold-search isearch-case-fold-search))
+      (occur (if isearch-regexp isearch-string (regexp-quote isearch-string))))))
+
+;; Ace jump mode
+(global-set-key (kbd "C-o") 'ace-jump-mode)
+
+;; Show documentation/information with M-RET
+(define-key lisp-mode-shared-map (kbd "M-RET") 'live-lisp-describe-thing-at-point)
+(define-key nrepl-mode-map (kbd "M-RET") 'nrepl-doc)
+(define-key nrepl-interaction-mode-map (kbd "M-RET") 'nrepl-doc)

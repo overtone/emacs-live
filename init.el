@@ -118,14 +118,19 @@
 ;; load live-lib
 (load-file (concat live-lib-dir "live-core.el"))
 
-;;default live packs
-(let* ((live-dir (file-name-as-directory "live")))
-  (setq live-packs (list (concat live-dir "foundation-pack")
-                         (concat live-dir "colour-pack")
-                         (concat live-dir "clojure-pack")
-                         (concat live-dir "lang-pack")
-                         (concat live-dir "power-pack")
-                         (concat live-dir "git-pack"))))
+;;default packs
+(let* ((pack-names '("foundation-pack"
+                     "colour-pack"
+                     "clojure-pack"
+                     "lang-pack"
+                     "power-pack"
+                     "git-pack"
+                     "bindings-pack"))
+       (live-dir (file-name-as-directory "live"))
+       (dev-dir  (file-name-as-directory "dev")))
+  (setq live-packs (mapcar (lambda (p) (concat live-dir p)) pack-names) )
+  (setq live-dev-pack-list (mapcar (lambda (p) (concat dev-dir p)) pack-names) ))
+
 
 ;; Helper fn for loading live packs
 
