@@ -1,3 +1,5 @@
+(require 'cl)
+
 (defun live-alist-keys (alist)
   (mapcar (lambda (el) (car el)) alist))
 
@@ -41,6 +43,10 @@
   "Add the list pack-list to end of the current list of packs to
   load"
   (setq live-packs (append live-packs pack-list)))
+
+(defun live-ignore-packs (pack-list)
+  "Do not load any of the packs in pack-list"
+  (setq live-packs (set-difference live-packs pack-list)))
 
 (defun live-pack-dir (pack)
   "Determine a pack name's absolute path"
