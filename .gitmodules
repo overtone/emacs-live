@@ -98,11 +98,17 @@
         path = packs/dev/power-pack/vendor/submodules/browse-kill-ring
         url = git://github.com/samaaron/browse-kill-ring.git
 [submodule "packs/dev/power-pack/vendor/submodules/expand-region"]
-	path = packs/dev/power-pack/vendor/submodules/expand-region
-	url = git://github.com/magnars/expand-region.el.git
+        path = packs/dev/power-pack/vendor/submodules/expand-region
+        url = git://github.com/magnars/expand-region.el.git
 [submodule "packs/dev/foundation-pack/vendor/submodules/exec-path-from-shell"]
-	path = packs/dev/foundation-pack/vendor/submodules/exec-path-from-shell
-	url = git://github.com/purcell/exec-path-from-shell.git
+        path = packs/dev/foundation-pack/vendor/submodules/exec-path-from-shell
+        url = git://github.com/purcell/exec-path-from-shell.git
 [submodule "packs/dev/power-pack/vendor/submodules/ace-jump-mode"]
-	path = packs/dev/power-pack/vendor/submodules/ace-jump-mode
-	url = git://github.com/winterTTr/ace-jump-mode.git
+        path = packs/dev/power-pack/vendor/submodules/ace-jump-mode
+        url = git://github.com/winterTTr/ace-jump-mode.git
+[submodule "packs/dev/foundation-pack/vendor/submodules/auto-compile"]
+        path = packs/dev/foundation-pack/vendor/submodules/auto-compile
+        url = git://github.com/tarsius/auto-compile.git
+[submodule "packs/dev/foundation-pack/vendor/submodules/packed"]
+        path = packs/dev/foundation-pack/vendor/submodules/packed
+        url = git://github.com/tarsius/packed.git

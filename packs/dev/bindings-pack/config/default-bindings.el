@@ -21,6 +21,7 @@
 
 ;; winner undo and redo
 (global-set-key (kbd "C-c b") 'winner-undo)
+(define-key nrepl-interaction-mode-map (kbd "C-c b") 'winner-undo)
 (global-set-key (kbd "C-c f") 'winner-redo)
 
 ;;text manipulation shortcuts
@@ -212,3 +213,5 @@
 (define-key lisp-mode-shared-map (kbd "M-RET") 'live-lisp-describe-thing-at-point)
 (define-key nrepl-mode-map (kbd "M-RET") 'nrepl-doc)
 (define-key nrepl-interaction-mode-map (kbd "M-RET") 'nrepl-doc)
+
+(global-set-key (kbd "C-x o") 'win-switch-dispatch)
