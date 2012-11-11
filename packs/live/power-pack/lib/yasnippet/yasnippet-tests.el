@@ -198,6 +198,12 @@
       (should (string= (yas--buffer-contents) "if condition\naaa\nelse\nbbb\nend")))))
 
 (ert-deftest another-example-for-issue-271 ()
+  ;; expect this to fail in batch mode since `region-active-p' doesn't
+  ;; used by `yas-expand-snippet' doesn't make sense in that context.
+  ;;
+  :expected-result (if noninteractive
+                       :failed
+                     :passed)
   (with-temp-buffer
     (yas-minor-mode 1)
     (let ((snippet "\\${${1:1}:`yas/selected-text`}"))
@@ -251,23 +257,34 @@ TODO: correct this bug!"
 
 ;;; Loading
 ;;;
+(defmacro yas-with-overriden-buffer-list (&rest body)
+  (let ((saved-sym (gensym)))
+    `(let ((,saved-sym (symbol-function 'buffer-list)))
+       (flet ((buffer-list ()
+                           (remove-if #'(lambda (buf)
+                                          (with-current-buffer buf
+                                            (eq major-mode 'lisp-interaction-mode)))
+                                      (funcall ,saved-sym))))
+         ,@body))))
+
 (defmacro yas-with-some-interesting-snippet-dirs (&rest body)
   `(yas-saving-variables
-    (yas-with-snippet-dirs
-     '((".emacs.d/snippets"
-        ("c-mode"
-         (".yas-parents" . "cc-mode")
-         ("printf" . "printf($1);"))  ;; notice the overriding for issue #281
-        ("emacs-lisp-mode" ("ert-deftest" . "(ert-deftest ${1:name} () $0)"))
-        ("lisp-interaction-mode" (".yas-parents" . "emacs-lisp-mode")))
-       ("library/snippets"
-        ("c-mode"
-         (".yas-parents" . "c++-mode")
-         ("printf" . "printf"))
-        ("cc-mode" ("def" . "# define"))
-        ("emacs-lisp-mode" ("dolist" . "(dolist)"))
-        ("lisp-interaction-mode" ("sc" . "brother from another mother"))))
-     ,@body)))
+    (yas-with-overriden-buffer-list
+     (yas-with-snippet-dirs
+      '((".emacs.d/snippets"
+         ("c-mode"
+          (".yas-parents" . "cc-mode")
+          ("printf" . "printf($1);"))  ;; notice the overriding for issue #281
+         ("emacs-lisp-mode" ("ert-deftest" . "(ert-deftest ${1:name} () $0)"))
+         ("lisp-interaction-mode" (".yas-parents" . "emacs-lisp-mode")))
+        ("library/snippets"
+         ("c-mode"
+          (".yas-parents" . "c++-mode")
+          ("printf" . "printf"))
+         ("cc-mode" ("def" . "# define"))
+         ("emacs-lisp-mode" ("dolist" . "(dolist)"))
+         ("lisp-interaction-mode" ("sc" . "brother from another mother"))))
+      ,@body))))
 
 (ert-deftest basic-jit-loading ()
   "Test basic loading and expansion of snippets"
@@ -438,23 +455,30 @@ TODO: be meaner"
     (yas-minor-mode 1)
     (should (eq (key-binding (yas--read-keybinding "<tab>")) 'yas-expand))
     (yas-expand-snippet "$1 $2 $3")
-    (dolist (k (if (listp yas-next-field-key)
-                   yas-next-field-key
-                 (list yas-next-field-key)))
-      (should (eq (key-binding (yas--read-keybinding k)) 'yas-next-field-or-maybe-expand)))
-    (dolist (k (if (listp yas-prev-field-key)
-                   yas-prev-field-key
-                 (list yas-prev-field-key)))
-      (should (eq (key-binding (yas--read-keybinding k)) 'yas-prev-field)))))
+    (should (eq (key-binding [(tab)]) 'yas-next-field-or-maybe-expand))
+    (should (eq (key-binding (kbd "TAB")) 'yas-next-field-or-maybe-expand))
+    (should (eq (key-binding [(shift tab)]) 'yas-prev-field))
+    (should (eq (key-binding [backtab]) 'yas-prev-field))))
 
 (ert-deftest test-yas-in-org ()
   (with-temp-buffer
     (org-mode)
     (yas-minor-mode 1)
-    (should (eq (key-binding (yas--read-keybinding "<tab>")) 'yas-expand))))
+    (should (eq (key-binding [(tab)]) 'yas-expand))
+    (should (eq (key-binding (kbd "TAB")) 'yas-expand))))
 
+
 ;;; Helpers
 ;;;
+(defun yas/ert ()
+  (interactive)
+  (with-temp-buffer
+    (flet ((message (&rest args)
+                    (declare (ignore args))
+                    nil))
+      (ert t (buffer-name (current-buffer)))
+      (princ (buffer-string)))))
+
 
 (defun yas-should-expand (keys-and-expansions)
   (dolist (key-and-expansion keys-and-expansions)

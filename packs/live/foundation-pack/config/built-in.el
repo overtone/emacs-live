@@ -29,7 +29,8 @@
 (when (fboundp 'winner-mode)
       (winner-mode 1))
 
-(setq redisplay-dont-pause t
+(setq initial-major-mode 'lisp-interaction-mode
+      redisplay-dont-pause t
       column-number-mode t
       echo-keystrokes 0.02
       inhibit-startup-message t

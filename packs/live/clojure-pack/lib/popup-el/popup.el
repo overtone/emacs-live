@@ -413,13 +413,14 @@ usual."
          (string (car (popup-substring-by-width string content-width)))
          (string-width (string-width string))
          (spacing (max (- popup-width string-width summary-width)
-                       (if (> popup-width string-width) 1 0))))
+                       (if (> popup-width string-width) 1 0)))
+         (truncated-summary
+          (car (popup-substring-by-width
+                summary (max (- popup-width string-width spacing) 0)))))
     (concat margin-left
             string
             (make-string spacing ? )
-            (car
-             (popup-substring-by-width
-              summary (max (- popup-width string-width spacing) 0)))
+            truncated-summary
             symbol
             margin-right)))
 
