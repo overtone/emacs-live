@@ -170,6 +170,7 @@ before calling `er/expand-region' for the first time."
 (eval-after-load "js3-mode"     '(require 'js-mode-expansions))
 (eval-after-load "latex"        '(require 'latex-mode-expansions))
 (eval-after-load "nxml-mode"    '(require 'nxml-mode-expansions))
+(eval-after-load "octave-mod"   '(require 'octave-expansions))
 (eval-after-load "python"       '(progn
                                    (when expand-region-guess-python-mode
                                      (expand-region-guess-python-mode))

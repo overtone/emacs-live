@@ -109,23 +109,14 @@ sure to add a set of basic tests around the functionality you're changing.
 * [Damien Cassou](https://github.com/DamienCassou) added option to continue expanding/contracting with fast keys after initial expand.
 * [Sylvain Rousseau](https://github.com/thisirs) fixed loads of little annoyances.
 
-### Ruby expansions contributed by
+### Language specific contributions
 
-* [Matt Briggs](https://github.com/mbriggs)
-* [Jorge Dias](https://github.com/diasjorge)
-* [Le Wang](https://github.com/lewang)
-
-### Python expansions contributed by
-
-* [Ivan Andrus](https://github.com/gvol)
-* [fgeller](https://github.com/fgeller)
-* [edmccard](https://github.com/edmccard)
-
-### More languages
-
+* [Matt Briggs](https://github.com/mbriggs), [Jorge Dias](https://github.com/diasjorge) and [Le Wang](https://github.com/lewang) contributed Ruby expansions.
+* [Ivan Andrus](https://github.com/gvol), [fgeller](https://github.com/fgeller) and [edmccard](https://github.com/edmccard) contributed Python expansions.
 * [François Févotte](https://github.com/ffevotte) contributed C and C++ expansions.
 * [Ivan Andrus](https://github.com/gvol) contributed text-mode, LaTeX-mode and nxml-mode expansions.
 * [Gleb Peregud](https://github.com/gleber) contributed Erlang expansions.
+* [Mark Hepburn](https://github.com/markhepburn) contributed Octave expansions.
 
 Thanks!
 
