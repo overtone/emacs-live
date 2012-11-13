@@ -126,9 +126,6 @@
 (global-set-key (kbd "C-w") 'backward-kill-word)
 (define-key paredit-mode-map (kbd "C-w") 'paredit-backward-kill-word)
 
-;;delete current word
-(global-set-key (kbd "M-w") (lambda () (interactive) (backward-word) (kill-word 1)))
-
 ;;kill line backwards
 (global-set-key (kbd "M-k") 'live-backwards-kill-line)
 
