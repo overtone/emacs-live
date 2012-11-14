@@ -91,7 +91,6 @@
 (define-key paredit-mode-map (kbd "C-M-f") 'live-paredit-forward)
 (define-key paredit-mode-map (kbd "M-q") 'live-paredit-reindent-defun)
 (define-key paredit-mode-map (kbd "M-d") 'live-paredit-forward-kill-sexp)
-(define-key paredit-mode-map (kbd "M-w") 'live-paredit-backward-kill-sexp)
 (define-key paredit-mode-map (kbd "M-k") 'live-paredit-backward-kill)
 (define-key paredit-mode-map (kbd "M-\\") 'live-paredit-delete-horizontal-space)
 
