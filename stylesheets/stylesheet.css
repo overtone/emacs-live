@@ -23,7 +23,6 @@ figure, figcaption, footer, header, hgroup,
 menu, nav, output, ruby, section, summary,
 time, mark, audio, video {
   margin: 0;
-  padding: 0;
   border: 0;
   font: inherit;
   vertical-align: baseline;
@@ -58,30 +57,34 @@ Theme Styles
 body {
   box-sizing: border-box;
   color:#373737;
-  background: #212121;
-  font-size: 16px;
-  font-family: 'Myriad Pro', Calibri, Helvetica, Arial, sans-serif;
+  background: black;
+  font-size: 14.5px;
+  font-family: "Menlo", "Bitstream Vera Sans Mono", Monaco, "Lucida Console", Terminal, monospace;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+
 }
 
 h1, h2, h3, h4, h5, h6 {
+  padding-top: 10px;
+
   margin: 10px 0;
   font-weight: 700;
-  color:#222222;
-  font-family: 'Lucida Grande', 'Calibri', Helvetica, Arial, sans-serif;
+  color:#ff0080;
+  font-family: 'Myriad Pro', Calibri, Helvetica, Arial, sans-serif;
   letter-spacing: -1px;
 }
 
 h1 {
   font-size: 36px;
   font-weight: 700;
+
+
 }
 
 h2 {
   padding-bottom: 10px;
   font-size: 32px;
-  background: url('../images/bg_hr.png') repeat-x bottom;
 }
 
 h3 {
@@ -147,8 +150,6 @@ img {
   position: relative;
   margin: 0 auto;
   max-width: 739px;
-  padding: 5px;
-  margin: 10px 0 10px 0;
   /* border: 1px solid #ebebeb; */
 
   /* box-shadow: 0 0 5px #ebebeb; */
@@ -158,26 +159,16 @@ img {
   /* -ms-box-shadow: 0 0 5px #ebebeb; */
 }
 
+
 pre, code {
-  width: 100%;
-  color: #222;
-  background-color: #fff;
 
+  color: #6ad980;
   font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
-  font-size: 14px;
-
-  border-radius: 2px;
-  -moz-border-radius: 2px;
-  -webkit-border-radius: 2px;
-
-
-
 }
 
 pre {
   width: 100%;
-  padding: 10px;
-  box-shadow: 0 0 10px rgba(0,0,0,.1);
+
   overflow: auto;
 }
 
@@ -262,7 +253,8 @@ form {
 /*   max-width: 100%; */
 /* } */
 
-/*******************************************************************************
+/*****************************************************/
+                                                     /*******************************************************************************
 Full-Width Styles
 *******************************************************************************/
 
@@ -272,7 +264,7 @@ Full-Width Styles
 
 .inner {
   position: relative;
-  max-width: 640px;
+  max-width: 920px;
   padding: 20px 10px;
   margin: 0 auto;
 }
@@ -283,22 +275,21 @@ Full-Width Styles
   top:0;
   right: 10px;
   z-index: 10;
-  padding: 10px 50px 10px 10px;
+
   color: #fff;
-  background: url('../images/blacktocat.png') #0090ff no-repeat 95% 50%;
+
   font-weight: 700;
-  box-shadow: 0 0 10px rgba(0,0,0,.5);
-  border-bottom-left-radius: 2px;
-  border-bottom-right-radius: 2px;
+
 }
 
 #header_wrap {
-  background: #060915;
+  background: black;
   /* background: -moz-linear-gradient(top, #373737, #212121); */
   /* background: -webkit-linear-gradient(top, #373737, #212121); */
   /* background: -ms-linear-gradient(top, #373737, #212121); */
   /* background: -o-linear-gradient(top, #373737, #212121); */
   /* background: linear-gradient(top, #373737, #212121); */
+
 }
 
 #header_wrap .inner {
@@ -321,6 +312,10 @@ Full-Width Styles
   text-shadow: #111 0px 0px 10px;
 }
 
+.abso {
+      position: absolute;
+}
+
 #downloads {
   position: absolute;
   width: 210px;
@@ -328,7 +323,7 @@ Full-Width Styles
   bottom: -40px;
   right: 0;
   height: 70px;
-  background: url('../images/icon_download.png') no-repeat 0% 90%;
+#  background: url('../images/icon_download.png') no-repeat 0% 90%;
 }
 
 .zip_download_link {
@@ -361,21 +356,60 @@ Full-Width Styles
 }
 
 #main_content_wrap {
-  background: #f2f2f2;
-  border-top: 1px solid #111;
-  border-bottom: 1px solid #111;
+  background: black;
+
 }
 
 #main_content {
-  padding-top: 40px;
+  padding-top: 0px;
 }
 
 #footer_wrap {
   background: #212121;
 }
 
+#intro {
+    font-size: 14.5px;
 
+    font-family: "Menlo", "Bitstream Vera Sans Mono", Monaco, "Lucida Console", Terminal, monospace;
+    border-top: 1px solid #111;
+    color: #5780e2;
+    background: black;
+}
 
+/* This is the css style that will make your text blink.*/
+.blinkytext {
+     text-decoration: blink;
+     font-style: normal;
+ }
+
+.greeny {
+    color: #6ad980;
+}
+
+.orangey {
+    color: #ff8000;
+}
+
+.yellowy {
+    color: #dce867;
+}
+
+.whitey {
+    color: #f1f1f1;
+}
+
+.bluey {
+    color: #5d99f3;
+}
+
+.pinky {
+    color: #ff0080;
+}
+
+.greyey {
+    color: #9b9b9b;
+}
 /*******************************************************************************
 Small Device Styles
 *******************************************************************************/
