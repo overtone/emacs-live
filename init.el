@@ -104,7 +104,10 @@
  live-packs-dir    (file-name-as-directory (concat live-root-dir "packs"))
  live-autosaves-dir(file-name-as-directory (concat live-tmp-dir  "autosaves"))
  live-backups-dir  (file-name-as-directory (concat live-tmp-dir  "backups"))
- live-load-pack-dir nil)
+ live-load-pack-dir nil
+ live-disable-zone nil)
+
+
 
 ;; create tmp dirs if necessary
 (make-directory live-etc-dir t)
@@ -197,4 +200,5 @@
 ")))
 )
 
-(add-hook 'term-setup-hook 'zone)
+(if (not live-disable-zone)
+    (add-hook 'term-setup-hook 'zone))
