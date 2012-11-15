@@ -113,7 +113,7 @@ footer p {
 
 a {
   text-decoration: none;
-  color: #007edf;
+    color: #dce867;
   text-shadow: none;
 
   transition: color 0.5s ease;
@@ -129,12 +129,14 @@ a {
 }
 
 #main_content a:hover {
-  color: #0069ba;
-  text-shadow: #0090ff 0px 0px 2px;
+    color: #ff0080;
+
+  text-shadow: #ab005a 0px 0px 2px;
 }
 
 footer a:hover {
-  color: #43adff;
+   color: #ff0080;
+
   text-shadow: #0090ff 0px 0px 2px;
 }
 
