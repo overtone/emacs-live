@@ -200,9 +200,11 @@ ul, ol, dl {
 }
 
 ul li {
-  list-style: inside;
   padding-left: 20px;
   color: #5d99f3;
+  list-style-type:none;
+  text-indent:10px;
+  margin:0;
 }
 
 ol li {
@@ -210,6 +212,8 @@ ol li {
   padding-left: 20px;
   color: #5d99f3;
 }
+
+li:before{content:"* ";display:inline;}
 
 dl dt {
   font-weight: bold;
@@ -329,9 +333,10 @@ form {
   z-index: 10;
 }
 
-ul{margin:0;}
-li{list-style-type:none;text-indent:10px;}
-li:before{content:"*";display:inline;}
+
+
+
+
 
 /* This is the css style that will make your text blink.*/
 .blinkytext {
