@@ -1,5 +1,8 @@
 ---
+
 title: This will be used as the title-tag of the page head
+layout: doc
+
 ---
 
 # This is a H1
