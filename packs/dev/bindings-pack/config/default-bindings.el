@@ -145,8 +145,8 @@
 
 
 ;;fast vertical naviation
-(global-set-key  (kbd "M-U") (lambda () (interactive) (previous-line 10)))
-(global-set-key  (kbd "M-D") (lambda () (interactive) (next-line 10)))
+(global-set-key  (kbd "M-U") (lambda () (interactive) (forward-line -10)))
+(global-set-key  (kbd "M-D") (lambda () (interactive) (forward-line 10)))
 (global-set-key  (kbd "M-p") 'outline-previous-visible-heading)
 (global-set-key  (kbd "M-n") 'outline-next-visible-heading)
 
