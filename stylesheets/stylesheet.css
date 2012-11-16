@@ -82,7 +82,6 @@ h1, h2, h3, h4, h5, h6 {
   margin: 10px 0;
   font-weight: 700;
   color:#ff0080;
-  font-family: 'Myriad Pro', Calibri, Helvetica, Arial, sans-serif;
   letter-spacing: -1px;
 }
 
@@ -176,7 +175,6 @@ img {
 pre, code {
 
   color: #6ad980;
-  font-family: Monaco, "Bitstream Vera Sans Mono", "Lucida Console", Terminal, monospace;
 }
 
 pre {
@@ -245,7 +243,6 @@ table {
  }
 
 th {
-  font-family: 'Lucida Grande', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   padding: 10px;
   background: #373737;
   color: #fff;
@@ -383,8 +380,6 @@ Full-Width Styles
 
 #intro {
     font-size: 14.5px;
-
-    font-family: "Menlo", "Bitstream Vera Sans Mono", Monaco, "Lucida Console", Terminal, monospace;
     border-top: 1px solid #111;
     color: #5780e2;
     background: black;
