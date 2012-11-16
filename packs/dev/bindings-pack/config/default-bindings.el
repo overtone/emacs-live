@@ -45,6 +45,7 @@
 (global-set-key (kbd "C-c i 0") (lambda () (interactive) (insert "∅")))
 (global-set-key (kbd "C-c i u") (lambda () (interactive) (insert "∪")))
 (global-set-key (kbd "C-c i s") (lambda () (interactive) (insert "♯")))
+(global-set-key (kbd "C-c i f") (lambda () (interactive) (insert "♭")))
 (global-set-key (kbd "C-c i p") (lambda () (interactive) (insert "£")))
 
 (global-set-key (kbd "C-c j p") 'quick-jump-go-back)
