@@ -1,6 +1,5 @@
 /*******************************************************************************
-Slate Theme for Github Pages
-by Jason Costello, @jsncostello
+Cyberpunk theme for Github Pages
 *******************************************************************************/
 
 @import url(pygment_trac.css);
@@ -17,7 +16,6 @@ MeyerWeb Reset
          url('font/DroidSans-Mono-webfont.svg#webfontSOhoM6aS') format('svg');
     font-weight: normal;
     font-style: normal;
-
 }
 
 html, body, div, span, applet, object, iframe,
@@ -83,38 +81,37 @@ h1, h2, h3, h4, h5, h6 {
   margin: 10px 0;
   font-weight: 700;
   color:#ff0080;
+  font-size: 14.5px;
 
 }
 
 h1 {
-  font-size: 36px;
-  font-weight: 700;
-
-
+    color: #5d99f3;
 }
 
 h2 {
-  font-size: 14.5px;
+
 }
 
 h3 {
-  font-size: 24px;
+
 }
 
 h4 {
-  font-size: 21px;
+
 }
 
 h5 {
-  font-size: 18px;
+
 }
 
 h6 {
-  font-size: 16px;
+
 }
 
 p {
   margin: 10px 0 15px 0;
+  color: #f1f1f1;
 }
 
 footer p {
@@ -123,7 +120,7 @@ footer p {
 
 a {
   text-decoration: none;
-    color: #dce867;
+  color: #dce867;
   text-shadow: none;
 
   transition: color 0.5s ease;
@@ -140,8 +137,7 @@ a {
 
 #main_content a:hover {
     color: #ff0080;
-
-  text-shadow: #ab005a 0px 0px 2px;
+    text-shadow: #ab005a 0px 0px 2px;
 }
 
 footer a:hover {
@@ -155,7 +151,7 @@ em {
 }
 
 strong {
-  font-weight: bold;
+    color: #ff8000;
 }
 
 img {
@@ -170,7 +166,6 @@ img {
   /* -o-box-shadow: 0 0 5px #ebebeb; */
   /* -ms-box-shadow: 0 0 5px #ebebeb; */
 }
-
 
 pre, code {
   color: #6ad980;
@@ -227,13 +222,6 @@ dl p {
   font-style: italic;
 }
 
-hr {
-  height: 1px;
-  margin-bottom: 5px;
-  border: none;
-  background: url('../images/bg_hr.png') repeat-x center;
-}
-
 table {
   border: 1px solid #373737;
   margin-bottom: 20px;
@@ -256,16 +244,6 @@ form {
   padding: 20px;
 }
 
-/* img { */
-/*   width: 100%; */
-/*   max-width: 100%; */
-/* } */
-
-/*****************************************************/
-                                                     /*******************************************************************************
-Full-Width Styles
-*******************************************************************************/
-
 .outer {
   width: 100%;
 }
@@ -275,19 +253,6 @@ Full-Width Styles
   max-width: 920px;
   padding: 20px 10px;
   margin: 0 auto;
-}
-
-#forkme_banner {
-  display: block;
-  position: absolute;
-  top:0;
-  right: 10px;
-  z-index: 10;
-
-  color: #fff;
-
-  font-weight: 700;
-
 }
 
 #header_wrap {
@@ -324,36 +289,6 @@ Full-Width Styles
       position: absolute;
 }
 
-#downloads {
-  position: absolute;
-  width: 210px;
-  z-index: 10;
-  bottom: -40px;
-  right: 0;
-  height: 70px;
-#  background: url('../images/icon_download.png') no-repeat 0% 90%;
-}
-
-.zip_download_link {
-  display: block;
-  float: right;
-  width: 90px;
-  height:70px;
-  text-indent: -5000px;
-  overflow: hidden;
-  background: url(../images/sprite_download.png) no-repeat bottom left;
-}
-
-.tar_download_link {
-  display: block;
-  float: right;
-  width: 90px;
-  height:70px;
-  text-indent: -5000px;
-  overflow: hidden;
-  background: url(../images/sprite_download.png) no-repeat bottom right;
-  margin-left: 10px;
-}
 
 .zip_download_link:hover {
   background: url(../images/sprite_download.png) no-repeat top left;
@@ -415,58 +350,4 @@ Full-Width Styles
 
 .greyey {
     color: #9b9b9b;
-}
-/*******************************************************************************
-Small Device Styles
-*******************************************************************************/
-
-@media screen and (max-width: 480px) {
-  body {
-    font-size:14px;
-    font-family: "Menlo", "Bitstream Vera Sans Mono", "DejaVu Sans Mono", "DroidSansMono", Monaco, "Lucida Console", Terminal, monospace, Consolas, "Liberation Mono", "Courier New", monospace
-  }
-
-  #downloads {
-    display: none;
-  }
-
-  .inner {
-    min-width: 320px;
-    max-width: 480px;
-  }
-
-  #project_title {
-  font-size: 32px;
-  }
-
-  h1 {
-    font-size: 28px;
-  }
-
-  h2 {
-      font-size: 14px;
-  }
-
-  h3 {
-    font-size: 21px;
-  }
-
-  h4 {
-    font-size: 18px;
-  }
-
-  h5 {
-    font-size: 14px;
-  }
-
-  h6 {
-    font-size: 12px;
-  }
-
-  code, pre {
-    min-width: 320px;
-    max-width: 480px;
-    font-size: 11px;
-  }
-
 }
