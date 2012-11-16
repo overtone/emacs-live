@@ -70,9 +70,10 @@ body {
   color:#373737;
   background: black;
   font-size: 14.5px;
-  font-family: "Menlo", "Bitstream Vera Sans Mono", DejaVu Sans Mono, "DroidSansMono", Monaco, "Lucida Console", Terminal, monospace, Consolas, Liberation Mono, Courier New, monospace
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  font-family: "Menlo", "Bitstream Vera Sans Mono", "DejaVu Sans Mono", "DroidSansMono", Monaco, "Lucida Console", Terminal, monospace, Consolas, "Liberation Mono", "Courier New", monospace
+
 
 }
 
