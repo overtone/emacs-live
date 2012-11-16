@@ -79,11 +79,10 @@ body {
 
 h1, h2, h3, h4, h5, h6 {
   padding-top: 10px;
-
   margin: 10px 0;
   font-weight: 700;
   color:#ff0080;
-  letter-spacing: -1px;
+
 }
 
 h1 {
@@ -94,8 +93,7 @@ h1 {
 }
 
 h2 {
-  padding-bottom: 10px;
-  font-size: 32px;
+  font-size: 14.5px;
 }
 
 h3 {
@@ -447,7 +445,7 @@ Small Device Styles
   }
 
   h2 {
-    font-size: 24px;
+      font-size: 14px;
   }
 
   h3 {
