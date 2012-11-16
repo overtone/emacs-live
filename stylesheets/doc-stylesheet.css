@@ -213,7 +213,7 @@ ol li {
   color: #5d99f3;
 }
 
-li:before{content:"* ";display:inline;}
+ul li:before{content:"* ";display:inline;}
 
 dl dt {
   font-weight: bold;
