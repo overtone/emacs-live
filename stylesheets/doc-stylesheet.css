@@ -329,6 +329,10 @@ form {
   z-index: 10;
 }
 
+ul{margin:0;}
+li{list-style-type:none;text-indent:10px;}
+li:before{content:"*";display:inline;}
+
 /* This is the css style that will make your text blink.*/
 .blinkytext {
      text-decoration: blink;
