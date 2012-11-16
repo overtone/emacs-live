@@ -70,6 +70,7 @@ body {
   color:#373737;
   background: black;
   font-size: 14.5px;
+  font-weight: 600;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   font-family: "Menlo", "Bitstream Vera Sans Mono", "DejaVu Sans Mono", "DroidSansMono", Monaco, "Lucida Console", Terminal, monospace, Consolas, "Liberation Mono", "Courier New", monospace
@@ -172,13 +173,11 @@ img {
 
 
 pre, code {
-
   color: #6ad980;
 }
 
 pre {
   width: 100%;
-
   overflow: auto;
 }
 
