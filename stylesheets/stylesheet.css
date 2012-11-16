@@ -9,6 +9,17 @@ by Jason Costello, @jsncostello
 MeyerWeb Reset
 *******************************************************************************/
 
+@font-face {
+    font-family: 'DroidSansMono';
+    src: url('font/DroidSans-Mono-webfont.eot?') format('eot'),
+         url('font/DroidSans-Mono-webfont.woff') format('woff'),
+         url('font/DroidSans-Mono-webfont.ttf') format('truetype'),
+         url('font/DroidSans-Mono-webfont.svg#webfontSOhoM6aS') format('svg');
+    font-weight: normal;
+    font-style: normal;
+
+}
+
 html, body, div, span, applet, object, iframe,
 h1, h2, h3, h4, h5, h6, p, blockquote, pre,
 a, abbr, acronym, address, big, cite, code,
@@ -59,7 +70,7 @@ body {
   color:#373737;
   background: black;
   font-size: 14.5px;
-  font-family: "Menlo", "Bitstream Vera Sans Mono", Monaco, "Lucida Console", Terminal, monospace;
+  font-family: "Menlo", "Bitstream Vera Sans Mono", DejaVu Sans Mono, "DroidSansMono", Monaco, "Lucida Console", Terminal, monospace, Consolas, Liberation Mono, Courier New, monospace
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 
