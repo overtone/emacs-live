@@ -426,6 +426,7 @@ Small Device Styles
 @media screen and (max-width: 480px) {
   body {
     font-size:14px;
+    font-family: "Menlo", "Bitstream Vera Sans Mono", "DejaVu Sans Mono", "DroidSansMono", Monaco, "Lucida Console", Terminal, monospace, Consolas, "Liberation Mono", "Courier New", monospace
   }
 
   #downloads {
