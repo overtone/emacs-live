@@ -215,11 +215,8 @@ ol li {
 
 ul li:before{
     content:"* ";
-    display:inline;}
-
-li:before{
-    color: #ff8000;
-}
+    display:inline;
+    color: #ff8000;}
 
 dl dt {
   font-weight: bold;
