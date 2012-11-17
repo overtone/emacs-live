@@ -140,8 +140,7 @@ a {
 
 #main_content a:hover {
     color: #ff0080;
-
-  text-shadow: #ab005a 0px 0px 2px;
+    text-shadow: #ab005a 0px 0px 2px;
 }
 
 footer a:hover {
@@ -267,14 +266,14 @@ Full-Width Styles
 *******************************************************************************/
 
 .outer {
-  width: 100%;
+    width: 100%;
+    background-color: black;
 }
 
 .inner {
-  position: relative;
-  max-width: 920px;
-  padding: 20px 10px;
-  margin: 0 auto;
+    position: relative;
+    max-width: 920px;
+    margin: 0 auto;
 }
 
 #forkme_banner {
@@ -321,7 +320,7 @@ Full-Width Styles
 }
 
 .abso {
-      position: absolute;
+    position: absolute;
 }
 
 #downloads {
@@ -365,7 +364,6 @@ Full-Width Styles
 
 #main_content_wrap {
   background: black;
-
 }
 
 #main_content {
@@ -415,6 +413,12 @@ Full-Width Styles
 
 .greyey {
     color: #9b9b9b;
+}
+
+#emacs_status{
+    color: #5d99f3;
+    background-color: #252525;
+    padding: 0px;
 }
 /*******************************************************************************
 Small Device Styles
