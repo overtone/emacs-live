@@ -200,7 +200,6 @@ ul, ol, dl {
 }
 
 ul li {
-  padding-left: 20px;
   color: #f1f1f1;
   list-style-type:none;
   text-indent:10px;
@@ -209,7 +208,6 @@ ul li {
 
 ol li {
   list-style: decimal inside;
-  padding-left: 20px;
   color: #f1f1f1;
 }
 
