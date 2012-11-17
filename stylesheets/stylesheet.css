@@ -280,9 +280,9 @@ Full-Width Styles
   display: block;
   position: absolute;
   top:0;
-  right: 10px;
+  right: 0px;
   z-index: 10;
-
+  padding-top: 25px;
   color: #fff;
 
   font-weight: 700;
@@ -371,7 +371,7 @@ Full-Width Styles
 }
 
 #footer_wrap {
-  background: #212121;
+    background-color: #252525;
 }
 
 #intro {
@@ -418,7 +418,6 @@ Full-Width Styles
 #emacs_status{
     color: #5d99f3;
     background-color: #252525;
-    padding: 0px;
 }
 /*******************************************************************************
 Small Device Styles
