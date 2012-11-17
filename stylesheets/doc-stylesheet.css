@@ -201,7 +201,7 @@ ul, ol, dl {
 
 ul li {
   padding-left: 20px;
-  color: #5d99f3;
+  color: #f1f1f1;
   list-style-type:none;
   text-indent:10px;
   margin:0;
@@ -210,12 +210,16 @@ ul li {
 ol li {
   list-style: decimal inside;
   padding-left: 20px;
-  color: #5d99f3;
+  color: #f1f1f1;
 }
 
 ul li:before{
     content:"* ";
     display:inline;}
+
+li:before{
+    color: #ff8000;
+}
 
 dl dt {
   font-weight: bold;
