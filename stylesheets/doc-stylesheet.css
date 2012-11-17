@@ -209,6 +209,7 @@ ul li {
 ol li {
   list-style: decimal inside;
   color: #f1f1f1;
+  padding-left: 5px;
 }
 
 ul li:before{
