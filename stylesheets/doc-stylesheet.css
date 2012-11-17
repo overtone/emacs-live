@@ -120,7 +120,7 @@ footer p {
 
 a {
   text-decoration: none;
-  color: #dce867;
+  color: #FBDE2D;
   text-shadow: none;
 
   transition: color 0.5s ease;
@@ -147,11 +147,12 @@ footer a:hover {
 }
 
 em {
-  font-style: italic;
+    font-style: italic;
+    color: #D8FA3C;
 }
 
 strong {
-    color: #ff8000;
+    color: #D8FA3C;
 }
 
 img {
@@ -168,7 +169,7 @@ img {
 }
 
 pre, code {
-  color: #6ad980;
+    color: #5d99f3;
 }
 
 pre {
@@ -196,7 +197,6 @@ blockquote {
 
 ul, ol, dl {
   margin-bottom: 15px
-  color: #5d99f3;
 }
 
 ul li {
