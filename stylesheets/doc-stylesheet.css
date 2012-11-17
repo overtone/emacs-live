@@ -175,7 +175,7 @@ pre, code {
 pre {
   width: 100%;
   overflow: auto;
-  padding-left: 15px;
+  padding-left: 30px;
 }
 
 code {
@@ -328,7 +328,7 @@ form {
     background: black;
 }
 
-#autodoc
+#autodoc {
   display: block;
   position: absolute;
   top:0;
