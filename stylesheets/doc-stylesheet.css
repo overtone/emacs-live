@@ -175,11 +175,11 @@ pre, code {
 pre {
   width: 100%;
   overflow: auto;
+  padding-left: 15px;
 }
 
 code {
   padding: 3px;
-  padding-left: 15px;
   margin: 0 3px;
   box-shadow: 0 0 10px rgba(0,0,0,.1);
 }
