@@ -314,11 +314,12 @@ form {
 }
 
 #main_content {
-  padding-top: 0px;
+    background: black;
 }
 
 #footer_wrap {
-  background: #212121;
+    width: 100%;
+    background-color: #252525;
 }
 
 #intro {

@@ -66,6 +66,7 @@ Theme Styles
 *******************************************************************************/
 
 body {
+
   box-sizing: border-box;
   color:#373737;
   background: black;
@@ -271,7 +272,7 @@ Full-Width Styles
 }
 
 .inner {
-    position: relative;
+    position:  relative;
     max-width: 920px;
     margin: 0 auto;
 }
@@ -323,54 +324,20 @@ Full-Width Styles
     position: absolute;
 }
 
-#downloads {
-  position: absolute;
-  width: 210px;
-  z-index: 10;
-  bottom: -40px;
-  right: 0;
-  height: 70px;
-#  background: url('../images/icon_download.png') no-repeat 0% 90%;
-}
-
-.zip_download_link {
-  display: block;
-  float: right;
-  width: 90px;
-  height:70px;
-  text-indent: -5000px;
-  overflow: hidden;
-  background: url(../images/sprite_download.png) no-repeat bottom left;
-}
-
-.tar_download_link {
-  display: block;
-  float: right;
-  width: 90px;
-  height:70px;
-  text-indent: -5000px;
-  overflow: hidden;
-  background: url(../images/sprite_download.png) no-repeat bottom right;
-  margin-left: 10px;
-}
-
-.zip_download_link:hover {
-  background: url(../images/sprite_download.png) no-repeat top left;
-}
-
-.tar_download_link:hover {
-  background: url(../images/sprite_download.png) no-repeat top right;
-}
-
 #main_content_wrap {
   background: black;
 }
 
 #main_content {
-  padding-top: 0px;
+  background: black;
 }
 
 #footer_wrap {
+    width: 100%;
+    background-color: #252525;
+}
+
+#footer_contents {
     background-color: #252525;
 }
 
