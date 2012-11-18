@@ -3,7 +3,7 @@
 ;; Copyrigth (C) 2011  Glen Stampoultzis
 
 ;; Author: Glen Stampoultzis <gstamp(at)gmail.com>
-;; Version: 0.2
+;; Version: 0.3
 ;; Package-Requires: ((clojure-mode "1.11.5"))
 ;; Keywords; clojure, align, let
 ;; URL: https://github.com/gstamp/align-cljlet
@@ -95,6 +95,8 @@
              (string-match " *binding" name)
              (string-match " *loop" name)
              (string-match " *with-open" name)
+             (string-match " *cond" name)
+             (string-match " *condp" name)
              (string-match " *defroutes" name)
              )))
       (if (looking-at "{")
@@ -176,12 +178,22 @@
                (acl-has-next-sexp)))
       (list width1 width2 width3))))
 
+(defun acl-check-for-another-sexp ()
+  "Is there another sexp after this"
+  (save-excursion
+    (condition-case nil
+        (progn
+          (forward-sexp 2)
+          t)
+      (error nil))))
+
 (defun acl-calc-width ()
   "Calculate the width needed for all the definitions in the form"
   (save-excursion
     (let ((width 0))
       (while (progn
-               (if (> (acl-get-width) width)
+               (if (and (acl-check-for-another-sexp)
+                        (> (acl-get-width) width))
                    (setq width (acl-get-width)))
                (acl-goto-next-pair)))
       width)))
@@ -248,21 +260,37 @@ positioned on the defroute form."
   "Take n elements from a list returning a new list"
   (butlast xs (- (length xs) n)))
 
-(defun acl-align-form ()
-  "Determine what type of form we are currently positioned at and align it"
-  (if (looking-at "( *defroutes")
+
+(defun acl-start-align-defroute ()
+  (progn
+    (down-list 1)
+    (forward-sexp 3)
+    (backward-sexp)                 ; this position's us back at the start of the
+                                        ; first form.
+    (acl-respace-defroute-form (acl-take-n defroute-columns (acl-calc-route-widths)))))
+
+(defun acl-position-to-start ()
+  (if (looking-at "( *cond\\b")
       (progn
         (down-list 1)
-        (forward-sexp 3)
-        (backward-sexp)                 ; this position's us back at the start of the
-                                        ; first form.
-        (acl-respace-defroute-form (acl-take-n defroute-columns (acl-calc-route-widths))))
-    (progn
+        (forward-sexp 2)
+        (backward-sexp))
+    (if (looking-at "( *condp\\b")
+        (progn
+          (down-list 1)
+          (forward-sexp 4)
+          (backward-sexp))
       (if (not (looking-at "{"))
           ;; move to start of [
           (down-list 2)
-        (down-list 1))
-      
+        (down-list 1)))))
+
+(defun acl-align-form ()
+  "Determine what type of form we are currently positioned at and align it"
+  (if (looking-at "( *defroutes")
+      (acl-start-align-defroute)
+    (progn
+      (acl-position-to-start)
       (if (acl-lines-correctly-paired)
           (let ((w (acl-calc-width)))
             (acl-respace-form w)

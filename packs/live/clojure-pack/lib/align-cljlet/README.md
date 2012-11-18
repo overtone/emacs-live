@@ -22,6 +22,8 @@ Forms currently handled:
  * with-open
  * literal hashes {}
  * defroute
+ * cond
+ * condp (except :>> subforms)
 
 If there are let pairs together on the same line the code will refuse
 to align them. For example, the following will not align:
@@ -39,6 +41,7 @@ will not be aligned.
 
 * This program requires clojure mode to be running in order to
   function correctly.
+* Does not currently align condp forms that use the :>> symbol.
 
 # Installation:
 

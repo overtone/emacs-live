@@ -42,6 +42,50 @@
   (acl-should-error
    " {:a 1 :b 2}"))
 
+(ert-deftest align-cond ()
+  (acl-should-align
+   "(cond
+   (> grade 90) \"A\"
+   (> grade 80)    \"B\"
+   (> grade 70)    \"C\"
+   (> grade 60) \"D\"
+   :else        \"F\")"
+   "(cond\n (> grade 90) \"A\"
+ (> grade 80) \"B\"
+ (> grade 70) \"C\"
+ (> grade 60) \"D\"
+ :else        \"F\")")
+
+  ;; TODO: Currently does not handle :>> forms
+  )
+
+(ert-deftest align-condp ()
+  (acl-should-align
+   "(condp = value
+  1     \"one\"
+  2 \"two\"
+  3   \"three\"
+  :else (str \"unexpected value\"))"
+   "(condp = value
+  1     \"one\"
+  2     \"two\"
+  3     \"three\"
+  :else (str \"unexpected value\"))"))
+
+(ert-deftest align-cond ()
+  (acl-should-align
+   "(cond
+   (> grade 90) \"A\"
+   (> grade 80)    \"B\"
+   (> grade 70)    \"C\"
+   (> grade 60) \"D\"
+   :else        \"F\")"
+   "(cond\n (> grade 90) \"A\"
+ (> grade 80) \"B\"
+ (> grade 70) \"C\"
+ (> grade 60) \"D\"
+ :else        \"F\")"))
+
 (ert-deftest calc-route-widths ()
   (with-temp-buffer
     (clojure-mode)
