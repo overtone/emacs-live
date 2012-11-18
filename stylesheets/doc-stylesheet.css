@@ -336,9 +336,10 @@ form {
   z-index: 10;
 }
 
-
-
-
+#emacs_status{
+    color: #5d99f3;
+    background-color: #252525;
+}
 
 
 /* This is the css style that will make your text blink.*/
