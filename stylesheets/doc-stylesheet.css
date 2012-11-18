@@ -346,8 +346,9 @@ footer p{
   display: block;
   position: absolute;
   top:0;
-  right: 10px;
+  right: 0px;
   z-index: 10;
+  padding-top: 45px;
 }
 
 #emacs_status{
