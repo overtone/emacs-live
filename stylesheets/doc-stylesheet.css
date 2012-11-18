@@ -175,7 +175,6 @@ pre, code {
 pre {
   width: 100%;
   overflow: auto;
-  padding-left: 30px;
 }
 
 code {
@@ -256,12 +255,12 @@ form {
 
 .outer {
   width: 100%;
+  background-color: black;
 }
 
 .inner {
   position: relative;
   max-width: 920px;
-  padding: 20px 10px;
   margin: 0 auto;
 }
 
