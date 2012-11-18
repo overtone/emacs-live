@@ -333,15 +333,22 @@ Full-Width Styles
 }
 
 #footer_wrap {
-    position: absolute;
-    bottom: 0;
-    height: 130px;
-    width: 100%;
+    padding-bottom: 10px;
+    max-width: 920px;
     background-color: #252525;
 }
 
 #footer_contents {
     background-color: #252525;
+}
+
+footer p{
+    margin-top: 10px;
+    margin-left: 10px;
+    margin-bottom: 0px;
+    padding-top: 5px;
+    padding-bottom: 0px;
+
 }
 
 #intro {

@@ -317,9 +317,22 @@ form {
     background: black;
 }
 
+#footer.inner {
+  background: #252525;
+}
+
 #footer_wrap {
-    width: 100%;
     background-color: #252525;
+    padding-bottom: 10px;
+    max-width: 920px;
+}
+
+footer p{
+    margin-top: 10px;
+    margin-left: 10px;
+    margin-bottom: 0px;
+    padding-top: 5px;
+    padding-bottom: 0px;
 }
 
 #intro {
