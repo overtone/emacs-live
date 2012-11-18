@@ -283,7 +283,7 @@ Full-Width Styles
   top:0;
   right: 0px;
   z-index: 10;
-  padding-top: 25px;
+  padding-top: 45px;
   color: #fff;
 
   font-weight: 700;
@@ -333,6 +333,9 @@ Full-Width Styles
 }
 
 #footer_wrap {
+    position: absolute;
+    bottom: 0;
+    height: 130px;
     width: 100%;
     background-color: #252525;
 }
