@@ -16,3 +16,4 @@ occasionally stop to enjoy the beautiful views on your way.
 * [Installing Emacs Live](doc-installation.html)
 * [The Emacs Live Pack Structure](pack-structure.html)
 * [First steps](doc-first-steps.html)
+* [FAQ](doc-faq.html)
