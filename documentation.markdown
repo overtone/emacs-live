@@ -1,6 +1,6 @@
 ---
 
-title: Home
+title: Documentation
 layout: doc
 
 ---
