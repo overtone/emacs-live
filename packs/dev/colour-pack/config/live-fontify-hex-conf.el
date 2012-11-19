@@ -9,3 +9,6 @@
 
 (font-lock-add-keywords 'lisp-interaction-mode
                         '((live-fontify-hex-colors)))
+
+(font-lock-add-keywords 'css-mode
+                        '((live-fontify-hex-colors)))

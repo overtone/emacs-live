@@ -6,7 +6,7 @@
   (while (re-search-forward "\\(#[[:xdigit:]]\\{6\\}\\)" limit t)
     (let ((ov (make-overlay (match-beginning 0)
                             (match-end 0))))
-      (overlay-put ov 'face  (list :background (match-string 1)))
+      (overlay-put ov 'face  (list :background (match-string 1) :foreground "black"))
       (overlay-put ov 'fontify-hex-colors t)
       (overlay-put ov 'evaporate t)))
   ;; return nil telling font-lock not to fontify anything from this
