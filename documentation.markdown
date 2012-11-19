@@ -10,6 +10,7 @@ layout: doc
 # --> Emacs Live Documatation.
 
 * [Installing Emacs Live](doc-installation.html)
+* [Starting Emacs Live](doc-starting.html)
 * [Personal Customisation](doc-customisation.html)
 * [First steps](doc-first-steps.html)
 * [Pack structure](doc-pack-structure.html)
