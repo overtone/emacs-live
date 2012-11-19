@@ -148,11 +148,11 @@ footer a:hover {
 
 em {
     font-style: italic;
-    color: #D8FA3C;
+    color: #FF6400;
 }
 
 strong {
-    color: #D8FA3C;
+    color: #FF6400
 }
 
 img {
@@ -215,7 +215,7 @@ ol li {
 ul li:before{
     content:"* ";
     display:inline;
-    color: #ff8000;}
+    color: #8B8989
 
 dl dt {
   font-weight: bold;

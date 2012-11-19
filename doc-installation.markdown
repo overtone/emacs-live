@@ -17,10 +17,10 @@ To use Emacs Live you need to have a copy of vanilla Emacs version 24 or
 higher. Depending on your operating system, this can be obtained from
 different sources.
 
-* **OS X GUI:** http://emacsformacosx.com/
+* **OS X GUI:** [http://emacsformacosx.com/](http://emacsformacosx.com/)
 * **OS X Console:** via [homebrew](http://mxcl.github.com/homebrew/) `brew install emacs`
-* **Windows:** http://alpha.gnu.org/gnu/emacs/windows/
-* **Linux:** consult your package manager or compile from source
+* **Windows:** [http://alpha.gnu.org/gnu/emacs/windows/](http://alpha.gnu.org/gnu/emacs/windows/)
+* **Linux:** consult your _package_ manager or compile from source
 
 # --> Basic Installation
 
@@ -33,7 +33,7 @@ uncompressing it and then moving the uncompressed folder to
 
 # --> Advanced Installation
 
-It is recommended that you use `git` to download and install Emacs Live. This makes it trivial for you to keep up-to-date with new versions:
+It is recommended that you use [git](http://git-scm.com) to download and install Emacs Live. This makes it trivial for you to keep up-to-date with new versions:
 
     git clone git://github.com/overtone/emacs-live.git ~/.emacs.d
 
