@@ -1,10 +1,11 @@
 ---
 
 title: FAQ
+filename: faq
 layout: doc
 
 ---
 
-# --> FAW
+# --> FAQ
 
 questions and answers go here...

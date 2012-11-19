@@ -1,6 +1,7 @@
 ---
 
 title: Installation
+filename: installation
 layout: doc
 
 ---
