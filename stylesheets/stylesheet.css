@@ -1,6 +1,5 @@
 /*******************************************************************************
-Slate Theme for Github Pages
-by Jason Costello, @jsncostello
+Cyberpunk theme for Github Pages
 *******************************************************************************/
 
 @import url(pygment_trac.css);
@@ -22,32 +21,32 @@ article, aside, canvas, details, embed,
 figure, figcaption, footer, header, hgroup,
 menu, nav, output, ruby, section, summary,
 time, mark, audio, video {
-  margin: 0;
-  border: 0;
-  font: inherit;
-  vertical-align: baseline;
+    margin: 0;
+    border: 0;
+    font: inherit;
+    vertical-align: baseline;
 }
 
 /* HTML5 display-role reset for older browsers */
 article, aside, details, figcaption, figure,
 footer, header, hgroup, menu, nav, section {
-  display: block;
+    display: block;
 }
 
 ol, ul {
-  list-style: none;
+    list-style: none;
 }
 
 blockquote, q {
 }
 
 table {
-  border-collapse: collapse;
-  border-spacing: 0;
+    border-collapse: collapse;
+    border-spacing: 0;
 }
 
 a:focus {
-  outline: none;
+    outline: none;
 }
 
 /*******************************************************************************
@@ -55,205 +54,189 @@ Theme Styles
 *******************************************************************************/
 
 body {
-
-  box-sizing: border-box;
-  color:#373737;
-  background: black;
-  font-size: 14.5px;
-  font-weight: 600;
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-  font-family: "Menlo", "Bitstream Vera Sans Mono", "DejaVu Sans Mono", "Droid Sans Mono", Monaco, "Lucida Console", Terminal, monospace, Consolas, "Liberation Mono", "Courier New", monospace
-
-
+    box-sizing: border-box;
+    color:#373737;
+    background: black;
+    font-size: 14.5px;
+    font-weight: 600;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    font-family: "Menlo", "Bitstream Vera Sans Mono", "DejaVu Sans Mono", "DroidSansMono", Monaco, "Lucida Console", Terminal, monospace, Consolas, "Liberation Mono", "Courier New", monospace
 }
 
 h1, h2, h3, h4, h5, h6 {
-  padding-top: 10px;
-  margin: 10px 0;
-  font-weight: 700;
-  color:#ff0080;
-
+    padding-top: 10px;
+    margin: 10px 0;
+    font-weight: 700;
+    color:#ff0080;
+    font-size: 14.5px;
 }
 
 h1 {
-  font-size: 36px;
-  font-weight: 700;
-
 
 }
 
 h2 {
-  font-size: 14.5px;
+
 }
 
 h3 {
-  font-size: 24px;
+
 }
 
 h4 {
-  font-size: 21px;
+
 }
 
 h5 {
-  font-size: 18px;
+
 }
 
 h6 {
-  font-size: 16px;
+
 }
 
 p {
-  margin: 10px 0 15px 0;
+    margin: 10px 0 15px 0;
+    color: #f1f1f1;
 }
 
 footer p {
-  color: #f2f2f2;
+    color: #f2f2f2;
 }
 
 a {
-  text-decoration: none;
-    color: #dce867;
-  text-shadow: none;
+    text-decoration: none;
+    color: #FBDE2D;
+    text-shadow: none;
 
-  transition: color 0.5s ease;
-  transition: text-shadow 0.5s ease;
-  -webkit-transition: color 0.5s ease;
-  -webkit-transition: text-shadow 0.5s ease;
-  -moz-transition: color 0.5s ease;
-  -moz-transition: text-shadow 0.5s ease;
-  -o-transition: color 0.5s ease;
-  -o-transition: text-shadow 0.5s ease;
-  -ms-transition: color 0.5s ease;
-  -ms-transition: text-shadow 0.5s ease;
+    transition: color 0.5s ease;
+    transition: text-shadow 0.5s ease;
+    -webkit-transition: color 0.5s ease;
+    -webkit-transition: text-shadow 0.5s ease;
+    -moz-transition: color 0.5s ease;
+    -moz-transition: text-shadow 0.5s ease;
+    -o-transition: color 0.5s ease;
+    -o-transition: text-shadow 0.5s ease;
+    -ms-transition: color 0.5s ease;
+    -ms-transition: text-shadow 0.5s ease;
 }
 
 #main_content a:hover {
-    color: #ff0080;
-    text-shadow: #ab005a 0px 0px 2px;
+    color: #61CE3C;
 }
 
 footer a:hover {
-   color: #ff0080;
-
-  text-shadow: #0090ff 0px 0px 2px;
+    color: #61CE3C;
 }
 
 em {
-  font-style: italic;
+    font-style: italic;
+    color: #FF6400;
 }
 
 strong {
-  font-weight: bold;
+    color: #FF6400
 }
 
 img {
-  position: relative;
-  margin: 0 auto;
-  max-width: 739px;
-  /* border: 1px solid #ebebeb; */
+    position: relative;
+    margin: 0 auto;
+    max-width: 739px;
+/* border: 1px solid #ebebeb; */
 
-  /* box-shadow: 0 0 5px #ebebeb; */
-  /* -webkit-box-shadow: 0 0 5px #ebebeb; */
-  /* -moz-box-shadow: 0 0 5px #ebebeb; */
-  /* -o-box-shadow: 0 0 5px #ebebeb; */
-  /* -ms-box-shadow: 0 0 5px #ebebeb; */
+/* box-shadow: 0 0 5px #ebebeb; */
+/* -webkit-box-shadow: 0 0 5px #ebebeb; */
+/* -moz-box-shadow: 0 0 5px #ebebeb; */
+/* -o-box-shadow: 0 0 5px #ebebeb; */
+/* -ms-box-shadow: 0 0 5px #ebebeb; */
 }
 
-
 pre, code {
-  color: #6ad980;
+    color: #5d99f3;
 }
 
 pre {
-  width: 100%;
-  overflow: auto;
+    width: 100%;
+    overflow: auto;
 }
 
 code {
-  padding: 3px;
-  margin: 0 3px;
-  box-shadow: 0 0 10px rgba(0,0,0,.1);
+    padding: 3px;
+    margin: 0 3px;
+    box-shadow: 0 0 10px rgba(0,0,0,.1);
 }
 
 pre code {
-  display: block;
-  box-shadow: none;
+    display: block;
+    box-shadow: none;
 }
 
 blockquote {
-  color: #666;
-  margin-bottom: 20px;
-  padding: 0 0 0 20px;
-  border-left: 3px solid #bbb;
+    color: #666;
+    margin-bottom: 20px;
+    padding: 0 0 0 20px;
+    border-left: 3px solid #bbb;
 }
 
 ul, ol, dl {
-  margin-bottom: 15px
+    margin-bottom: 15px
+    padding-left: 5px;
 }
 
 ul li {
-  list-style: inside;
-  padding-left: 20px;
+    color: #f1f1f1;
+    list-style-type:none;
+    text-indent:10px;
+    margin:0;
 }
 
 ol li {
-  list-style: decimal inside;
-  padding-left: 20px;
+    list-style: decimal inside;
+    color: #f1f1f1;
+}
+
+ul li:before{
+    content:"* ";
+    display:inline;
+    color: #8B8989
 }
 
 dl dt {
-  font-weight: bold;
+    font-weight: bold;
 }
 
 dl dd {
-  padding-left: 20px;
-  font-style: italic;
+    padding-left: 20px;
+    font-style: italic;
 }
 
 dl p {
-  padding-left: 20px;
-  font-style: italic;
-}
-
-hr {
-  height: 1px;
-  margin-bottom: 5px;
-  border: none;
-  background: url('../images/bg_hr.png') repeat-x center;
+    padding-left: 20px;
+    font-style: italic;
 }
 
 table {
-  border: 1px solid #373737;
-  margin-bottom: 20px;
-  text-align: left;
- }
-
-th {
-  padding: 10px;
-  background: #373737;
-  color: #fff;
- }
-
-td {
-  padding: 10px;
-  border: 1px solid #373737;
- }
-
-form {
-  background: #f2f2f2;
-  padding: 20px;
+    border: 1px solid #373737;
+    margin-bottom: 20px;
+    text-align: left;
 }
 
-/* img { */
-/*   width: 100%; */
-/*   max-width: 100%; */
-/* } */
+th {
+    padding: 10px;
+    background: #373737;
+    color: #fff;
+}
 
-/*****************************************************/
-                                                     /*******************************************************************************
-Full-Width Styles
-*******************************************************************************/
+td {
+    padding: 10px;
+    border: 1px solid #373737;
+}
+
+form {
+    background: #f2f2f2;
+    padding: 20px;
+}
 
 .outer {
     width: 100%;
@@ -261,74 +244,70 @@ Full-Width Styles
 }
 
 .inner {
-    position:  relative;
+    position: relative;
     max-width: 920px;
     margin: 0 auto;
 }
 
-#forkme_banner {
-  display: block;
-  position: absolute;
-  top:0;
-  right: 0px;
-  z-index: 10;
-  padding-top: 45px;
-  color: #fff;
-
-  font-weight: 700;
-
-}
-
 #header_wrap {
-  background: black;
-  /* background: -moz-linear-gradient(top, #373737, #212121); */
-  /* background: -webkit-linear-gradient(top, #373737, #212121); */
-  /* background: -ms-linear-gradient(top, #373737, #212121); */
-  /* background: -o-linear-gradient(top, #373737, #212121); */
-  /* background: linear-gradient(top, #373737, #212121); */
-
+    background: black;
+/* background: -moz-linear-gradient(top, #373737, #212121); */
+/* background: -webkit-linear-gradient(top, #373737, #212121); */
+/* background: -ms-linear-gradient(top, #373737, #212121); */
+/* background: -o-linear-gradient(top, #373737, #212121); */
+/* background: linear-gradient(top, #373737, #212121); */
 }
 
 #header_wrap .inner {
-  padding: 50px 10px 30px 10px;
+    padding: 50px 10px 30px 10px;
 }
 
 #project_title {
-  margin: 0;
-  color: #ff0080;
-  font-size: 42px;
-  font-weight: 700;
-  text-shadow: #111 0px 0px 10px;
+    margin: 0;
+    color: #ff0080;
+    font-size: 42px;
+    font-weight: 700;
+    text-shadow: #111 0px 0px 10px;
 }
 
 #project_tagline {
-  color: #fff;
-  font-size: 24px;
-  font-weight: 300;
-  background: none;
-  text-shadow: #111 0px 0px 10px;
+    color: #fff;
+    font-size: 24px;
+    font-weight: 300;
+    background: none;
+    text-shadow: #111 0px 0px 10px;
 }
 
 .abso {
     position: absolute;
 }
 
+
+.zip_download_link:hover {
+    background: url(../images/sprite_download.png) no-repeat top left;
+}
+
+.tar_download_link:hover {
+    background: url(../images/sprite_download.png) no-repeat top right;
+}
+
 #main_content_wrap {
-  background: black;
+    background: black;
+
 }
 
 #main_content {
-  background: black;
+    background: black;
+}
+
+#footer.inner {
+    background: #252525;
 }
 
 #footer_wrap {
+    background-color: #252525;
     padding-bottom: 10px;
     max-width: 920px;
-    background-color: #252525;
-}
-
-#footer_contents {
-    background-color: #252525;
 }
 
 footer p{
@@ -337,7 +316,6 @@ footer p{
     margin-bottom: 0px;
     padding-top: 5px;
     padding-bottom: 0px;
-
 }
 
 #intro {
@@ -347,11 +325,27 @@ footer p{
     background: black;
 }
 
+#autodoc {
+    display: block;
+    position: absolute;
+    top:0;
+    right: 0px;
+    z-index: 10;
+    padding-top: 45px;
+}
+
+#emacs_status{
+    color: #5d99f3;
+    background-color: #252525;
+    overflow:hidden;
+}
+
+
 /* This is the css style that will make your text blink.*/
 .blinkytext {
-     text-decoration: blink;
-     font-style: normal;
- }
+    text-decoration: blink;
+    font-style: normal;
+}
 
 .greeny {
     color: #6ad980;
@@ -379,37 +373,4 @@ footer p{
 
 .greyey {
     color: #9b9b9b;
-}
-
-#live-ascii {
-    color: #9b9b9b;
-}
-
-#emacs_status{
-    color: #5d99f3;
-    background-color: #252525;
-}
-/*******************************************************************************
-Small Device Styles
-*******************************************************************************/
-
-@media screen and (max-width: 480px) {
-  body {
-
-    font-family: "Menlo", "Bitstream Vera Sans Mono", "DejaVu Sans Mono", "Droid Sans Mono", Monaco, "Lucida Console", Terminal, monospace, Consolas, "Liberation Mono", "Courier New", monospace
-  }
-
-  .inner {
-    min-width: 320px;
-    max-width: 480px;
-  }
-
-  #live-ascii  {
-    color: #9b9b9b;
-      font-size: 7px;
-  }
-
-  #forkme_banner {
-      display: none;
-}
 }

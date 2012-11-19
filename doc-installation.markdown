@@ -18,7 +18,7 @@ higher. Depending on your operating system, this can be obtained from
 different sources.
 
 * **OS X GUI:** [http://emacsformacosx.com/](http://emacsformacosx.com/)
-* **OS X Console:** via [homebrew](http://mxcl.github.com/homebrew/) `brew install emacs`
+* **OS X Console:** via [homebrew](http://mxcl.github.com/homebrew/) - `brew install emacs`
 * **Windows:** [http://alpha.gnu.org/gnu/emacs/windows/](http://alpha.gnu.org/gnu/emacs/windows/)
 * **Linux:** consult your _package_ manager or compile from source
 
