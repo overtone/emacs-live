@@ -392,6 +392,10 @@ footer p{
     color: #9b9b9b;
 }
 
+.live-ascii {
+    color: #9b9b9b;
+}
+
 #emacs_status{
     color: #5d99f3;
     background-color: #252525;
@@ -402,12 +406,8 @@ Small Device Styles
 
 @media screen and (max-width: 480px) {
   body {
-    font-size:14px;
-    font-family: "Menlo", "Bitstream Vera Sans Mono", "DejaVu Sans Mono", "DroidSansMono", Monaco, "Lucida Console", Terminal, monospace, Consolas, "Liberation Mono", "Courier New", monospace
-  }
 
-  #downloads {
-    display: none;
+    font-family: "Menlo", "Bitstream Vera Sans Mono", "DejaVu Sans Mono", "Droid Sans Mono", Monaco, "Lucida Console", Terminal, monospace, Consolas, "Liberation Mono", "Courier New", monospace
   }
 
   .inner {
@@ -415,38 +415,12 @@ Small Device Styles
     max-width: 480px;
   }
 
-  #project_title {
-  font-size: 32px;
+  #live-ascii  {
+    color: #9b9b9b;
+      font-size: 7px;
   }
 
-  h1 {
-    font-size: 28px;
-  }
-
-  h2 {
-      font-size: 14px;
-  }
-
-  h3 {
-    font-size: 21px;
-  }
-
-  h4 {
-    font-size: 18px;
-  }
-
-  h5 {
-    font-size: 14px;
-  }
-
-  h6 {
-    font-size: 12px;
-  }
-
-  code, pre {
-    min-width: 320px;
-    max-width: 480px;
-    font-size: 11px;
-  }
-
+  #forkme_banner {
+      display: none;
+}
 }
