@@ -29,7 +29,7 @@ It's also useful to set `emacsclient` as your default editor in the `EDITOR` she
 
 # --> Daemon mode with OS X GUI Emacs
 
-If you're running a GUI version of Emacs on OS X, then you can start Emacs in daemon mode as a background process with the followign terminal command: `/Applications/Emacs.app/Contents/MacOS/Emacs --daemon`. Creating a new GUI frame to this terminal can then be achieved with: `/Applications/Emacs.app/Contents/MacOS/bin/emacsclient -c -n`. You can also open up a new GUI frame for a specific file with `/Applications/Emacs.app/Contents/MacOS/bin/emacsclient /file/to/edit -c -n`. It's also possible to [automatically start the daemon process on boot with launchd](http://cubiclemuses.com/cm/articles/2009/08/06/emacs-and-os-x-launchd/).
+If you're running a GUI version of Emacs on OS X, then you can start Emacs in daemon mode as a background process with the following terminal command: `/Applications/Emacs.app/Contents/MacOS/Emacs --daemon`. Creating a new GUI frame to this terminal can then be achieved with: `/Applications/Emacs.app/Contents/MacOS/bin/emacsclient -c -n`. You can also open up a new GUI frame for a specific file with `/Applications/Emacs.app/Contents/MacOS/bin/emacsclient /file/to/edit -c -n`. It's also possible to [automatically start the daemon process on boot with launchd](http://cubiclemuses.com/cm/articles/2009/08/06/emacs-and-os-x-launchd/).
 
 # --> General Daemon Mode Information
 
