@@ -93,6 +93,10 @@
       (load-file old-file)
       (error (concat "Oops - your emacs isn't supported. Emacs Live only works on Emacs 24+ and you're running version: " emacs-version ". Please upgrade your Emacs and try again, or define ~/.emacs-old.el for a fallback")))))
 
+(let ((emacs-live-directory (getenv "EMACS_LIVE_DIR")))
+  (when emacs-live-directory
+    (setq user-emacs-directory emacs-live-directory)))
+
 (when live-supported-emacsp
 ;; Store live base dirs, but respect user's choice of `live-root-dir'
 ;; when provided.
