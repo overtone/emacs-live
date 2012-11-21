@@ -166,6 +166,14 @@
      (hl-sexp-face ((t (:background "grey9"))))
 
      (browse-kill-ring-current-entry-face ((t (:background "#333333"))))
+
+     (markdown-link-face ((t (:foreground "#FBDE2D"))))
+     (markdown-url-face ((t (:foreground  "#61CE3C"))))
+     (markdown-bold-face ((t (:foreground "#FF6400"))))
+     (markdown-italic-face ((t (:italic t :foreground "#FF6400"))))
+     (markdown-pre-face ((t (:foreground "#4c83ff"))))
+     (markdown-inline-code-face ((t (:foreground "#4c83ff"))))
+     (markdown-list-face ((t (:foreground "#8B8989"))))
      ))
   )
 

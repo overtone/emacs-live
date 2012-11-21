@@ -1,6 +1,6 @@
 ;;; popwin-w3m.el --- Popwin Configuration for w3m
 
-;; Copyright (C) 2011  Tomohiro Matsuyama
+;; Copyright (C) 2011, 2012  Tomohiro Matsuyama
 
 ;; Author: Tomohiro Matsuyama <tomo@cx4a.org>
 ;; Keywords: 

@@ -651,6 +651,9 @@ operation after commit).")
     (define-key map (kbd "z") 'magit-key-mode-popup-stashing)
     map))
 
+(eval-after-load 'dired-x
+  '(define-key magit-status-mode-map [remap dired-jump] 'magit-dired-jump))
+
 (defvar magit-log-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd ".") 'magit-mark-item)
@@ -5067,7 +5070,7 @@ restore the window state that was saved before ediff was called."
       (magit-git-section 'diffbuf
                          (magit-rev-range-describe range "Changes")
                          'magit-wash-diffs
-                         "diff" (magit-diff-U-arg) args))))
+                         "diff" (magit-diff-U-arg) args "--"))))
 
 (define-derived-mode magit-diff-mode magit-mode "Magit Diff"
   "Mode for looking at a git diff.
@@ -5302,9 +5305,14 @@ values (such as wildcards) that might be of interest.
 
 If LOCAL is nil, the `.gitignore' file is updated.
 Otherwise, it is `.git/info/exclude'."
-  (let ((ignore-file (if local (concat (magit-git-dir) "info/exclude") ".gitignore")))
+  (let* ((local-ignore-dir (concat (magit-git-dir) "info/"))
+         (ignore-file (if local
+                          (concat local-ignore-dir "exclude")
+                        ".gitignore")))
     (if edit
       (setq file (magit-ignore-modifiable-file file edit)))
+    (if (and local (not (file-exists-p local-ignore-dir)))
+        (make-directory local-ignore-dir t))
     (with-temp-buffer
       (when (file-exists-p ignore-file)
         (insert-file-contents ignore-file))
@@ -5445,6 +5453,22 @@ The name of the change log file is set by variable change-log-default-name."
 (defun magit-add-change-log-entry-other-window ()
   (interactive)
   (magit-visiting-file-item (call-interactively 'add-change-log-entry-other-window)))
+
+(eval-after-load 'dired-x
+  '(defun magit-dired-jump (&optional other-window)
+    "Visit current item.
+With a prefix argument, visit in other window."
+    (interactive "P")
+    (require 'dired-x)
+    (magit-section-action (item info "dired-jump")
+      ((untracked file)
+       (dired-jump other-window (file-truename info)))
+      ((diff)
+       (dired-jump other-window (file-truename (magit-diff-item-file item))))
+      ((hunk)
+       (dired-jump other-window
+                   (file-truename (magit-diff-item-file
+                                   (magit-hunk-item-diff item))))))))
 
 (defun magit-visit-file-item (&optional other-window)
   "Visit current file associated with item.

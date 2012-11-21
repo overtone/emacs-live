@@ -4,7 +4,7 @@
 
 ;; Author: Tomohiro Matsuyama <tomo@cx4a.org>
 ;; Keywords: convenience
-;; Version: 0.6alpha
+;; Version: 0.6
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -61,7 +61,7 @@
 
 (eval-when-compile (require 'cl))
 
-(defconst popwin:version "0.6alpha")
+(defconst popwin:version "0.6")
 
 
 
@@ -340,6 +340,12 @@ is left or right, this configuration will be ignored. If this
 variable is float, the popup window height will be a multiplier
 of the value and frame-size."
   :type 'number
+  :group 'popwin)
+
+(defcustom popwin:reuse-window 'current-frame
+  "Non-nil means `popwin:display-buffer' will not popup the
+visible buffer.  The value is same as a second argument of
+`get-buffer-window'."
   :group 'popwin)
 
 (defcustom popwin:adjust-other-windows t
@@ -621,11 +627,15 @@ BUFFER."
   (run-hooks 'popwin:after-popup-hook)
   popwin:popup-window)
 
-(defun popwin:popup-last-buffer ()
-  "Show the last popup buffer with the same configuration."
-  (interactive)
+(defun popwin:popup-last-buffer (&optional noselect)
+  "Show the last popup buffer with the same configuration. If
+NOSELECT is non-nil, the popup window will not be selected."
+  (interactive "P")
   (if popwin:popup-last-config
-      (apply 'popwin:popup-buffer popwin:popup-last-config)
+      (if noselect
+          (destructuring-bind (buffer . keyargs) popwin:popup-last-config
+            (apply 'popwin:popup-buffer buffer :noselect t keyargs))
+        (apply 'popwin:popup-buffer popwin:popup-last-config))
     (error "No popup buffer ever")))
 (defalias 'popwin:display-last-buffer 'popwin:popup-last-buffer)
 
@@ -882,12 +892,19 @@ specifies default values of the config."
 usual. This function can be used as a value of
 `display-buffer-function'."
   (interactive "BDisplay buffer:\n")
-  (popwin:display-buffer-1
-   buffer-or-name
-   :if-config-not-found
-   (unless (called-interactively-p)
-     (lambda (buffer)
-       (popwin:original-display-buffer buffer not-this-window)))))
+  (if (and popwin:reuse-window
+           (not (memq (get-buffer-window buffer-or-name popwin:reuse-window)
+                      (list (if not-this-window (selected-window)) nil))))
+      ;; Call `display-buffer' for reuse.
+      (popwin:original-display-buffer buffer-or-name not-this-window)
+    (popwin:display-buffer-1
+     buffer-or-name
+     :if-config-not-found
+     (unless (with-no-warnings
+               ;; FIXME: emacs bug?
+               (called-interactively-p))
+       (lambda (buffer)
+         (popwin:original-display-buffer buffer not-this-window))))))
 
 (defun popwin:special-display-popup-window (buffer &rest ignore)
   "Obsolete."

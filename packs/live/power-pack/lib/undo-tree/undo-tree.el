@@ -3,7 +3,7 @@
 ;; Copyright (C) 2009-2012  Free Software Foundation, Inc
 
 ;; Author: Toby Cubitt <toby-undo-tree@dr-qubit.org>
-;; Version: 0.6.1
+;; Version: 0.6.2
 ;; Keywords: convenience, files, undo, redo, history, tree
 ;; URL: http://www.dr-qubit.org/emacs.php
 ;; Repository: http://www.dr-qubit.org/git/undo-tree.git
@@ -2795,11 +2795,11 @@ changes within the current region."
 		       (region-beginning) (region-end))))
 	(error "No further redo information for region"))
 
-      ;; advance current node
+      ;; get next node (but DON'T advance current node in tree yet, in case
+      ;; redoing fails)
       (setq current (undo-tree-current buffer-undo-tree)
-	    current (setf (undo-tree-current buffer-undo-tree)
-			  (nth (undo-tree-node-branch current)
-			       (undo-tree-node-next current))))
+	    current (nth (undo-tree-node-branch current)
+			 (undo-tree-node-next current)))
       ;; remove any GC'd elements from node's redo list
       (decf (undo-tree-size buffer-undo-tree)
 	    (undo-list-byte-size (undo-tree-node-redo current)))
@@ -2813,6 +2813,8 @@ changes within the current region."
 	(set-marker-insertion-type pos t))
       (primitive-undo 1 (undo-tree-copy-list (undo-tree-node-redo current)))
       (undo-boundary)
+      ;; advance current node in tree
+      (setf (undo-tree-current buffer-undo-tree) current)
 
       ;; if preserving old undo record, discard new undo entries that
       ;; `primitive-undo' has added to `buffer-undo-list', and remove any GC'd

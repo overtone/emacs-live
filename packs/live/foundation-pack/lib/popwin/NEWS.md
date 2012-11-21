@@ -1,3 +1,30 @@
+v0.6
+====
+
+New Features
+------------
+
+- GNU Emacs trunk (24.3) support
+- Restore `window-start`
+
+New Commands
+------------
+
+- `popwin:switch-to-last-buffer`
+- `popwin:popup-last-buffer`
+- `popwin:original-display-last-buffer`
+- `popwin:original-pop-to-last-buffer`
+
+New Variables
+-------------
+
+- `popwin:reuse-window`
+
+Contributors
+------------
+
+- ARISAWA Yuuki added a lot of test cases (test/popwin-test.el)
+
 v0.5.1
 ======
 

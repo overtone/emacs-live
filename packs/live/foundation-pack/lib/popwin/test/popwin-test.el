@@ -264,11 +264,11 @@
 
 (ert-deftest popup-buf1-again ()
   (popwin-test:common
+    (switch-to-buffer buf2)
     (let ((popwin:special-display-config '(("*buf1*"))))
       (popwin:display-buffer buf1))
     (should (eq (car popwin:popup-last-config) buf1))
     (popwin:close-popup-window)
-    (switch-to-buffer buf2)
     (should-not (popwin-test:front-buffer-p buf1))
     (should-not (eq (length (window-list)) 2))
     (popwin:popup-last-buffer)
@@ -430,6 +430,41 @@
    (popwin:switch-to-last-buffer)
    (should (null popwin:popup-buffer))
    (should (eq (current-buffer) buf2))))
+
+(ert-deftest popwin-display-buffer-reuse-window ()
+  (popwin-test:common
+   (let ((popwin:special-display-config '(("*buf1*")))
+         (window (selected-window)))
+     (popwin:display-buffer buf1)
+     (should (not (popwin:popup-window-live-p)))
+     (should (equal (window-list) (list window))))
+   (let ((popwin:special-display-config '(("*buf1*")))
+         (popwin:reuse-window nil)
+         (window (selected-window)))
+     (popwin:display-buffer buf1)
+     (should (eq (car popwin:popup-last-config) buf1))
+     (should (popwin:popup-window-live-p))
+     (popwin:close-popup-window))
+   (let ((popwin:special-display-config '(("*buf2*"))))
+     (popwin:display-buffer buf2)
+     (should (eq (car popwin:popup-last-config) buf2))
+     (should (popwin:popup-window-live-p))
+     (popwin:close-popup-window))
+   (split-window-vertically)
+   (switch-to-buffer buf2)
+   (popwin:display-buffer buf1)
+   (should (not (popwin:popup-window-live-p)))))
+
+(defun do-nothing () (interactive))
+
+(ert-deftest popup-from-minibuffer ()
+  (popwin-test:common
+   (popwin-test:store-minibuffer-input "do TAB -nothing C-g")
+   (should
+    (condition-case nil
+        (prog1 nil
+          (call-interactively 'execute-extended-command))
+      (quit t)))))
 
 ;; test-case M-x occur and M-x next-error
 ;; test-case M-x dired and o
