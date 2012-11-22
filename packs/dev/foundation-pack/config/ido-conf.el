@@ -10,7 +10,10 @@
 
 (icomplete-mode 1)
 
-(defun ido-goto-symbol (&optional symbol-list)
+(defvar live-symbol-names)
+(defvar live-name-and-pos)
+
+(defun live-ido-goto-symbol (&optional symbol-list)
       "Refresh imenu and jump to a place in the buffer using Ido."
       (interactive)
       (unless (featurep 'imenu)
@@ -21,7 +24,7 @@
               (ido-enable-flex-matching
                (if (boundp 'ido-enable-flex-matching)
                    ido-enable-flex-matching t))
-              name-and-pos symbol-names position)
+              live-name-and-pos live-symbol-names position selected-symbol)
           (unless ido-mode
             (ido-mode 1)
             (setq ido-enable-flex-matching t))
@@ -30,11 +33,11 @@
                    (setq imenu--index-alist nil)
                    (ido-goto-symbol (imenu--make-index-alist))
                    (setq selected-symbol
-                         (ido-completing-read "Symbol? " symbol-names))
+                         (ido-completing-read "Symbol? " live-symbol-names))
                    (string= (car imenu--rescan-item) selected-symbol)))
           (unless (and (boundp 'mark-active) mark-active)
             (push-mark nil t nil))
-          (setq position (cdr (assoc selected-symbol name-and-pos)))
+          (setq position (cdr (assoc selected-symbol live-name-and-pos)))
           (cond
            ((overlayp position)
             (goto-char (overlay-start position)))
@@ -55,5 +58,5 @@
                     (get-text-property 1 'org-imenu-marker symbol))))
             (unless (or (null position) (null name)
                         (string= (car imenu--rescan-item) name))
-              (add-to-list 'symbol-names name)
-              (add-to-list 'name-and-pos (cons name position))))))))
+              (add-to-list 'live-symbol-names name)
+              (add-to-list 'live-name-and-pos (cons name position))))))))
