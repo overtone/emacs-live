@@ -24,7 +24,7 @@ Emacs Live has support for nREPL built in and is the preferred way of connecting
 
 ## Jacking in
 
-The simplest way to get Emacs Live connected with a Clojure process is to use the function `nrepl-jack-in`. This allows you to connect to a specific lein project which therefore ensures that all the project dependencies defined in the `project.clj` are available on the JVM classpath.
+The simplest way to get Emacs Live connected with a Clojure process is to use the function `nrepl-jack-in`. This allows you to connect to a specific lein project which therefore ensures that all the project dependencies defined in the project's `project.clj` are available on the JVM classpath.
 
 In order to communicate the correct project, you should summon `M-x nrepl-jack-in` whilst the point is in a buffer which is part of the Leiningen project you wish to connect to. This will then spawn `lein repl :headless` as  external shell process and automatically connect to it.
 
