@@ -1,4 +1,4 @@
---
+---
 
 title: Hacking Clojure
 filename: hacking-clojure
