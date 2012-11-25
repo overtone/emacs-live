@@ -128,6 +128,7 @@
 ;;allow the deletion of words:
 ;;backward kill word (forward kill word is M-d)
 (global-set-key (kbd "C-w") 'backward-kill-word)
+(define-key ido-file-completion-map (kbd "C-w") 'backward-kill-word)
 (define-key paredit-mode-map (kbd "C-w") 'paredit-backward-kill-word)
 
 ;;kill line backwards
