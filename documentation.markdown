@@ -16,6 +16,7 @@ layout: doc
 * [Personal Customisation](doc-customisation.html)
 * [Pack structure](doc-pack-structure.html)
 * [Boot procedure](doc-booting.html)
+* [Reporting Issues](doc-reporting-issues.html)
 * [FAQ](doc-faq.html)
 
 Emacs is like a mountain - don't run at it with all your might expecting
