@@ -20,11 +20,11 @@ layout: doc
                      | ;  :|
             _____.,-#%&$@%#&#~,._____
 
-Emacs Live weaves together a lot of different functionality, and while a lot of care has been taken to ensure a seemless union, no code is error free. If you have found some behaviour that you think is incorrect, then please consider submitting a [Gihub Issue](https://github.com/overtone/emacs-live/issues).
+Emacs Live weaves together a lot of different functionality, and while a lot of care has been taken to ensure a seemless union, no code is error free. If you have found some behaviour that you think is incorrect, then please consider submitting a [Gihub Issue](https://github.com/overtone/emacs-live/issues). The following should help you make the issue report as useful as possible.
 
 # --> Remove any pre-compiled code
 
-Sometiems errors can occur because there's a mismatch between some pre-compiled code and the normal elisp code. You should therefore remove any pre-compiled code to verify that this isn't the cause of the issue. On Linux/Max OS X this can be achieved with:
+Sometimes errors can occur because there's a mismatch between some pre-compiled code and the normal elisp code. You should therefore remove any pre-compiled code to verify that this isn't the cause of the issue. On Linux/Max OS X this can be achieved with:
 
     rm -rf ~/.emacs.d/**/*.elc
 
