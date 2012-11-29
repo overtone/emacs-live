@@ -37,6 +37,10 @@
 (global-set-key (kbd "C-c m n")     'eval-print-last-sexp)
 (global-set-key (kbd "C-c m r")     'eval-region)
 
+(global-set-key (kbd "C-c n e b")     'nrepl-eval-buffer)
+
+
+
 ;;funky characters
 (global-set-key (kbd "C-c i l") (lambda () (interactive) (insert "λ")))
 (global-set-key (kbd "C-c i n") (lambda () (interactive) (insert "ℕ")))
@@ -85,7 +89,8 @@
 (define-key paredit-mode-map (kbd "C-M-j") 'live-paredit-forward-slurp-sexp-neatly)
 (define-key paredit-mode-map (kbd "C-M-y") 'paredit-forward-barf-sexp)
 (define-key paredit-mode-map (kbd "C-M-z") 'align-cljlet)
-(define-key paredit-mode-map (kbd "M-s") 'paredit-split-sexp)
+(define-key paredit-mode-map (kbd "M-S") 'paredit-split-sexp)
+(define-key paredit-mode-map (kbd "M-s") 'paredit-splice-sexp)
 (define-key paredit-mode-map (kbd "M-j") 'paredit-join-sexps)
 (define-key paredit-mode-map (kbd "M-P") 'live-paredit-previous-top-level-form)
 (define-key paredit-mode-map (kbd "M-N") 'live-paredit-next-top-level-form)
@@ -124,6 +129,7 @@
 ;;allow the deletion of words:
 ;;backward kill word (forward kill word is M-d)
 (global-set-key (kbd "C-w") 'backward-kill-word)
+(define-key ido-file-completion-map (kbd "C-w") 'backward-kill-word)
 (define-key paredit-mode-map (kbd "C-w") 'paredit-backward-kill-word)
 
 ;;kill line backwards

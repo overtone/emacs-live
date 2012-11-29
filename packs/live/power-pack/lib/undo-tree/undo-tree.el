@@ -3,7 +3,7 @@
 ;; Copyright (C) 2009-2012  Free Software Foundation, Inc
 
 ;; Author: Toby Cubitt <toby-undo-tree@dr-qubit.org>
-;; Version: 0.6.2
+;; Version: 0.6.3
 ;; Keywords: convenience, files, undo, redo, history, tree
 ;; URL: http://www.dr-qubit.org/emacs.php
 ;; Repository: http://www.dr-qubit.org/git/undo-tree.git
@@ -3387,7 +3387,7 @@ signaling an error if file is not found."
   (when undo-tree-visualizer-timestamps
     (undo-tree-move-backward (/ undo-tree-visualizer-spacing 2)))
 
-  (let* ((undo-tree-insert-face (and (boundp 'undo-tree-insert-face)
+  (let* ((undo-tree-insert-face (and undo-tree-insert-face
 				     (or (and (consp undo-tree-insert-face)
 					      undo-tree-insert-face)
 					 (list undo-tree-insert-face))))
@@ -3419,11 +3419,11 @@ signaling an error if file is not found."
 	     (current "x")
 	     (t "o"))
 	  undo-tree-insert-face
-	    (cons
+	    (nconc
 	     (cond
-	      (current    'undo-tree-visualizer-current-face)
-	      (unmodified 'undo-tree-visualizer-unmodified-face)
-	      (register   'undo-tree-visualizer-register-face))
+	      (current    '(undo-tree-visualizer-current-face))
+	      (unmodified '(undo-tree-visualizer-unmodified-face))
+	      (register   '(undo-tree-visualizer-register-face)))
 	     undo-tree-insert-face))
     ;; draw node and link it to its representation in visualizer
     (undo-tree-insert node-string)
@@ -3595,7 +3595,7 @@ signaling an error if file is not found."
   ;; delete region instead of single char if transient-mark-mode is enabled
   (setq mark-active nil)
   (backward-delete-char arg)
-  (when (boundp 'undo-tree-insert-face)
+  (when undo-tree-insert-face
     (put-text-property (- (point) arg) (point) 'face undo-tree-insert-face)))
 
 

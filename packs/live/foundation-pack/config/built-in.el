@@ -39,7 +39,8 @@
       require-final-newline t
       truncate-partial-width-windows nil
       delete-by-moving-to-trash nil
-      confirm-nonexistent-file-or-buffer nil)
+      confirm-nonexistent-file-or-buffer nil
+      query-replace-highlight t)
 
 ;;set all coding systems to utf-8
 (setq utf-translate-cjk-mode nil) ; disable CJK coding/encoding (Chinese/Japanese/Korean characters)

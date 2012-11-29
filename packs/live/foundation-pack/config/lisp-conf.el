@@ -25,7 +25,4 @@
                                    (let ((obj (read (current-buffer))))
                                      (and (symbolp obj) (fboundp obj) obj))))))
                    (describe-function sym))
-                  ((setq sym (variable-at-point)) (describe-variable sym))
-                  ;; now let it operate fully -- i.e. also check the
-                  ;; surrounding sexp for a function call.
-                  ((setq sym (function-at-point)) (describe-function sym)))))
+                  ((setq sym (variable-at-point)) (describe-variable sym)))))
