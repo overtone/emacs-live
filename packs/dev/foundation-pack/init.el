@@ -1,4 +1,6 @@
-(live-load-config-file "auto-compile-conf.el")
+(when (not (or (eq 'ms-dos system-type)
+               (eq 'windows-nt system-type)))
+  (live-load-config-file "auto-compile-conf.el"))
 
 (require 'dircolors)
 (require 'smooth-scrolling)
