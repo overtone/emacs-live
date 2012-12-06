@@ -50,6 +50,10 @@
 ;;
 ;;     (add-hook 'nrepl-mode-hook 'set-auto-complete-as-completion-at-point-function)
 ;;     (add-hook 'nrepl-interaction-mode-hook 'set-auto-complete-as-completion-at-point-function)
+;;
+;; You might consider using ac-nrepl's popup documentation in place of `nrepl-doc':
+;;
+;;     (define-key nrepl-interaction-mode-map (kbd "C-c C-d") 'ac-nrepl-popup-doc)
 
 ;;; Code:
 
@@ -266,6 +270,17 @@ This affects only the current buffer."
   (add-to-list 'ac-sources 'ac-source-nrepl-all-classes)
   (add-to-list 'ac-sources 'ac-source-nrepl-java-methods)
   (add-to-list 'ac-sources 'ac-source-nrepl-static-methods))
+
+
+;;;###autoload
+(defun ac-nrepl-popup-doc ()
+  "A popup alternative to `nrepl-doc'."
+  (interactive)
+  (popup-tip (ac-nrepl-documentation (symbol-at-point))
+             :point (ac-nrepl-symbol-start-pos)
+             :around t
+             :scroll-bar t
+             :margin t))
 
 (provide 'ac-nrepl)
 

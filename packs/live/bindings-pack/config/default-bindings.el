@@ -84,6 +84,7 @@
 (define-key paredit-mode-map (kbd "C-c l w") 'paredit-splice-sexp-killing-backward)
 (define-key paredit-mode-map (kbd "C-c l l") 'align-cljlet)
 (define-key paredit-mode-map (kbd "C-c l t") 'fill-paragraph)
+(define-key paredit-mode-map (kbd "C-c l j") 'live-paredit-forward-slurp-sexp-neatly)
 (define-key paredit-mode-map (kbd "C-M-e") 'paredit-backward-barf-sexp)
 (define-key paredit-mode-map (kbd "C-M-s") 'paredit-backward-slurp-sexp)
 (define-key paredit-mode-map (kbd "C-M-j") 'live-paredit-forward-slurp-sexp-neatly)
