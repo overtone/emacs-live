@@ -4,7 +4,7 @@
 
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
 ;; Created: 20120624
-;; Version: 0.3.2
+;; Version: 0.3.3
 ;; Status: beta
 ;; Homepage: http://tarsius.github.com/packed
 ;; Keywords: compile, convenience, lisp
@@ -43,7 +43,7 @@
 (require 'bytecomp)
 
 (eval-when-compile
-  (require 'cl)) ; case, push
+  (require 'cl-lib))
 
 (declare-function autoload-rubric "autoload")
 (declare-function autoload-find-destination "autoload")
@@ -172,12 +172,13 @@ the directory based on it's filename.
 Normally DIRECTORY should be an absolute path; if it is not then
 this function does not check for \".nosearch\"s existence.  This
 distinction is useful when the directory does not actually exist."
-  (or (and (string-match packed-ignore-directory-regexp
-                         (packed-filename directory))
-           (or (not package)
-               (not (string-match packed-ignore-directory-regexp package))))
-      (and (file-name-absolute-p directory)
-           (file-exists-p (expand-file-name ".nosearch" directory)))))
+  (let ((file (packed-filename directory)))
+    (or (string-match "^\\." file)
+        (and (string-match packed-ignore-directory-regexp file)
+             (or (not package)
+                 (not (string-match packed-ignore-directory-regexp package))))
+        (and (file-name-absolute-p directory)
+             (file-exists-p (expand-file-name ".nosearch" directory))))))
 
 (defmacro packed-with-file (file &rest body)
   "Execute BODY in a buffer containing the contents of FILE.
@@ -430,7 +431,7 @@ non-nil return nil."
          (setq file (car elt)
                dir (file-name-nondirectory file))
          (if (cdr elt)
-             (case (byte-recompile-file file force 0)
+             (cl-case (byte-recompile-file file force 0)
                (no-byte-compile (setq skip-count (1+ skip-count)))
                ((t)             (setq  lib-count (1+  lib-count)))
                ((nil)           (setq fail-count (1+ fail-count))))

@@ -155,7 +155,8 @@
   (ac-nrepl-candidates*
    (ac-nrepl-filtered-clj
     "(let [prefix \"%s\"]
-       (if-not (.contains prefix \"/\")
+       (if (or (not (.contains prefix \"/\"))
+               (.startsWith prefix \"/\"))
          '()
           (let [scope (symbol (first (.split prefix \"/\")))]
             (map (fn [memb] (str scope \"/\" memb))
@@ -257,8 +258,6 @@
    ac-nrepl-source-defaults)
   "Auto-complete source for nrepl java static method completion.")
 
-
-
 ;;;###autoload
 (defun ac-nrepl-setup ()
   "Add the nrepl completion source to the front of `ac-sources'.
@@ -270,7 +269,6 @@ This affects only the current buffer."
   (add-to-list 'ac-sources 'ac-source-nrepl-all-classes)
   (add-to-list 'ac-sources 'ac-source-nrepl-java-methods)
   (add-to-list 'ac-sources 'ac-source-nrepl-static-methods))
-
 
 ;;;###autoload
 (defun ac-nrepl-popup-doc ()

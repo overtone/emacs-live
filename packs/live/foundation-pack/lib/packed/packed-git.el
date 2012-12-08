@@ -33,7 +33,7 @@
 ;;; Code:
 
 (eval-when-compile
-  (require 'cl)) ; destructuring-bind ecase
+  (require 'cl-lib))
 
 (require 'magit)
 (require 'packed)
@@ -119,10 +119,10 @@ See function `packed-libraries' for more information."
          files)
     (when (or (null tree) searchp)
       (dolist (object objects)
-        (destructuring-bind (file type) object
+        (cl-destructuring-bind (file type) object
           (when tree
             (setq file (concat (file-name-as-directory tree) file)))
-          (ecase type
+          (cl-ecase type
             (blob (and searchp
                        (packed-git-library-p nil commit file package)
                        (push file files)))
