@@ -47,7 +47,7 @@ If the error occurs during start up, then you should start Emacs in debug mode t
 Here are some guidelines which can help your issue be tracked and dealt with quickly and effectively:
 
 * Please read through the list of current issues to ensure you're not creating a duplicate.
-* Try to be very specific and clear about the issue - what did you expect eand what did it do?
+* Try to be very specific and clear about the issue - what did you expect and what did it do?
 * Provide the simplest and most foolproof route to reproducing the error.
 * Provide details about your system. At least: OS, Emacs version, Emacs Live version.
 
