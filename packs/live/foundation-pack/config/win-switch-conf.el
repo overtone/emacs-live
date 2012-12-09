@@ -16,7 +16,7 @@
 (win-switch-set-keys '() 'shrink-horizontally)
 (win-switch-set-keys '() 'enlarge-horizontally)
 (win-switch-set-keys '() 'other-frame)
-(win-switch-set-keys '() 'exit)
+(win-switch-set-keys '("C-g") 'exit)
 (win-switch-set-keys '() 'split-horizontally)
 (win-switch-set-keys '() 'split-vertically)
 (win-switch-set-keys '() 'delete-window)
