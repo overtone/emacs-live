@@ -1,3 +1,11 @@
+v0.6.1
+======
+
+Fixed Bugs
+----------
+
+- Restore `window-start` incorrectly
+
 v0.6
 ====
 

@@ -398,12 +398,30 @@
 
 (ert-deftest popwin-restore-window-start ()
   (popwin-test:common
-   (insert "foo\nbar\n")
+   (insert (make-string 100 ?\n))
    (set-window-start nil (point-max))
    (popwin:popup-buffer buf2)
+   (set-window-start (get-buffer-window buf1) (point-min))
    (popwin:close-popup-window)
    (should (eq (current-buffer) buf1))
    (should (eq (window-start) (point-max)))))
+
+(ert-deftest popwin-restore-window-start/*help* ()
+  (require 'help-mode)
+  (describe-function 'popwin:find-file)
+  (switch-to-buffer (help-buffer))
+  (goto-char (point-min))
+  (should (search-forward "popwin.e" (point-max) t))
+  (call-interactively 'push-button)
+  (goto-char (point-max))
+  (describe-function 'popwin:popup-buffer)
+  (switch-to-buffer (help-buffer))
+  (goto-char (point-min))
+  (should (search-forward "popwin.e" (point-max) t))
+  (call-interactively 'push-button)
+  (sit-for 0)
+  (beginning-of-line)
+  (should (search-forward "popwin:popup-buffer" (line-end-position) t)))
 
 (ert-deftest popwin-original-display-last-buffer ()
   (popwin-test:common

@@ -4,7 +4,7 @@
 
 ;; Author: Tomohiro Matsuyama <tomo@cx4a.org>
 ;; Keywords: convenience
-;; Version: 0.6
+;; Version: 0.6.1
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -487,6 +487,9 @@ window will not be selected."
           (when (popwin:window-deletable-p popwin:popup-window)
             (delete-window popwin:popup-window))
           (popwin:restore-window-outline (car (window-tree)) popwin:window-outline)
+          ;; Call `redisplay' here so `window-start' could be set
+          ;; prior to the point change of the master buffer.
+          (redisplay)
           (when (and (not keep-selected)
                      (window-live-p popwin:selected-window))
             (select-window popwin:selected-window)))

@@ -1,21 +1,24 @@
 EMACS=emacs
 EMACS23=emacs23
 
-.PHONY: test test-nw test-emacs23 test-emacs23-nw
+.PHONY: compile clean test test-nw test-emacs23 test-emacs23-nw
 
 compile: popwin.el
 	$(EMACS) --batch -f batch-byte-compile popwin.el
 
-test:
+clean:
+	rm -f popwin.elc
+
+test: compile
 	$(EMACS) -Q -L . -l test/popwin-test.el
 
-test-nw:
+test-nw: compile
 	$(EMACS) -Q -nw -L . -l test/popwin-test.el
 
-test-emacs23: test/ert.el
+test-emacs23: compile test/ert.el
 	$(EMACS23) -Q -L . -l test/ert.el -l test/popwin-test.el
 
-test-emacs23-nw: test/ert.el
+test-emacs23-nw: compile test/ert.el
 	$(EMACS23) -Q -nw -L . -l test/ert.el -l test/popwin-test.el
 
 test/ert.el:
