@@ -36,7 +36,7 @@
 ;;
 ;; Alternatively, let us know in the mailing list:
 ;;
-;;    http://groups.google.com/group/overtone
+;;    http://groups.google.com/group/emacs-live
 ;;
 ;; Good luck, and thanks for using Emacs Live!
 ;;
