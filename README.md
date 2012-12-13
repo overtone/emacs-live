@@ -213,8 +213,12 @@ within your own live packs:
 It is recommended that you place your own personal packs in an external
 directory. See the `user/template-pack`'s README for more information.
 
-## Feedback
+## Mailing List
 
 I'm very happy to hear any feedback regarding this config. The idea is
 for you to use it to get started and give you a platform to start
 editing it and turning it into something personal.
+
+Please make any comments on the Emacs Live mailing list:
+
+http://groups.google.com/group/emacs-live
