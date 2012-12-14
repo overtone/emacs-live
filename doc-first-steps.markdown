@@ -34,6 +34,8 @@ Here's a quick list of useful and basic combinations, most are covered by the tu
 
 `C-g` - Cancel a command or dialog
 
+`M-x` - Run a command by name (e.g., `M-x emacs-uptime`)
+
 `C-x C-c` - Quit Emacs
 
 The tutorial covers all these and more, so give it a read through and get hacking!
@@ -61,3 +63,11 @@ The main manipulations key commands are:
 As a beginner you may find stumble upon some ways to unbalance the parens. If this happens use C-q ) to force insert a close paren. Once the parens are balanced you can go back to editing as usual.
 
 To see all the paredit commands and get more info about how it works check out the source and look for `setq paredit-commands`
+
+# --> Go spelunking
+
+There's a lot to love in Emacs Live. One interesting place to start exploring is the key bindings in `packs/live/bindings-pack/config/deffault-bindings.el`. Have a look around and you may find something interesting.
+
+# --> And on to Clojure
+
+Once you've got a handle on Emacs basics, head over to the [Clojure Hacking](doc-clojure.html) documentation to learn more about using Emacs Live to work on Clojure code!
