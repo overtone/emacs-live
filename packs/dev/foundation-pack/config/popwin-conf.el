@@ -6,6 +6,7 @@
       '(("*Help*"  :height 30 :stick t)
         ("*Completions*" :noselect t)
         ("*compilation*" :noselect t)
+        ("*Backtrace*" :height 30)
         ("*Messages*" :height 30)
         ("*Occur*" :noselect t)
         ("\\*Slime Description.*" :noselect t :regexp t :height 30)
@@ -20,7 +21,8 @@
         (".*overtone.log" :regexp t :height 30)
         ("*gists*" :height 30)
         ("*sldb.*":regexp t :height 30)
-        ("*nREPL error*" :height 30)
+        ;; TODO: fix nREPL + popwin conflicts and reinstate.
+        ;;("*nrepl-error*" :height 30)
         ("*nREPL doc*" :height 30)
         ("*Kill Ring*" :height 30)
         ("*Compile-Log*" :height 30)))
