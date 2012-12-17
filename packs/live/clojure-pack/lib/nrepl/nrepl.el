@@ -88,7 +88,7 @@
 (defvar nrepl-connection-buffer "*nrepl-connection*")
 (defvar nrepl-server-buffer "*nrepl-server*")
 (defvar nrepl-nrepl-buffer "*nrepl*")
-(defvar nrepl-error-buffer "*nREPL error*")
+(defvar nrepl-error-buffer "*nrepl-error*")
 
 (defface nrepl-prompt-face
   '((t (:inherit font-lock-keyword-face)))
@@ -416,26 +416,48 @@ Emacs behavior use `indent-for-tab-command'."
 (defun nrepl-eldoc-format-thing (thing)
   (propertize thing 'face 'font-lock-function-name-face))
 
-(defun nrepl-eldoc-format-arglist (arglist)
-  ;; TODO: find out which arglist variant is in use and which argument
-  ;; is currently under point.  Highlight that argument
-  ;; for now:
-  arglist)
+(defun nrepl-highlight-args (arglist pos)
+  (let* ((rest-pos (position '& arglist))
+         (i 0))
+    (mapconcat
+     (lambda (arg)
+       (let ((argstr (format "%s" arg)))
+         (if (eq arg '&)
+             argstr
+           (prog1
+               (if (or (= (1+ i) pos)
+                       (and rest-pos (> (+ 1 i) rest-pos)
+                            (> pos rest-pos)))
+                   (propertize argstr 'face
+                               'eldoc-highlight-function-argument)
+                 argstr)
+             (setq i (1+ i)))))) arglist " ")))
 
-(defun nrepl-eldoc-handler (buffer the-thing)
-  (lexical-let ((thing the-thing))
+(defun nrepl-highlight-arglist (arglist pos)
+  (concat "[" (nrepl-highlight-args arglist pos) "]"))
+
+(defun nrepl-eldoc-format-arglist (arglist pos)
+  (concat "("
+          (mapconcat (lambda (args) (nrepl-highlight-arglist args pos))
+                     (read arglist) " ") ")"))
+
+(defun nrepl-eldoc-handler (buffer the-thing the-pos)
+  (lexical-let ((thing the-thing)
+                (pos the-pos))
     (nrepl-make-response-handler
      buffer
      (lambda (buffer value)
        (when (not (string-equal value "nil"))
          (message (format "%s: %s"
                           (nrepl-eldoc-format-thing thing)
-                          (nrepl-eldoc-format-arglist value)))))
+                          (nrepl-eldoc-format-arglist value pos)))))
        nil nil nil)))
 
 (defun nrepl-eldoc ()
   "Backend function for eldoc to show argument list in the echo area."
-  (let* ((thing (nrepl-operator-before-point))
+  (let* ((fnsym (eldoc-fnsym-in-current-sexp))
+         (thing (car fnsym))
+         (pos (cadr fnsym))
          (form (format "(try
                          (:arglists
                           (clojure.core/meta
@@ -445,8 +467,9 @@ Emacs behavior use `indent-for-tab-command'."
     (when thing
         (nrepl-send-string form
                            (nrepl-eldoc-handler (current-buffer)
-                                                thing)
+                                                (symbol-name thing) pos)
                            (nrepl-current-ns)
+
                            (nrepl-current-tooling-session)))))
 
 (defun nrepl-turn-on-eldoc-mode ()
@@ -454,7 +477,6 @@ Emacs behavior use `indent-for-tab-command'."
   (setq eldoc-documentation-function 'nrepl-eldoc)
   (apply 'eldoc-add-command nrepl-extra-eldoc-commands)
   (turn-on-eldoc-mode))
-
 
 ;;; JavaDoc Browsing
 ;;; Assumes local-paths are accessible in the VM.
@@ -612,7 +634,7 @@ Emacs behavior use `indent-for-tab-command'."
         (nrepl-send-string "(if-let [pst+ (clojure.core/resolve 'clj-stacktrace.repl/pst+)]
                         (pst+ *e) (clojure.stacktrace/print-stack-trace *e))"
                            (nrepl-make-response-handler
-                            (nrepl-popup-buffer nrepl-error-buffer)
+                            (nrepl-popup-buffer nrepl-error-buffer t)
                             nil
                             'nrepl-emit-into-color-buffer nil nil) nil session))
     ;; TODO: maybe put the stacktrace in a tmp buffer somewhere that the user
@@ -641,7 +663,10 @@ Emacs behavior use `indent-for-tab-command'."
    "Mode for nrepl popup buffers"
    nil
    (" nREPL-tmp")
-   '(("q" .  nrepl-popup-buffer-quit-function)))
+   (let ((map (make-sparse-keymap)))
+     (define-key map (kbd "q") 'nrepl-popup-buffer-quit-function)
+     (define-key map (kbd "C-g") 'nrepl-popup-buffer-quit-function)
+    map))
 
 (make-variable-buffer-local
  (defvar nrepl-popup-buffer-quit-function 'nrepl-popup-buffer-quit
@@ -1138,11 +1163,13 @@ This function is meant to be used in hooks to avoid lambda
     (define-key map (kbd "C-c M-m") 'nrepl-macroexpand-all)
     (define-key map (kbd "C-c M-n") 'nrepl-set-ns)
     (define-key map (kbd "C-c C-d") 'nrepl-doc)
+    (define-key map (kbd "C-c C-s") 'nrepl-src)
     (define-key map (kbd "C-c C-z") 'nrepl-switch-to-repl-buffer)
+    (define-key map (kbd "C-c M-o") 'nrepl-find-and-clear-repl-buffer)
     (define-key map (kbd "C-c C-k") 'nrepl-load-current-buffer)
     (define-key map (kbd "C-c C-l") 'nrepl-load-file)
     (define-key map (kbd "C-c C-b") 'nrepl-interrupt)
-    (define-key map (kbd "C-c b") 'nrepl-javadoc)
+    (define-key map (kbd "C-c C-j") 'nrepl-javadoc)
     map))
 
 (easy-menu-define nrepl-interaction-mode-menu nrepl-interaction-mode-map
@@ -1159,7 +1186,10 @@ This function is meant to be used in hooks to avoid lambda
     ["Macroexpand-all last expression" nrepl-macroexpand-all]
     ["Set ns" nrepl-set-ns]
     ["Display documentation" nrepl-doc]
+    ["Display Source" nrepl-src]
+    ["Display JavaDoc" nrepl-javadoc]
     ["Switch to REPL" nrepl-switch-to-repl-buffer]
+    ["Clear REPL" nrepl-find-and-clear-repl-buffer]
     ["Load current buffer" nrepl-load-current-buffer]
     ["Load file" nrepl-load-file]
     ["Interrupt" nrepl-interrupt]))
@@ -1205,6 +1235,7 @@ This function is meant to be used in hooks to avoid lambda
     (define-key map (kbd "C-<return>") 'nrepl-closing-return)
     (define-key map (kbd "C-j") 'nrepl-newline-and-indent)
     (define-key map (kbd "C-c C-d") 'nrepl-doc)
+    (define-key map (kbd "C-c C-s") 'nrepl-src)
     (define-key map (kbd "C-c C-o") 'nrepl-clear-output)
     (define-key map (kbd "C-c M-o") 'nrepl-clear-buffer)
     (define-key map (kbd "C-c C-u") 'nrepl-kill-input)
@@ -1221,7 +1252,7 @@ This function is meant to be used in hooks to avoid lambda
     (define-key map (kbd "C-c C-n") 'nrepl-next-prompt)
     (define-key map (kbd "C-c C-p") 'nrepl-previous-prompt)
     (define-key map (kbd "C-c C-b") 'nrepl-interrupt)
-    (define-key map (kbd "C-c b") 'nrepl-javadoc)
+    (define-key map (kbd "C-c C-j") 'nrepl-javadoc)
     map))
 
 (easy-menu-define nrepl-mode-menu nrepl-mode-map
@@ -1231,6 +1262,8 @@ This function is meant to be used in hooks to avoid lambda
     ["Jump back" nrepl-jump-back]
     ["Complete symbol" complete-symbol]
     ["Display documentation" nrepl-doc]
+    ["Display source" nrepl-src]
+    ["Display JavaDoc" nrepl-javadoc]
     ["Clear output" nrepl-clear-output]
     ["Clear buffer" nrepl-clear-buffer]
     ["Kill input" nrepl-kill-input]
@@ -1265,6 +1298,8 @@ This function is meant to be used in hooks to avoid lambda
                'nrepl-complete-at-point)
   (set-syntax-table nrepl-mode-syntax-table)
   (nrepl-turn-on-eldoc-mode)
+  (if (fboundp 'hack-dir-local-variables-non-file-buffer)
+      (hack-dir-local-variables-non-file-buffer))
   (when nrepl-history-file
     (nrepl-history-load nrepl-history-file)
     (add-hook 'kill-buffer-hook 'nrepl-history-just-save t t)
@@ -1713,6 +1748,15 @@ text property `nrepl-old-input'."
     (recenter t))
   (run-hooks 'nrepl-clear-buffer-hook))
 
+(defun nrepl-find-and-clear-repl-buffer ()
+  "Finds the `nrepl-nrepl-buffer`, clears it and returns to the
+buffer in which the command was invoked."
+  (interactive)
+  (let ((origin-buffer (current-buffer)))
+    (switch-to-buffer nrepl-nrepl-buffer)
+    (nrepl-clear-buffer)
+    (switch-to-buffer origin-buffer)))
+
 (defun nrepl-input-line-beginning-position ()
   (save-excursion
     (goto-char nrepl-input-start-mark)
@@ -1895,6 +1939,8 @@ the buffer should appear."
       (down-list 1)
       (nrepl-symbol-at-point))))
 
+
+
 (defun nrepl-read-symbol-name (prompt callback &optional query)
    "Either read a symbol name or choose the one at point.
 The user is prompted if a prefix argument is in effect, if there is no
@@ -1919,6 +1965,21 @@ Defaults to the symbol at point. With prefix arg or no symbol
 under point, prompts for a var."
   (interactive "P")
   (nrepl-read-symbol-name "Symbol: " 'nrepl-doc-handler query))
+
+(defun nrepl-src-handler (symbol)
+  (let ((form (format "(clojure.repl/source %s)" symbol))
+        (doc-buffer (nrepl-popup-buffer "*nREPL doc*" t)))
+    (nrepl-send-string form
+                       (nrepl-popup-eval-out-handler doc-buffer)
+                       nrepl-buffer-ns
+                       (nrepl-current-tooling-session))))
+
+(defun nrepl-src (query)
+  "Open a window with the source for the given entry.
+Defaults to the symbol at point. With prefix arg or no symbol
+under point, prompts for a var."
+  (interactive "P")
+  (nrepl-read-symbol-name "Symbol: " 'nrepl-src-handler query))
 
 ;; TODO: implement reloading ns
 (defun nrepl-eval-load-file (form)
