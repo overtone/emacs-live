@@ -20,7 +20,7 @@ layout: doc
                      | ;  :|
             _____.,-#%&$@%#&#~,._____
 
-Emacs Live weaves together a lot of different functionality, and while a lot of care has been taken to ensure a seemless union, no code is error free. If you have found some behaviour that you think is incorrect, then please consider submitting a [GitHub Issue](https://github.com/overtone/emacs-live/issues). The following should help you make the issue report as useful as possible.
+Emacs Live weaves together a lot of different functionality, and while a lot of care has been taken to ensure a seamless union, no code is error free. If you have found some behaviour that you think is incorrect, then please consider submitting a [GitHub Issue](https://github.com/overtone/emacs-live/issues). The following should help you make the issue report as useful as possible.
 
 # --> Remove any pre-compiled code
 
