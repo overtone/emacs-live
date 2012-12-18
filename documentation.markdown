@@ -7,15 +7,15 @@ layout: doc
 
 ---
 
-# --> Emacs Live Documatation.
+# --> Emacs Live Documentation.
 
 * [Installing Emacs Live](doc-installation.html)
 * [Starting Emacs Live](doc-starting.html)
-* [First steps](doc-first-steps.html)
+* [First Steps](doc-first-steps.html)
 * [Clojure Hacking](doc-clojure.html)
 * [Personal Customisation](doc-customisation.html)
-* [Pack structure](doc-pack-structure.html)
-* [Boot procedure](doc-booting.html)
+* [Pack Structure](doc-pack-structure.html)
+* [Boot Procedure](doc-booting.html)
 * [Reporting Issues](doc-reporting-issues.html)
 * [FAQ](doc-faq.html)
 
