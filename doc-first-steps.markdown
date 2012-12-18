@@ -44,7 +44,7 @@ The tutorial covers all these and more, so give it a read through and get hackin
 
 Emacs Live comes bundled with paredit which keeps your parens and square brackets balanced at all times. It takes some getting used to but makes manipulating Lisp expressions (sets of parens) much quicker.
 
-One stumbling block for me is that you won't be allowed to remove closing parens. The closing paren will instead be removed when you remove it's opening match. But you can't remove that before the expression is empty. For example if you have a buffer like this (pipe represents the cursor):
+One stumbling block for me is that you won't be allowed to remove closing parens. The closing paren will instead be removed when you remove its opening match. But you can't remove that before the expression is empty. For example if you have a buffer like this (pipe represents the cursor):
 
     (|saw)
 
@@ -56,17 +56,17 @@ The main manipulations key commands are:
 
 `C-(` - "Slurp" the previous expression into this expression
 
-`C-}` - "Barf" the current expression out to the right of it's parent expression
+`C-}` - "Barf" the current expression out to the right of its parent expression
 
-`C-{` - "Barf" the current expression out to the left of it's parent expression
+`C-{` - "Barf" the current expression out to the left of its parent expression
 
-As a beginner you may find stumble upon some ways to unbalance the parens. If this happens use C-q ) to force insert a close paren. Once the parens are balanced you can go back to editing as usual.
+As a beginner you may stumble upon some ways to unbalance the parens. If this happens use C-q ) to forcibly insert a close paren. Once the parens are balanced you can go back to editing as usual.
 
 To see all the paredit commands and get more info about how it works check out the source and look for `setq paredit-commands`
 
 # --> Go spelunking
 
-There's a lot to love in Emacs Live. One interesting place to start exploring is the key bindings in `packs/live/bindings-pack/config/deffault-bindings.el`. Have a look around and you may find something interesting.
+There's a lot to love in Emacs Live. One interesting place to start exploring is in the [default key bindings](https://github.com/overtone/emacs-live/blob/master/packs/live/bindings-pack/config/default-bindings.el) in `packs/live/bindings-pack/config/default-bindings.el`. Have a look around and you may find something interesting.
 
 # --> And on to Clojure
 

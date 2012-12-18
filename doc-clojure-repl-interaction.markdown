@@ -16,7 +16,7 @@ You should see the following at the top of your `*nrepl*` buffer:
 
     user>
 
-It's doing two things. Firstly, it's telling you that your current namespace (i.e. `*ns*`) is is `user` and secondly, it's waiting for you to give it a standard Clojure form to evaluate in the context of that namespace. For example you could type:
+It's doing two things. Firstly, it's telling you that your current namespace (i.e. `*ns*`) is `user` and secondly, it's waiting for you to give it a standard Clojure form to evaluate in the context of that namespace. For example you could type:
 
     user> (+ 1 2)
 
@@ -32,7 +32,7 @@ It prints out the result of evaluating the form, and then gives you another `use
 
 If you wish to access previous REPL lines you have two options. Firstly you can use the functions `nrepl-previous-input` (*M-p*) and `nrepl-next-input` (*M-n*) to cycle through the history. Once you have found the line you're looking for, you can then simply press *RET* to evaluate it again, or you have the option of editing it before evaluation.
 
-Another option is to treat the `*nrepl*` buffer like a normal Emacs buffer and simply use the search commands `isearch-backward` (*C-r*) and `isearch-forward` (*C-s*) to search back and forth through the buffer. When the point is on the line you'd like to re-use, simply pres *RET* and the form will be placed at prompt ready for a subsequent *RET* to evaluate it or to be edited.
+Another option is to treat the `*nrepl*` buffer like a normal Emacs buffer and simply use the search commands `isearch-backward` (*C-r*) and `isearch-forward` (*C-s*) to search back and forth through the buffer. When the point is on the line you'd like to re-use, simply press *RET* and the form will be placed at the prompt ready for a subsequent *RET* to evaluate it or for it to be edited.
 
 Of course, you're also free to use standard killing and yanking to manipulate the text.
 
