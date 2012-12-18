@@ -8,4 +8,4 @@ layout: doc
 
 # Interactive editing
 
-You can also send commands to the Clojure REPL from an editor buffer. The main command to do this is `C-M-x` which will send the most outer form to the REPL.
+You can also send commands to the Clojure REPL from an editor buffer. The main command to do this is `C-M-x` which will send the outermost form to the REPL.

@@ -26,7 +26,7 @@ Emacs Live has support for nREPL built in and is the preferred way of connecting
 
 The simplest way to get Emacs Live connected with a Clojure process is to use the function `nrepl-jack-in`. This allows you to connect to a specific lein project which therefore ensures that all the project dependencies defined in the project's `project.clj` are available on the JVM classpath.
 
-In order to communicate the correct project, you should summon `M-x nrepl-jack-in` whilst the point is in a buffer which is part of the Leiningen project you wish to connect to. This will then spawn `lein repl :headless` as  external shell process and automatically connect to it.
+In order to communicate with the correct project, you should summon `M-x nrepl-jack-in` whilst the point is in a buffer which is part of the Leiningen project you wish to connect to. This will then spawn `lein repl :headless` as an external shell process and automatically connect to it.
 
 Project discovery is made possible because each buffer has a buffer-local variable named `default-directory` which stores the directory the file associated with the buffer is located within. This is then used as the working directory of the shell process, and even when started from a project subfolder, Leiningen automagically knows how to find the root of the project directory and start the JVM process from there. You can always verify what directory the JVM thinks is the working directory by issuing the following in the REPL: `(System/getProperty "user.dir")`.
 
