@@ -30,10 +30,6 @@
         path = packs/dev/lang-pack/vendor/submodules/actionscript-mode
         url = git://github.com/austinhaas/actionscript-mode.git
         ignore = untracked
-[submodule "packs/dev/lang-pack/vendor/submodules/scel"]
-        path = packs/dev/lang-pack/vendor/submodules/scel
-        url = git://github.com/samaaron/scel.git
-        ignore = untracked
 [submodule "packs/dev/lang-pack/vendor/submodules/yaml-mode"]
         path = packs/dev/lang-pack/vendor/submodules/yaml-mode
         url = git://github.com/yoshiki/yaml-mode.git
@@ -113,5 +109,5 @@
         path = packs/dev/foundation-pack/vendor/submodules/packed
         url = git://github.com/tarsius/packed.git
 [submodule "packs/dev/power-pack/vendor/submodules/multiple-cursors"]
-	path = packs/dev/power-pack/vendor/submodules/multiple-cursors
-	url = git://github.com/magnars/multiple-cursors.el.git
+        path = packs/dev/power-pack/vendor/submodules/multiple-cursors
+        url = git://github.com/magnars/multiple-cursors.el.git
