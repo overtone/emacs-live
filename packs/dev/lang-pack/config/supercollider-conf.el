@@ -1,4 +1,4 @@
-(live-add-pack-lib "scel/el")
+(live-add-pack-lib "scel")
 (require 'sclang)
 
 (custom-set-variables
