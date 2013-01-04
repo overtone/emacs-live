@@ -195,6 +195,8 @@
                                                                   ) "
 ;;           http://github.com/overtone/emacs-live
 ;;
+;; (Press any key to stop the madness and start the awesome!)
+;;
 ;; "                                                      (live-welcome-message) "
 
 ")))
