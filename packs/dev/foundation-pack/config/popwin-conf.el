@@ -22,7 +22,8 @@
         ("*gists*" :height 30)
         ("*sldb.*":regexp t :height 30)
         ("*nrepl-error*" :height 30)
-        ("*nREPL doc*" :height 30)
+        ("*nrepl-doc*" :height 30)
+        ("*nrepl-src*" :height 30)
         ("*Kill Ring*" :height 30)
         ("*Compile-Log*" :height 30)))
 
