@@ -197,3 +197,13 @@ children of DIRECTORY."
 
 (defun live-user-first-name-p ()
   (not (string-equal "" (live-user-first-name))))
+
+(defun live-server-kill-terminal ()
+  (interactive)
+  "Kill the current client without offering to save the current
+   buffers. Useful if you want to quickly exit but have a server
+   running in the background"
+  (let ((proc (frame-parameter (selected-frame) 'client)))
+    (cond ((processp proc)
+           (server-delete-client proc))
+          (t (error "Could not kill terminal: invalid client frame")))))
