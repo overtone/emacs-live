@@ -99,14 +99,14 @@
 (define-key paredit-mode-map (kbd "M-q") 'live-paredit-reindent-defun)
 (define-key paredit-mode-map (kbd "M-d") 'live-paredit-forward-kill-sexp)
 (define-key paredit-mode-map (kbd "M-k") 'live-paredit-backward-kill)
-(define-key paredit-mode-map (kbd "M-]") 'live-paredit-delete-horizontal-space)
+(define-key paredit-mode-map (kbd "M-\\") 'live-paredit-delete-horizontal-space)
 
 ;;browse kill ring (visual paste)
 (global-set-key (kbd "M-y") 'browse-kill-ring)
 
 ;;make C-\ and M-\ cut and copy respectively
-(global-set-key (kbd "C-\\") 'kill-region)
-(global-set-key (kbd "M-\\") 'kill-ring-save)
+(global-set-key (kbd "C-]") 'kill-region)
+(global-set-key (kbd "M-]") 'kill-ring-save)
 
 ;; undo
 (global-set-key (kbd "C-M-_") 'undo-tree-undo)
@@ -205,3 +205,5 @@
 (define-key nrepl-interaction-mode-map (kbd "M-RET") 'nrepl-doc)
 
 (global-set-key (kbd "C-x o") 'win-switch-dispatch)
+
+(global-set-key (kbd "C-x !") 'live-server-kill-terminal)
