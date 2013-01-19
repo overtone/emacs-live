@@ -5,3 +5,6 @@
 
 ;; Load bindings config
 (live-load-config-file "bindings.el")
+
+;; Load my custom changes
+(live-load-config-file "setup.el")
