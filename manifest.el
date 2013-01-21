@@ -1,1 +1,1 @@
-(setq live-version "1.0-BETA-18")
+(setq live-version "1.0beta18")
