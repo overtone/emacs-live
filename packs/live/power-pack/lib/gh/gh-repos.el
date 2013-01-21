@@ -38,7 +38,8 @@
 
 ;;;###autoload
 (defclass gh-repos-api (gh-api-v3)
-  ((repo-cls :allocation :class :initform gh-repos-repo))
+  ((repo-cls :allocation :class :initform gh-repos-repo)
+   (user-cls :allocation :class :initform gh-user))
   "Repos API")
 
 ;;;###autoload
@@ -68,10 +69,14 @@
    (svn-url :initarg :svn-url)
    (mirror-url :initarg :mirror-url)
    (owner :initarg :owner :initform nil)
+   (id :initarg :id)
+   (full-name :initarg full-name)
    (language :initarg :language)
    (fork :initarg :fork)
    (forks :initarg :forks)
+   (forks-count :initarg forks-count)
    (watchers :initarg :watchers)
+   (watchers-count :initarg watchers-count)
    (size :initarg :size)
    (master-branch :initarg :master-branch)
    (open-issues :initarg :open-issues)
@@ -81,6 +86,9 @@
    (organisation :initarg :organisation :initform nil)
    (parent :initarg :parent)
    (source :initarg :source)
+   (has-issues :initarg :has-issues)
+   (has-wiki :initarg :has-wiki)
+   (has-downloads :initarg :has-downloads)
 
    (owner-cls :allocation :class :initform gh-user)
    (organisation-cls :allocation :class :initform gh-user)
@@ -88,12 +96,26 @@
    (source-cls :allocation :class :initform gh-repos-repo))
   "Class for GitHub repositories")
 
+(defmethod constructor :static ((repo gh-repos-repo) newname &rest args)
+  (let ((obj (call-next-method)))
+    (when (and (not (slot-boundp obj 'name))
+               (not (oref obj owner)))
+      (with-slots (name owner)
+          obj
+        (when (slot-boundp obj 'full-name)
+          (setq newname (oref obj :full-name)))
+        (when (string-match "^\\([^/]+\\)/\\([^/]+\\)$" newname)
+          (setq name (match-string 2 newname)
+                owner (gh-user "owner" :login (match-string 1 newname))))))
+    obj))
+
 (defmethod gh-object-read-into ((repo gh-repos-repo) data)
   (call-next-method)
   (with-slots (url html-url clone-url git-url ssh-url svn-url mirror-url
-                   owner language fork forks watchers size master-branch
-                   open-issues pushed-at created-at
-                   organisation parent source)
+                   id owner full-name language fork forks forks-count
+                   watchers watchers-count size master-branch open-issues
+                   pushed-at created-at organisation parent source
+                   has-issues has-wiki has-downloads)
       repo
     (setq url (gh-read data 'url)
           html-url (gh-read data 'html_url)
@@ -102,15 +124,19 @@
           ssh-url (gh-read data 'ssh_url)
           svn-url (gh-read data 'svn_url)
           mirror-url (gh-read data 'mirror_url)
+          id (gh-read data 'id)
           owner (gh-object-read (or (oref repo :owner)
                                     (oref repo owner-cls))
                                 (gh-read data 'owner))
+          full-name (gh-read data 'full_name)
           language (gh-read data 'language)
           fork (gh-read data 'fork)
           forks (gh-read data 'forks)
+          forks-count (gh-read data 'forks_count)
           watchers (gh-read data 'watchers)
+          watchers-count (gh-read data 'watchers_count)
           size (gh-read data 'size)
-          master-branch (gh-read data 'master-branch)
+          master-branch (gh-read data 'master_branch)
           open-issues (gh-read data 'open_issues)
           pushed-at (gh-read data 'pushed_at)
           created-at (gh-read data 'created_at)
@@ -120,7 +146,10 @@
           parent (gh-object-read (oref repo parent-cls)
                                  (gh-read data 'parent))
           source (gh-object-read (oref repo source-cls)
-                                 (gh-read data 'source)))))
+                                 (gh-read data 'source))
+          has-issues (gh-read data 'has_issues)
+          has-wiki (gh-read data 'has_wiki)
+          has-downloads (gh-read data 'has_downloads))))
 
 (defclass gh-repos-ref (gh-object)
   ((label :initarg :label)
@@ -209,6 +238,16 @@
              (oref repo-stub :name))
      (gh-repos-repo-to-obj new-stub))))
 
+(defmethod gh-repos-repo-delete ((api gh-repos-api) repo-id
+                                 &optional user)
+  (gh-api-authenticated-request
+   api (gh-object-reader (oref api repo-cls)) "DELETE"
+   (format "/repos/%s/%s"
+           (or user (gh-api-get-username api))
+           repo-id)))
+
+;; TODO gh-repos-repo-move
+
 (defmethod gh-repos-repo-contributors ((api gh-repos-api) repo)
   (gh-api-authenticated-request
    api (gh-object-reader (oref api repo-cls)) "GET"
@@ -242,6 +281,13 @@
                          (oref (oref repo :owner) :login)
                          (oref repo :name))))
 
+;;; TODO gh-repos-repo-branch-commits
+;;; TODO Collaborators sub-API
+;;; TODO Comments sub-API
+;;; TODO Commits sub-API
+;;; TODO Contents sub-API
+;;; TODO Downloads sub-API
+
 ;;; Forks sub-API
 
 (defmethod gh-repos-forks-list ((api gh-repos-api) repo)
@@ -258,6 +304,87 @@
            (oref (oref repo :owner) :login)
            (oref repo :name))
    nil (when org `(("org" . ,org)))))
+
+;;; TODO Keys sub-API
+;;; TODO Hooks sub-API
+;;; TODO Merging sub-API
+
+;;; Starring sub-API
+
+(defmethod gh-repos-stargazers ((api gh-repos-api) repo)
+  (gh-api-authenticated-request
+   api (gh-object-list-reader (oref api user-cls)) "GET"
+   (format "/repos/%s/%s/stargazers"
+           (oref (oref repo :owner) :login)
+           (oref repo :name))))
+
+(defmethod gh-repos-starred-list ((api gh-repos-api) &optional username)
+  (gh-api-authenticated-request
+   api (gh-object-list-reader (oref api repo-cls)) "GET"
+   (format "/users/%s/starred" (or username (gh-api-get-username api)))))
+
+(defmethod gh-repos-starred-p ((api gh-repos-api) repo)
+  (eq (oref (gh-api-authenticated-request
+             api nil "GET"
+             (format "/user/starred/%s/%s"
+                     (oref (oref repo :owner) :login)
+                     (oref repo :name)))
+            :http-status)
+      204))
+
+(defmethod gh-repos-star ((api gh-repos-api) repo)
+  (gh-api-authenticated-request
+   api nil "PUT"
+   (format "/user/starred/%s/%s"
+           (oref (oref repo :owner) :login)
+           (oref repo :name))))
+
+(defmethod gh-repos-unstar ((api gh-repos-api) repo)
+  (gh-api-authenticated-request
+   api nil "DELETE"
+   (format "/user/starred/%s/%s"
+           (oref (oref repo :owner) :login)
+           (oref repo :name))))
+
+;;; TODO Statuses sub-API
+
+;;; Watching sub-API
+
+(defmethod gh-repos-watchers ((api gh-repos-api) repo)
+  (gh-api-authenticated-request
+   api (gh-object-list-reader (oref api user-cls)) "GET"
+   (format "/repos/%s/%s/subscribers"
+           (oref (oref repo :owner) :login)
+           (oref repo :name))))
+
+(defmethod gh-repos-watched-list ((api gh-repos-api) &optional username)
+  (gh-api-authenticated-request
+   api (gh-object-list-reader (oref api repo-cls)) "GET"
+   (format "/users/%s/subscriptions"
+           (or username (gh-api-get-username api)))))
+
+(defmethod gh-repos-watched-p ((api gh-repos-api) repo)
+  (eq (oref (gh-api-authenticated-request
+             api nil "GET"
+             (format "/user/subscriptions/%s/%s"
+                     (oref (oref repo :owner) :login)
+                     (oref repo :name)))
+            :http-status)
+      204))
+
+(defmethod gh-repos-watch ((api gh-repos-api) repo)
+  (gh-api-authenticated-request
+   api nil "PUT"
+   (format "/user/subscriptions/%s/%s"
+           (oref (oref repo :owner) :login)
+           (oref repo :name))))
+
+(defmethod gh-repos-unwatch ((api gh-repos-api) repo)
+  (gh-api-authenticated-request
+   api nil "DELETE"
+   (format "/user/subscriptions/%s/%s"
+           (oref (oref repo :owner) :login)
+           (oref repo :name))))
 
 (provide 'gh-repos)
 ;;; gh-repos.el ends here

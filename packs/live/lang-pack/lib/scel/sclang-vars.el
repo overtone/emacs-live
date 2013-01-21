@@ -16,18 +16,18 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to
-;; the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, 
+;; the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
 ;; Boston, MA 02110-1301, USA.
 
 ;;; Code:
 
-(defconst sclang-system-data-dir "@PKG_DATA_DIR@"
+(defcustom sclang-system-data-dir nil
   "Installation dependent data directory.")
 
-(defconst sclang-system-help-dir "@PKG_DATA_DIR@/Help"
+(defcustom sclang-system-help-dir nil
   "Installation dependent help directory.")
 
-(defconst sclang-system-extension-dir "@PKG_DATA_DIR@/Extensions"
+(defcustom sclang-system-extension-dir nil
   "Installation dependent extension directory.")
 
 (provide 'sclang-vars)

@@ -4,9 +4,7 @@ Dependencies:
 - pcache.el : https://github.com/sigma/pcache
 - logito.el : https://github.com/sigma/logito
 
-The goal is to provide a consistent mapping for the various API versions (v2 and upcoming v3) so that client code might experience a smooth transition.
-
-This library also allows implementation of the various authentication schemes (password, API token, OAuth).
+This library also allows implementation of the various authentication schemes (password, OAuth).
 
 Implementation is heavily based on EIEIO so that various components can be replaced easily.
 

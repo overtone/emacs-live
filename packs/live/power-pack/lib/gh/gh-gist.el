@@ -121,7 +121,8 @@
                            (oref f :content)) (oref gist :files)))))
 
 (defmethod gh-gist-gist-file-to-obj ((file gh-gist-gist-file))
-  `(,(oref file :filename) . (("content" . ,(oref file :content)))))
+  `(,(oref file :filename) . (("filename" . ,(oref file :filename))
+                              ("content" . ,(oref file :content)))))
 
 (defmethod gh-gist-list ((api gh-gist-api) &optional username)
   (gh-api-authenticated-request

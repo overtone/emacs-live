@@ -96,14 +96,21 @@
                      "brother from another bla!"))))
 
 (ert-deftest mirrors-adjacent-to-fields-with-nested-mirrors ()
-  (with-temp-buffer)
-  (yas-minor-mode 1)
-  (yas-expand-snippet "<%= f.submit \"${1:Submit}\"${2:$(and (yas-text) \", :disable_with => '\")}${2:$1ing...}${2:$(and (yas-text) \"'\")} %>")
-  (should (string= (yas--buffer-contents)
-                   "<%= f.submit \"Submit\", :disable_with => 'Submiting...' %>"))
-  (ert-simulate-command `(yas-mock-insert "Send"))
-  (should (string= (yas--buffer-contents)
-                   "<%= f.submit \"Send\", :disable_with => 'Sending...' %>")))
+  (with-temp-buffer
+    (yas-minor-mode 1)
+    (yas-expand-snippet "<%= f.submit \"${1:Submit}\"${2:$(and (yas-text) \", :disable_with => '\")}${2:$1ing...}${2:$(and (yas-text) \"'\")} %>")
+    (should (string= (yas--buffer-contents)
+                     "<%= f.submit \"Submit\", :disable_with => 'Submiting...' %>"))
+    (ert-simulate-command `(yas-mock-insert "Send"))
+    (should (string= (yas--buffer-contents)
+                     "<%= f.submit \"Send\", :disable_with => 'Sending...' %>"))))
+
+(ert-deftest deep-nested-mirroring-issue-351 ()
+  (with-temp-buffer
+    (yas-minor-mode 1)
+    (yas-expand-snippet "${1:FOOOOOOO}${2:$1}${3:$2}${4:$3}")
+    (ert-simulate-command `(yas-mock-insert "abc"))
+    (should (string= (yas--buffer-contents) "abcabcabcabc"))))
 
 ;; (ert-deftest in-snippet-undo ()
 ;;   (with-temp-buffer
@@ -260,11 +267,12 @@ TODO: correct this bug!"
 (defmacro yas-with-overriden-buffer-list (&rest body)
   (let ((saved-sym (gensym)))
     `(let ((,saved-sym (symbol-function 'buffer-list)))
-       (cl-flet ((buffer-list ()
-                              (remove-if #'(lambda (buf)
-                                             (with-current-buffer buf
-                                               (eq major-mode 'lisp-interaction-mode)))
-                                         (funcall ,saved-sym))))
+       (yas--with-temporary-redefinitions
+           ((buffer-list ()
+                         (remove-if #'(lambda (buf)
+                                        (with-current-buffer buf
+                                          (eq major-mode 'lisp-interaction-mode)))
+                                    (funcall ,saved-sym))))
          ,@body))))
 
 (defmacro yas-with-some-interesting-snippet-dirs (&rest body)
@@ -461,6 +469,21 @@ TODO: be meaner"
     (should (eq (key-binding [(shift tab)]) 'yas-prev-field))
     (should (eq (key-binding [backtab]) 'yas-prev-field))))
 
+(ert-deftest test-rebindings ()
+  (unwind-protect
+      (progn
+        (define-key yas-minor-mode-map [tab] nil)
+        (define-key yas-minor-mode-map (kbd "TAB") nil)
+        (define-key yas-minor-mode-map (kbd "SPC") 'yas-expand)
+        (with-temp-buffer
+          (yas-minor-mode 1)
+          (should (not (eq (key-binding (yas--read-keybinding "TAB")) 'yas-expand)))
+          (should (eq (key-binding (yas--read-keybinding "SPC")) 'yas-expand))
+          (yas-reload-all)
+          (should (not (eq (key-binding (yas--read-keybinding "TAB")) 'yas-expand)))
+          (should (eq (key-binding (yas--read-keybinding "SPC")) 'yas-expand))))
+    (setcdr yas-minor-mode-map (cdr (yas--init-minor-keymap)))))
+
 (ert-deftest test-yas-in-org ()
   (with-temp-buffer
     (org-mode)
@@ -474,9 +497,10 @@ TODO: be meaner"
 (defun yas/ert ()
   (interactive)
   (with-temp-buffer
-    (cl-flet ((message (&rest args)        ;
-                       (declare (ignore args))
-                       nil))
+    (yas--with-temporary-redefinitions
+        ((message (&rest args)        ;
+                  (declare (ignore args))
+                  nil))
       (ert t (buffer-name (current-buffer)))
       (princ (buffer-string)))))
 

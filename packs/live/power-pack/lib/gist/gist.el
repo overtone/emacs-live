@@ -1,18 +1,16 @@
 ;;; gist.el --- Emacs integration for gist.github.com
 
-;; Author: Christian Neukirchen <purl.org/net/chneukirchen>
-;; Maintainer: Yann Hodique <yann.hodique@gmail.com>
+;; Author: Yann Hodique <yann.hodique@gmail.com>
+;; Original author: Christian Neukirchen <purl.org/net/chneukirchen>
 ;; Contributors:
 ;; Chris Wanstrath <chris@ozmm.org>
 ;; Will Farrington <wcfarrington@gmail.com>
 ;; Michael Ivey
 ;; Phil Hagelberg
 ;; Dan McKinley
-;; Yann Hodique <yann.hodique@gmail.com>
-;; Version: 1.0.2
-;; Created: 21 Jul 2008
+;; Version: 1.0.3
 ;; Keywords: gist git github paste pastie pastebin
-;; Package-Requires: ((eieio "1.3") (gh "0.5.3") (tabulated-list "0"))
+;; Package-Requires: ((eieio "1.3") (gh "0.6.0") (tabulated-list "0"))
 
 ;; This file is NOT part of GNU Emacs.
 
@@ -33,8 +31,7 @@
 
 ;;; Commentary:
 
-;; Uses your local GitHub config if it can find it.
-;; See http://github.com/blog/180-local-github-config
+;; An Emacs interface for managing gists (http://gist.github.com).
 
 ;;; Code:
 
@@ -104,7 +101,7 @@ they're posted.")
                                   :description (or description "")
                                   :files files))
          (resp (gh-gist-new api gist)))
-    (gh-api-add-response-callback resp (or callback 'gist-created-callback))))
+    (gh-url-add-response-callback resp (or callback 'gist-created-callback))))
 
 ;;;###autoload
 (defun gist-region (begin end &optional private callback)
@@ -193,7 +190,7 @@ Copies the URL into the kill ring."
       (pcache-clear (oref api :cache))
       (message "Retrieving list of your gists..."))
     (let ((resp (gh-gist-list api)))
-      (gh-api-add-response-callback
+      (gh-url-add-response-callback
        resp 'gist-lists-retrieved-callback))))
 
 (defun gist-list-reload ()
@@ -287,7 +284,7 @@ for the gist."
                      :description new-descr))
            (api (gist-get-api t))
            (resp (gh-gist-edit api g)))
-      (gh-api-add-response-callback resp
+      (gh-url-add-response-callback resp
                                     (lambda (gist)
                                       (gist-list-reload))))))
 
@@ -305,7 +302,7 @@ for the gist."
                                                     (buffer-string ))))))
            (api (gist-get-api t))
            (resp (gh-gist-edit api g)))
-      (gh-api-add-response-callback resp
+      (gh-url-add-response-callback resp
                                     (lambda (gist)
                                       (gist-list-reload))))))
 
@@ -326,7 +323,7 @@ for the gist."
                                          :content nil))))
            (api (gist-get-api t))
            (resp (gh-gist-edit api g)))
-      (gh-api-add-response-callback resp
+      (gh-url-add-response-callback resp
                                     (lambda (gist)
                                       (gist-list-reload))))))
 
@@ -407,7 +404,7 @@ for the gist."
                        :files files))
              (api (gist-get-api t))
              (resp (gh-gist-edit api g)))
-        (gh-api-add-response-callback
+        (gh-url-add-response-callback
          resp
          (lambda (gist)
            (set-buffer-modified-p nil)

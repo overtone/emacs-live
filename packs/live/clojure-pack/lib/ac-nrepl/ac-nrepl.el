@@ -63,12 +63,18 @@
 (defun ac-nrepl-available-p ()
   "Return t if nrepl is available for completion, otherwise nil."
   (condition-case nil
-      (not (null (nrepl-current-session)))
+      (not (null (nrepl-current-tooling-session)))
     (error nil)))
+
+(defun ac-nrepl-sync-eval (clj)
+  "Synchronously evaluate CLJ.
+Result is a plist, as returned from `nrepl-send-string-sync'."
+  (nrepl-send-string-sync clj (nrepl-current-ns) (nrepl-current-tooling-session)))
 
 (defun ac-nrepl-candidates* (clj)
   "Return completion candidates produced by evaluating CLJ."
-  (let ((response (plist-get (nrepl-send-string-sync (concat "(require 'complete.core) " clj) (nrepl-current-ns)) :value)))
+  (let ((response (plist-get (ac-nrepl-sync-eval (concat "(require 'complete.core) " clj))
+                             :value)))
     (when response
       (car (read-from-string response)))))
 
@@ -164,17 +170,24 @@
                                    (catch java.lang.ClassNotFoundException e nil))]
                    (complete.core/static-members class))))))  ")))
 
+(defun ac-nrepl-trim (s)
+  "Trim leading and trailing whitespace from string S."
+  (if (string-match "\\`[ \t\r\n]*\\(.*)[ \t\r\n]*\\'" s)
+    (match-string 1)
+    s))
+
 (defun ac-nrepl-documentation (symbol)
   "Return documentation for the given SYMBOL, if available."
   (substring-no-properties
-   (replace-regexp-in-string
-    "\r" ""
+   (ac-nrepl-trim
     (replace-regexp-in-string
-     "^\\(  \\|-------------------------\r?\n\\)" ""
-     (plist-get (nrepl-send-string-sync
-                 (format "(try (eval '(clojure.repl/doc %s)) (catch Exception e (println \"\")))" symbol)
-                 (nrepl-current-ns))
-                :stdout)))))
+     "\r" ""
+     (replace-regexp-in-string
+      "^\\(  \\|-------------------------\r?\n\\)" ""
+      (plist-get (ac-nrepl-sync-eval
+                  (format "(try (eval '(clojure.repl/doc %s))
+                               (catch Exception e (println \"\")))" symbol))
+                 :stdout))))))
 
 (defun ac-nrepl-symbol-start-pos ()
   "Find the starting position of the symbol at point, unless inside a string."

@@ -45,8 +45,7 @@ EmacsInterface {
 			var result, dt;
 
 			dt = {
-				result = IdentitySet.new;
-
+				result = IdentitySet(16384);
 				Class.allClasses.do { | class |
 					if (class.isMetaClass.not) {
 						result.add(class.name);
@@ -56,14 +55,12 @@ EmacsInterface {
 					};
 				};
 
-				File.use(fileName, "w", { | file |
-					result.collectAs(_.asString, Array).storeLispOn(file);
-				});
+				result = result.collectAs(_.asString, Array)
 			}.bench(false);
 
 			"Emacs: Built symbol table in % seconds\n".postf(dt.asStringPrec(3));
 
-			true
+			result
 		})
 		.put(\openDefinition, { | name |
 			var class, method, res;
@@ -197,6 +194,32 @@ EmacsInterface {
 			//	devpath.postln;
 			Document.open( devpath ).front;
 			name -> devpath
+		})
+		.put( \helpSymbols, {
+			var result, dt;
+
+			dt = {
+				result = IdentitySet.new(16384);
+				SCDoc.helpSourceDirs.do {|dir|
+					("find -L"+dir.escapeChar($ )+"-type f -name '*.schelp' -not -name '*.ext.schelp'")
+					.unixCmdGetStdOutLines.do {|file|
+						result.add(file[dir.size+1 ..].drop(-7))
+					}
+				};
+
+				Class.allClasses.do { | class |
+					if (class.isMetaClass.not) {
+						result.add(class.name.asString);
+					};
+					class.methods.do { | method |
+						result.add(method.name.asString);
+					};
+				};
+
+				result = result.asArray
+			}.bench(false);
+			"Emacs: Index help topics in % seconds\n".postf(dt.asStringPrec(3));
+			result
 		});
 	}
 }
@@ -211,8 +234,15 @@ Emacs {
 		var outFileName, newServer;
 		Class.initClassTree(EmacsInterface);
 		Class.initClassTree(EmacsDocument);
+		Class.initClassTree(AbstractResponderFunc);
 		Class.initClassTree(OSCresponder);
 		Class.initClassTree(Server);
+
+		Platform.makeServerWindowAction = {|aServer, aWindow| aServer.makeEmacsWindow };
+		Platform.makeSynthDescWindowAction = {|aSynthDesc| aSynthDesc.makeEmacsWindow };
+		Platform.openHelpFileAction = {|aString| aString.openHelpFileEmacs };
+		Platform.openHTMLFileAction = {|aString| aString.openHTMLFileEmacs };
+
 		requestHandlers = IdentityDictionary.new;
 		requestAllocator = StackNumberAllocator(0, 128);
 		keys = IdentityDictionary.new;
@@ -226,12 +256,13 @@ Emacs {
 			thisProcess.platform.declareFeature( \emacs );
 			outStream = CollStream.on(String.new);
 			outFile = File(outFileName, "w");
-			UI.registerForShutdown({
+			ShutDown.add {
+				Emacs.evalLispExpression( "(sclang-on-library-shutdown)" );
 				if (outFile.notNil) {
 					outFile.close;
 					outFile = nil
 				};
-			});
+			};
 			// initialize servers
 			newServer = { | server update |
 				SimpleController(server)
