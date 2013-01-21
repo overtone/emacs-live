@@ -1,8 +1,13 @@
 (require 'cl)
 
+(defvar live-current-pack-dir nil "The directory of the pack bein currently loaded")
+(defvar live-current-pack-version nil "The version string of the pack being currently loaded")
+(defvar live-current-pack-name nil "The name of the pack being currently loaded")
+(defvar live-current-pack-description nil "The description of the pack being currently loaded")
+
 (defun live-filter (condp lst)
-    (delq nil
-          (mapcar (lambda (x) (when (funcall condp x) x)) lst)))
+  (delq nil
+        (mapcar (lambda (x) (when (funcall condp x) x)) lst)))
 
 (defun live-list-buffer-paths ()
   (mapcar #'file-truename
@@ -36,21 +41,61 @@
 
 (defun live-pack-config-dir ()
   "Returns the path of the config dir for the current pack"
-  (file-name-as-directory (concat live-load-pack-dir "config")))
+  (file-name-as-directory (concat live-current-pack-dir "config")))
 
 (defun live-pack-lib-dir ()
   "Returns the path of the lib dir for the current pack"
-  (file-name-as-directory (concat live-load-pack-dir "lib")))
+  (file-name-as-directory (concat live-current-pack-dir "lib")))
+
+(defun live-pack-version (version)
+  "Specify the version of the current pack. This should typically
+   only be used in the pack's info.el file"
+  (setq live-current-pack-version version))
+
+(defun live-pack-description (desc)
+  "Specify the description of the current pack. This should typically
+   only be used in the pack's info.el file"
+  (setq live-current-pack-description desc))
+
+(defun live-pack-name (name)
+  "Specify the name of the current pack. This should typically
+   only be used in the pack's info.el file"
+  (setq live-current-pack-name name))
+
+(defun live-clear-pack-info ()
+  "Clears the pack-info vars for the current pack."
+  (setq live-current-pack-version nil)
+  (setq live-current-pack-name nil)
+  (setq live-current-pack-description nil))
+
+(defun live-check-pack-info ()
+  "Checks that that all the correct pack-info has been set by the
+  current pack's pack-info.el"
+  (when (not live-current-pack-version)
+    (message (concat "Error - no pack version found for pack in path: " live-current-pack-dir)))
+  (version-to-list live-current-pack-version)
+  (when (not live-current-pack-name)
+    (message (concat "Error - no pack name found for pack in path: " live-current-pack-dir)))
+  (when (not live-current-pack-description)
+    (message (concat "Error - no pack description found for pack in path: " live-current-pack-dir))))
 
 (defun live-load-pack (pack-dir)
-  "Load a live pack. This is a dir that contains at least a file
-  called init.el. Adds the packs's lib dir to the load-path"
-  (let* ((pack-init (concat pack-dir "init.el")))
-    (setq live-load-pack-dir pack-dir)
+  "Load a live pack. This is a dir that contains at least the
+  files pack-info.el and init.el. Adds the packs's lib dir
+  to the load-path"
+  (let* ((pack-info (concat pack-dir "info.el"))
+         (pack-init (concat pack-dir "init.el")))
+    (setq live-current-pack-dir pack-dir)
+    (message (concat "Live pack lib dir: " (live-pack-lib-dir)))
+    (live-clear-pack-info)
+    (if (file-exists-p pack-info)
+        (load-file pack-info)
+      (message (concat "Could not find info.el file for pack with location: " pack-dir)))
+    (live-check-pack-info)
     (add-to-list 'load-path (live-pack-lib-dir))
     (if (file-exists-p pack-init)
         (load-file pack-init))
-    (setq live-load-pack-dir nil)))
+    (setq live-current-pack-dir nil)))
 
 (defun live-add-pack-lib (p)
   "Adds the path (specified relative to the the pack's lib dir)
