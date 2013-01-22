@@ -73,7 +73,7 @@
   current pack's pack-info.el"
   (when (not live-current-pack-version)
     (message (concat "Error - no pack version found for pack in path: " live-current-pack-dir)))
-  (version-to-list live-current-pack-version)
+  ;;(version-to-list live-current-pack-version)
   (when (not live-current-pack-name)
     (message (concat "Error - no pack name found for pack in path: " live-current-pack-dir)))
   (when (not live-current-pack-description)
