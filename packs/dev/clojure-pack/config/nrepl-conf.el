@@ -67,8 +67,8 @@
                                clojure.core/str
                                clojure.java.io/resource :file)
                          (comp clojure.core/str clojure.java.io/file :file) :line)
-                        (clojure.core/meta (clojure.core/resolve '%s)))"
-                      var)))
+                        (clojure.core/meta (clojure.core/ns-resolve '%s '%s)))"
+                      (nrepl-current-ns) var)))
     (nrepl-send-string form
                        (nrepl-jump-to-def-handler (current-buffer))
                        (nrepl-current-ns)
