@@ -8,6 +8,13 @@ Use the file `init.el` for your own configuration elisp. If this starts
 getting unweildy then you might want to break out the config into
 separate files which you can store in the config directory.
 
+### info.el
+
+Set the pack's description in `info.el`, e.g.
+
+    (live-pack-version "1.0")                   ;; required
+    (live-pack-description "Custom additions")  ;; optional
+
 ### config
 
 Files placed in the `config` dir may then be referenced and pulled into
