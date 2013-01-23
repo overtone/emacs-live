@@ -94,8 +94,11 @@
       (error (concat "Oops - your emacs isn't supported. Emacs Live only works on Emacs 24+ and you're running version: " emacs-version ". Please upgrade your Emacs and try again, or define ~/.emacs-old.el for a fallback")))))
 
 (when live-supported-emacsp
-;; Store live base dirs
-(setq live-root-dir user-emacs-directory)
+;; Store live base dirs, but respect user's choice of `live-root-dir'
+;; when provided.
+(setq live-root-dir (if (boundp 'live-root-dir)
+                        (file-name-as-directory live-root-dir)
+                      user-emacs-directory))
 
 (setq
  live-tmp-dir      (file-name-as-directory (concat live-root-dir "tmp"))
