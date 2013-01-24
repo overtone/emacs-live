@@ -1,7 +1,7 @@
 
 ;; monkypatch basic-save-buffer to make saving buffers with no
 ;; associated file name more intuitive.
-(defun basic-save-buffer ()
+(defun live-mp-new-basic-save-buffer ()
   "Save the current buffer in its visited file, if it has been modified.
 The hooks `write-contents-functions' and `write-file-functions' get a chance
 to do the job of saving; if they do not, then the buffer is saved in
@@ -99,3 +99,7 @@ Before and after saving the buffer, this function runs
             (vc-after-save)
             (run-hooks 'after-save-hook) )
           (message "(No changes need to be saved)")))))
+
+
+(defalias 'live-mp-orig-basic-save-buffer 'basic-save-buffer)
+(defalias 'basic-save-buffer 'live-mp-new-basic-save-buffer)
