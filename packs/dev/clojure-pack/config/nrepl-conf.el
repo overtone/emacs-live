@@ -38,7 +38,10 @@
   '(add-to-list 'ac-modes 'nrepl-mode))
 
 ;; specify the print length to be 100 to stop infinite sequences killing things.
-(nrepl-send-string-sync "(set! *print-length* 100)" "clojure.core")
+(defun live-nrepl-set-print-length ()
+  (nrepl-send-string-sync "(set! *print-length* 100)" "clojure.core"))
+
+(add-hook 'nrepl-connected-hook 'live-nrepl-set-print-length)
 
 ;;; Monkey Patch nREPL with better behaviour:
 
