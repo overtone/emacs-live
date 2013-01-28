@@ -3,7 +3,6 @@
 
 ;; C-c Groups
 ;;
-;;e - eval and replace
 ;;b - winner undo
 ;;f - winner redo
 ;;l - lispy shortcuts (i.e. paredit and clojure specific fns)
@@ -16,8 +15,6 @@
 ;;s - show popupwindows
 ;;w - window and buffer shortcuts
 
-;; Should be able to eval-and-replace anywhere.
-(global-set-key (kbd "C-c e") 'eval-and-replace)
 
 ;; winner undo and redo
 (global-set-key (kbd "C-c b") 'winner-undo)
@@ -37,7 +34,7 @@
 (global-set-key (kbd "C-c m n") 'eval-print-last-sexp)
 (global-set-key (kbd "C-c m r") 'eval-region)
 
-(global-set-key (kbd "C-c n e b") 'nrepl-eval-buffer)
+(global-set-key (kbd "C-M-x") 'nrepl-eval-buffer)
 
 
 
@@ -97,7 +94,7 @@
 (define-key paredit-mode-map (kbd "M-N")     'live-paredit-next-top-level-form)
 (define-key paredit-mode-map (kbd "C-M-f")   'live-paredit-forward)
 (define-key paredit-mode-map (kbd "M-q")     'live-paredit-reindent-defun)
-(define-key paredit-mode-map (kbd "M-d")     'live-paredit-forward-kill-sexp)
+(define-key paredit-mode-map (kbd "M-w")     'live-paredit-forward-kill-sexp)
 (define-key paredit-mode-map (kbd "M-k")     'live-paredit-backward-kill)
 (define-key paredit-mode-map (kbd "M-\\")    'live-paredit-delete-horizontal-space)
 
@@ -130,6 +127,7 @@
 (global-set-key (kbd "C-\\") 'backward-kill-word)
 (define-key ido-file-completion-map (kbd "C-\\") 'backward-kill-word)
 (define-key paredit-mode-map (kbd "C-\\") 'paredit-backward-kill-word)
+(define-key paredit-mode-map (kbd "M-d") 'paredit-forward-kill-word)
 
 ;;kill line backwards
 (global-set-key (kbd "M-k") 'live-backwards-kill-line)
