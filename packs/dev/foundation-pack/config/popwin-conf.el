@@ -3,7 +3,6 @@
 (setq display-buffer-function 'popwin:display-buffer)
 
 (setq popwin:special-display-config
-      '(("*Help*"  :height 30 :stick t)
       '(("*Help*"  :height 30)
         ("*Completions*" :noselect t)
         ("*Messages*" :noselect t :height 30)
@@ -25,7 +24,7 @@
         ("*nrepl-src*" :height 30 :stick t)
         ("*nrepl-result*" :height 30 :stick t)
         ("*Kill Ring*" :height 30)
-        ("*Compile-Log*" :height 30 :stick t))))
+        ("*Compile-Log*" :height 30 :stick t)))
 
 (defun live-show-messages ()
   (interactive)
