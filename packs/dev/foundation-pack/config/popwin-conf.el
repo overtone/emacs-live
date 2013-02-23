@@ -24,6 +24,7 @@
         ("*nrepl-error*" :height 30 :stick t)
         ("*nrepl-doc*" :height 30 :stick t)
         ("*nrepl-src*" :height 30 :stick t)
+        ("*nrepl-result*" :height 30 :stick t)
         ("*Kill Ring*" :height 30)
         ("*Compile-Log*" :height 30 :stick t)))
 
