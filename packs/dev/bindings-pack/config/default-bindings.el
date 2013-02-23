@@ -207,3 +207,10 @@
 (global-set-key (kbd "C-x o") 'win-switch-dispatch)
 
 (global-set-key (kbd "C-x !") 'live-server-kill-terminal)
+
+
+(global-set-key (kbd "C-x C-g") 'git-gutter:toggle)
+
+;; Jump to next/previous diff
+(global-set-key (kbd "C-x p") 'git-gutter:previous-diff)
+(global-set-key (kbd "C-x n") 'git-gutter:next-diff)
