@@ -1,7 +1,3 @@
-;;make sure ansi colour character escapes are honoured
-(require 'ansi-color)
-(ansi-color-for-comint-mode-on)
-
 (setq font-lock-maximum-decoration t
       color-theme-is-global t)
 
