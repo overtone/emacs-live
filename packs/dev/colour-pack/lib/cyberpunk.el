@@ -174,6 +174,13 @@
      (markdown-pre-face ((t (:foreground "#4c83ff"))))
      (markdown-inline-code-face ((t (:foreground "#4c83ff"))))
      (markdown-list-face ((t (:foreground "#8B8989"))))
+
+     (git-gutter:modified ((t (:foreground "deep pink" :background "gray10"))) )
+     (git-gutter:deleted ((t (:foreground "gray10" :background "gray10"))) )
+     (git-gutter:added ((t (:foreground "#4c83ff" :background "gray10" ))) )
+
+
+
      ))
   )
 
