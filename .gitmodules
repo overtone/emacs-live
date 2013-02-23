@@ -111,3 +111,6 @@
 [submodule "packs/dev/power-pack/vendor/submodules/multiple-cursors"]
         path = packs/dev/power-pack/vendor/submodules/multiple-cursors
         url = git://github.com/magnars/multiple-cursors.el.git
+[submodule "packs/dev/power-pack/vendor/submodules/emacs-git-gutter"]
+	path = packs/dev/power-pack/vendor/submodules/emacs-git-gutter
+	url = git://github.com/syohex/emacs-git-gutter.git
