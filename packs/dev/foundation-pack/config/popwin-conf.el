@@ -24,7 +24,8 @@
         ("*nrepl-src*" :height 30 :stick t)
         ("*nrepl-result*" :height 30 :stick t)
         ("*Kill Ring*" :height 30)
-        ("*Compile-Log*" :height 30 :stick t)))
+        ("*Compile-Log*" :height 30 :stick t)
+        ("*git-gutter:diff*" :height 30 :stick t)))
 
 (defun live-show-messages ()
   (interactive)
