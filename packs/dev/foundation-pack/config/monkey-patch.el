@@ -1,4 +1,3 @@
-
 ;; monkypatch basic-save-buffer to make saving buffers with no
 ;; associated file name more intuitive.
 (defun live-mp-new-basic-save-buffer ()
@@ -13,6 +12,7 @@ Before and after saving the buffer, this function runs
     ;; In an indirect buffer, save its base buffer instead.
     (if (buffer-base-buffer)
         (set-buffer (buffer-base-buffer)))
+
     (if (or (buffer-modified-p)
             ;; handle the case when no modification has been made but
             ;; the file disappeared since visited
@@ -97,8 +97,8 @@ Before and after saving the buffer, this function runs
             (delete-auto-save-file-if-necessary recent-save)
             ;; Support VC `implicit' locking.
             (vc-after-save)
-            (run-hooks 'after-save-hook) )
-          (message "(No changes need to be saved)")))))
+            (run-hooks 'after-save-hook)))
+      (message "(No changes need to be saved)"))))
 
 
 (defalias 'live-mp-orig-basic-save-buffer 'basic-save-buffer)
