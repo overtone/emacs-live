@@ -100,17 +100,17 @@
 
   Also tidies up trailing parens when in a lisp form"
   (interactive "P")
-  (when (not (live-paredit-top-level-p))
-    (cond ((paredit-in-comment-p) (fill-paragraph argument))
-          ((paredit-in-string-p) (progn
-                                   (save-excursion
-                                     (paredit-forward-up)
-                                     (insert "\n"))
-                                   (fill-paragraph argument)
-                                   (save-excursion
-                                     (paredit-forward-up)
-                                     (delete-char 1))))
-          (t (progn (save-excursion
+  (cond ((paredit-in-comment-p) (fill-paragraph argument))
+        ((paredit-in-string-p) (progn
+                                 (save-excursion
+                                   (paredit-forward-up)
+                                   (insert "\n"))
+                                 (fill-paragraph argument)
+                                 (save-excursion
+                                   (paredit-forward-up)
+                                   (delete-char 1))))
+        (t (when (not (live-paredit-top-level-p))
+             (progn (save-excursion
                       (end-of-defun)
                       (beginning-of-defun)
                       (indent-sexp))

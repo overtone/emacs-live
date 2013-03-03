@@ -11,6 +11,7 @@ Installation
 
     $ git clone git://github.com/mooz/js2-mode.git
     $ cd js2-mode
+    $ git checkout emacs24
     $ emacs --batch -f batch-byte-compile js2-mode.el
 
 Then put js2-mode.elc into your site-lisp directory.
@@ -23,10 +24,10 @@ In your emacs config:
 See <http://code.google.com/p/js2-mode/wiki/InstallationInstructions> for
 additional details.
 
-Emacs 24
-========
+Emacs 22 and 23
+===============
 
-The version from the [branch `emacs24`](https://github.com/mooz/js2-mode/tree/emacs24) is recommended.
+This version requires Emacs 24. For backwards-compatible version, check out the [`master` branch](https://github.com/mooz/js2-mode/tree/master).
 
 Bugs
 ====

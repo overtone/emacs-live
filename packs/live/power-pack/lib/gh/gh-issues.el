@@ -285,24 +285,17 @@
 ;;; helpers
 
 (defun gh-issues--issue-id (issue-or-issue-id)
-  (if (and (eieio-object-p issue-or-issue-id)
-           (eq (class-of issue-or-issue-id)
-               gh-issues-issue))
+  (if (eieio-object-p issue-or-issue-id)
       (oref issue-or-issue-id id)
     issue-or-issue-id))
 
 (defun gh-issues--milestone-id (milestone-or-milestone-id)
-  (if (and (eieio-object-p milestone-or-milestone-id)
-           (eq (class-of milestone-or-milestone-id)
-               gh-issues-milestone))
+  (if (eieio-object-p milestone-or-milestone-id)
       (oref milestone-or-milestone-id id)
     milestone-or-milestone-id))
 
 (defun gh-issues--label-name (label-or-label-name)
-  (if (and
-       (eieio-object-p label-or-label-name)
-       (eq (class-of label-or-label-name)
-           gh-issues-label))
+  (if (eieio-object-p label-or-label-name)
       (oref label-or-label-name name)
     label-or-label-name))
 

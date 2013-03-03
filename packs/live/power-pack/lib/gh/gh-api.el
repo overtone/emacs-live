@@ -63,14 +63,18 @@
 
 (defmethod gh-api-set-default-auth ((api gh-api) auth)
   (let ((auth (or (oref api :auth) auth))
-        (cache (oref api :cache)))
+        (cache (oref api :cache))
+        (classname (symbol-name (funcall (if (fboundp 'eieio-object-class)
+                                             'eieio-object-class
+                                           'object-class)
+                                         api))))
     (oset api :auth auth)
     (unless (or (null cache)
                 (and (eieio-object-p cache)
                      (object-of-class-p cache 'gh-cache)))
       (oset api :cache (funcall (oref api cache-cls)
                                 (format "gh/%s/%s"
-                                        (symbol-name (object-class api))
+                                        classname
                                         (gh-api-get-username api)))))))
 
 (defmethod gh-api-expand-resource ((api gh-api)

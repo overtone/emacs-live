@@ -327,6 +327,11 @@ Clojure to load that file."
   :type 'string
   :group 'clojure-mode)
 
+(defcustom clojure-mode-inf-lisp-command "lein repl"
+  "The command used by `inferior-lisp-program'."
+  :type 'string
+  :group 'clojure-mode)
+
 (defcustom clojure-mode-use-backtracking-indent t
   "Set to non-nil to enable backtracking/context sensitive indentation."
   :type 'boolean
@@ -340,14 +345,13 @@ Clojure to load that file."
 (defvar clojure-mode-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map lisp-mode-shared-map)
-    (define-key map "\e\C-x" 'lisp-eval-defun)
-    (define-key map "\C-x\C-e" 'lisp-eval-last-sexp)
-    (define-key map "\C-c\C-e" 'lisp-eval-last-sexp)
-    (define-key map "\C-c\C-l" 'clojure-load-file)
-    (define-key map "\C-c\C-r" 'lisp-eval-region)
+    (define-key map (kbd "C-M-x")   'lisp-eval-defun)
+    (define-key map (kbd "C-x C-e") 'lisp-eval-last-sexp)
+    (define-key map (kbd "C-c C-e") 'lisp-eval-last-sexp)
+    (define-key map (kbd "C-c C-l") 'clojure-load-file)
+    (define-key map (kbd "C-c C-r") 'lisp-eval-region)
     (define-key map (kbd "C-c C-t") 'clojure-jump-between-tests-and-code)
-    (define-key map "\C-c\C-z" 'clojure-display-inferior-lisp-buffer)
-    (define-key map (kbd "C-c t") 'clojure-jump-to-test)
+    (define-key map (kbd "C-c C-z") 'clojure-display-inferior-lisp-buffer)
     (define-key map (kbd "C-c M-q") 'clojure-fill-docstring)
     map)
   "Keymap for Clojure mode. Inherits from `lisp-mode-shared-map'.")
@@ -384,9 +388,13 @@ numbers count from the end:
   leiningen.compile -> leiningen.test.compile (uses 1)
   clojure.http.client -> clojure.http.test.client (uses -1)")
 
-(defun clojure-mode-version ()
-  "Currently package.el doesn't support prerelease version numbers."
-  "2.0.0")
+(defvar clojure-mode-version "2.0.0"
+  "The current version of `clojure-mode'.")
+
+(defun clojure-mode-display-version ()
+  "Display the current `clojure-mode-version' in the minibuffer."
+  (interactive)
+  (message "clojure-mode (version %s)" clojure-mode-version))
 
 ;; For compatibility with Emacs < 24, derive conditionally
 (defalias 'clojure-parent-mode
@@ -404,15 +412,11 @@ or to switch back to an existing one.
 
 Entry to this mode calls the value of `clojure-mode-hook'
 if that value is non-nil."
-  (interactive)
-  (use-local-map clojure-mode-map)
   (set (make-local-variable 'imenu-create-index-function)
        (lambda ()
          (imenu--generic-function '((nil clojure-match-next-def 0)))))
-  (set (make-local-variable 'local-abbrev-table) clojure-mode-abbrev-table)
   (set (make-local-variable 'indent-tabs-mode) nil)
   (lisp-mode-variables nil)
-  (set-syntax-table clojure-mode-syntax-table)
   (set (make-local-variable 'comment-start-skip)
        "\\(\\(^\\|[^\\\\\n]\\)\\(\\\\\\\\\\)*\\)\\(;+\\|#|\\) *")
   (set (make-local-variable 'lisp-indent-function)
@@ -422,11 +426,10 @@ if that value is non-nil."
          'clojure-forward-sexp))
   (set (make-local-variable 'lisp-doc-string-elt-property)
        'clojure-doc-string-elt)
-  (set (make-local-variable 'inferior-lisp-program) "lein repl")
+  (set (make-local-variable 'inferior-lisp-program) clojure-mode-inf-lisp-command)
   (set (make-local-variable 'parse-sexp-ignore-comments) t)
 
   (clojure-mode-font-lock-setup)
-
   (add-hook 'paredit-mode-hook
             (lambda ()
               (when (>= paredit-version 21)
@@ -1207,7 +1210,7 @@ returned."
   (let* ((project-dir (file-truename
                        (locate-dominating-file default-directory
                                                "project.clj")))
-         (relative (substring (buffer-file-name) (length project-dir) -4)))
+         (relative (substring (file-truename (buffer-file-name)) (length project-dir) -4)))
     (replace-regexp-in-string
      "_" "-" (mapconcat 'identity (cdr (split-string relative "/")) "."))))
 
@@ -1247,17 +1250,22 @@ returned."
   (replace-regexp-in-string "-" "_" namespace))
 
 (defun clojure-test-for (namespace)
+  "Returns the path of the test file for the given namespace."
   (let* ((namespace (clojure-underscores-for-hyphens namespace))
          (segments (split-string namespace "\\.")))
-    (mapconcat 'identity segments "/")))
+    (format "%stest/%s_test.clj"
+            (file-name-as-directory
+             (locate-dominating-file buffer-file-name "src/"))
+            (mapconcat 'identity segments "/"))))
+
+(defvar clojure-test-for-fn 'clojure-test-for
+  "Var pointing to the function that will return the full path of the
+Clojure test file for the given namespace.")
 
 (defun clojure-jump-to-test ()
   "Jump from implementation file to test."
   (interactive)
-  (find-file (format "%stest/%s_test.clj"
-                     (file-name-as-directory
-                      (locate-dominating-file buffer-file-name "src/"))
-                     (clojure-test-for (clojure-find-ns)))))
+  (find-file (funcall clojure-test-for-fn (clojure-find-ns))))
 
 (defun clojure-jump-between-tests-and-code ()
   (interactive)

@@ -37,6 +37,12 @@
 (eval-after-load "auto-complete"
   '(add-to-list 'ac-modes 'nrepl-mode))
 
+;; specify the print length to be 100 to stop infinite sequences killing things.
+(defun live-nrepl-set-print-length ()
+  (nrepl-send-string-sync "(set! *print-length* 100)" "clojure.core"))
+
+(add-hook 'nrepl-connected-hook 'live-nrepl-set-print-length)
+
 ;;; Monkey Patch nREPL with better behaviour:
 
 ;;; Region discovery fix
@@ -67,8 +73,8 @@
                                clojure.core/str
                                clojure.java.io/resource :file)
                          (comp clojure.core/str clojure.java.io/file :file) :line)
-                        (clojure.core/meta (clojure.core/resolve '%s)))"
-                      var)))
+                        (clojure.core/meta (clojure.core/ns-resolve '%s '%s)))"
+                      (nrepl-current-ns) var)))
     (nrepl-send-string form
                        (nrepl-jump-to-def-handler (current-buffer))
                        (nrepl-current-ns)

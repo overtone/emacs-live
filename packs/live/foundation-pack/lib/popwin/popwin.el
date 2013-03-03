@@ -4,7 +4,7 @@
 
 ;; Author: Tomohiro Matsuyama <tomo@cx4a.org>
 ;; Keywords: convenience
-;; Version: 0.6.1
+;; Version: 0.6
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -396,7 +396,7 @@ popup buffer.")
 (defvar popwin:close-popup-window-timer nil
   "Timer of closing the popup window.")
 
-(defvar popwin:close-popup-window-timer-interval 0.01
+(defvar popwin:close-popup-window-timer-interval 0.05
   "Interval of `popwin:close-popup-window-timer'.")
 
 (defvar popwin:before-popup-hook nil)

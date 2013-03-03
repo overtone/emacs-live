@@ -5,7 +5,7 @@
 ;; URL: https://github.com/purcell/elisp-slime-nav
 ;; Version: DEV
 ;;
-;;; Commentary
+;;; Commentary:
 ;;
 ;; This package provides Slime's convenient "M-." and "M-," navigation
 ;; in `emacs-lisp-mode', together with an elisp equivalent of
@@ -26,7 +26,10 @@
 ;;   When navigating into Emacs' C source, "M-," will not be bound to
 ;;   the same command, but "M-*" will typically do the trick.
 ;;
-;;; Code
+;;; Code:
+
+(require 'help-mode)
+
 (defvar elisp-slime-nav-mode-map (make-keymap))
 
 ;;;###autoload
@@ -93,7 +96,8 @@ Argument SYM-NAME thing to find."
 (define-key elisp-slime-nav-mode-map (kbd "C-c C-d C-d") 'elisp-slime-nav-describe-elisp-thing-at-point)
 
 ;;;###autoload
-(add-hook 'emacs-lisp-mode-hook 'elisp-slime-nav-mode)
+(dolist (hook '(emacs-lisp-mode-hook ielm-mode-hook))
+  (add-hook hook 'elisp-slime-nav-mode))
 
 
 (provide 'elisp-slime-nav)

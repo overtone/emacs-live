@@ -44,7 +44,7 @@
      (font-lock-variable-name-face ((t (:foreground "#D8FA3C"))))
      (font-lock-warning-face ((t (:bold t :foreground "Pink"))))
 
-     (gui-element ((t (:background "#333333" :foreground "#96CBFE"))))
+     (gui-element ((t (:background "gray10" :foreground "#96CBFE"))))
 ;;     (region ((t (:foreground "black" :background "#7F073F"))))
      (region ((t ( :background "#7F073F"))))
      (mode-line ((t (:background "gray10" :foreground "#4c83ff"))))
@@ -54,15 +54,15 @@
      (isearch ((t (:background "deep pink" :foreground "black"))))
      (isearch-fail ((t (:background "red4"))))
      (lazy-highlight ((t (:background "yellow" :foreground "black"))))
-     (query-replace ((t (:background "#333333"))))
+     (query-replace ((t (:background "gray10"))))
      (Highline-face ((t (:background "SeaGreen"))))
-     (hl-line ((t (:background "#333333"))))
+     (hl-line ((t (:background "gray10"))))
      (italic ((t (nil))))
      (left-margin ((t (nil))))
      (text-cursor ((t (:background "yellow" :foreground "black"))))
      (toolbar ((t (nil))))
      (underline ((nil (:underline nil))))
-     (vertical-border ((t (:background "black" :foreground "#333333"))))
+     (vertical-border ((t (:background "black" :foreground "gray10"))))
      (zmacs-region ((t (:background "snow" :foreground "ble"))))
 
      (diff-added ((t (:foreground "green"))))
@@ -84,9 +84,9 @@
      (ac-yasnippet-candidate-face ((t (:background "gray60" :foreground "black"))))
      (ac-yasnippet-selection-face ((t (:background "deep pink" :foreground "black"))))
      (popup-isearch-match ((t (:background "black" :foreground "deep pink"))))
-     (popup-tip-face ((t (:background "#333333" :foreground "white"))))
+     (popup-tip-face ((t (:background "gray10" :foreground "white"))))
      (popup-scroll-bar-foreground-face ((t (:background "#0A0A0A"))))
-     (popup-scroll-bar-background-face ((t (:background "#333333"))))
+     (popup-scroll-bar-background-face ((t (:background "gray10"))))
 
      (window-number-face ((t (:background "grey10" :foreground "#4c83ff"))))
 
@@ -161,11 +161,11 @@
      (erc-timestamp-face ((t (:foreground "dim gray"))))
      (erc-underline-face ((t (:underline t))))
 
-     (vhl/default-face ((t (:background "#333333"))))
+     (vhl/default-face ((t (:background "gray10"))))
      (undo-tree-visualizer-active-branch-face ((t (:foreground "deep pink" :background "black"))))
      (hl-sexp-face ((t (:background "grey9"))))
 
-     (browse-kill-ring-current-entry-face ((t (:background "#333333"))))
+     (browse-kill-ring-current-entry-face ((t (:background "gray10"))))
 
      (markdown-link-face ((t (:foreground "#FBDE2D"))))
      (markdown-url-face ((t (:foreground  "#61CE3C"))))
@@ -174,6 +174,14 @@
      (markdown-pre-face ((t (:foreground "#4c83ff"))))
      (markdown-inline-code-face ((t (:foreground "#4c83ff"))))
      (markdown-list-face ((t (:foreground "#8B8989"))))
+
+     (git-gutter:modified ((t (:foreground "deep pink" :background "gray10"))) )
+     (git-gutter:deleted ((t (:foreground "gray10" :background "gray10"))) )
+     (git-gutter:added ((t (:foreground "#4c83ff" :background "gray10" ))) )
+     (git-gutter:unchanged ((t (:background "gray10" ))) )
+
+
+
      ))
   )
 

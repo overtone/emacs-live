@@ -312,15 +312,29 @@ such that ignores any prefix arguments."
                      (intern (concat (symbol-name command-name-prefix) post)))
                    '("-inner-sexp" "-inner-list"))))))
 
+(defun nesf-end-of-buffer-p ()
+  "Predicate fn to determine whether point is at the end of the
+   buffer"
+  (<= (buffer-size) (point)))
+
 (defun nesf-paredit-forward-down ()
   "Doesn't freeze Emacs if attempted to be called at end of
    buffer. Otherwise similar to paredit-forward-down."
   (interactive)
   (if (save-excursion
           (forward-comment (buffer-size))
-          (not (live-end-of-buffer-p)))
+          (not (nesf-end-of-buffer-p)))
       (paredit-forward-down)
     (error "unexpected end of buffer")))
+
+(defun nesf-paredit-top-level-p ()
+  "Returns true if point is not within a given form i.e. it's in
+  toplevel 'whitespace'"
+  (not
+   (save-excursion
+     (ignore-errors
+       (paredit-forward-up)
+       t))))
 
 ;;; initialize.
 (defun nesf-initialize ()
@@ -349,13 +363,13 @@ such that ignores any prefix arguments."
                                 (backward-char)
                                 (bounds-of-thing-at-point 'sexp))))
   (define-nrepl-eval-sexp-fu-flash-command nrepl-eval-expression-at-point
-    (nrepl-eval-sexp-fu-flash      (when (not (and (live-paredit-top-level-p)
+    (nrepl-eval-sexp-fu-flash      (when (not (and (nesf-paredit-top-level-p)
                                                    (save-excursion
                                                      (ignore-errors (forward-char))
-                                                     (live-paredit-top-level-p))))
+                                                     (nesf-paredit-top-level-p))))
                                      (save-excursion
                                        (save-match-data
-                                         (ignore-errors (live-paredit-forward-down))
+                                         (ignore-errors (nesf-paredit-forward-down))
                                          (paredit-forward-up)
                                          (while (ignore-errors (paredit-forward-up) t))
                                          (let ((end (point)))

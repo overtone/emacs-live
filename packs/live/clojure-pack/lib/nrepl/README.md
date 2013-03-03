@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/kingtim/nrepl.el.png?branch=master)](https://travis-ci.org/kingtim/nrepl.el)
+
 # nrepl.el
 
 `nrepl.el` is an Emacs client for
@@ -88,6 +90,18 @@ experience.
   'nrepl-turn-on-eldoc-mode)
 ```
 
+* You can hide the `*nrepl-connection*` and `*nrepl-server*` buffers
+from appearing in some buffer switching commands like
+`switch-to-buffer`(<kbd>C-x b</kbd>) like this:
+
+```lisp
+(setq nrepl-hide-special-buffers t)
+```
+
+When using `switch-to-buffer`, pressing <kbd>SPC</kbd> after the command will
+make the hidden buffers visible. They'll always be visible in
+`list-buffers` (<kbd>C-x C-b</kbd>).
+
 * You can control the <kbd>TAB</kbd> key behavior in the REPL via the
 `nrepl-tab-command` variable.  While the default command
 `nrepl-indent-and-complete-symbol` should be an adequate choice for
@@ -100,17 +114,23 @@ following snippet:
 (setq nrepl-tab-command 'indent-for-tab-command)
 ```
 
-* Stop the error buffer from popping up while working in the REPL
-buffer:
+* Stop the error buffer from popping up while working in buffers other
+than the REPL:
 
 ```lisp
 (setq nrepl-popup-stacktraces nil)
 ```
 
+* Enable error buffer popping also in the REPL:
+
+```lisp
+(setq nrepl-popup-stacktraces-in-repl t)
+```
+
 * Make <kbd>C-c C-z</kbd> switch to the `*nrepl*` buffer in the current window:
 
 ```lisp
-(add-to-list 'same-window-buffer-names "*nrepl*") 
+(add-to-list 'same-window-buffer-names "*nrepl*")
 ```
 
 * Enabling `CamelCase` support for editing commands(like
@@ -127,7 +147,7 @@ when editing Clojure (or any other Lisp) code is highly
 recommended.  You're probably using it already in your `clojure-mode`
 buffers (if you're not you probably should). You might also want to
 enable `paredit` in the nREPL buffer as well:
- 
+
 ```lisp
 (add-hook 'nrepl-mode-hook 'paredit-mode)
 ```
@@ -139,7 +159,7 @@ enable `paredit` in the nREPL buffer as well:
   orient yourself in the code, and tell which statements are at a
   given depth. Assuming you've already installed RainbowDelimiters you can
   enable it in nREPL like this:
-  
+
 ```lisp
 (add-hook 'nrepl-mode-hook 'rainbow-delimiters-mode)
 ```
@@ -147,8 +167,8 @@ enable `paredit` in the nREPL buffer as well:
 ## Basic Usage
 
 The only requirement to use nrepl.el is to have a nrepl server to
-which it may connect. Many Clojurians favour the use of the Leiningen tool 
-to start a nrepl server, but the use of Leiningen is not a prerequisite to use 
+which it may connect. Many Clojurians favour the use of the Leiningen tool
+to start a nrepl server, but the use of Leiningen is not a prerequisite to use
 nrepl.el (but it's required if you want to use the `nrepl-jack-in` command).
 
 ### Setting up a Leiningen project (optional)
@@ -161,7 +181,7 @@ reuses many things from the Maven ecosystem).
 nrepl.el features a command called `nrepl-jack-in` that will start an nrepl server
 for a particular Leiningen project and connect to it automatically.
 This functionality depends on Leiningen 2. Older versions are not supported. Follow
-the installation instructions on Leiningen's web site to get it up and running and afterwards 
+the installation instructions on Leiningen's web site to get it up and running and afterwards
 create a project like this:
 
 ```bash
@@ -197,10 +217,19 @@ Typing there <kbd>M-x nrepl</kbd> will allow you to connect to the running nrepl
 ### Using the nrepl minor mode
 
 `nrepl.el` comes with a handy minor mode called `nrepl-interaction-mode` (complementing
-`clojure-mode`) that allows you to evaluate code in your Clojure source 
+`clojure-mode`) that allows you to evaluate code in your Clojure source
 files and load it directly in the repl.  A list of all
 available commands is available in the nREPL menu and in the following
 section of this manual.
+
+### Pretty printing in the REPL
+
+Make the REPL always pretty-print the results of your commands. Note
+that this will not work correctly with forms such as `(def a 1) (def b2)`
+and it expects `clojure.pprint` to have been required already
+(the default in more recent versions of Clojure):
+
+<kbd>M-x nrepl-toggle-pretty-printing</kbd>
 
 ## Keys
 
@@ -208,24 +237,29 @@ section of this manual.
     Prompts for a project root if given a prefix argument.
 * <kbd>M-x nrepl</kbd>: Connect to an already-running nrepl server.
 
+While you're in `clojure-mode`, `nrepl-jack-in` is bound for
+convenience to <kbd>C-c M-j</kbd> and `nrepl` is bound to <kbd>C-c
+M-c</kbd>.
+
 ### Clojure buffer commands:
 
-* <kbd>C-x C-e</kbd>: Evalulate the form preceding point and display the result in the echo area.  If invoked with a prefix argument, insert the result into the current buffer.
-* <kbd>C-M-x</kbd>: Evaluate the top level form under point and display the result in the echo area.  If invoked with a prefix argument, insert the result into the current buffer.
+* <kbd>C-x C-e</kbd>: Evaluate the form preceding point and display the result in the echo area.  If invoked with a prefix argument, insert the result into the current buffer.
+* <kbd>C-c C-p</kbd>: Evaluate the form preceding point and display the result in a popup buffer.
+* <kbd>C-M-x</kbd>: Evaluate the top level form under point and display the result in the echo area.  If invoked with a prefix argument, insert the result into the current buffer. Also bound to <kbd>C-c C-c</kbd>.
 * <kbd>C-c C-r</kbd>: Evaluate the region and display the result in the echo area.
 * <kbd>C-c C-b</kbd>: Interrupt any pending evaluations.
-* <kbd>C-c C-m</kbd>: Invoke macroexpand-1 on the form preceding point and display the result in a macroexpansion buffer.  If invoked with a prefix argument, macroexpand is used instead of macroexpand-1.
-* <kbd>C-c M-m</kbd>: Invoke clojure.walk/macroexpand-all on the form preceding point and display the result in a macroexpansion buffer.
+* <kbd>C-c C-m</kbd>: Invoke macroexpand-1 on the form at point and display the result in a macroexpansion buffer.  If invoked with a prefix argument, macroexpand is used instead of macroexpand-1.
+* <kbd>C-c M-m</kbd>: Invoke clojure.walk/macroexpand-all on the form at point and display the result in a macroexpansion buffer.
 * <kbd>C-c C-n</kbd>: Eval the ns form.
 * <kbd>C-c M-n</kbd>: Switch the namespace of the repl buffer to the namespace of the current buffer.
-* <kbd>C-c C-z</kbd>: Select the repl buffer.
+* <kbd>C-c C-z</kbd>: Select the repl buffer. With a prefix argument - changes the namespace of the REPL buffer to the one of the currently visited source file.
 * <kbd>C-c M-o</kbd>: Clear the entire REPL buffer, leaving only a prompt. Useful if you're running the REPL buffer in a side by side buffer.
 * <kbd>C-c C-k</kbd>: Load the current buffer.
 * <kbd>C-c C-l</kbd>: Load a file.
 * <kbd>C-c C-d</kbd>: Display doc string for the symbol at point.  If invoked with a prefix argument, or no symbol is found at point, prompt for a symbol
 * <kbd>C-c C-s</kbd>: Display the source for the symbol at point.  If invoked with a prefix argument, or no symbol is found at point, prompt for a symbol
 * <kbd>C-c C-j</kbd>: Display JavaDoc (in your default browser) for the symbol at point.  If invoked with a prefix argument, or no symbol is found at point, prompt for a symbol
-* <kbd>M-.</kbd>: Jump to the definition of a var.  If invoked with a prefix argument, or no symbol is found at point, prompt for a var.
+* <kbd>M-.</kbd>: Jump to the definition of a symbol.  If invoked with a prefix argument, or no symbol is found at point, prompt for a symbol.
 * <kbd>M-,</kbd>: Return to your pre-jump location.
 * <kbd>M-TAB</kbd>: Complete the symbol at point. (For `auto-complete` integration, see [`ac-nrepl`](https://github.com/purcell/ac-nrepl))
 
@@ -237,7 +271,7 @@ section of this manual.
 * <kbd>C-c M-o</kbd>: Clear the entire REPL buffer, leaving only a prompt.
 * <kbd>C-c C-o</kbd>: Remove the output of the previous evaluation from the REPL buffer.
 * <kbd>C-c C-u</kbd>: Kill all text from the prompt to the current point.
-* <kbd>C-c C-b</kbd>: Interrupt any pending evaluations.
+* <kbd>C-c C-b</kbd>: Interrupt any pending evaluations. Also bound to <kbd>C-c C-c</kbd>.
 * <kbd>C-up, C-down</kbd>: Goto to previous/next input in history.
 * <kbd>M-p, M-n</kbd>: Search the previous/next item in history using the current input
 as search pattern. If M-p/M-n is typed two times in a row, the second invocation
@@ -251,10 +285,21 @@ uses the same search pattern (even if the current input has changed).
 
 ### Macroexpansion buffer commands:
 
-* <kbd>C-c C-m</kbd>: Invoke macroexpand-1 on the form preceding point and replace the original form with its expansion.  If invoked with a prefix argument, macroexpand is used instead of macroexpand-1.
-* <kbd>C-c M-m</kbd>: Invoke clojure.walk/macroexpand-all on the form preceding point and replace the original form with its expansion.
+* <kbd>C-c C-m</kbd>: Invoke macroexpand-1 on the form at point and replace the original form with its expansion.  If invoked with a prefix argument, macroexpand is used instead of macroexpand-1.
+* <kbd>C-c M-m</kbd>: Invoke clojure.walk/macroexpand-all on the form at point and replace the original form with its expansion.
 * <kbd>g</kbd>: The prior macroexpansion is performed again and the current contents of the macroexpansion buffer are replaced with the new expansion.
 * <kbd>C-/</kbd>, <kbd>C-x u</kbd>: Undo the last inplace expansion performed in the macroexpansion buffer.
+
+
+### Managing multiple sessions
+
+You can connection to multiple nREPL servers and use `nrepl-jack-in` multiple
+times.  To close a single nREPL session, use `M-x nrepl-close`.  `M-x
+nrepl-quit` closes all sessions.
+
+nrepl.el commands in a clojure buffer use the default connection.  To make a
+connection default, switch to it's repl buffer and use
+`M-x nrepl-make-repl-connection-default`.
 
 ## Requirements:
 
@@ -262,12 +307,16 @@ uses the same search pattern (even if the current input has changed).
 * [clojure-mode](https://github.com/technomancy/clojure-mode)
 * [GNU Emacs](http://www.gnu.org/software/emacs/emacs.html) 23.2+ or 24.
 
+## Changelog
+
+An extensive changelog is available [here](CHANGELOG.md).
+
 ## Contributing
 * Mailing list: [https://groups.google.com/forum/#!forum/nrepl-el](https://groups.google.com/forum/#!forum/nrepl-el)
 * Please report issues on the [GitHub issue tracker](https://github.com/kingtim/nrepl.el/issues) or the mailing list.
 
 ## License
 
-Copyright © 2012 Tim King, Phil Hagelberg and contributors.
+Copyright © 2012-2013 Tim King, Phil Hagelberg and [contributors](https://github.com/kingtim/nrepl.el/contributors).
 
 Distributed under the GNU General Public License, version 3

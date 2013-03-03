@@ -2,7 +2,7 @@
 ;;; Copyright 2012 Anthony Grimes
 ;;; Author: Anthony Grimes
 ;;; URL: https://github.com/Raynes/refheap.el
-;;; Version: 0.0.2
+;;; Version: 0.0.3
 
 (require 'json)
 (require 'url)
@@ -12,7 +12,9 @@
   :prefix "refheap-"
   :group 'applications)
 
-(defvar refheap-supported-modes '((clojure-mode . "Clojure")
+(defvar refheap-supported-modes '((nrepl-clojure-mode . "Clojure")
+                                  (clojure-mode . "Clojure")
+                                  (clojurescript-mode . "Clojure")
                                   (diff-mode . "Diff")
                                   (fancy-mode . "Fancy")
                                   (groovy-mode . "Groovy")

@@ -118,6 +118,7 @@ sure to add a set of basic tests around the functionality you're changing.
 * [Gleb Peregud](https://github.com/gleber) contributed Erlang expansions.
 * [Mark Hepburn](https://github.com/markhepburn) contributed Octave expansions.
 * [Rotem Yaari](https://github.com/vmalloc) also contributed an adapter for the region expansion in web-mode.
+* [Kang-min Liu](https://github.com/gugod) contributed Perl expansions.
 
 Thanks!
 

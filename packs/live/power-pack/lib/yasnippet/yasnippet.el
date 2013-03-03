@@ -475,7 +475,7 @@ snippet itself contains a condition that returns the symbol
 
 ;;; Internal variables
 
-(defvar yas--version "0.8.0 (beta)")
+(defvar yas--version "0.8.0beta")
 
 (defvar yas--menu-table (make-hash-table)
   "A hash table of MAJOR-MODE symbols to menu keymaps.")
@@ -4391,7 +4391,7 @@ Remaining args as in `yas-expand-snippet'."
 (defun yas--message (level message &rest args)
   "When LEVEL is above `yas-verbosity-level', log MESSAGE and ARGS."
   (when (> yas-verbosity level)
-    (message (apply #'yas--format message args))))
+    (message "%s" (apply #'yas--format message args))))
 
 (defun yas--format (format-control &rest format-args)
   (apply #'format (concat "[yas] " format-control) format-args))

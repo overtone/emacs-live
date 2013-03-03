@@ -213,6 +213,11 @@ buffer."
   "Face for popup."
   :group 'popup)
 
+(defface popup-summary-face
+  '((t (:inherit popup-face :foreground "dimgray")))
+  "Face for popup summary."
+  :group 'popup)
+
 (defface popup-scroll-bar-foreground-face
   '((t (:background "black")))
   "Foreground face for scroll-bar."
@@ -237,7 +242,7 @@ buffer."
 (defstruct popup
   point row column width height min-height direction overlays keymap
   parent depth
-  face mouse-face selection-face
+  face mouse-face selection-face summary-face
   margin-left margin-right margin-left-cancel scroll-bar symbol
   cursor offset scroll-top current-height list newlines
   pattern original-list)
@@ -367,13 +372,26 @@ usual."
     (and (eq (overlay-get overlay 'display) nil)
          (eq (overlay-get overlay 'after-string) nil))))
 
-(defun* popup-set-line-item (popup line &key item face mouse-face margin-left margin-right scroll-bar-char symbol summary keymap)
+(defun* popup-set-line-item (popup
+                             line
+                             &key
+                             item
+                             face
+                             mouse-face
+                             margin-left
+                             margin-right
+                             scroll-bar-char
+                             symbol
+                             summary
+                             summary-face
+                             keymap)
   (let* ((overlay (popup-line-overlay popup line))
          (content (popup-create-line-string popup (popup-x-to-string item)
                                             :margin-left margin-left
                                             :margin-right margin-right
                                             :symbol symbol
-                                            :summary summary))
+                                            :summary summary
+                                            :summary-face summary-face))
          (start 0)
          (prefix (overlay-get overlay 'prefix))
          (postfix (overlay-get overlay 'postfix))
@@ -401,7 +419,14 @@ usual."
                          scroll-bar-char
                          postfix))))
 
-(defun* popup-create-line-string (popup string &key margin-left margin-right symbol summary)
+(defun* popup-create-line-string (popup
+                                  string
+                                  &key
+                                  margin-left
+                                  margin-right
+                                  symbol
+                                  summary
+                                  summary-face)
   (let* ((popup-width (popup-width popup))
          (summary-width (string-width summary))
          (content-width (max
@@ -417,6 +442,9 @@ usual."
          (truncated-summary
           (car (popup-substring-by-width
                 summary (max (- popup-width string-width spacing) 0)))))
+    (when summary-face
+      (put-text-property 0 (length truncated-summary)
+                         'face summary-face truncated-summary))
     (concat margin-left
             string
             (make-string spacing ? )
@@ -459,6 +487,7 @@ number at the point."
                       (face 'popup-face)
                       mouse-face
                       (selection-face face)
+                      (summary-face 'popup-summary-face)
                       scroll-bar
                       margin-left
                       margin-right
@@ -611,6 +640,7 @@ KEYMAP is a keymap that will be put on the popup contents."
                             :face face
                             :mouse-face mouse-face
                             :selection-face selection-face
+                            :summary-face summary-face
                             :margin-left margin-left
                             :margin-right margin-right
                             :margin-left-cancel margin-left-cancel
@@ -651,6 +681,7 @@ KEYMAP is a keymap that will be put on the popup contents."
         with popup-face = (popup-face popup)
         with mouse-face = (popup-mouse-face popup)
         with selection-face = (popup-selection-face popup)
+        with summary-face-0 = (popup-summary-face popup)
         with list = (popup-list popup)
         with length = (length list)
         with thum-size = (max (/ (* height height) (max length 1)) 1)
@@ -671,6 +702,7 @@ KEYMAP is a keymap that will be put on the popup contents."
         for face = (if (= i cursor)
                        (or (popup-item-selection-face item) selection-face)
                      (or (popup-item-face item) popup-face))
+        for summary-face = (unless (= i cursor) summary-face-0)
         for empty-char = (propertize " " 'face face)
         for scroll-bar-char = (if scroll-bar
                                   (cond
@@ -700,6 +732,7 @@ KEYMAP is a keymap that will be put on the popup contents."
                              :scroll-bar-char scroll-bar-char
                              :symbol sym
                              :summary summary
+                             :summary-face summary-face
                              :keymap keymap)
         
         finally
@@ -1013,7 +1046,7 @@ PROMPT is a prompt string when reading events during event loop."
 ;;; Popup Menu
 
 (defface popup-menu-face
-  '((t (:background "lightgray" :foreground "black")))
+  '((t (:inherit popup-face)))
   "Face for popup menu."
   :group 'popup)
 
@@ -1025,6 +1058,11 @@ PROMPT is a prompt string when reading events during event loop."
 (defface popup-menu-selection-face
   '((t (:background "steelblue" :foreground "white")))
   "Face for popup menu selection."
+  :group 'popup)
+
+(defface popup-menu-summary-face
+  '((t (:inherit popup-summary-face)))
+  "Face for popup summary."
   :group 'popup)
 
 (defvar popup-menu-show-tip-function 'popup-tip
@@ -1237,6 +1275,7 @@ isearch canceled. The arguments is whole filtered list of items."
                            :face 'popup-menu-face
                            :mouse-face 'popup-menu-mouse-face
                            :selection-face 'popup-menu-selection-face
+                           :summary-face 'popup-menu-summary-face
                            :margin-left margin-left
                            :margin-right margin-right
                            :scroll-bar scroll-bar

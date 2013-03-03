@@ -8,6 +8,9 @@ interactive auto-completion framework
 Where nrepl provides it, pop-up documentation for completed symbols
 will be displayed.
 
+**Latest stable version**: see the [latest numbered tag](https://github.com/purcell/ac-nrepl/tags), which
+will also be the latest version available via Marmalade.
+
 Installation
 =============
 

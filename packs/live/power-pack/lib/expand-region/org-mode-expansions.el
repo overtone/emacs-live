@@ -47,11 +47,23 @@
   (exchange-point-and-mark)
   (skip-chars-forward er--space-str))
 
+(defun er/mark-org-code-block ()
+  "Marks an org-code-block."
+  (interactive)
+  (let ((case-fold-search t)
+        (re "#\\+begin_\\(\\sw+\\)"))
+    (unless (looking-at re)
+      (search-backward-regexp re))
+    (set-mark (point))
+    (search-forward (concat "#+end_" (match-string 1)))
+    (exchange-point-and-mark)))
+
 (defun er/add-org-mode-expansions ()
   "Adds org-specific expansions for buffers in org-mode"
   (set (make-local-variable 'er/try-expand-list) (append
                                                   er/try-expand-list
                                                   '(org-mark-subtree
+                                                    er/mark-org-code-block
                                                     er/mark-sentence
                                                     er/mark-paragraph))))
 

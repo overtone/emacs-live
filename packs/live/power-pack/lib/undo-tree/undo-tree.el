@@ -828,6 +828,16 @@
       (file-local-copy file-or-buf))))
 
 
+;; `user-error' isn't defined in Emacs < 24.3
+(unless (fboundp 'user-error)
+  (defalias 'user-error 'error)
+  ;; prevent debugger being called on user errors
+  (add-to-list 'debug-ignored-errors "^No further undo information")
+  (add-to-list 'debug-ignored-errors "^No further redo information")
+  (add-to-list 'debug-ignored-errors "^No further redo information for region"))
+
+
+
 
 
 ;;; =====================================================================
@@ -1047,10 +1057,6 @@ in visualizer."
 (defconst undo-tree-visualizer-buffer-name " *undo-tree*")
 (defconst undo-tree-diff-buffer-name "*undo-tree Diff*")
 
-;; prevent debugger being called on "No further redo information"
-(add-to-list 'debug-ignored-errors "^No further redo information")
-(add-to-list 'debug-ignored-errors "^No further redo information for region")
-
 ;; install history-auto-save hooks
 (add-hook 'write-file-functions 'undo-tree-save-history-hook)
 (add-hook 'find-file-hook 'undo-tree-load-history-hook)
@@ -1126,12 +1132,12 @@ in visualizer."
     (define-key map "d" 'undo-tree-visualizer-toggle-diff)
     ;; selection mode
     (define-key map "s" 'undo-tree-visualizer-selection-mode)
-    ;; horizontal scrolling may be needed if the tree wide
+    ;; horizontal scrolling may be needed if the tree is very wide
     (define-key map "," 'undo-tree-visualizer-scroll-left)
     (define-key map "." 'undo-tree-visualizer-scroll-right)
     (define-key map "<" 'undo-tree-visualizer-scroll-left)
     (define-key map ">" 'undo-tree-visualizer-scroll-right)
-    ;; vertical scrolling may be needed if the tree tall
+    ;; vertical scrolling may be needed if the tree is very tall
     (define-key map [next] 'undo-tree-visualizer-scroll-up)
     (define-key map [prior] 'undo-tree-visualizer-scroll-down)
     ;; quit/abort visualizer
@@ -2653,7 +2659,8 @@ mode, just \\[universal-argument] as an argument limits undo to
 changes within the current region."
   (interactive "*P")
   ;; throw error if undo is disabled in buffer
-  (when (eq buffer-undo-list t) (error "No undo information in this buffer"))
+  (when (eq buffer-undo-list t)
+    (user-error "No undo information in this buffer"))
   (undo-tree-undo-1 arg)
   ;; inform user if at branch point
   (when (> (undo-tree-num-branches) 1) (message "Undo branch point!")))
@@ -2680,14 +2687,14 @@ changes within the current region."
     (dotimes (i (or (and (numberp arg) (prefix-numeric-value arg)) 1))
       ;; check if at top of undo tree
       (unless (undo-tree-node-previous (undo-tree-current buffer-undo-tree))
-	(error "No further undo information"))
+	(user-error "No further undo information"))
 
       ;; if region is active, or a non-numeric prefix argument was supplied,
       ;; try to pull out a new branch of changes affecting the region
       (when (and undo-in-region
 		 (not (undo-tree-pull-undo-in-region-branch
 		       (region-beginning) (region-end))))
-	(error "No further undo information for region"))
+	(user-error "No further undo information for region"))
 
       ;; remove any GC'd elements from node's undo list
       (setq current (undo-tree-current buffer-undo-tree))
@@ -2759,7 +2766,8 @@ mode, just \\[universal-argument] as an argument limits redo to
 changes within the current region."
   (interactive "*P")
   ;; throw error if undo is disabled in buffer
-  (when (eq buffer-undo-list t) (error "No undo information in this buffer"))
+  (when (eq buffer-undo-list t)
+    (user-error "No undo information in this buffer"))
   (undo-tree-redo-1 arg)
   ;; inform user if at branch point
   (when (> (undo-tree-num-branches) 1) (message "Undo branch point!")))
@@ -2786,14 +2794,14 @@ changes within the current region."
     (dotimes (i (or (and (numberp arg) (prefix-numeric-value arg)) 1))
       ;; check if at bottom of undo tree
       (when (null (undo-tree-node-next (undo-tree-current buffer-undo-tree)))
-	(error "No further redo information"))
+	(user-error "No further redo information"))
 
       ;; if region is active, or a non-numeric prefix argument was supplied,
       ;; try to pull out a new branch of changes affecting the region
       (when (and redo-in-region
 		 (not (undo-tree-pull-redo-in-region-branch
 		       (region-beginning) (region-end))))
-	(error "No further redo information for region"))
+	(user-error "No further redo information for region"))
 
       ;; get next node (but DON'T advance current node in tree yet, in case
       ;; redoing fails)
@@ -2877,11 +2885,13 @@ using `undo-tree-redo'."
 					   (1- (undo-tree-num-branches)) b)))
 				 ))))))
   ;; throw error if undo is disabled in buffer
-  (when (eq buffer-undo-list t) (error "No undo information in this buffer"))
+  (when (eq buffer-undo-list t)
+    (user-error "No undo information in this buffer"))
   ;; sanity check branch number
-  (when (<= (undo-tree-num-branches) 1) (error "Not at undo branch point"))
+  (when (<= (undo-tree-num-branches) 1)
+    (user-error "Not at undo branch point"))
   (when (or (< branch 0) (> branch (1- (undo-tree-num-branches))))
-    (error "Invalid branch number"))
+    (user-error "Invalid branch number"))
   ;; transfer entries accumulated in `buffer-undo-list' to `buffer-undo-tree'
   (undo-list-transfer-to-tree)
   ;; switch branch
@@ -2931,7 +2941,8 @@ The saved state can be restored using
 Argument is a character, naming the register."
   (interactive "cUndo-tree state to register: ")
   ;; throw error if undo is disabled in buffer
-  (when (eq buffer-undo-list t) (error "No undo information in this buffer"))
+  (when (eq buffer-undo-list t)
+    (user-error "No undo information in this buffer"))
   ;; transfer entries accumulated in `buffer-undo-list' to `buffer-undo-tree'
   (undo-list-transfer-to-tree)
   ;; save current node to REGISTER
@@ -2956,11 +2967,11 @@ Argument is a character, naming the register."
   (let ((data (registerv-data (get-register register))))
     (cond
      ((eq buffer-undo-list t)
-      (error "No undo information in this buffer"))
+      (user-error "No undo information in this buffer"))
      ((not (undo-tree-register-data-p data))
-      (error "Register doesn't contain undo-tree state"))
+      (user-error "Register doesn't contain undo-tree state"))
      ((not (eq (current-buffer) (undo-tree-register-data-buffer data)))
-      (error "Register contains undo-tree state for a different buffer")))
+      (user-error "Register contains undo-tree state for a different buffer")))
     ;; transfer entries accumulated in `buffer-undo-list' to `buffer-undo-tree'
     (undo-list-transfer-to-tree)
     ;; restore buffer state corresponding to saved node
@@ -2996,7 +3007,8 @@ Otherwise, prompt for one.
 If OVERWRITE is non-nil, any existing file will be overwritten
 without asking for confirmation."
   (interactive)
-  (when (eq buffer-undo-list t) (error "No undo information in this buffer"))
+  (when (eq buffer-undo-list t)
+    (user-error "No undo information in this buffer"))
   (undo-list-transfer-to-tree)
   (when (and buffer-undo-tree (not (eq buffer-undo-tree t)))
     (condition-case nil
@@ -3120,7 +3132,8 @@ signaling an error if file is not found."
   (interactive "*")
   (deactivate-mark)
   ;; throw error if undo is disabled in buffer
-  (when (eq buffer-undo-list t) (error "No undo information in this buffer"))
+  (when (eq buffer-undo-list t)
+    (user-error "No undo information in this buffer"))
   ;; transfer entries accumulated in `buffer-undo-list' to `buffer-undo-tree'
   (undo-list-transfer-to-tree)
   ;; add hook to kill visualizer buffer if original buffer is changed
