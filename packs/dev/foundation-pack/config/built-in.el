@@ -40,10 +40,11 @@
       truncate-partial-width-windows nil
       delete-by-moving-to-trash nil
       confirm-nonexistent-file-or-buffer nil
-      query-replace-highlight t)
+      query-replace-highlight t
+      next-error-highlight t
+      next-error-highlight-no-select t)
 
 ;;set all coding systems to utf-8
-(setq utf-translate-cjk-mode nil) ; disable CJK coding/encoding (Chinese/Japanese/Korean characters)
 (set-language-environment 'utf-8)
 (set-default-coding-systems 'utf-8)
 (setq locale-coding-system 'utf-8)
@@ -51,6 +52,8 @@
 (set-keyboard-coding-system 'utf-8)
 (set-selection-coding-system 'utf-8)
 (prefer-coding-system 'utf-8)
+;;disable CJK coding/encoding (Chinese/Japanese/Korean characters)
+(setq utf-translate-cjk-mode nil)
 
 (set-default 'indent-tabs-mode nil)
 (auto-compression-mode t)
