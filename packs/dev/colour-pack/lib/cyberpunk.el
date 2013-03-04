@@ -54,6 +54,7 @@
      (isearch ((t (:background "deep pink" :foreground "black"))))
      (isearch-fail ((t (:background "red4"))))
      (lazy-highlight ((t (:background "yellow" :foreground "black"))))
+     (next-error ((t (:background "deep pink" :foreground "white"))))
      (query-replace ((t (:background "gray10"))))
      (Highline-face ((t (:background "SeaGreen"))))
      (hl-line ((t (:background "gray10"))))
