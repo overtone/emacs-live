@@ -111,6 +111,7 @@
  live-packs-dir    (file-name-as-directory (concat live-root-dir "packs"))
  live-autosaves-dir(file-name-as-directory (concat live-tmp-dir  "autosaves"))
  live-backups-dir  (file-name-as-directory (concat live-tmp-dir  "backups"))
+ live-custom-dir   (file-name-as-directory (concat live-etc-dir  "custom"))
  live-load-pack-dir nil
  live-disable-zone nil)
 
@@ -121,6 +122,7 @@
 (make-directory live-tmp-dir t)
 (make-directory live-autosaves-dir t)
 (make-directory live-backups-dir t)
+(make-directory live-custom-dir t)
 
 ;; Load manifest
 (load-file (concat live-root-dir "manifest.el"))
@@ -209,3 +211,7 @@
 
 (if (not live-disable-zone)
     (add-hook 'term-setup-hook 'zone))
+
+(setq custom-file (concat live-custom-dir "custom-configuration.el"))
+(when (file-exists-p custom-file)
+  (load custom-file))
