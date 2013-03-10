@@ -70,7 +70,11 @@
 
 ;;remove all trailing whitespace and trailing blank lines before
 ;;saving the file
-(add-hook 'before-save-hook 'whitespace-cleanup)
+(defun live-cleanup-whitespace ()
+  (let ((whitespace-style '(trailing empty)) )
+    (whitespace-cleanup)))
+
+(add-hook 'before-save-hook 'live-cleanup-whitespace)
 
 ;; savehist keeps track of some history
 (setq savehist-additional-variables
