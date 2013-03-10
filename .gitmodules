@@ -114,3 +114,6 @@
 [submodule "packs/dev/power-pack/vendor/submodules/emacs-git-gutter"]
 	path = packs/dev/power-pack/vendor/submodules/emacs-git-gutter
 	url = git://github.com/syohex/emacs-git-gutter.git
+[submodule "packs/dev/lang-pack/vendor/submodules/glsl-mode"]
+	path = packs/dev/lang-pack/vendor/submodules/glsl-mode
+	url = git://github.com/jimhourihan/glsl-mode.git
