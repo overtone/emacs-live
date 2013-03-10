@@ -33,6 +33,7 @@
 (global-set-key (kbd "C-c g p") 'git-gutter:previous-diff)
 (global-set-key (kbd "C-c g n") 'git-gutter:next-diff)
 (global-set-key (kbd "C-c g d") 'git-gutter:popup-diff)
+(global-set-key (kbd "C-c g r") 'git-gutter:revert-hunk)
 
 ;;text manipulation shortcuts
 (global-set-key (kbd "C-c t b") 'untabify-buffer)
