@@ -182,7 +182,10 @@
      (git-gutter:added ((t (:foreground "#61CE3C" :background "gray5" ))) )
      (git-gutter:unchanged ((t (:background "grey5" ))) )
 
-
+     (glsl-type-face ((t (:foreground "#4c83ff"))))
+     (glsl-keyword-face ((t (:foreground "#FBDE2D"))))
+     (glsl-variable-name-face ((t (:foreground "grey57"))))
+     (glsl-builtin-face ((t (:foreground "#FF6400"))))
 
      ))
   )
