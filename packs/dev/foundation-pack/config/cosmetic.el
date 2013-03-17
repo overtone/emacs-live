@@ -16,9 +16,20 @@
 ;remove bells
 (setq ring-bell-function 'ignore)
 
-(cond
- ((and (window-system) (eq system-type 'darwin))
-  (add-to-list 'default-frame-alist '(font . "Menlo-12"))))
+;; default darwin font
+(require 'cl)
+
+(defun live-set-default-darwin-font (font-string)
+  (interactive "MNew darwin default font: ")
+  (setq default-frame-alist
+        (remove-if (lambda (x)
+                     (eq 'font (car x)))
+                   default-frame-alist))
+  (cond
+   ((and (window-system) (eq system-type 'darwin))
+    (add-to-list 'default-frame-alist (cons 'font font-string)))))
+
+(live-set-default-darwin-font "Menlo-12")
 
 ;; make fringe smaller
 (if (fboundp 'fringe-mode)
