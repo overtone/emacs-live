@@ -135,7 +135,7 @@ functions and switching buffers.
 
 #### Colour
 
-Colour highlighting in two flavours - cyberpunk and gandalf. User
+Colour highlighting in two flavours - cyberpunk and gandalf. Use
 `color-theme-cyberpunk` and `color-theme-gandalf` to switch between the
 two themes. Currently cyberpunk has seen more love - patch requests
 accepted for appropriate improvements to Gandalf.
