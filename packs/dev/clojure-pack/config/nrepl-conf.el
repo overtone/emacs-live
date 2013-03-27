@@ -26,7 +26,7 @@
               (kbd "}") 'paredit-close-curly)))
 
 (setq nrepl-popup-stacktraces t)
-
+(setq nrepl-popup-stacktraces-in-repl t)
 (add-to-list 'same-window-buffer-names "*nrepl*")
 
 ;;Auto Complete
