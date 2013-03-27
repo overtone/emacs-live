@@ -107,7 +107,7 @@
 (setq
  live-tmp-dir      (file-name-as-directory (concat live-root-dir "tmp"))
  live-etc-dir      (file-name-as-directory (concat live-root-dir "etc"))
- live-pscratch-dir (file-name-as-directory (concat live-etc-dir "pscratch"))
+ live-pscratch-dir (file-name-as-directory (concat live-tmp-dir "pscratch"))
  live-lib-dir      (file-name-as-directory (concat live-root-dir "lib"))
  live-packs-dir    (file-name-as-directory (concat live-root-dir "packs"))
  live-autosaves-dir(file-name-as-directory (concat live-tmp-dir  "autosaves"))
@@ -124,6 +124,7 @@
 (make-directory live-autosaves-dir t)
 (make-directory live-backups-dir t)
 (make-directory live-custom-dir t)
+(make-directory live-pscratch-dir t)
 
 ;; Load manifest
 (load-file (concat live-root-dir "manifest.el"))
