@@ -107,6 +107,7 @@
 (setq
  live-tmp-dir      (file-name-as-directory (concat live-root-dir "tmp"))
  live-etc-dir      (file-name-as-directory (concat live-root-dir "etc"))
+ live-pscratch-dir (file-name-as-directory (concat live-etc-dir "pscratch"))
  live-lib-dir      (file-name-as-directory (concat live-root-dir "lib"))
  live-packs-dir    (file-name-as-directory (concat live-root-dir "packs"))
  live-autosaves-dir(file-name-as-directory (concat live-tmp-dir  "autosaves"))
