@@ -1,5 +1,22 @@
 # Emacs Live Changelog
 
+## 1.0-BETA-22 (Sat 30th March 2013)
+* Update many dependencies
+* Make grep highlights more permanent (rather than just flashing away)
+* Move default location of customisation to separate location
+* Update Gandalf theme
+* add live-recentf-ido-find-file
+* Reduce impact of whitespace fixes on file save - only remove trailing
+  whitespace and empty lines at the start and end of file
+* Update git gutter and tone down colours
+* Add binding for git-gutter:revert-hunk C-c g r
+* Add glsl major mode to lang pack.
+* Allow default font to be specified on Darwin [Roth Michaels]
+* Add license - GPL v3
+* Add live-persistent-scratch-buffer fn for creating unique buffers
+  backed by files
+
+
 ## 1.0-BETA-21 (Sun 3rd March 2013)
 
 * Update many dependencies.
