@@ -65,16 +65,22 @@ current buffer with <kbd>C-c C-,</kbd>. Failing tests and errors will be
 highlighted using overlays. To clear the overlays, use <kbd>C-c k</kbd>.
 
 You can jump between implementation and test files with <kbd>C-c C-t</kbd> if
-your project is laid out in a way that clojure-test-mode expects. Your
-project root should have a `src/` directory containing files that
-correspond to their namespace. It should also have a `test/` directory
-containing files that correspond to their namespace, and the test
-namespaces should mirror the implementation namespaces with the
-addition of "-test" as the suffix to the last segment of the namespace.
+your project is laid out in a way that clojure-test-mode expects. Your project
+root should have a `src/` directory containing files that correspond to their
+namespace. It should also have a `test/` directory containing files that
+correspond to their namespace, and the test namespaces should mirror the
+implementation namespaces with the addition of "-test" as the suffix to the last
+segment of the namespace.
 
-So `my.project.frob` would be found in `src/my/project/frob.clj` and
-its tests would be in `test/my/project/frob_test.clj` in the
-`my.project.frob-test` namespace.
+So `my.project.frob` would be found in `src/my/project/frob.clj` and its tests
+would be in `test/my/project/frob_test.clj` in the `my.project.frob-test`
+namespace.
+
+This behavior can also be overridden by setting `clojure-test-for-fn` and
+`clojure-test-implementation-for-fn` with functions of your choosing.
+`clojure-test-for-fn` takes an implementation namespace and returns the full
+path of the test file.  `clojure-test-implementation-for-fn` takes a test
+namespace and returns the full path for the implementation file.
 
 ## Paredit
 

@@ -1,13 +1,16 @@
 (require 'magit)
 
-(eval-when-compile (require 'cl))
+(eval-when-compile (require 'cl-lib))
 
 (defvar magit-key-mode-key-maps '()
   "This will be filled lazily with proper `define-key' built
   keymaps as they're requested.")
 
-(defvar magit-key-mode-buf-name "*magit-key*"
-  "Name of the buffer.")
+(defvar magit-key-mode-buf-name "*magit-key: %s*"
+  "Format string to create the name of the magit-key buffer.")
+
+(defvar magit-key-mode-last-buffer nil
+  "Store the last magit-key buffer used.")
 
 (defvar magit-key-mode-current-args nil
   "A hash-table of current argument set (which will eventually
@@ -269,7 +272,7 @@ The user is prompted for the key."
     (goto-char (point-min))
     (let* ((exec (get-text-property (point) 'key-group-executor))
            (exec-alist (if exec `((,exec . ,(point))) nil)))
-      (do nil ((eobp) (nreverse exec-alist))
+      (cl-do nil ((eobp) (nreverse exec-alist))
         (when (not (eq exec (get-text-property (point) 'key-group-executor)))
           (setq exec (get-text-property (point) 'key-group-executor))
           (when exec (push (cons exec (point)) exec-alist)))
@@ -313,25 +316,22 @@ Put it in `magit-key-mode-key-maps' for fast lookup."
                                  (interactive)
                                  (magit-key-mode-help ',for-group)))
 
-    (flet ((defkey (k action)
-             (when (and (lookup-key map (car k))
-                        (not (numberp (lookup-key map (car k)))))
-               (message "Warning: overriding binding for `%s' in %S"
-                        (car k) for-group)
-               (ding)
-               (sit-for 2))
-             (define-key map (car k)
-               `(lambda () (interactive) ,action))))
-      (when actions
-        (dolist (k actions)
-          (defkey k `(magit-key-mode-command ',(nth 2 k)))))
-      (when switches
-        (dolist (k switches)
-          (defkey k `(magit-key-mode-add-option ',for-group ,(nth 2 k)))))
-      (when arguments
-        (dolist (k arguments)
-          (defkey k `(magit-key-mode-add-argument
-                      ',for-group ,(nth 2 k) ',(nth 3 k))))))
+    (let ((defkey (lambda (k action)
+                    (when (and (lookup-key map (car k))
+                               (not (numberp (lookup-key map (car k)))))
+                      (message "Warning: overriding binding for `%s' in %S"
+                               (car k) for-group)
+                      (ding)
+                      (sit-for 2))
+                    (define-key map (car k)
+                      `(lambda () (interactive) ,action)))))
+      (dolist (k actions)
+        (funcall defkey k `(magit-key-mode-command ',(nth 2 k))))
+      (dolist (k switches)
+        (funcall defkey k `(magit-key-mode-add-option ',for-group ,(nth 2 k))))
+      (dolist (k arguments)
+        (funcall defkey k `(magit-key-mode-add-argument
+                            ',for-group ,(nth 2 k) ',(nth 3 k)))))
 
     (push (cons for-group map) magit-key-mode-key-maps)
     map))
@@ -369,10 +369,7 @@ command that's eventually invoked.")
 
 (defun magit-key-mode-kill-buffer ()
   (interactive)
-  (kill-buffer magit-key-mode-buf-name))
-
-(defvar magit-log-mode-window-conf nil
-  "Pre-popup window configuration.")
+  (kill-buffer magit-key-mode-last-buffer))
 
 (defun magit-key-mode (for-group &optional original-opts)
   "Mode for magit key selection.
@@ -384,7 +381,9 @@ the key combination highlighted before the description."
   (setq magit-log-mode-window-conf
         (current-window-configuration))
   ;; setup the mode, draw the buffer
-  (let ((buf (get-buffer-create magit-key-mode-buf-name)))
+  (let ((buf (get-buffer-create (format magit-key-mode-buf-name
+                                        (symbol-name for-group)))))
+    (setq magit-key-mode-last-buffer buf)
     (delete-other-windows)
     (split-window-vertically)
     (other-window 1)

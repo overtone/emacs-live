@@ -46,3 +46,34 @@ Feature: cperl-mode expansions
     """
     Namespace::Foo::Bar
     """
+
+  Scenario: Mark one perl subroutine
+    Given I turn on cperl-mode
+    And there is no region selected
+    When I insert:
+    """
+    sub foo {
+      foo_do_something;
+    }
+
+    sub bar {
+       bar_do_something;
+    }
+
+    sub baz {
+       baz_do_something;
+    }
+    """
+    And I place the cursor before "foo_do_something"
+    And I press "C-@"
+    And I press "C-@"
+    And I press "C-@"
+    And I press "C-@"
+    And I press "C-@"
+    Then the region should be:
+    """
+    sub foo {
+      foo_do_something;
+    }
+
+    """

@@ -2,12 +2,10 @@
 
 ## Introduction
 `git-gutter.el` is port of [GitGutter](https://github.com/jisaacks/GitGutter)
-which is a plugin of Sublime Text2.
+which is a plugin of Sublime Text.
 
 
-`git-gutter.el` does not work well with `linum-mode`.
-Please see [git-gutter-fringe](https://github.com/syohex/emacs-git-gutter-fringe)
-which can work with `linum-mode`, if you use `linum-mode`.
+`git-gutter.el` also supports TRAMP so you can use `git-gutter.el` for remote files.
 
 
 ## Screenshot
@@ -18,6 +16,24 @@ which can work with `linum-mode`, if you use `linum-mode`.
 ## Requirements
 
 * Emacs 23 or higher
+* [Git](http://git-scm.com/) 1.7.0 or higher
+
+
+## git-gutter.el vs [git-gutter-fringe.el](https://github.com/syohex/emacs-git-gutter-fringe)
+
+### git-gutter.el
+
+* Work in tty frame
+* Not work with `linum-mode`
+* More configurable
+
+### git-gutter-fringe.el
+
+* Not Work in tty frame
+* Work with `linum-mode`
+* Less configurable
+* Show diff information on right side
+
 
 ## Installation
 
@@ -63,17 +79,24 @@ Toggle git-gutter
 
     M-x git-gutter:toggle
 
- Jump to next diff
+Jump to next hunk(alias `git-gutter:next-diff`)
 
-    M-x git-gutter:next-diff
+    M-x git-gutter:next-hunk
 
- Jump to previous diff
+Jump to previous hunk(alias `git-gutter:previous-diff`)
 
-    M-x git-gutter:previous-diff
+    M-x git-gutter:previous-hunk
 
- Popup diff of current position
+Popup current diff hunk
 
-    M-x git-gutter:popup-diff
+    M-x git-gutter:popup-hunk(alias `git-gutter:popup-diff`)
+
+`git-gutter:next-hunk` and `git-gutter:previous-hunk` update content
+of buffer popuped by `git-gutter:popup-diff` to current hunk.
+
+Revert current hunk
+
+    M-x git-gutter:revert-hunk
 
 
 ## Sample Configuration
@@ -88,11 +111,14 @@ Toggle git-gutter
 (add-hook 'ruby-mode-hook 'git-gutter-mode)
 
 (global-set-key (kbd "C-x C-g") 'git-gutter:toggle)
-(global-set-key (kbd "C-x v =") 'git-gutter:popup-diff)
+(global-set-key (kbd "C-x v =") 'git-gutter:popup-hunk)
 
-;; Jump to next/previous diff
-(global-set-key (kbd "C-x p") 'git-gutter:previous-diff)
-(global-set-key (kbd "C-x n") 'git-gutter:next-diff)
+;; Jump to next/previous hunk
+(global-set-key (kbd "C-x p") 'git-gutter:previous-hunk)
+(global-set-key (kbd "C-x n") 'git-gutter:next-hunk)
+
+;; Revert current hunk
+(global-set-key (kbd "C-x r") 'git-gutter:revert-hunk)
 ````
 
 
@@ -140,6 +166,27 @@ character.
 (setq git-gutter:deleted-sign "☂")
 ````
 
+### If You Feel git-gutter is Slow
+
+`git-gutter.el` updates gutter at hooks below
+
+* `after-save-hook`
+* `after-revert-hook`
+* `window-configuration-change-hook`
+
+`window-configuration-change-hook` is run N times if you show N windows,
+so you may feel git-gutter is slow if you show many windows.
+
+In such case, please remove `window-configuration-change-hook` to update points
+as below and instead you update `M-x git-gutter` manually when needed.
+
+````
+(setq git-gutter:update-hooks '(after-save-hook after-revert-hook))
+````
+
+You can also add other hook points by setting `git-gutter:update-hooks`.
+
+
 ### Show Unchanged Information
 
 ![git-gutter-unchanged](image/git-gutter-unchanged.png)
@@ -154,14 +201,28 @@ Like following.
 
 Default value of `git-gutter:unchanged-sign` is `nil`.
 
-### Always Show Gutter
+### Show a separator column
 
-Always show gutter if `git-gutter:always-show-gutter` is non-nil. (Default is `nil`)
+![git-gutter-separator](image/git-gutter-separator.png)
+
+`git-gutter.el` can display an additional separator character at the right of the changed
+signs. This is mostly useful when running emacs in a console.
 
 ````elisp
-(setq git-gutter:always-show-gutter t)
+(setq git-gutter:separator-sign "|")
+(set-face-foreground 'git-gutter:separator "yellow")
 ````
 
+Default value of `git-gutter:separator-sign` is `nil`.
+
+### Hide gutter if there are no changes
+
+Hide gutter when there are no changes if `git-gutter:hide-gutter` is non-nil.
+(Default is nil)
+
+````elisp
+(setq git-gutter:hide-gutter t)
+````
 
 ### Pass option to 'git diff' command
 
@@ -173,11 +234,17 @@ You can pass `git diff` option to set `git-gutter:diff-option`.
 ````
 
 
+### Run hook
+
+Run hook `git-gutter-mode-on-hook` when `git-gutter-mode` is turn on, and
+run hook `git-gutter-mode-off-hook` when `git-gutter-mode` is turn off.
+
+
 ## See Also
 
 ### [GitGutter](https://github.com/jisaacks/GitGutter)
 
-GitGutter is Sublime text2 plugin.
+GitGutter is Sublime Text plugin.
 
 ### [diff-hl](https://github.com/dgutov/diff-hl)
 

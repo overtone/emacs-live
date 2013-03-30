@@ -54,6 +54,7 @@
      (isearch ((t (:background "deep pink" :foreground "black"))))
      (isearch-fail ((t (:background "red4"))))
      (lazy-highlight ((t (:background "yellow" :foreground "black"))))
+     (next-error ((t (:background "deep pink" :foreground "black"))))
      (query-replace ((t (:background "gray10"))))
      (Highline-face ((t (:background "SeaGreen"))))
      (hl-line ((t (:background "gray10"))))
@@ -77,6 +78,7 @@
 
      (eval-sexp-fu-flash ((t (:background "grey15" :foreground "DeepPink3"))))
      (nrepl-eval-sexp-fu-flash ((t (:background "grey15" :foreground "DeepPink3"))))
+     (nrepl-error-highlight-face ((t (:background "black" :foreground "red" :underline t))))
 
      (ac-completion-face ((t (:foreground "darkgray" :underline t))))
      (ac-candidate-face ((t (:background "gray60" :foreground "black"))))
@@ -175,12 +177,15 @@
      (markdown-inline-code-face ((t (:foreground "#4c83ff"))))
      (markdown-list-face ((t (:foreground "#8B8989"))))
 
-     (git-gutter:modified ((t (:foreground "deep pink" :background "gray10"))) )
-     (git-gutter:deleted ((t (:foreground "gray10" :background "gray10"))) )
-     (git-gutter:added ((t (:foreground "#4c83ff" :background "gray10" ))) )
-     (git-gutter:unchanged ((t (:background "gray10" ))) )
+     (git-gutter:modified ((t (:foreground "#4c83ff" :background "gray5"))) )
+     (git-gutter:deleted ((t (:foreground "gray10" :background "gray5"))) )
+     (git-gutter:added ((t (:foreground "#61CE3C" :background "gray5" ))) )
+     (git-gutter:unchanged ((t (:background "grey5" ))) )
 
-
+     (glsl-type-face ((t (:foreground "#4c83ff"))))
+     (glsl-keyword-face ((t (:foreground "#FBDE2D"))))
+     (glsl-variable-name-face ((t (:foreground "grey57"))))
+     (glsl-builtin-face ((t (:foreground "#FF6400"))))
 
      ))
   )

@@ -32,6 +32,8 @@
 ;;;###autoload
 (require 'eieio)
 
+(require 'gh-profile)
+
 (defgroup gh nil
   "Github API client libraries."
   :group 'applications)
@@ -77,6 +79,14 @@
 (defun gh-read (obj field)
   (cdr (assoc field obj)))
 
+(defun gh-namespaced-key (key)
+  (let ((profile (gh-profile-current-profile)))
+    (concat "github."
+            (if (string= profile gh-profile-default-profile)
+                ""
+              (concat profile "."))
+            key)))
+
 (defun gh-config (key)
   "Returns a GitHub specific value from the global Git config."
   (let ((strip (lambda (string)
@@ -84,13 +94,13 @@
                      (substring string 0 (- (length string) 1)))))
         (git (executable-find "git")))
   (funcall strip (shell-command-to-string
-                  (concat git " config github." key)))))
+                  (concat git " config " (gh-namespaced-key key))))))
 
 (defun gh-set-config (key value)
   "Sets a GitHub specific value to the global Git config."
   (let ((git (executable-find "git")))
     (shell-command-to-string
-     (concat git " config --global github." key " " value))))
+     (concat git " config --global " (gh-namespaced-key key) " " value))))
 
 (provide 'gh-common)
 ;;; gh-common.el ends here

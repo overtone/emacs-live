@@ -128,6 +128,7 @@
   resp)
 
 (defun gh-url-set-response (status req-resp)
+  (set-buffer-multibyte t)
   (destructuring-bind (req resp) req-resp
     (condition-case err
         (progn

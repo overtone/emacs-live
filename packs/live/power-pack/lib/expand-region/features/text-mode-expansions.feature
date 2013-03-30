@@ -91,8 +91,6 @@ Feature: Text-mode expansions
     Here is a sentence.  Here is another.  And one with Dr. Baker.
 
     Another paragraph.  With 2 sentences.
-
-
     """
     # trailing blank lines aren't captured for some reason.  That's
     # why all the C-x ... C-b stuff

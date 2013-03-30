@@ -32,40 +32,46 @@
 ;;;###autoload
 (require 'eieio)
 
+(require 'gh-profile)
 (require 'gh-common)
 
 (defgroup gh-auth nil
   "Github authentication."
   :group 'gh)
 
-(defvar gh-auth-username nil)
-(defvar gh-auth-password nil)
-(defvar gh-auth-oauth-token nil)
+(defvar gh-auth-alist nil)
 
 (defun gh-auth-get-username ()
-  (let ((user (or gh-auth-username
-                  (setq gh-auth-username (gh-config "user")))))
+  (let* ((profile (gh-profile-current-profile))
+         (user (or (plist-get (cdr (assoc profile gh-auth-alist)) :username)
+                   (plist-get (cdr (assoc profile gh-profile-alist)) :username)
+                   (gh-config "user"))))
     (when (not user)
       (setq user (read-string "GitHub username: "))
-      (setq gh-auth-username user)
       (gh-set-config "user" user))
+    (plist-put (cdr (assoc profile gh-auth-alist)) :username user)
     user))
 
-(defun gh-auth-get-password (remember)
-  (let ((pass (or gh-auth-password
-                  (setq gh-auth-password (gh-config "password")))))
+(defun gh-auth-get-password (&optional remember)
+  (let* ((profile (gh-profile-current-profile))
+         (pass (or (plist-get (cdr (assoc profile gh-auth-alist)) :password)
+                   (plist-get (cdr (assoc profile gh-profile-alist)) :password)
+                   (gh-config "password"))))
     (when (not pass)
       (setq pass (read-passwd "GitHub password: "))
       (when remember
-        (setq gh-auth-password pass)
         (gh-set-config "password" pass)))
+    (when remember
+      (plist-put (cdr (assoc profile gh-auth-alist)) :password pass))
     pass))
 
 (declare-function 'gh-oauth-auth-new "gh-oauth")
 
 (defun gh-auth-get-oauth-token ()
-  (let ((token (or gh-auth-oauth-token
-                   (setq gh-auth-oauth-token (gh-config "oauth-token")))))
+  (let* ((profile (gh-profile-current-profile))
+         (token (or (plist-get (cdr (assoc profile gh-auth-alist)) :token)
+                    (plist-get (cdr (assoc profile gh-profile-alist)) :token)
+                    (gh-config "oauth-token"))))
     (when (not token)
       (let* ((api (make-instance 'gh-oauth-api))
              (tok (and (fboundp 'gh-oauth-auth-new)
@@ -73,7 +79,7 @@
                                             '(user repo gist)) :data)
                              :token))))
         (setq token (or tok (read-string "GitHub OAuth token: ")))
-        (setq gh-auth-oauth-token token)
+        (plist-put (cdr (assoc profile gh-auth-alist)) :token token)
         (gh-set-config "oauth-token" token)))
     token))
 

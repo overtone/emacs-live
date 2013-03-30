@@ -225,15 +225,28 @@ With zero ARG, skip the last one and mark next."
       (multiple-cursors-mode 1)
     (multiple-cursors-mode 0)))
 
+(defun mc--select-thing-at-point (thing)
+  (let ((bound (bounds-of-thing-at-point thing)))
+    (when bound
+      (set-mark (car bound))
+      (goto-char (cdr bound))
+      bound)))
+
+(defun mc--select-thing-at-point-or-bark (thing)
+  (unless (or (region-active-p) (mc--select-thing-at-point thing))
+    (error "Mark a region or set cursor on a %s." thing)))
+
 ;;;###autoload
 (defun mc/mark-all-words-like-this ()
   (interactive)
+  (mc--select-thing-at-point-or-bark 'word)
   (let ((mc/enclose-search-term 'words))
     (mc/mark-all-like-this)))
 
 ;;;###autoload
 (defun mc/mark-all-symbols-like-this ()
   (interactive)
+  (mc--select-thing-at-point-or-bark 'symbol)
   (let ((mc/enclose-search-term 'symbols))
     (mc/mark-all-like-this)))
 
@@ -314,7 +327,8 @@ With prefix, it behaves the same as original `mc/mark-all-like-this'"
   (interactive "P")
   (if arg
       (mc/mark-all-like-this)
-    (if (and (mc--no-region-and-in-sgmlish-mode)
+    (if (and (not (use-region-p))
+             (derived-mode-p 'sgml-mode)
              (mc--on-tag-name-p))
         (mc/mark-sgml-tag-pair)
       (let ((before (mc/num-cursors)))
@@ -332,10 +346,6 @@ With prefix, it behaves the same as original `mc/mark-all-like-this'"
             (mc/mark-all-like-this)))
         (when (<= (mc/num-cursors) before)
           (mc/mark-all-like-this))))))
-
-(defun mc--no-region-and-in-sgmlish-mode ()
-  (and (not (use-region-p))
-       (derived-mode-p 'sgml-mode)))
 
 (defun mc--in-defun ()
   (bounds-of-thing-at-point 'defun))
@@ -355,6 +365,7 @@ With prefix, it behaves the same as original `mc/mark-all-like-this'"
 (defun mc/mark-all-words-like-this-in-defun ()
   "Mark all words like this in defun."
   (interactive)
+  (mc--select-thing-at-point-or-bark 'word)
   (if (mc--in-defun)
       (save-restriction
         (widen)
@@ -366,6 +377,7 @@ With prefix, it behaves the same as original `mc/mark-all-like-this'"
 (defun mc/mark-all-symbols-like-this-in-defun ()
   "Mark all symbols like this in defun."
   (interactive)
+  (mc--select-thing-at-point-or-bark 'symbol)
   (if (mc--in-defun)
       (save-restriction
         (widen)

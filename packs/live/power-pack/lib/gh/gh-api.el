@@ -33,6 +33,8 @@
 (require 'eieio)
 
 (require 'json)
+
+(require 'gh-profile)
 (require 'gh-url)
 (require 'gh-auth)
 (require 'gh-cache)
@@ -43,11 +45,17 @@
   "Github API."
   :group 'gh)
 
+(defcustom gh-api-username-filter 'gh-api-enterprise-username-filter
+  "Filter to apply to usernames to build URL components"
+  :type 'function
+  :group 'gh-api)
+
 ;;;###autoload
 (defclass gh-api ()
   ((sync :initarg :sync :initform t)
    (cache :initarg :cache :initform nil)
    (base :initarg :base :type string)
+   (profile :initarg :profile :type string)
    (auth :initarg :auth :initform nil)
    (data-format :initarg :data-format)
    (num-retries :initarg :num-retries :initform 0)
@@ -81,13 +89,16 @@
                                    resource)
   resource)
 
+(defun gh-api-enterprise-username-filter (username)
+  (replace-regexp-in-string (regexp-quote ".") "-" username))
+
 (defmethod gh-api-get-username ((api gh-api))
-  (oref (oref api :auth) :username))
+  (let ((username (oref (oref api :auth) :username)))
+    (funcall gh-api-username-filter username)))
 
 ;;;###autoload
 (defclass gh-api-v3 (gh-api)
-  ((base :initarg :base :initform "https://api.github.com")
-   (data-format :initarg :data-format :initform :json))
+  ((data-format :initarg :data-format :initform :json))
   "Github API v3")
 
 (defcustom gh-api-v3-authenticator 'gh-oauth-authenticator
@@ -97,7 +108,10 @@
   :group 'gh-api)
 
 (defmethod constructor :static ((api gh-api-v3) newname &rest args)
-  (let ((obj (call-next-method)))
+  (let ((obj (call-next-method))
+        (gh-profile-current-profile (gh-profile-current-profile)))
+    (oset obj :profile (gh-profile-current-profile))
+    (oset obj :base (gh-profile-url))
     (gh-api-set-default-auth obj
                              (or (oref obj :auth)
                                  (funcall gh-api-v3-authenticator "auth")))
@@ -156,8 +170,12 @@
 (defmethod gh-api-authenticated-request
   ((api gh-api) transformer method resource &optional data params)
   (let* ((fmt (oref api :data-format))
-         (headers (when (eq fmt :form)
-                    '(("Content-Type" . "application/x-www-form-urlencoded"))))
+         (headers (cond ((eq fmt :form)
+                         '(("Content-Type" .
+                            "application/x-www-form-urlencoded")))
+                        ((eq fmt :json)
+                         '(("Content-Type" .
+                            "application/json")))))
          (cache (oref api :cache))
          (key (and cache
                    (member method (oref cache safe-methods))

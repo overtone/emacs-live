@@ -1,5 +1,61 @@
 Revision history for git-gutter.el
 
+Revision 0.36 2013/03/20 syohex
+   - Implement separator charactor(by sdelafond)
+     It is useful in no-window Emacs
+   - Fix for byte-compiling
+
+Revision 0.35 2013/03/18 syohex
+   [INCOMPATIBLE CHANGE]
+   - Remove git-gutter:always-show-gutter and introduce git-gutter:hide-gutter
+   - Always show gutter if global-git-gutter is enable.
+   - Show message at git-gutter:{next,previous}-hunk if there are no changes.
+
+Revision 0.34 2013/03/17 syohex
+   - Remove unneed hook
+   - Clean up codes
+   - Users can customize update points.
+
+Revision 0.33 2013/03/16 syohex
+   - Fix toggle flag bug
+   - leaf functions are redefined as inline function
+
+Revision 0.32 2013/03/14 syohex
+   - Rename git-gutter:popup-diff to git-gutter:popup-hunk
+     User can use old function name as alias
+
+Revision 0.31 2013/03/11 syohex
+   - Fix git-gutter:always-show-gutter bug
+   - Update unit tests
+
+Revision 0.30 2013/03/11 syohex
+   - Quote the filename for files which include spaces. (Thanks paradoxxxzero)
+
+Revision 0.29 2013/03/11 syohex
+   - Fix for byte-compile
+
+Revision 0.28 2013/03/11 syohex
+   - Fix minor-mode definition(Thanks sabof)
+   - Fix typo in documentation(Thanks f-frhs)
+   - Fix git-gutter:toggle issue that doest not toggle git-gutter-mode
+     (Thanks f-frhs)
+
+Revision 0.27 2013/03/08 syohex
+   - Cleanup code
+
+Revision 0.26 2013/03/07 syohex
+   - Add hook git-gutter-mode-on-hook and git-gutter-off-hook
+
+Revision 0.25 2013/03/07 syohex
+   - [EXPERIMENTAL] Support tramp
+   - fix git-gutter:toggle problem
+   - implement git-gutter:revert-hunk
+   - change name next-diff, previous-diff => next-hunk, previous-hunk
+     Add aliases for compatibility
+
+Revision 0.24 2013/03/03 syohex
+   - Fix bug that works with linum-mode for git-gutter-fringe
+
 Revision 0.23 2013/03/03 syohex
    - Fix for cleanup
 

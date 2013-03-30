@@ -102,7 +102,7 @@ Feature: ruby-mode expansions
     something do
 
       end
-    
+
     """
 
   Scenario: Mark ruby block with using curly brackets
@@ -221,7 +221,7 @@ Feature: ruby-mode expansions
     end
 
     """
-    And I go to line "7"
+    And I go to line "8"
     And I press "C-@"
     And I press "C-@"
     And I press "C-@"

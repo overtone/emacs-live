@@ -29,17 +29,18 @@
 
 (ert-deftest git-gutter:root-directory ()
   "helper function `git-gutter:root-directory'"
-  (let ((expected (expand-file-name default-directory))
-        (got (git-gutter:root-directory)))
-    (should (string= expected got)))
+  (let ((file (buffer-file-name)))
+    (let ((expected (expand-file-name default-directory))
+          (got (git-gutter:root-directory file)))
+      (should (string= expected got)))
 
-  ;; temporary directory maybe be version-controled
-  (let ((default-directory temporary-file-directory))
-    (should (null (git-gutter:root-directory))))
+    ;; temporary directory maybe be version-controled
+    (let ((default-directory temporary-file-directory))
+      (should (null (git-gutter:root-directory file))))
 
-  ;; Files in .git/ directory are not version-controled
-  (let ((default-directory (concat default-directory ".git/")))
-    (should (null (git-gutter:root-directory)))))
+    ;; Files in .git/ directory are not version-controled
+    (let ((default-directory (concat default-directory ".git/")))
+      (should (null (git-gutter:root-directory file))))))
 
 (ert-deftest git-gutter:sign-width ()
   "helper function `git-gutter:sign-width'"
@@ -76,7 +77,7 @@
 (ert-deftest git-gutter:make-diffinfo ()
   "helper function `git-gutter:make-diffinfo'"
   (let ((diffinfo1 (git-gutter:make-diffinfo 'added "diff1" 10 20))
-        (diffinfo2 (git-gutter:make-diffinfo 'deleted "diff2" 5)))
+        (diffinfo2 (git-gutter:make-diffinfo 'deleted "diff2" 5 nil)))
     (loop for (prop . expected) in '((:type . added)
                                      (:start-line . 10) (:end-line . 20))
           do
@@ -92,12 +93,13 @@
   "Should return nil if default-directory does not exist"
 
   ;; In git repository, but here is '.git'
-  (let ((buf (find-file-noselect ".git/config")))
-    (with-current-buffer buf
-      (should (null (git-gutter:in-git-repository-p)))))
+  (let ((file (buffer-file-name)))
+    (let ((buf (find-file-noselect ".git/config")))
+      (with-current-buffer buf
+        (should (null (git-gutter:in-git-repository-p file)))))
 
-  (let ((default-directory (file-name-directory (locate-library "git-gutter"))))
-    (should (git-gutter:in-git-repository-p))))
+    (let ((default-directory (file-name-directory (locate-library "git-gutter"))))
+      (should (git-gutter:in-git-repository-p file)))))
 
 (ert-deftest git-gutter ()
   "Should return nil if buffer does not related with file or file is not existed"
@@ -106,5 +108,55 @@
   (let ((buf (find-file-noselect "not-found")))
     (with-current-buffer buf
       (should (null (git-gutter))))))
+
+(ert-deftest git-gutter:collect-deleted-line ()
+  "Should return lines which start with '-'"
+  (let* ((input (mapconcat 'identity
+                           (list "-apple" "-melon" "+orange")
+                           "\n"))
+         (got (git-gutter:collect-deleted-line input)))
+    (should (equal got '("apple" "melon")))))
+
+(ert-deftest git-gutter:insert-deleted-lines ()
+  "Should insert deleted line"
+  (let ((input (mapconcat 'identity
+                          (list "-apple" "-melon" "+orange")
+                          "\n")))
+    (with-temp-buffer
+      (git-gutter:insert-deleted-lines input)
+      (should (string= (buffer-string)
+                       "apple\nmelon\n")))))
+
+(ert-deftest git-gutter:diff-content ()
+  "Should return diff hunk"
+  (let* ((input "@@-1,1+1,1@@
+foo
+bar
+@@ -2,2 +2,2 @@")
+         (got (with-temp-buffer
+                (insert input)
+                (goto-char (point-min))
+                (goto-char (line-end-position))
+                (git-gutter:diff-content))))
+    (should (string= got "@@-1,1+1,1@@\nfoo\nbar"))))
+
+(ert-deftest git-gutter:diff-command ()
+  "Should return git diff command"
+  (let ((git-gutter:diff-option "--binary"))
+    (let ((got (git-gutter:diff-command "emacs/git.el"))
+          (expected "git --no-pager diff --no-color --no-ext-diff -U0 --binary \"emacs/git.el\""))
+      (should (string= got expected)))))
+
+(ert-deftest git-gutter:set-window-margin ()
+  "Should change window margin"
+  (git-gutter:set-window-margin 4)
+  (let ((got (car (window-margins))))
+    (should (= got 4))))
+
+(ert-deftest git-gutter:file-path ()
+  "Should return file path which is passed to 'git diff'"
+  (let ((expected (buffer-file-name))
+        (got (git-gutter:file-path default-directory (buffer-file-name))))
+    (should (string= got expected))))
 
 ;;; test-git-gutter.el end here

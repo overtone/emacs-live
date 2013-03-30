@@ -6,7 +6,7 @@
 (require 'color-theme)
 
 ;;;###autoload
-(defun color-theme-gandalf()
+(defun color-theme-gandalf ()
   "Gandalf colour theme by Sam Aaron"
   (interactive)
   (color-theme-install
@@ -23,11 +23,11 @@
      (bold-italic ((t (:bold t))))
      (border-glyph ((t (nil))))
      (buffers-tab ((t (:background "white" :foreground "black"))))
-     (font-lock-builtin-face ((t (:foreground "dark blue"))))
-     (font-lock-comment-face ((t (:italic t :foreground "dark green" :italic t))))
+     (font-lock-builtin-face ((t (:foreground "blue" :bold t))))
+     (font-lock-comment-face ((t (:italic t :foreground "white" ))))
      (font-lock-constant-face ((t (:foreground "dark blue"))))
      (font-lock-doc-string-face ((t (:foreground "black"))))
-     (font-lock-function-name-face ((t (:foreground "dark blue" :bold t))))
+     (font-lock-function-name-face ((t (:foreground "deep pink" :bold t))))
      (font-lock-keyword-face ((t (:foreground "black" :bold t))))
      (font-lock-preprocessor-face ((t (:foreground "black"))))
      (font-lock-reference-face ((t (:foreground "dark cyan"))))
@@ -37,12 +37,14 @@
 
      (font-lock-string-face ((t (:foreground "dark green"  :bold t))))
 
+     (window-number-face ((t (:background "deep pink" :foreground "black"))))
+
      (font-lock-type-face ((t (:foreground "blue"))))
-     (font-lock-variable-name-face ((t (:foreground "dark cyan"))))
+     (font-lock-variable-name-face ((t (:foreground "#96CBFE" :bold t))))
      (font-lock-warning-face ((t (:bold t :foreground "black"))))
      (gui-element ((t (:background "grey40" :foreground "#96CBFE"))))
      (region ((t (:background "#758BC6"))))
-     (mode-line ((t (:background "grey50" :foreground "white"))))
+     (mode-line ((t (:background "deep pink" :foreground "white"))))
      (mode-line-inactive ((t (:background "gray50" :foreground "black"))))
      (highlight ((t (:background "grey70"))))
      (isearch ((t (:background "deep pink" :foreground "black"))))
@@ -58,8 +60,6 @@
      (vertical-border ((t (:background "black" :foreground "#333333"))))
      (zmacs-region ((t (:background "snow" :foreground "ble"))))
      (erc-default-face ((t (:foreground "dark green"))))
-
-     ; NICK: add ido, and a bit of minibuffer colour.
      (ido-first-match ((t (:foreground "black" :background "grey70"))))
      (ido-only-match ((t (:foreground "black" :background "grey95"))))
      (ido-subdir ((t (:foreground "white" :background "#758BC6"))))
@@ -75,11 +75,11 @@
      (magit-branch ((t (:foreground "DarkGoldenRod"))))
 
      ;;rainbow-delimiters (
-     (rainbow-delimiters-depth-1-face ((t (:foreground "dark red"))))
-     (rainbow-delimiters-depth-2-face ((t (:foreground "dark green"))))
+     (rainbow-delimiters-depth-1-face ((t (:foreground "gray50"))))
+     (rainbow-delimiters-depth-2-face ((t (:foreground "black"))))
      (rainbow-delimiters-depth-3-face ((t (:foreground "deep pink"))))
-     (rainbow-delimiters-depth-4-face ((t (:foreground "brown"))))
-     (rainbow-delimiters-depth-5-face ((t (:foreground "dark green"))))
+     (rainbow-delimiters-depth-4-face ((t (:foreground "#4c83ff"))))
+     (rainbow-delimiters-depth-5-face ((t (:foreground "light green"))))
      (rainbow-delimiters-depth-6-face ((t (:foreground "dark blue"))))
      (rainbow-delimiters-depth-7-face ((t (:foreground "dark orange"))))
      (rainbow-delimiters-depth-8-face ((t (:foreground "slate blue"))))
@@ -87,9 +87,14 @@
      (rainbow-delimiters-unmatched-face ((t (:foreground "white"))))
 
      (vhl/default-face ((t (:background "grey60"))))
-      (undo-tree-visualizer-active-branch-face ((t (:foreground "deep pink" :background "grey40"))))
+     (undo-tree-visualizer-active-branch-face ((t (:foreground "deep pink" :background "grey40"))))
 
-      (markdown-link-face ((t (:background "#FBDE2D"))))
+     (markdown-link-face ((t (:background "#FBDE2D"))))
+
+     (git-gutter:modified ((t (:foreground "#4c83ff" :background "gray60"))) )
+     (git-gutter:deleted ((t (:foreground "gray10" :background "gray60"))) )
+     (git-gutter:added ((t (:foreground "#61CE3C" :background "gray60" ))) )
+     (git-gutter:unchanged ((t (:background "gray60" ))) )
      )
    ))
 
@@ -110,11 +115,11 @@
  '(ediff-odd-diff-A ((((class color) (background dark)) (:background "dark green"))))
  '(ediff-odd-diff-B ((((class color) (background dark)) (:background "dark red"))))
  '(ediff-even-diff-B ((((class color) (background dark)) (:background "dark red"))))
-; '(ediff-current-diff-B ((((class color)) (:background "white"))))
-; '(ediff-even-diff-A ((((class color)) nil)))
-; '(ediff-even-diff-B ((((class color)) nil)))
-; '(ediff-fine-diff-A ((((class color)) (:background "cyan"))))
-; '(ediff-fine-diff-B ((((class color)) (:background "cyan"))))
-; '(ediff-odd-diff-A ((((class color)) nil)))
-; '(ediff-odd-diff-B ((((class color)) nil)))
+                                        ; '(ediff-current-diff-B ((((class color)) (:background "white"))))
+                                        ; '(ediff-even-diff-A ((((class color)) nil)))
+                                        ; '(ediff-even-diff-B ((((class color)) nil)))
+                                        ; '(ediff-fine-diff-A ((((class color)) (:background "cyan"))))
+                                        ; '(ediff-fine-diff-B ((((class color)) (:background "cyan"))))
+                                        ; '(ediff-odd-diff-A ((((class color)) nil)))
+                                        ; '(ediff-odd-diff-B ((((class color)) nil)))
  )

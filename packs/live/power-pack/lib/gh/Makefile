@@ -1,5 +1,5 @@
 PKGNAME = gh
-VERSION = 0.6.0
+VERSION = 0.7.2
 SNAPDIR = $(PKGNAME)-$(VERSION)
 
 PKGDEF    = $(PKGNAME)-pkg.el
@@ -9,7 +9,7 @@ ALLSOURCE = $(wildcard *.el)
 
 SOURCE  = $(filter-out $(SPECIAL), $(ALLSOURCE))
 TARGET  = $(patsubst %.el,%.elc, $(SOURCE))
-MISC    = README
+README  = README.md
 
 EMACS    = emacs
 SITEFLAG = --no-site-file
@@ -64,7 +64,8 @@ elpa: info
 	rm -fR $(ELPA)/$(SNAPDIR)
 	rm -f $(ELPA)/$(PKGNAME)-$(VERSION).tar
 	mkdir -p $(ELPA)/$(SNAPDIR) && chmod 0755 $(ELPA)/$(SNAPDIR)
-	cp $(SOURCE) $(MISC) $(ELPA)/$(SNAPDIR)
+	cp $(SOURCE) $(ELPA)/$(SNAPDIR)
+	pandoc -f markdown_github -t plain $(README) | tail +3 > $(ELPA)/$(SNAPDIR)/README
 	cp docs/build/texinfo/$(PKGNAME).info $(ELPA)/$(SNAPDIR)
 	sed -e "s/%VERSION%/$(VERSION)/g" < $(PKGDEF) \
 		> $(ELPA)/$(SNAPDIR)/$(PKGDEF)

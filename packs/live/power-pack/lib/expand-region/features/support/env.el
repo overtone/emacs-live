@@ -1,13 +1,9 @@
 (let* ((current-directory (file-name-directory load-file-name))
        (features-directory (expand-file-name ".." current-directory))
        (project-directory (expand-file-name ".." features-directory)))
-  (setq expand-region-root-path project-directory)
-  (setq expand-region-util-path (expand-file-name "util" project-directory)))
+  (setq expand-region-root-path project-directory))
 
 (add-to-list 'load-path expand-region-root-path)
-(add-to-list 'load-path expand-region-util-path)
-(add-to-list 'load-path (expand-file-name "espuds" expand-region-util-path))
-(add-to-list 'load-path (expand-file-name "features/support/vendor/python-el" expand-region-root-path))
 
 (require 'expand-region)
 (require 'espuds)

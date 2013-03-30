@@ -6,7 +6,7 @@
 ;;          Lennart Staflin <lenst@lysator.liu.se>
 ;;          Phil Hagelberg <technomancy@gmail.com>
 ;; URL: http://github.com/technomancy/clojure-mode
-;; Version: 2.0.0
+;; Version: 2.1.0
 ;; Keywords: languages, lisp
 
 ;; This file is not part of GNU Emacs.
@@ -189,7 +189,7 @@
         "load-file" "load-reader" "load-string" "loaded-libs" "locking"
         "long" "long-array" "longs" "loop" "macroexpand"
         "macroexpand-1" "make-array" "make-hierarchy" "map" "map?"
-        "mapcat" "max" "max-key" "memfn" "memoize"
+        "map-indexed" "mapcat" "max" "max-key" "memfn" "memoize"
         "merge" "merge-with" "meta" "method-sig" "methods"
         "min" "min-key" "mod" "name" "namespace"
         "neg?" "newline" "next" "nfirst" "nil?"
@@ -388,7 +388,7 @@ numbers count from the end:
   leiningen.compile -> leiningen.test.compile (uses 1)
   clojure.http.client -> clojure.http.test.client (uses -1)")
 
-(defvar clojure-mode-version "2.0.0"
+(defvar clojure-mode-version "2.1.0"
   "The current version of `clojure-mode'.")
 
 (defun clojure-mode-display-version ()
@@ -913,7 +913,7 @@ This function also returns nil meaning don't specify the indentation."
               ((or (eq method 'defun)
                    (and (null method)
                         (> (length function) 3)
-                        (string-match "\\`\\(?:\\S +/\\)?def\\|with-"
+                        (string-match "\\`\\(?:\\S +/\\)?\\(def\\|with-\\)"
                                       function)))
                (lisp-indent-defform state indent-point))
 
@@ -1279,6 +1279,8 @@ Clojure test file for the given namespace.")
   (put 'clojure-mode-load-command 'safe-local-variable 'stringp)
 
   (add-to-list 'auto-mode-alist '("\\.clj\\'" . clojure-mode))
+  (add-to-list 'auto-mode-alist '("\\.dtm\\'" . clojure-mode))
+  (add-to-list 'auto-mode-alist '("\\.edn\\'" . clojure-mode))
   (add-to-list 'interpreter-mode-alist '("jark" . clojure-mode))
   (add-to-list 'interpreter-mode-alist '("cake" . clojure-mode)))
 

@@ -1,6 +1,6 @@
 ;;; nrepl-tests.el
 
-;; Copyright © 2012 Tim King
+;; Copyright © 2012-2013 Tim King
 
 ;; Author: Tim King
 
@@ -135,6 +135,18 @@
   (let ((nrepl-hide-special-buffers t))
     (should (equal (nrepl-server-buffer-name) " *nrepl-server*"))))
 
+(ert-deftest test-nrepl-extract-error-line ()
+  (let ((st "this context, compiling:(/some/test/file.clj:20) ala bala"))
+    (should (= (nrepl-extract-error-line st) 20)))
+  (let ((st "this context, compiling:(NO_SOURCE_PATH:20) ala bala"))
+    (should (= (nrepl-extract-error-line st) 20))))
+
+(ert-deftest test-nrepl-extract-error-filename ()
+  (let ((st "this context, compiling:(/some/test/file.clj:20) ala bala"))
+    (should (string= (nrepl-extract-error-filename st) "/some/test/file.clj")))
+  (let ((st "this context, compiling:(NO_SOURCE_PATH:20) ala bala"))
+    (should (string= (nrepl-extract-error-filename st) "NO_SOURCE_PATH"))))
+
 (defmacro nrepl-test-with-two-buffers (buffer-names &rest body)
   (lexical-let ((create (lambda (b) (list b `(generate-new-buffer " *temp*")))))
     `(lexical-let (,@(mapcar create buffer-names))
@@ -183,3 +195,46 @@
      (should (equal (append (list (buffer-name b)) connections)
                     (nrepl-connection-buffers)))
      (should (equal (buffer-name b) (nrepl-current-connection-buffer))))))
+
+;;; connection browser
+
+(ert-deftest test-nrepl-connections-buffer ()
+  (with-temp-buffer
+    (lexical-let ((b1 (current-buffer)))
+      (set (make-local-variable 'nrepl-endpoint) '("localhost" 4005))
+      (set (make-local-variable 'nrepl-project-dir) "proj")
+      (with-temp-buffer
+        (lexical-let ((b2 (current-buffer)))
+          (set (make-local-variable 'nrepl-endpoint) '("123.123.123.123" 4006))
+          (let ((nrepl-connection-list
+                 (list (buffer-name b1) (buffer-name b2))))
+            (nrepl-connection-browser)
+            (with-current-buffer "*nrepl-connections*"
+              (should (equal "  Host              Port   Project
+
+* localhost         4005   proj
+  123.123.123.123   4006   \n\n"
+                             (buffer-string)))
+              (goto-char 80)         ; somewhere in the second connection listed
+              (nrepl-connections-make-default)
+              (should (equal (buffer-name b2) (first nrepl-connection-list)))
+              (should (equal "  Host              Port   Project
+
+  localhost         4005   proj
+* 123.123.123.123   4006   \n\n"
+                             (buffer-string)))
+              (goto-char 80)         ; somewhere in the second connection listed
+              (nrepl-connections-close-connection)
+              (should (equal (list (buffer-name b1)) nrepl-connection-list))
+              (should (equal "  Host              Port   Project
+
+* localhost         4005   proj\n\n"
+                             (buffer-string)))
+              (with-temp-buffer
+                (let ((b3 (current-buffer)))
+                  (with-current-buffer b1
+                    (set (make-local-variable 'nrepl-nrepl-buffer) b3))
+                  (with-current-buffer "*nrepl-connections*"
+                    (nrepl-connections-goto-connection)
+                    (should (equal b3 (current-buffer))))))
+              (kill-buffer "*nrepl-connections*"))))))))
