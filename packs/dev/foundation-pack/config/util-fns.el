@@ -63,3 +63,10 @@
   "Predicate fn to determine whether point is at the end of the
    buffer"
   (<= (buffer-size) (point)))
+
+(defun live-indent-defun ()
+  "Indent the current defun."
+  (interactive)
+  (save-excursion
+    (mark-defun)
+    (indent-region (region-beginning) (region-end))))
