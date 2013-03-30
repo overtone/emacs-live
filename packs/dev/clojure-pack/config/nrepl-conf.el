@@ -25,8 +25,8 @@
             (define-key nrepl-mode-map
               (kbd "}") 'paredit-close-curly)))
 
-(setq nrepl-popup-stacktraces t)
-(setq nrepl-popup-stacktraces-in-repl t)
+(setq nrepl-popup-stacktraces nil)
+(setq nrepl-popup-stacktraces-in-repl nil)
 (add-to-list 'same-window-buffer-names "*nrepl*")
 
 ;;Auto Complete
@@ -76,9 +76,7 @@
             (compilation-minor-mode 1))
           ))))
 
-(setq nrepl-err-handler 'live-nrepl-err-handler)
-
-
+;;(setq nrepl-err-handler 'live-nrepl-err-handler)
 
 ;;; Region discovery fix
 (defun nrepl-region-for-expression-at-point ()
