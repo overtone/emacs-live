@@ -187,6 +187,16 @@
      (glsl-variable-name-face ((t (:foreground "grey57"))))
      (glsl-builtin-face ((t (:foreground "#FF6400"))))
 
+     (term-bold ((t (:bold t :weight bold))))
+     (term-color-black ((t (:background "black" :foreground "black"))))
+     (term-color-blue ((t (:background "#4c83ff" :foreground "#4c83ff"))))
+     (term-color-cyan ((t (:background "cyan3" :foreground "cyan3"))))
+     (term-color-green ((t (:background "green3" :foreground "green3"))))
+     (term-color-magenta ((t (:background "magenta3" :foreground "magenta3"))))
+     (term-color-red ((t (:background "red3" :foreground "red3"))))
+     (term-color-white ((t (:background "white" :foreground "white"))))
+     (term-color-yellow ((t (:background "yellow3" :foreground "yellow3"))))
+     (term-underline ((t (:underline t))))
      ))
   )
 
