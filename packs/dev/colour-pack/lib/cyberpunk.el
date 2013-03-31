@@ -189,7 +189,7 @@
 
      (term-bold ((t (:bold t :weight bold))))
      (term-color-black ((t (:background "black" :foreground "black"))))
-     (term-color-blue ((t (:background "slate blue" :foreground "slate blue"))))
+     (term-color-blue ((t (:background "#4c83ff" :foreground "#4c83ff"))))
      (term-color-cyan ((t (:background "cyan3" :foreground "cyan3"))))
      (term-color-green ((t (:background "green3" :foreground "green3"))))
      (term-color-magenta ((t (:background "magenta3" :foreground "magenta3"))))
