@@ -152,6 +152,10 @@
   "Returns a list of absolute directories of all the registered packs"
   (mapcar (lambda (pack-name) (live-pack-dir pack-name)) live-packs))
 
+(defun live-set-custom-file (cfile)
+  "Set the customization file to be loaded at the end fo the boot process."
+  (setq custom-file cfile))
+
 (defun live-byte-recompile-directory-sl (directory &optional arg force follow-symlinks?)
   "Recompile every `.el' file in DIRECTORY that needs recompilation.
 This happens when a `.elc' file exists but is older than the `.el' file.
