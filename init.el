@@ -210,6 +210,7 @@
 (if (not live-disable-zone)
     (add-hook 'term-setup-hook 'zone))
 
-(setq custom-file (concat live-custom-dir "custom-configuration.el"))
+(if (not (boundp 'custom-file))
+    (setq custom-file (concat live-custom-dir "custom-configuration.el")))
 (when (file-exists-p custom-file)
   (load custom-file))
