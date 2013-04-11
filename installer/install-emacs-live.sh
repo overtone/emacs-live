@@ -7,6 +7,7 @@
 # Note:
 # Run at your own risk!
 # As always, you should read code before you run it on your machine
+GIT_ACCOUNT=overtone
 
 # Directory to preserve any Emacs configs found
 old_config=~/emacs-live-old-config
@@ -42,8 +43,8 @@ rm -rf $tmp_dir
 mkdir $tmp_dir
 
 # Download intro and outro text
-$HTTP_CLIENT $tmp_dir/intro.txt https://raw.github.com/overtone/emacs-live/master/installer/intro.txt
-$HTTP_CLIENT $tmp_dir/outro.txt https://raw.github.com/overtone/emacs-live/master/installer/outro.txt
+$HTTP_CLIENT $tmp_dir/intro.txt https://raw.github.com/${GIT_ACCOUNT}/emacs-live/master/installer/intro.txt
+$HTTP_CLIENT $tmp_dir/outro.txt https://raw.github.com/${GIT_ACCOUNT}/emacs-live/master/installer/outro.txt
 
 # Print outro and ask for user confirmation to continue
 echo ""
@@ -59,7 +60,7 @@ function download_tarball {
      echo ""
      echo $(tput setaf 2)"--> Downloading Emacs Live..."$(tput sgr0)
      echo ""
-     $HTTP_CLIENT $tmp_dir/live.zip https://github.com/overtone/emacs-live/zipball/master
+     $HTTP_CLIENT $tmp_dir/live.zip https://github.com/${GIT_ACCOUNT}/emacs-live/zipball/master
 
      # Unzip zipball
      unzip $tmp_dir/live.zip -d $tmp_dir/
@@ -69,7 +70,7 @@ function git_clone {
      echo ""
      echo $(tput setaf 2)"--> Cloning Emacs Live..."$(tput sgr0)
      echo ""
-    git clone https://github.com/overtone/emacs-live.git $tmp_dir/overtone-emacs-live
+    git clone https://github.com/${GIT_ACCOUNT}/emacs-live.git $tmp_dir/${GIT_ACCOUNT}-emacs-live
 }
 
 if [[ $REPLY =~ ^[Yy]$ ]]; then
@@ -154,8 +155,8 @@ To revert back to your old Emacs configs simply:
     fi
 
     mkdir ~/.emacs.d
-    mv $tmp_dir/overtone*/* ~/.emacs.d
-    mv $tmp_dir/overtone*/.* ~/.emacs.d
+    mv $tmp_dir/${GIT_ACCOUNT}*/* ~/.emacs.d
+    mv $tmp_dir/${GIT_ACCOUNT}*/.* ~/.emacs.d
     echo $(tput setaf 4)"Personal Pack"
     echo "-------------"$(tput sgr0)
     echo ""
