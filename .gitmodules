@@ -117,3 +117,6 @@
 [submodule "packs/dev/lang-pack/vendor/submodules/glsl-mode"]
 	path = packs/dev/lang-pack/vendor/submodules/glsl-mode
 	url = git://github.com/jimhourihan/glsl-mode.git
+[submodule "packs/dev/org-pack/vendor/submodules/org-mode"]
+	path = packs/dev/org-pack/vendor/submodules/org-mode
+	url = git://orgmode.org/org-mode.git

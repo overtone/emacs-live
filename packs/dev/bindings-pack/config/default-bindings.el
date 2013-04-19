@@ -112,6 +112,11 @@
 (define-key paredit-mode-map (kbd "M-k")     'live-paredit-backward-kill)
 (define-key paredit-mode-map (kbd "M-\\")    'live-paredit-delete-horizontal-space)
 
+;; org-mode
+(define-key org-mode-map (kbd "C-M-f")    'org-metadown)
+(define-key org-mode-map (kbd "C-M-b")    'org-metaup)
+(define-key org-mode-map (kbd "C-M-_")    'undo-tree-undo)
+
 ;;browse kill ring (visual paste)
 (global-set-key (kbd "M-y") 'browse-kill-ring)
 
@@ -135,6 +140,7 @@
 
 ;;redefine help shortcut
 (global-set-key (kbd "M-h") 'help-command)
+(define-key org-mode-map (kbd "M-h") 'help-command)
 
 ;;allow the deletion of words:
 ;;backward kill word (forward kill word is M-d)

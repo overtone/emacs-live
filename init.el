@@ -137,6 +137,7 @@
                      "lang-pack"
                      "power-pack"
                      "git-pack"
+                     "org-pack"
                      "bindings-pack"))
        (live-dir (file-name-as-directory "live"))
        (dev-dir  (file-name-as-directory "dev")))
