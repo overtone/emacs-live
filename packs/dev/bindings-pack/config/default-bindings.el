@@ -111,11 +111,22 @@
 (define-key paredit-mode-map (kbd "M-d")     'live-paredit-forward-kill-sexp)
 (define-key paredit-mode-map (kbd "M-k")     'live-paredit-backward-kill)
 (define-key paredit-mode-map (kbd "M-\\")    'live-paredit-delete-horizontal-space)
+(define-key paredit-mode-map (kbd "C-M-i")   'paredit-forward-down)
+(define-key paredit-mode-map (kbd "C-M-n")   'paredit-forward-up)
+(define-key paredit-mode-map (kbd "C-M-p")   'paredit-backward-down)
+(define-key paredit-mode-map (kbd "C-M-u")   'paredit-backward-up)
+
+
+(define-key nrepl-interaction-mode-map (kbd "C-M-i")   'paredit-forward-down)
 
 ;; org-mode
 (define-key org-mode-map (kbd "C-M-f")    'org-metadown)
 (define-key org-mode-map (kbd "C-M-b")    'org-metaup)
 (define-key org-mode-map (kbd "C-M-_")    'undo-tree-undo)
+(define-key org-mode-map (kbd "C-M-l")    'org-shiftright)
+(define-key org-mode-map (kbd "C-M-j")    'org-shiftleft)
+(define-key org-mode-map (kbd "C-M-i")    'org-shiftup)
+(define-key org-mode-map (kbd "C-M-k")    'org-shiftdown)
 
 ;;browse kill ring (visual paste)
 (global-set-key (kbd "M-y") 'browse-kill-ring)
