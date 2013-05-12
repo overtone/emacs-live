@@ -70,3 +70,12 @@
   (save-excursion
     (mark-defun)
     (indent-region (region-beginning) (region-end))))
+
+(defun live-delete-and-extract-sexp ()
+  "Delete the sexp and return it."
+  (interactive)
+  (let* ((begin (point)))
+    (forward-sexp)
+    (let* ((result (buffer-substring-no-properties begin (point))))
+      (delete-region begin (point))
+      result)))
