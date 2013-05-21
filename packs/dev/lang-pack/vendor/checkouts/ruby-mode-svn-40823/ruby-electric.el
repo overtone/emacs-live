@@ -120,11 +120,13 @@ strings. Note that you must have Font Lock enabled."
   (define-key ruby-mode-map "[" 'ruby-electric-matching-char)
   (define-key ruby-mode-map "\"" 'ruby-electric-matching-char)
   (define-key ruby-mode-map "\'" 'ruby-electric-matching-char)
+  (define-key ruby-mode-map "`" 'ruby-electric-matching-char)
   (define-key ruby-mode-map "}" 'ruby-electric-closing-char)
   (define-key ruby-mode-map ")" 'ruby-electric-closing-char)
   (define-key ruby-mode-map "]" 'ruby-electric-closing-char)
   (define-key ruby-mode-map "|" 'ruby-electric-bar)
-  (define-key ruby-mode-map "#" 'ruby-electric-hash))
+  (define-key ruby-mode-map "#" 'ruby-electric-hash)
+  (define-key ruby-mode-map (kbd "DEL") 'ruby-electric-delete-backward-char))
 
 (defun ruby-electric-space (arg)
   (interactive "P")
@@ -183,6 +185,11 @@ strings. Note that you must have Font Lock enabled."
   (setq this-original-command 'self-insert-command)
   (setq this-command 'cua-replace-region)
   (cua-replace-region))
+
+(defun ruby-electric-cua-delete-region()
+  (setq this-original-command 'delete-backward-char)
+  (setq this-command 'cua-delete-region)
+  (cua-delete-region))
 
 (defmacro ruby-electric-insert (arg &rest body)
   `(cond ((ruby-electric-cua-replace-region-p)
@@ -248,20 +255,36 @@ strings. Note that you must have Font Lock enabled."
               (insert "{}")
               (backward-char 1))))))
 
+(defmacro ruby-electric-avoid-eob(&rest body)
+  `(if (eobp)
+       (save-excursion
+         (insert "\n")
+         (backward-char)
+         ,@body
+         (prog1
+             (ruby-electric-string-at-point-p)
+           (delete-char 1)))
+     ,@body))
+
 (defun ruby-electric-matching-char(arg)
   (interactive "P")
   (ruby-electric-insert
    arg
-   (cond
-    ((and
-      (eq last-command 'ruby-electric-matching-char)
-      (char-equal last-command-event (following-char))) ;; repeated ' or "
-     (setq this-command 'self-insert-command)
-     (delete-forward-char 1))
-    (t
-     (and (ruby-electric-code-at-point-p)
-          (save-excursion (insert (cdr (assoc last-command-event
-                                              ruby-electric-matching-delimeter-alist)))))))))
+   (let ((closing (cdr (assoc last-command-event
+                              ruby-electric-matching-delimeter-alist))))
+     (cond
+      ((char-equal closing last-command-event)
+       (if (and (not (ruby-electric-string-at-point-p))
+                (ruby-electric-avoid-eob
+                 (redisplay)
+                 (ruby-electric-string-at-point-p)))
+           (save-excursion (insert closing))
+         (and (eq last-command 'ruby-electric-matching-char)
+              (char-equal (following-char) closing) ;; repeated quotes
+              (delete-forward-char 1))
+         (setq this-command 'self-insert-command)))
+      ((ruby-electric-code-at-point-p)
+       (save-excursion (insert closing)))))))
 
 (defun ruby-electric-closing-char(arg)
   (interactive "P")
@@ -296,5 +319,28 @@ strings. Note that you must have Font Lock enabled."
         (save-excursion
           (insert "|")))))
 
+(defun ruby-electric-delete-backward-char(arg)
+  (interactive "P")
+  (if (ruby-electric-cua-replace-region-p)
+      (ruby-electric-cua-delete-region)
+    (cond ((memq last-command '(ruby-electric-matching-char
+                                ruby-electric-bar))
+           (delete-char 1))
+          ((eq last-command 'ruby-electric-curlies)
+           (cond ((eolp)
+                  (cond ((char-equal (preceding-char) ?\s)
+                         (setq this-command last-command))
+                        ((char-equal (preceding-char) ?{)
+                         (and (looking-at "[ \t\n]*}")
+                              (delete-char (- (match-end 0) (match-beginning 0)))))))
+                 ((char-equal (following-char) ?\s)
+                  (setq this-command last-command)
+                  (delete-char 1))
+                 ((char-equal (following-char) ?})
+                  (delete-char 1))))
+          ((eq last-command 'ruby-electric-hash)
+           (and (char-equal (preceding-char) ?{)
+                (delete-char 1))))
+    (delete-char -1)))
 
 (provide 'ruby-electric)
