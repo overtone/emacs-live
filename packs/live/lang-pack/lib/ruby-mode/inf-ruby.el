@@ -1,6 +1,6 @@
 ;;; -*-Emacs-Lisp-*-
 ;;;
-;;;  $Id: inf-ruby.el 30505 2011-01-10 04:51:20Z nobu $
+;;;  $Id: inf-ruby.el 38107 2012-12-01 08:13:04Z nobu $
 ;;;  $Author: nobu $
 ;;;
 ;;; Inferior Ruby Mode - ruby process in a buffer.
@@ -220,9 +220,9 @@ to continue it."
   (use-local-map inferior-ruby-mode-map)
   (setq comint-input-filter (function ruby-input-filter))
   (setq comint-get-old-input (function ruby-get-old-input))
-  (compilation-shell-minor-mode t)
   (make-local-variable 'compilation-error-regexp-alist)
   (setq compilation-error-regexp-alist inferior-ruby-error-regexp-alist)
+  (compilation-shell-minor-mode t)
   (run-hooks 'inferior-ruby-mode-hook))
 
 (defvar inferior-ruby-filter-regexp "\\`\\s *\\S ?\\S ?\\s *\\'"
