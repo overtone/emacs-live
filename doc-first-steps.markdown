@@ -12,31 +12,35 @@ If you're new to Emacs, it's worth taking the time to read the tutorial. You can
 
 Here's a quick list of useful and basic combinations, most are covered by the tutorial but if you're familiar with another editor this may provide you with an early productivity boost:
 
-`C-x C-f` - Open a file
+`M-x` **smex** - Run a command by name (e.g., `M-x emacs-uptime`)
 
-`C-x b` - Switch to an already open file
+`C-g` **keyboard-quit** - Cancel a command or dialog
 
-`C-x C-s` - Save
+`M-h ?` **help-for-help** - Help menu
 
-`C-_` - Undo
+`C-x C-f` **ido-find-file** - Open a file
 
-`C-x u` - Visual Undo!
+`C-x b`**ido-switch-buffer**  - Switch to an already open file
 
-`C-x 2` - Horizontal split
+`C-b` **ibuffer** - Display open buffers
 
-`C-x 3` - Vertical split
+`C-x C-s` **save-buffer* - Save
 
-`C-x o` - Switch to the next split pane
+`C-_` **undo-tree-undo* - Undo
 
-`C-x 0` - Close current split pane
+`C-x u` **undo-tree-visualize** - Visual Undo!
 
-`C-x 1` - Close all other split panes and leave the current
+`C-x 2` **split-window-below** - Horizontal split
 
-`C-g` - Cancel a command or dialog
+`C-x 3` **split-window-right** - Vertical split
 
-`M-x` - Run a command by name (e.g., `M-x emacs-uptime`)
+`C-x o` **win-switch-dispatch** - Switch to the next split pane
 
-`C-x C-c` - Quit Emacs
+`C-x 0` **delete-window** - Close current split pane
+
+`C-x 1` **delete-other-windows** - Close all other split panes and leave the current
+
+`C-x C-c` **save-buffers-kill-terminal** - Quit Emacs
 
 The tutorial covers all these and more, so give it a read through and get hacking!
 
