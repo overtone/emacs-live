@@ -5,7 +5,7 @@ This is a template for your own user (or other purpose) pack.
 ### init.el
 
 Use the file `init.el` for your own configuration elisp. If this starts
-getting unweildy then you might want to break out the config into
+getting unwieldy then you might want to break out the config into
 separate files which you can store in the config directory.
 
 ### config
