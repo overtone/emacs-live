@@ -74,3 +74,25 @@
     (goto-char original-point)))
 
 (define-key clojure-mode-map (kbd "C-:") 'live-toggle-clj-keyword-string)
+
+(defun live-toggle-clj-coll ()
+  "convert the coll at (point) from (x) -> {x} -> [x] -> (x) recur"
+  (interactive)
+  (let* ((original-point (point)))
+    (while (and (> (point) 1)
+                (not (equal "(" (buffer-substring-no-properties (point) (+ 1 (point)))))
+                (not (equal "{" (buffer-substring-no-properties (point) (+ 1 (point)))))
+                (not (equal "[" (buffer-substring-no-properties (point) (+ 1 (point))))))
+      (backward-char))
+    (cond
+     ((equal "(" (buffer-substring-no-properties (point) (+ 1 (point))))
+      (insert "{" (substring (live-delete-and-extract-sexp) 1 -1) "}"))
+     ((equal "{" (buffer-substring-no-properties (point) (+ 1 (point))))
+      (insert "[" (substring (live-delete-and-extract-sexp) 1 -1) "]"))
+     ((equal "[" (buffer-substring-no-properties (point) (+ 1 (point))))
+      (insert "(" (substring (live-delete-and-extract-sexp) 1 -1) ")"))
+     ((equal 1 (point))
+      (message "beginning of file reached, this was probably a mistake.")))
+    (goto-char original-point)))
+
+(define-key clojure-mode-map (kbd "C->") 'live-toggle-clj-coll)
