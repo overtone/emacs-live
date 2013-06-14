@@ -75,7 +75,7 @@
 
 (define-key clojure-mode-map (kbd "C-:") 'live-toggle-clj-keyword-string)
 
-(defun live-toggle-clj-coll ()
+(defun live-cycle-clj-coll ()
   "convert the coll at (point) from (x) -> {x} -> [x] -> (x) recur"
   (interactive)
   (let* ((original-point (point)))
@@ -95,4 +95,4 @@
       (message "beginning of file reached, this was probably a mistake.")))
     (goto-char original-point)))
 
-(define-key clojure-mode-map (kbd "C->") 'live-toggle-clj-coll)
+(define-key clojure-mode-map (kbd "C->") 'live-cycle-clj-coll)
