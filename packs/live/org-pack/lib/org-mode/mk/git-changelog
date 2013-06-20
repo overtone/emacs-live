@@ -1,0 +1,93 @@
+#!/usr/bin/env python
+
+# git-changelog
+#
+# version 2.0, by John Wiegley
+#
+# The purpose of this code is to turn "git log" output into a complete
+# ChangeLog, for projects who wish to begin using a ChangeLog, but haven't
+# been.
+#
+# This version of git-changelog depends on GitPython:
+#   git://gitorious.org/git-python/mainline.git
+
+import time
+import string
+import sys
+import re
+import os
+
+from git import *               # GitPython
+from subprocess import *
+
+repo = Repo(os.getcwd())
+ref  = 'origin/master..'
+path = ''
+
+# Usage: git changelog [COMMITISH] [-- [PATH]]
+
+saw_dashdash = False
+if len(sys.argv) > 1:
+    for arg in sys.argv[1:]:
+        if arg == "--":
+            saw_dashdash = True
+        elif saw_dashdash:
+            path = arg
+        else:
+            ref = arg
+
+for commit in repo.iter_commits(ref, paths=path):
+    hash_id  = commit.sha
+    author   = commit.author
+    date     = commit.committed_date
+    log_text = commit.message.split('\n')[0]
+
+    log_text_remainder = commit.message.split('\n\n')[1:]
+    while len(log_text_remainder) > 0 and not log_text_remainder[0]:
+        log_text_remainder = log_text_remainder[1:]
+    log_text_remainder = string.join(log_text_remainder, '\n\t')
+    if log_text_remainder:
+        log_text_remainder = '\n\t' + log_text_remainder
+
+    diff = commit.diff(commit.parents[0])
+    files = []
+    for f in diff:
+        if not f.a_blob:
+            p = f.b_blob.path
+        elif not f.b_blob:
+            p = f.a_blob.path
+        else:
+            continue
+
+        p2 = re.sub('^' + path + '/', '', p)
+        if p != p2:
+            files.append(p2)
+
+    fp = Popen(["fmt", "-72"], shell = True, stdin = PIPE, stdout = PIPE)
+    if files:
+        fp.stdin.write("\t* %s: %s" % (string.join(files, ",\n\t"), log_text))
+    else:
+        fp.stdin.write("\t* %s" % log_text)
+    fp.stdin.close()
+    log_text = fp.stdout.read()
+    del fp
+
+    print "%s  %s  <%s>\n" % \
+        (time.strftime("%Y-%m-%d", time.gmtime(date)),
+         author.name, author.email)
+
+    if path:
+        log_text = re.sub(' ' + path + '/', ' ', log_text)
+        log_text_remainder = re.sub(' ' + path + '/', ' ', log_text_remainder)
+
+    # If the log_text_remainder already begins with a *, then use that as the
+    # changelog text.
+    if re.match('\s+\* ', log_text_remainder):
+        if log_text_remainder[0] == '\n':
+            print log_text_remainder[1:]
+        else:
+            print log_text_remainder
+    else:
+        print "%s%s" % (log_text, log_text_remainder)
+
+# git-changelog ends here

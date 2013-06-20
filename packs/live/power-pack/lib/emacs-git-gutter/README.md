@@ -21,18 +21,12 @@ which is a plugin of Sublime Text.
 
 ## git-gutter.el vs [git-gutter-fringe.el](https://github.com/syohex/emacs-git-gutter-fringe)
 
-### git-gutter.el
-
-* Work in tty frame
-* Not work with `linum-mode`
-* More configurable
-
-### git-gutter-fringe.el
-
-* Not Work in tty frame
-* Work with `linum-mode`
-* Less configurable
-* Show diff information on right side
+|                      | git-gutter.el | git-gutter-fringe.el |
+|:---------------------|:-------------:|:--------------------:|
+| Work in tty frame    | OK            | NG                   |
+| Work with linum-mode | NG            | OK                   |
+| Show on right side   | NG            | OK                   |
+| More configurable    | OK            | NG                   |
 
 
 ## Installation
@@ -50,58 +44,58 @@ And you can also install it with [el-get](https://github.com/dimitri/el-get).
 If you want to use `git-gutter` for files in git repository.
 You add following s-exp in your configuration file(`~/.emacs.d/init.el` or `~/.emacs`).
 
-````elisp
+```elisp
 (global-git-gutter-mode t)
-````
+```
 
 Other case, you want to use `git-gutter` for some files, you can use `git-gutter-mode`.
 Following example of enabling `git-gutter` for some mode.
 
-````elisp
+```elisp
 (add-hook 'ruby-mode-hook 'git-gutter-mode)
 (add-hook 'python-mode-hook 'git-gutter-mode)
-````
+```
 
 
-## Basic Usage
+## Commands
 
 `git-gutter.el` provides following commands.
 
-Show changes from last commit or Update change information.
-
-    M-x git-gutter
-
-Clear changes
-
-    M-x git-gutter:clear
-
-Toggle git-gutter
-
-    M-x git-gutter:toggle
+#### `git-gutter:next-hunk`
 
 Jump to next hunk(alias `git-gutter:next-diff`)
 
-    M-x git-gutter:next-hunk
+#### `git-gutter:previous-hunk`
 
 Jump to previous hunk(alias `git-gutter:previous-diff`)
 
-    M-x git-gutter:previous-hunk
+#### `git-gutter:popup-hunk`
 
-Popup current diff hunk
-
-    M-x git-gutter:popup-hunk(alias `git-gutter:popup-diff`)
+Popup current diff hunk(alias `git-gutter:popup-diff`)
 
 `git-gutter:next-hunk` and `git-gutter:previous-hunk` update content
 of buffer popuped by `git-gutter:popup-diff` to current hunk.
 
+#### `git-gutter:revert-hunk`
+
 Revert current hunk
 
-    M-x git-gutter:revert-hunk
+#### `git-gutter`
+
+Show changes from last commit or Update change information.
+
+#### `git-gutter:clear`
+
+Clear changes
+
+#### `git-gutter:toggle`
+
+Toggle git-gutter
 
 
 ## Sample Configuration
 
-````elisp
+```elisp
 (require 'git-gutter)
 
 ;; If you enable global minor mode
@@ -119,7 +113,7 @@ Revert current hunk
 
 ;; Revert current hunk
 (global-set-key (kbd "C-x r") 'git-gutter:revert-hunk)
-````
+```
 
 
 ## Customize
@@ -130,7 +124,7 @@ Revert current hunk
 
 You can change the signs and those faces.
 
-````elisp
+```elisp
 (setq git-gutter:modified-sign "  ") ;; two space
 (setq git-gutter:added-sign "++")    ;; multiple character is OK
 (setq git-gutter:deleted-sign "--")
@@ -138,15 +132,15 @@ You can change the signs and those faces.
 (set-face-background 'git-gutter:modified "purple") ;; background color
 (set-face-foreground 'git-gutter:added "green")
 (set-face-foreground 'git-gutter:deleted "red")
-````
+```
 
 You can change minor-mode name in mode-line to set `git-gutter:lighter`.
 Default is " GitGutter"
 
-````elisp
+```elisp
 ;; first character should be a space
 (setq git-gutter:lighter " GG")
-````
+```
 
 
 ### Using full width characters
@@ -159,12 +153,12 @@ But `char-width` does not work for some full-width characters.
 So you should explicitly specify window width, if you use full-width
 character.
 
-```` elisp
+```elisp
 (setq git-gutter:window-width 2)
 (setq git-gutter:modified-sign "☁")
 (setq git-gutter:added-sign "☀")
 (setq git-gutter:deleted-sign "☂")
-````
+```
 
 ### If You Feel git-gutter is Slow
 
@@ -174,18 +168,39 @@ character.
 * `after-revert-hook`
 * `window-configuration-change-hook`
 
-`window-configuration-change-hook` is run N times if you show N windows,
-so you may feel git-gutter is slow if you show many windows.
+`window-configuration-change-hook` is run at buffer updated, window construction
+changed etc. But it's hook is called a lot of times and it makes Emacs slow.
+Additionally it is difficult to control(Update function is called (2 * N)
+times if you show N windows in frame).
 
-In such case, please remove `window-configuration-change-hook` to update points
-as below and instead you update `M-x git-gutter` manually when needed.
+So `git-gutter.el` does not call update function within `git-gutter:update-threshold`
+second(Default is 1 second) at `window-configuration-change-hook`. Please set longer
+time if you feel slow yet. Update function is always called if `git-gutter:update-threshold`
+is nil.
 
-````
+If you even feel Emacs slow, please remove `window-configuration-change-hook` to
+update points as below and instead you update `M-x git-gutter` manually when needed.
+
+```elisp
+(setq git-gutter:update-threshold 2)
+
 (setq git-gutter:update-hooks '(after-save-hook after-revert-hook))
-````
+```
 
 You can also add other hook points by setting `git-gutter:update-hooks`.
 
+### Disabled modes
+
+If you use `global-git-gutter-mode`, you may want some modes to disable
+`git-gutter-mode`. You can make it by setting `git-gutter:disabled-modes`
+to `non-nil`.
+
+```elisp
+;; inactivate git-gutter-mode in asm-mode and image-mode
+(setq git-gutter:disabled-modes '(asm-mode image-mode))
+```
+
+Default is `nil`.
 
 ### Show Unchanged Information
 
@@ -194,10 +209,10 @@ You can also add other hook points by setting `git-gutter:update-hooks`.
 `git-gutter.el` can view unchanged information by setting `git-gutter:unchanged-sign`.
 Like following.
 
-````elisp
+```elisp
 (setq git-gutter:unchanged-sign " ")
 (set-face-background 'git-gutter:unchanged "yellow")
-````
+```
 
 Default value of `git-gutter:unchanged-sign` is `nil`.
 
@@ -208,10 +223,10 @@ Default value of `git-gutter:unchanged-sign` is `nil`.
 `git-gutter.el` can display an additional separator character at the right of the changed
 signs. This is mostly useful when running emacs in a console.
 
-````elisp
+```elisp
 (setq git-gutter:separator-sign "|")
 (set-face-foreground 'git-gutter:separator "yellow")
-````
+```
 
 Default value of `git-gutter:separator-sign` is `nil`.
 
@@ -220,19 +235,27 @@ Default value of `git-gutter:separator-sign` is `nil`.
 Hide gutter when there are no changes if `git-gutter:hide-gutter` is non-nil.
 (Default is nil)
 
-````elisp
+```elisp
 (setq git-gutter:hide-gutter t)
-````
+```
 
 ### Pass option to 'git diff' command
 
 You can pass `git diff` option to set `git-gutter:diff-option`.
 
-````elisp
+```elisp
 ;; ignore all spaces
 (setq git-gutter:diff-option "-w")
-````
+```
 
+### Log/Message Level
+
+```elisp
+;; Don't need log/message.
+(setq git-gutter:verbosity 0)
+```
+
+Default value is 4(`0` is lowest, `4` is highest).
 
 ### Run hook
 

@@ -1,0 +1,36 @@
+#+property: var  foo=1
+#+property: var+ bar=2
+
+#+begin_src emacs-lisp
+  (+ foo bar)
+#+end_src
+
+#+begin_src emacs-lisp
+  (org-entry-get (point) "var" t)
+#+end_src
+
+* overwriting a file-wide property
+  :PROPERTIES:
+  :var:      foo=7
+  :END:
+
+#+begin_src emacs-lisp
+  foo
+#+end_src
+
+#+begin_src emacs-lisp
+  (org-entry-get (point) "var" t)
+#+end_src
+
+* appending to a file-wide property
+  :PROPERTIES:
+  :var+:      baz=3
+  :END:
+
+#+begin_src emacs-lisp
+  (+ foo bar baz)
+#+end_src
+
+#+begin_src emacs-lisp
+  (org-entry-get (point) "var" t)
+#+end_src

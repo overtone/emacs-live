@@ -1,3 +1,25 @@
+v0.7.0
+======
+
+Highlight
+---------
+
+- Introduce popwin-mode.  You can now toggle the mode by `M-x
+  popwin-mode`.
+
+Compatibility
+-------------
+
+- Using `display-buffer-function` is deprecated since GNU Emacs 24.3.
+  You should fix the configuration in `.emacs` like
+  
+        (setq display-buffer-function 'popwin:display-buffer)
+  
+  to
+  
+        (popwin-mode 1)
+  
+
 v0.6.2
 ======
 

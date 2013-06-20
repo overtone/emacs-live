@@ -1,0 +1,14 @@
+#+Title: a collection of examples for export tests
+#+OPTIONS: ^:nil
+
+* stripping commas from within blocks on export
+  :PROPERTIES:
+  :ID:       76d3a083-67fa-4506-a41d-837cc48158b5
+  :END:
+The following commas should not be removed.
+
+#+begin_src r
+  a <- c(1
+         , 2
+         , 3)
+#+end_src

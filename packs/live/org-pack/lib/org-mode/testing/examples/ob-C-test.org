@@ -1,0 +1,44 @@
+#+Title: a collection of examples for ob-C tests
+#+OPTIONS: ^:nil
+* Simple tests
+  :PROPERTIES:
+  :ID:       fa6db330-e960-4ea2-ac67-94bb845b8577
+  :END:
+#+source: simple
+#+begin_src cpp :includes "<iostream>" :results silent
+  std::cout << 42;
+  return 0;
+#+end_src
+
+#+source: integer_var
+#+begin_src cpp :var q=12 :includes "<iostream>" :results silent
+  std::cout << q;
+  return 0;
+#+end_src
+
+#+source: two_var
+#+begin_src cpp :var q=12 :var p=10 :includes "<iostream>" :results silent
+  std::cout << p+q;
+  return 0;
+#+end_src
+
+#+source: string_var
+#+begin_src cpp :var q="word" :includes '(<iostream> <cstring>) :results silent
+  std::cout << q << ' ' << strlen(q);
+  return 0;
+#+end_src
+
+#+source: define
+#+begin_src cpp :defines N 42  :includes "<iostream>" :results silent
+  std::cout << N;
+  return 0;
+#+end_src
+
+* Array
+#+source: array
+#+begin_src cpp :includes "<iostream>" :results vector :results silent
+  for (int i=1; i<3; i++) {
+    std::cout << i << '\n';
+  }
+  return 0;
+#+end_src

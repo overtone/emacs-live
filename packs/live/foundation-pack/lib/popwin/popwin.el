@@ -4,7 +4,7 @@
 
 ;; Author: Tomohiro Matsuyama <tomo@cx4a.org>
 ;; Keywords: convenience
-;; Version: 0.6.2
+;; Version: 0.7.0alpha
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -27,7 +27,7 @@
 ;; To use popwin, just add the following code into your .emacs:
 ;; 
 ;;     (require 'popwin)
-;;     (setq display-buffer-function 'popwin:display-buffer)
+;;     (popwin-mode 1)
 ;; 
 ;; Then try to show some buffer, for example *Help* or
 ;; *Completeions*. Unlike standard behavior, their buffers may be
@@ -61,7 +61,7 @@
 
 (eval-when-compile (require 'cl))
 
-(defconst popwin:version "0.6")
+(defconst popwin:version "0.7.0alpha")
 
 
 
@@ -665,7 +665,15 @@ be closed by `popwin:close-popup-window'."
 
 (defmacro popwin:without-special-displaying (&rest body)
   "Evaluate BODY without special displaying."
-  `(let (display-buffer-function) ,@body))
+  (if (boundp 'display-buffer-alist)
+      `(with-no-warnings
+         (let ((display-buffer-function nil)
+               (display-buffer-alist
+                (remove '(popwin:display-buffer-condition
+                          popwin:display-buffer-action)
+                        display-buffer-alist)))
+           ,@body))
+    `(with-no-warnings (let ((display-buffer-function nil)) ,@body))))
 
 (defcustom popwin:special-display-config
   '(;; Emacs
@@ -825,6 +833,24 @@ special displaying."
       (popwin:original-pop-to-buffer (car popwin:popup-last-config))
     (error "No popup buffer ever")))
 
+(defun* popwin:match-config (buffer)
+  (when (stringp buffer) (setq buffer (get-buffer buffer)))
+  (loop with name = (buffer-name buffer)
+        with mode = (buffer-local-value 'major-mode buffer)
+        for config in popwin:special-display-config
+        for (pattern . keywords) = (popwin:listify config)
+        if (cond ((eq pattern t) t)
+                 ((and (stringp pattern) (plist-get keywords :regexp))
+                  (string-match pattern name))
+                 ((stringp pattern)
+                  (string= pattern name))
+                 ((symbolp pattern)
+                  (eq pattern mode))
+                 ((functionp pattern)
+                  (funcall pattern buffer))
+                 (t (error "Invalid pattern: %s" pattern)))
+        return (cons pattern keywords)))
+
 (defun* popwin:display-buffer-1 (buffer-or-name
                                  &key
                                  default-config-keywords
@@ -839,55 +865,23 @@ value is :create, create a new buffer named BUFFER-OR-NAME. If
 the value is :error, report an error. The default value
 is :create. DEFAULT-CONFIG-KEYWORDS is a property list which
 specifies default values of the config."
-  (loop with buffer = (popwin:get-buffer buffer-or-name if-buffer-not-found)
-        with name = (buffer-name buffer)
-        with mode = (buffer-local-value 'major-mode buffer)
-        with win-width = popwin:popup-window-width
-        with win-height = popwin:popup-window-height
-        with win-position = popwin:popup-window-position
-        with win-noselect
-        with win-dedicated
-        with win-stick
-        with win-tail
-        with found
-        until found
-        for config in (if if-config-not-found
-                          popwin:special-display-config
-                        `(,@popwin:special-display-config t))
-        for (pattern . keywords) = (popwin:listify config) do
-        (destructuring-bind (&key regexp width height position noselect dedicated stick tail)
-            (append keywords default-config-keywords)
-          (let ((matched (cond ((eq pattern t) t)
-                               ((and (stringp pattern) regexp)
-                                (string-match pattern name))
-                               ((stringp pattern)
-                                (string= pattern name))
-                               ((symbolp pattern)
-                                (eq pattern mode))
-                               ((functionp pattern)
-                                (funcall pattern buffer))
-                               (t (error "Invalid pattern: %s" pattern)))))
-            (when matched
-              (setq found t
-                    win-width (or width win-width)
-                    win-height (or height win-height)
-                    win-position (or position win-position)
-                    win-noselect noselect
-                    win-dedicated dedicated
-                    win-stick stick
-                    win-tail tail))))
-        finally return
-        (if (not found)
-            (funcall if-config-not-found buffer)
-          (popwin:popup-buffer buffer
-                               :width win-width
-                               :height win-height
-                               :position win-position
-                               :noselect (or (popwin:minibuffer-window-selected-p)
-                                             win-noselect)
-                               :dedicated win-dedicated
-                               :stick win-stick
-                               :tail win-tail))))
+  (let* ((buffer (popwin:get-buffer buffer-or-name if-buffer-not-found))
+         (pattern-and-keywords (popwin:match-config buffer)))
+    (unless pattern-and-keywords
+      (if if-config-not-found
+          (return-from popwin:display-buffer-1
+            (funcall if-config-not-found buffer))
+        (setq pattern-and-keywords '(t))))
+    (destructuring-bind (&key regexp width height position noselect dedicated stick tail)
+        (append (cdr pattern-and-keywords) default-config-keywords)
+      (popwin:popup-buffer buffer
+                           :width (or width popwin:popup-window-width)
+                           :height (or height popwin:popup-window-height)
+                           :position (or position popwin:popup-window-position)
+                           :noselect (or (popwin:minibuffer-window-selected-p) noselect)
+                           :dedicated dedicated
+                           :stick stick
+                           :tail tail))))
 
 ;;;###autoload
 (defun popwin:display-buffer (buffer-or-name &optional not-this-window)
@@ -998,6 +992,32 @@ original window configuration."
   "Display *Messages* buffer in a popup window."
   (interactive)
   (popwin:popup-buffer-tail "*Messages*"))
+
+
+
+;;; Minor Mode
+
+(defun popwin:display-buffer-condition (buffer action)
+  (and (popwin:match-config buffer) t))
+
+(defun popwin:display-buffer-action (buffer alist)
+  (let ((not-this-window (plist-get 'inhibit-same-window alist)))
+    (popwin:display-buffer buffer not-this-window)))
+
+(define-minor-mode popwin-mode
+  ""
+  :init-value nil
+  :global t
+  (if (boundp 'display-buffer-alist)
+      (let ((pair '(popwin:display-buffer-condition popwin:display-buffer-action)))
+        (if popwin-mode
+          (push pair display-buffer-alist)
+          (setq display-buffer-alist (delete pair display-buffer-alist))))
+    (with-no-warnings
+      (unless (or (null display-buffer-function)
+                  (eq display-buffer-function 'popwin:display-buffer))
+        (warn "Overwriting display-buffer-function variable to enable/disable popwin-mode"))
+      (setq display-buffer-function (if popwin-mode 'popwin:display-buffer nil)))))
 
 
 

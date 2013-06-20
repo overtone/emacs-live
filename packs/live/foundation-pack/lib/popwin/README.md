@@ -42,7 +42,7 @@ Install `popwin.el` into your `load-path` directory. If you have
 And then add the following code into your `.emacs`:
 
     (require 'popwin)
-    (setq display-buffer-function 'popwin:display-buffer)
+    (popwin-mode 1)
 
 popwin is tested under GNU Emacs 22 or later.
 

@@ -1,7 +1,8 @@
 (require 'popwin)
 (require 'ert)
 
-(setq display-buffer-function 'popwin:display-buffer)
+;(setq display-buffer-function 'popwin:display-buffer)
+(popwin-mode 1)
 (setq popwin:popup-window-position 'bottom)
 
 (defun popwin-test:front-buffer-p (buffer)
