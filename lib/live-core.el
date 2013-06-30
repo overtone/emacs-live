@@ -1,6 +1,6 @@
 (require 'cl)
 
-(defvar live-current-pack-dir nil "The directory of the pack bein currently loaded")
+(defvar live-current-pack-dir nil "The directory of the pack being currently loaded")
 (defvar live-current-pack-version nil "The version string of the pack being currently loaded")
 (defvar live-current-pack-name nil "The name of the pack being currently loaded")
 (defvar live-current-pack-description nil "The description of the pack being currently loaded")
