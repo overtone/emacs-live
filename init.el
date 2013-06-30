@@ -101,8 +101,12 @@
 ;; Store live base dirs, but respect user's choice of `live-root-dir'
 ;; when provided.
 (setq live-root-dir (if (boundp 'live-root-dir)
-                        (file-name-as-directory live-root-dir)
-                      user-emacs-directory))
+                          (file-name-as-directory live-root-dir)
+                        (if (file-exists-p (expand-file-name "manifest.el" user-emacs-directory))
+                            user-emacs-directory)
+                        (file-name-directory (or
+                                              load-file-name
+                                              buffer-file-name))))
 
 (setq
  live-tmp-dir      (file-name-as-directory (concat live-root-dir "tmp"))
