@@ -61,6 +61,7 @@
 (require 'inf-lisp)
 
 (require 'imenu)
+(require 'easymenu)
 
 (declare-function clojure-test-jump-to-implementation  "clojure-test-mode.el")
 
@@ -303,8 +304,10 @@
       ("\\<[a-z]+\\.[a-zA-Z0-9._]*[A-Z]+[a-zA-Z0-9/.$]*\\>" 0 font-lock-preprocessor-face)
 
       ;; fooBar
-      ("[a-z]*[A-Z]+[a-z][a-zA-Z0-9$]*\\>" 0 font-lock-preprocessor-face)))
+      ("[a-z]*[A-Z]+[a-z][a-zA-Z0-9$]*\\>" 0 font-lock-preprocessor-face)
 
+      (clojure-mode-font-lock-regexp-groups
+       (1 'font-lock-regexp-grouping-construct prepend))))
   "Default expressions to highlight in Clojure mode.")
 
 (defgroup clojure-mode nil
@@ -355,6 +358,20 @@ Clojure to load that file."
     (define-key map (kbd "C-c M-q") 'clojure-fill-docstring)
     map)
   "Keymap for Clojure mode. Inherits from `lisp-mode-shared-map'.")
+
+(easy-menu-define clojure-mode-menu clojure-mode-map
+  "Menu for Clojure mode."
+  '("Clojure"
+    ["Eval Function Definition" lisp-eval-defun]
+    ["Eval Last Sexp" lisp-eval-last-sexp]
+    ["Eval Region" lisp-eval-region]
+    "--"
+    ["Run Inferior Lisp" clojure-display-inferior-lisp-buffer]
+    ["Display Inferior Lisp Buffer" clojure-display-inferior-lisp-buffer]
+    ["Load File" clojure-load-file]
+    "--"
+    ["Fill Docstring" clojure-fill-docstring]
+    ["Jump Between Test and Code" clojure-jump-between-tests-and-code]))
 
 (defvar clojure-mode-syntax-table
   (let ((table (copy-syntax-table emacs-lisp-mode-syntax-table)))
@@ -534,6 +551,38 @@ elements of a def* forms."
             (setq font-lock-end def-end
                   changed t)))))
     changed))
+
+(defun clojure-mode-font-lock-regexp-groups (bound)
+  "A function run by font-lock to highlight grouping constructs
+in regular expression."
+  (catch 'found
+    (while (re-search-forward (concat
+                               ;; A group may start using several alternatives:
+                               "\\(\\(?:"
+                               ;; 1. (? special groups
+                               "(\\?\\(?:"
+                               ;; a) non-capturing group (?:X)
+                               ;; b) independent non-capturing group (?>X)
+                               ;; c) zero-width positive lookahead (?=X)
+                               ;; d) zero-width negative lookahead (?!X)
+                               "[:=!>]\\|"
+                               ;; e) zero-width positive lookbehind (?<=X)
+                               ;; f) zero-width negative lookbehind (?<!X)
+                               "<[=!]\\|"
+                               ;; g) named capturing group (?<name>X)
+                               "<[[:alnum:]]+>"
+                               "\\)\\|" ;; end of special groups
+                               ;; 2. normal capturing groups (
+                               ;; 3. we also highlight alternative
+                               ;; separarators |, and closing parens )
+                               "[|()]"
+                               "\\)\\)") bound t)
+      (let ((face (get-text-property (1- (point)) 'face)))
+        (when (and (or (and (listp face)
+                            (memq 'font-lock-string-face face))
+                       (eq 'font-lock-string-face face))
+                   (clojure-string-start t))
+          (throw 'found t))))))
 
 (defun clojure-find-block-comment-start (limit)
   "Search for (comment...) or #_ style block comments and put
@@ -1064,6 +1113,7 @@ use (put-clojure-indent 'some-symbol 'defun)."
   ;; clojure.test
   (testing 1)
   (deftest 'defun)
+  (are 1)
   (use-fixtures 'defun))
 
 
@@ -1074,14 +1124,23 @@ use (put-clojure-indent 'some-symbol 'defun)."
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun clojure-string-start ()
-  "Return the position of the \" that begins the string at point."
-  (save-excursion
-    (save-match-data
-      ;; Find a quote that appears immediately after whitespace,
-      ;; beginning of line, or an open paren, brace, or bracket
-      (re-search-backward "\\(\\s-\\|^\\|(\\|\\[\\|{\\)\\(\"\\)")
-      (match-beginning 2))))
+(defun clojure-string-start (&optional regex)
+  "Return the position of the \" that begins the string at point.
+If REGEX is non-nil, return the position of the # that begins
+the regex at point.  If point is not inside a string or regex,
+return nil."
+  (when (nth 3 (syntax-ppss)) ;; Are we really in a string?
+    (save-excursion
+      (save-match-data
+        ;; Find a quote that appears immediately after whitespace,
+        ;; beginning of line, hash, or an open paren, brace, or bracket
+        (re-search-backward "\\(\\s-\\|^\\|#\\|(\\|\\[\\|{\\)\\(\"\\)")
+        (let ((beg (match-beginning 2)))
+          (when beg
+            (if regex
+                (and (char-equal ?# (char-before beg)) (1- beg))
+              (when (not (char-equal ?# (char-before beg)))
+                beg))))))))
 
 (defun clojure-char-at-point ()
   "Return the char at point or nil if at buffer end."
@@ -1279,6 +1338,7 @@ Clojure test file for the given namespace.")
   (put 'clojure-mode-load-command 'safe-local-variable 'stringp)
 
   (add-to-list 'auto-mode-alist '("\\.clj\\'" . clojure-mode))
+  (add-to-list 'auto-mode-alist '("\\.cljs\\'" . clojure-mode))
   (add-to-list 'auto-mode-alist '("\\.dtm\\'" . clojure-mode))
   (add-to-list 'auto-mode-alist '("\\.edn\\'" . clojure-mode))
   (add-to-list 'interpreter-mode-alist '("jark" . clojure-mode))

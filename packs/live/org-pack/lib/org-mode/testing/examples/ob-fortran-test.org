@@ -1,0 +1,86 @@
+#+Title: a collection of examples for ob-fortran tests
+#+OPTIONS: ^:nil
+
+* simple programs
+  :PROPERTIES:
+  :ID:       459384e8-1797-4f11-867e-dde0473ea7cc
+  :END:
+#+name: hello
+#+begin_src fortran :results silent
+print *, 'Hello world'
+#+end_src
+
+#+name: fortran_parameter
+#+begin_src fortran :results silent
+integer, parameter :: i = 10
+write (*, '(i2)') i
+#+end_src
+
+* variable resolution
+  :PROPERTIES:
+  :ID:       d8d1dfd3-5f0c-48fe-b55d-777997e02242
+  :END:
+#+begin_src fortran :var N = 15 :results silent
+write (*, '(i2)') N
+#+end_src
+
+Define for preprocessed fortran
+#+begin_src fortran :defines N 42 :results silent
+implicit none
+write (*, '(i2)') N
+#+end_src
+
+#+begin_src fortran :var s="word" :results silent
+write (*, '(a4)') s
+#+end_src
+* arrays
+  :PROPERTIES:
+  :ID:       c28569d9-04ce-4cad-ab81-1ea29f691465
+  :END:
+Real array as input
+#+begin_src fortran :var s='(1.0 2.0 3.0) :results silent
+write (*, '(3f5.2)'), s
+#+end_src
+
+#+tblname: test_tbl
+| 1.0 |
+| 2.0 |
+
+#+begin_src fortran :var s=test_tbl :results silent
+write (*, '(2f5.2)'), s
+#+end_src
+
+* failing
+  :PROPERTIES:
+  :ID:       891ead4a-f87a-473c-9ae0-1cf348bcd04f
+  :END:
+Should fail (TODO: add input variables for the case with explicit
+program statement)
+#+begin_src fortran :var s="word" :results silent
+program ex
+print *, "output of ex program"
+end program ex
+#+end_src
+
+Fails to compile (TODO: error check in ob-fortran.el)
+#+begin_src fortran :var s='(1 ()) :results silent
+print *, s
+#+end_src
+
+Should fail to compile with gfortran
+#+begin_src fortran :flags --std=f95 --pedantic-error :results silent
+program ex
+integer*8 :: i
+end program ex
+#+end_src
+
+* programs input parameters
+  :PROPERTIES:
+  :ID:       2d5330ea-9934-4737-9ed6-e1d3dae2dfa4
+  :END:
+Pass parameters to the program
+#+begin_src fortran :cmdline "23" :results silent
+character(len=255) :: cmd
+call get_command_argument(1, cmd)
+write (*,*) trim(cmd)
+#+end_src

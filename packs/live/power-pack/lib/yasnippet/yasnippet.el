@@ -110,9 +110,9 @@
 ;;           are to be displayed, or all the tables for all major
 ;;           modes.
 ;;
-;;   The `dropdown-list.el' extension is bundled with YASnippet, you
-;;   can optionally use it the preferred "prompting method", putting in
-;;   your .emacs file, for example:
+;;   If you have `dropdown-list' installed, you can optionally use it
+;;   as the preferred "prompting method", putting in your .emacs file,
+;;   for example:
 ;;
 ;;       (require 'dropdown-list)
 ;;       (setq yas-prompt-functions '(yas-dropdown-prompt
@@ -660,6 +660,11 @@ There might be additional parenting information stored in the
 `derived-mode-parent' property of some mode symbols, but that is
 not recorded here.")
 
+(defvar yas--ancestors (make-hash-table)
+  "A hash table of mode symbols do lists of all parent mode symbols.
+
+A cache managed by `yas--all-parents'")
+
 (defvar yas--direct-keymaps (list)
   "Keymap alist supporting direct snippet keybindings.
 
@@ -1151,9 +1156,21 @@ conditions to filter out potential expansions."
 
 (defun yas--all-parents (mode)
   "Returns a list of all parent modes of MODE."
-  (let ((parents (gethash mode yas--parents)))
-    (append parents
-            (mapcan #'yas--all-parents parents))))
+  (or (gethash mode yas--ancestors)
+      (let ((seen '()))
+        (labels ((yas--all-parents-1
+                  (m)
+                  (cond ((memq m seen)
+                         (yas--message 1
+                                       "Cyclic parenthood: mode %s has already seen as a parent of mode %s"
+                                       m mode)
+                         nil)
+                        (t
+                         (let* ((parents (gethash m yas--parents)))
+                           (setq seen (append seen parents))
+                           (append parents (mapcan #'yas--all-parents-1 parents)))))))
+          (puthash mode (yas--all-parents-1 mode)
+                   yas--ancestors)))))
 
 (defun yas--table-templates (table)
   (when table
@@ -1606,7 +1623,7 @@ Optional PROMPT sets the prompt to use."
 		 ido-mode))
     (yas-completing-prompt prompt choices display-fn #'ido-completing-read)))
 
-(eval-when-compile (require 'dropdown-list nil t))
+(declare-function dropdown-list "dropdown-list")
 (defun yas-dropdown-prompt (prompt choices &optional display-fn)
   (when (featurep 'dropdown-list)
     (let (formatted-choices
@@ -1866,6 +1883,7 @@ loading."
       ;;
       (setq yas--tables (make-hash-table))
       (setq yas--parents (make-hash-table))
+      (setq yas--ancestors (make-hash-table))
 
       ;; Before killing `yas--menu-table' use its keys to cleanup the
       ;; mode menu parts of `yas--minor-mode-menu' (thus also cleaning
@@ -2531,7 +2549,7 @@ neither do the elements of PARENTS."
                                     (buffer-substring-no-properties (point-min)
                                                                     (point-max))))))))
     (when major-mode-sym
-      (cons major-mode-sym parents))))
+      (cons major-mode-sym (remove major-mode-sym parents)))))
 
 (defvar yas--editing-template nil
   "Supporting variable for `yas-load-snippet-buffer' and `yas--visit-snippet'.")

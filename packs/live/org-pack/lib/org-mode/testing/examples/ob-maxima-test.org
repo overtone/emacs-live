@@ -1,0 +1,90 @@
+#+Title: a collection of examples for ob-maxima tests
+#+OPTIONS: ^:nil
+
+* Simple tests
+  :PROPERTIES:
+  :ID:       b5842ed4-8e8b-4b18-a1c9-cef006b6a6c8
+  :END:
+#+begin_src maxima :var s=4 :results silent
+print(s);
+#+end_src
+
+Pass a string
+#+begin_src maxima :var fun="sin(x)" :var q=2 :results silent
+print(diff(fun, x, q))$
+#+end_src
+
+* Graphic output
+Graphic output
+#+begin_src maxima  :var a=0.5 :results graphics :file maxima-test-sin.png
+plot2d(sin(a*x), [x, 0, 2*%pi])$
+#+end_src
+
+#+begin_src maxima  :results graphics :file maxima-test-3d.png
+plot3d (2^(-u^2 + v^2), [u, -3, 3], [v, -2, 2])$
+#+end_src
+* Output to a file
+Output to a file
+#+begin_src maxima :file maxima-test-ouput.out
+for i:1 thru 10 do print(i)$
+#+end_src
+* List input
+  :PROPERTIES:
+  :ID:       b5561c6a-73cd-453a-ba5e-62ad84844de6
+  :END:
+Simple list as an input
+#+begin_src maxima :var a=(list 1 2 3) :results silent :results verbatim
+print(a)$
+#+end_src
+
+#+begin_src maxima :var a=(list 1 (list 1 2) 3) :results silent :results verbatim
+print(a+1);
+#+end_src
+
+* Table input
+  :PROPERTIES:
+  :ID:       400ee228-6b12-44fd-8097-7986f0f0db43
+  :END:
+#+tblname: test_tbl_col
+| 1.0 |
+| 2.0 |
+
+#+tblname: test_tbl_row
+| 1.0 | 2.0 |
+
+#+begin_src maxima :var s=test_tbl_col :results silent :results verbatim
+print(s+1.0);
+#+end_src
+
+#+begin_src maxima :var s=test_tbl_row :results silent :results verbatim
+print(s+1.0);
+#+end_src
+
+Matrix
+#+tblname: test_tbl_mtr
+| 1.0 | 1.0 |
+
+#+begin_src maxima :var s=test_tbl_mtr :results silent :results verbatim
+ms: apply(matrix, s);
+print(ms);
+#+end_src
+
+* Construct a table from the output
+  :PROPERTIES:
+  :ID:       cc158527-b867-4b1d-8ae0-b8c713a90fd7
+  :END:
+#+begin_src maxima :var s=test_tbl_mtr :results silent
+m: genmatrix (lambda([i,j], i+j-1), 3, 3)$
+write_data(m, "/dev/stdout")$
+#+end_src
+
+* Latex output
+#+begin_src maxima  :exports both :results latex :results verbatim
+assume(x>0);
+tex(ratsimp(diff(%e^(a*x), x)));
+#+end_src
+
+#+results:
+#+BEGIN_LaTeX
+$$a\,e^{a\,x}$$
+#+END_LaTeX

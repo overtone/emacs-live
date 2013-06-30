@@ -1,0 +1,664 @@
+#!/usr/bin/env python
+#
+# Patchwork command line client
+# Copyright (C) 2008, 2013 Nate Case <ncase@xes-inc.com>
+#
+# This file is part of the Patchwork package.
+#
+# Patchwork is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# Patchwork is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Patchwork; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+import os
+import sys
+import xmlrpclib
+import getopt
+import string
+import tempfile
+import subprocess
+import base64
+import ConfigParser
+import datetime
+import smtplib
+import urllib
+import re
+
+from email.mime.text import MIMEText
+
+notify_on_state_change = {
+    'accepted':          'emacs-orgmode@gnu.org',
+    'rejected':          'emacs-orgmode@gnu.org',
+    'changes requested': 'emacs-orgmode@gnu.org',
+    'rfc':               'emacs-orgmode@gnu.org'
+}
+
+# Default Patchwork remote XML-RPC server URL
+# This script will check the PW_XMLRPC_URL environment variable
+# for the URL to access.  If that is unspecified, it will fallback to
+# the hardcoded default value specified here.
+DEFAULT_URL = "http://patchwork.newartisans.com/xmlrpc/"
+CONFIG_FILES = [os.path.expanduser('~/.pwclientrc')]
+
+class Filter:
+    """Filter for selecting patches."""
+    def __init__(self):
+        # These fields refer to specific objects, so they are special
+        # because we have to resolve them to IDs before passing the
+        # filter to the server
+        self.state = ""
+        self.project = ""
+
+        # The dictionary that gets passed to via XML-RPC
+        self.d = {}
+
+    def add(self, field, value):
+        if field == 'state':
+            self.state = value
+        elif field == 'project':
+            self.project = value
+        else:
+            # OK to add directly
+            self.d[field] = value
+
+    def resolve_ids(self, rpc):
+        """Resolve State, Project, and Person IDs based on filter strings."""
+        if self.state != "":
+            id = state_id_by_name(rpc, self.state)
+            if id == 0:
+                sys.stderr.write("Note: No State found matching %s*, " \
+                                 "ignoring filter\n" % self.state)
+            else:
+                self.d['state_id'] = id
+
+        if self.project != "":
+            id = project_id_by_name(rpc, self.project)
+            if id == 0:
+                sys.stderr.write("Note: No Project found matching %s, " \
+                                 "ignoring filter\n" % self.project)
+            else:
+                self.d['project_id'] = id
+
+    def __str__(self):
+        """Return human-readable description of the filter."""
+        return str(self.d)
+
+class BasicHTTPAuthTransport(xmlrpclib.SafeTransport):
+
+    def __init__(self, username = None, password = None, use_https = False):
+        self.username = username
+        self.password = password
+        self.use_https = use_https
+        xmlrpclib.SafeTransport.__init__(self)
+
+    def authenticated(self):
+        return self.username != None and self.password != None
+
+    def send_host(self, connection, host):
+        xmlrpclib.Transport.send_host(self, connection, host)
+        if not self.authenticated():
+            return
+        credentials = '%s:%s' % (self.username, self.password)
+        auth = 'Basic ' + base64.encodestring(credentials).strip()
+        connection.putheader('Authorization', auth)
+
+    def make_connection(self, host):
+        if self.use_https:
+            fn = xmlrpclib.SafeTransport.make_connection
+        else:
+            fn = xmlrpclib.Transport.make_connection
+        return fn(self, host)
+
+def usage():
+    sys.stderr.write("Usage: %s <action> [options]\n\n" % \
+                        (os.path.basename(sys.argv[0])))
+    sys.stderr.write("Where <action> is one of:\n")
+    sys.stderr.write(
+"""        apply <ID>    : Apply a patch (in the current dir, using -p1)
+        get <ID>      : Download a patch and save it locally
+        projects      : List all projects
+        states        : Show list of potential patch states
+        list [str]    : List patches, using the optional filters specified
+                        below and an optional substring to search for patches
+                        by name
+        search [str]  : Same as 'list'
+        view <ID>     : View a patch
+        show <ID>     : Same as view
+        update [-s state] [-c commit-ref] [-m email-comment] <ID>
+                      : Update patch, send mail to mailing list if appropriate
+        branch <ID>   : Create a topic branch t/patchNNN for this patch
+                      :  and update it to the current master
+        merge [-m email-comment] <ID>
+                      : Merge the t/patchNNN topic branch into master
+\n""")
+    sys.stderr.write("""\nFilter options for 'list' and 'search':
+        -s <state>    : Filter by patch state (e.g., 'New', 'Accepted', etc.)
+        -p <project>  : Filter by project name (see 'projects' for list)
+        -w <who>      : Filter by submitter (name, e-mail substring search)
+        -d <who>      : Filter by delegate (name, e-mail substring search)
+        -n <max #>    : Restrict number of results\n""")
+    sys.stderr.write("""\nActions that take an ID argument can also be \
+invoked with:
+        -h <hash>     : Lookup by patch hash\n""")
+    sys.exit(1)
+
+def project_id_by_name(rpc, linkname):
+    """Given a project short name, look up the Project ID."""
+    if len(linkname) == 0:
+        return 0
+    projects = rpc.project_list(linkname, 0)
+    for project in projects:
+        if project['linkname'] == linkname:
+            return project['id']
+    return 0
+
+def state_id_by_name(rpc, name):
+    """Given a partial state name, look up the state ID."""
+    if len(name) == 0:
+        return 0
+    states = rpc.state_list(name, 0)
+    for state in states:
+        if state['name'].lower().startswith(name.lower()):
+            return state['id']
+    return 0
+
+def person_ids_by_name(rpc, name):
+    """Given a partial name or email address, return a list of the
+    person IDs that match."""
+    if len(name) == 0:
+        return []
+    people = rpc.person_list(name, 0)
+    return map(lambda x: x['id'], people)
+
+def list_patches(patches):
+    """Dump a list of patches to stdout."""
+    print("%-5s %-12s %s" % ("ID", "State", "Name"))
+    print("%-5s %-12s %s" % ("--", "-----", "----"))
+    for patch in patches:
+        print("%-5d %-12s %s" % (patch['id'], patch['state'], patch['name']))
+
+def action_list(rpc, filter, submitter_str, delegate_str):
+    filter.resolve_ids(rpc)
+
+    if submitter_str != "":
+        ids = person_ids_by_name(rpc, submitter_str)
+        if len(ids) == 0:
+            sys.stderr.write("Note: Nobody found matching *%s*\n", \
+                             submitter_str)
+        else:
+            for id in ids:
+                person = rpc.person_get(id)
+                print "Patches submitted by %s <%s>:" % \
+                        (person['name'], person['email'])
+                f = filter
+                f.add("submitter_id", id)
+                patches = rpc.patch_list(f.d)
+                list_patches(patches)
+        return
+
+    if delegate_str != "":
+        ids = person_ids_by_name(rpc, delegate_str)
+        if len(ids) == 0:
+            sys.stderr.write("Note: Nobody found matching *%s*\n", \
+                             delegate_str)
+        else:
+            for id in ids:
+                person = rpc.person_get(id)
+                print "Patches delegated to %s <%s>:" % \
+                        (person['name'], person['email'])
+                f = filter
+                f.add("delegate_id", id)
+                patches = rpc.patch_list(f.d)
+                list_patches(patches)
+        return
+
+    patches = rpc.patch_list(filter.d)
+    list_patches(patches)
+
+def action_projects(rpc):
+    projects = rpc.project_list("", 0)
+    print("%-5s %-24s %s" % ("ID", "Name", "Description"))
+    print("%-5s %-24s %s" % ("--", "----", "-----------"))
+    for project in projects:
+        print("%-5d %-24s %s" % (project['id'], \
+                project['linkname'], \
+                project['name']))
+
+def action_states(rpc):
+    states = rpc.state_list("", 0)
+    print("%-5s %s" % ("ID", "Name"))
+    print("%-5s %s" % ("--", "----"))
+    for state in states:
+        print("%-5d %s" % (state['id'], state['name']))
+
+def action_get(rpc, patch_id):
+    patch = rpc.patch_get(patch_id)
+    s = rpc.patch_get_mbox(patch_id)
+
+    if patch == {} or len(s) == 0:
+        sys.stderr.write("Unable to get patch %d\n" % patch_id)
+        sys.exit(1)
+
+    base_fname = fname = os.path.basename(patch['filename'])
+    i = 0
+    while os.path.exists(fname):
+        fname = "%s.%d" % (base_fname, i)
+        i += 1
+
+    try:
+        f = open(fname, "w")
+    except:
+        sys.stderr.write("Unable to open %s for writing\n" % fname)
+        sys.exit(1)
+
+    try:
+        f.write(unicode(s).encode("utf-8"))
+        f.close()
+        print "Saved patch to %s" % fname
+    except:
+        sys.stderr.write("Failed to write to %s\n" % fname)
+        sys.exit(1)
+
+def action_apply(rpc, patch_id):
+    patch = rpc.patch_get(patch_id)
+    if patch == {}:
+        sys.stderr.write("Error getting information on patch ID %d\n" % \
+                         patch_id)
+        sys.exit(1)
+    print "Applying patch #%d to current directory" % patch_id
+    print "Description: %s" % patch['name']
+    s = rpc.patch_get_mbox(patch_id)
+    if len(s) > 0:
+        proc = subprocess.Popen(['patch', '-p1'], stdin = subprocess.PIPE)
+        proc.communicate(s)
+    else:
+        sys.stderr.write("Error: No patch content found\n")
+        sys.exit(1)
+
+def action_update_patch(rpc, patch_id, state = None, commit = None,
+                        delegate_str = "", comment_str = "None",
+			archived = False):
+    patch = rpc.patch_get(patch_id)
+    if patch == {}:
+        sys.stderr.write("Error getting information on patch ID %d\n" % \
+                         patch_id)
+        sys.exit(1)
+
+    params = {}
+
+    delegate_id = None
+    if delegate_str != "":
+        params['delegate'] = delegate_str
+        ids = person_ids_by_name(rpc, delegate_str)
+        if len(ids) == 0:
+            sys.stderr.write("Note: Nobody found matching *%s*\n"% \
+                             delegate_str)
+        else:
+            delegate_id = ids[0]
+
+    if state:
+        state_id = state_id_by_name(rpc, state)
+        if state_id == 0:
+            sys.stderr.write("Error: No State found matching %s*\n" % state)
+            sys.exit(1)
+        params['state'] = state_id
+
+        if state.lower() in notify_on_state_change:
+            if not delegate_id:
+                sys.stderr.write("Error: Delegate (-d) required for this update\n")
+                sys.exit(1)
+                
+            person = rpc.person_get(delegate_id)
+            submitter = rpc.person_get(patch['submitter_id'])
+
+            from_addr = '%s <%s>' % (person['name'], person['email'])
+            cc_addr   = '%s <%s>' % (submitter['name'], submitter['email'])
+            to_addr   = notify_on_state_change[state.lower()]
+
+            orig_mail = rpc.patch_get_mbox(patch_id)
+            orig_mail = '> ' + orig_mail.replace('\n','\n> ')
+
+            longdesc = '''Patch %s (http://patchwork.newartisans.com/patch/%s/) is now "%s".
+
+Maintainer comment: %s
+
+This relates to the following submission:
+
+http://mid.gmane.org/%s
+
+Here is the original message containing the patch:
+
+%s''' % \
+                (patch['id'], patch['id'], state, comment_str, urllib.quote(patch['msgid']), orig_mail)
+            shortdesc = '[%s] %s' % (state, patch['name'])
+
+            msg = MIMEText(longdesc)
+
+            msg['Subject']    = shortdesc
+            msg['From']       = from_addr
+            msg['To']         = to_addr
+            #msg['Cc']         = cc_addr
+            msg['References'] = patch['msgid']
+
+            # Send the message via our own SMTP server, but don't include
+            # the envelope header.
+            try:
+                s = smtplib.SMTP('localhost')
+                print "Sending e-mail to: %s, %s" % (to_addr, cc_addr)
+                s.sendmail(from_addr, [to_addr, cc_addr], msg.as_string())
+                s.quit()
+            except:
+                sys.stderr.write("Warning: Failed to send e-mail " +
+                                 "(no SMTP server listening at localhost?)\n")
+
+    if commit:
+        params['commit_ref'] = commit
+
+    if archived:
+        params['archived'] = archived
+
+    success = False
+    try:
+        print "Updating patch %d to state '%s', delegate %s" % \
+            (patch_id, state, delegate_str)
+        success = rpc.patch_set(patch_id, params)
+    except xmlrpclib.Fault, f:
+        sys.stderr.write("Error updating patch: %s\n" % f.faultString)
+
+    if not success:
+        sys.stderr.write("Patch not updated\n")
+
+def patch_id_from_hash(rpc, project, hash):
+    try:
+        patch = rpc.patch_get_by_project_hash(project, hash)
+    except xmlrpclib.Fault:
+        # the server may not have the newer patch_get_by_project_hash function,
+        # so fall back to hash-only.
+        patch = rpc.patch_get_by_hash(hash)
+
+    if patch == {}:
+        return None
+
+    return patch['id']
+
+def branch_with(patch_id, rpc, delegate_str):
+    s = rpc.patch_get_mbox(patch_id)
+    if len(s) > 0:
+        print unicode(s).encode("utf-8")
+
+    patch = rpc.patch_get(patch_id)
+
+    # Find the latest commit from the day before the patch
+    proc = subprocess.Popen(['git', 'log', '--until=' + patch['date'],
+                             '-1', '--format=%H', 'master'],
+                            stdout = subprocess.PIPE)
+    sha = proc.stdout.read()[:-1]
+
+    # Create a topic branch named after this commit
+    proc = subprocess.Popen(['git', 'checkout', '-b', 't/patch%s' %
+                             patch_id, sha])
+    sts = os.waitpid(proc.pid, 0)
+    if sts[1] != 0:
+        sys.stderr.write("Could not create branch for patch\n")
+        return
+
+    # Apply the patch to the branch
+    fname = '/tmp/patch'
+    try:
+        f = open(fname, "w")
+    except:
+        sys.stderr.write("Unable to open %s for writing\n" % fname)
+        sys.exit(1)
+
+    try:
+        f.write(unicode(s).encode("utf-8"))
+        f.close()
+        print "Saved patch to %s" % fname
+    except:
+        sys.stderr.write("Failed to write to %s\n" % fname)
+        sys.exit(1)
+
+    proc = subprocess.Popen(['git', 'am', '/tmp/patch'])
+    sts = os.waitpid(proc.pid, 0)
+    if sts[1] != 0:
+        sys.stderr.write("Failed to apply patch to branch\n")
+        proc = subprocess.Popen(['git', 'checkout', 'master'])
+        os.waitpid(proc.pid, 0)
+        proc = subprocess.Popen(['git', 'branch', '-D', 't/patch%s' %
+                                 patch_id, sha])
+        os.waitpid(proc.pid, 0)
+        return
+
+    # If it succeeded this far, mark the patch as "Under Review" by the
+    # invoking user.
+    action_update_patch(rpc, patch_id, state = 'Under Review',
+                        delegate_str = delegate_str)
+
+    proc = subprocess.Popen(['git', 'rebase', 'master'])
+    sts = os.waitpid(proc.pid, 0)
+
+    print sha
+
+def merge_with(patch_id, rpc, delegate_str, comment_str):
+    s = rpc.patch_get_mbox(patch_id)
+    if len(s) > 0:
+        print unicode(s).encode("utf-8")
+
+    proc = subprocess.Popen(['git', 'checkout', 'master'])
+    sts = os.waitpid(proc.pid, 0)
+    if sts[1] != 0:
+        sys.stderr.write("Failed to checkout master branch\n")
+        return
+
+    proc = subprocess.Popen(['git', 'merge', '--ff', 't/patch%s' % patch_id])
+    sts = os.waitpid(proc.pid, 0)
+    if sts[1] != 0:
+        sys.stderr.write("Failed to merge t/patch%s into master\n" % patch_id)
+        return
+
+    proc = subprocess.Popen(['git', 'rev-parse', 'master'],
+                            stdout = subprocess.PIPE)
+    sha = proc.stdout.read()[:-1]
+
+    # If it succeeded this far, mark the patch as "Accepted" by the invoking
+    # user.
+    action_update_patch(rpc, patch_id, state = 'Accepted', commit = sha,
+                        delegate_str = delegate_str, comment_str = comment_str,
+                        archived = True)
+
+    print sha
+
+auth_actions = ['update', 'branch', 'merge']
+
+def main():
+    try:
+        opts, args = getopt.getopt(sys.argv[2:], 's:p:w:d:n:c:h:m:')
+    except getopt.GetoptError, err:
+        print str(err)
+        usage()
+
+    if len(sys.argv) < 2:
+        usage()
+
+    action = sys.argv[1].lower()
+
+    # set defaults
+    filt = Filter()
+    submitter_str = ""
+    delegate_str = ""
+    project_str = ""
+    commit_str = ""
+    state_str = "New"
+    hash_str = ""
+    url = DEFAULT_URL
+
+    config = ConfigParser.ConfigParser()
+    config.read(CONFIG_FILES)
+
+    # grab settings from config files
+    if config.has_option('base', 'url'):
+        url = config.get('base', 'url')
+
+    if config.has_option('base', 'project'):
+        project_str = config.get('base', 'project')
+
+    comment_str = "none"
+    for name, value in opts:
+        if name == '-s':
+            state_str = value
+        elif name == '-p':
+            project_str = value
+        elif name == '-w':
+            submitter_str = value
+        elif name == '-d':
+            delegate_str = value
+        elif name == '-c':
+            commit_str = value
+        elif name == '-h':
+            hash_str = value
+        elif name == '-m':
+	    comment_str = value
+        elif name == '-n':
+            try:
+                filt.add("max_count", int(value))
+            except:
+                sys.stderr.write("Invalid maximum count '%s'\n" % value)
+                usage()
+        else:
+            sys.stderr.write("Unknown option '%s'\n" % name)
+            usage()
+
+    if len(args) > 1:
+        sys.stderr.write("Too many arguments specified\n")
+        usage()
+
+    (username, password) = (None, None)
+    transport = None
+    if action in auth_actions:
+        if config.has_option('auth', 'username') and \
+                config.has_option('auth', 'password'):
+
+            use_https = url.startswith('https')
+
+            transport = BasicHTTPAuthTransport( \
+                    config.get('auth', 'username'),
+                    config.get('auth', 'password'),
+                    use_https)
+
+        else:
+            sys.stderr.write(("The %s action requires authentication, "
+                    "but no username or password\nis configured\n") % action)
+            sys.exit(1)
+
+    if project_str:
+        filt.add("project", project_str)
+
+    if state_str:
+        filt.add("state", state_str)
+
+    try:
+        rpc = xmlrpclib.Server(url, transport = transport)
+    except:
+        sys.stderr.write("Unable to connect to %s\n" % url)
+        sys.exit(1)
+
+    patch_id = None
+    if hash_str:
+        patch_id = patch_id_from_hash(rpc, project_str, hash_str)
+        if patch_id is None:
+            sys.stderr.write("No patch has the hash provided\n")
+            sys.exit(1)
+
+
+    if action == 'list' or action == 'search':
+        if len(args) > 0:
+            filt.add("name__icontains", args[0])
+        action_list(rpc, filt, submitter_str, delegate_str)
+
+    elif action.startswith('project'):
+        action_projects(rpc)
+
+    elif action.startswith('state'):
+        action_states(rpc)
+
+    elif action == 'branch':
+        try:
+            patch_id = patch_id or int(args[0])
+        except:
+            sys.stderr.write("Invalid patch ID given\n")
+            sys.exit(1)
+
+        branch_with(patch_id, rpc, config.get('auth', 'username'))
+
+    elif action == 'merge':
+        try:
+            patch_id = patch_id or int(args[0])
+        except:
+            sys.stderr.write("Invalid patch ID given\n")
+            sys.exit(1)
+
+        merge_with(patch_id, rpc, config.get('auth', 'username'), comment_str)
+
+    elif action == 'test':
+
+	patch_id = patch_id or int(args[0])
+	patch = rpc.patch_get(patch_id)
+	s = rpc.patch_get_mbox(patch_id)
+	print "xxx %s xxx"
+	print "xxx %s xxx" % patch['name']
+	print "xxx %s xxx" % rpc.patch_get_mbox(patch_id)
+
+    elif action == 'view' or action == 'show':
+        try:
+            patch_id = patch_id or int(args[0])
+        except:
+            sys.stderr.write("Invalid patch ID given\n")
+            sys.exit(1)
+
+        s = rpc.patch_get_mbox(patch_id)
+        if len(s) > 0:
+            print unicode(s).encode("utf-8")
+
+    elif action == 'get' or action == 'save':
+        try:
+            patch_id = patch_id or int(args[0])
+        except:
+            sys.stderr.write("Invalid patch ID given\n")
+            sys.exit(1)
+
+        action_get(rpc, patch_id)
+
+    elif action == 'apply':
+        try:
+            patch_id = patch_id or int(args[0])
+        except:
+            sys.stderr.write("Invalid patch ID given\n")
+            sys.exit(1)
+
+        action_apply(rpc, patch_id)
+
+    elif action == 'update':
+        try:
+            patch_id = patch_id or int(args[0])
+        except:
+            sys.stderr.write("Invalid patch ID given\n")
+            sys.exit(1)
+
+        action_update_patch(rpc, patch_id, state = state_str,
+                            commit = commit_str, delegate_str = delegate_str, comment_str = comment_str)
+
+    else:
+        sys.stderr.write("Unknown action '%s'\n" % action)
+        usage()
+
+if __name__ == "__main__":
+    main()

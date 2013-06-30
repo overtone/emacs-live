@@ -97,7 +97,9 @@
   "Class for GitHub repositories")
 
 (defmethod constructor :static ((repo gh-repos-repo) newname &rest args)
-  (let ((obj (call-next-method)))
+  (when (consp newname)
+    (setq newname (concat (car newname) "/" (cdr newname))))
+  (let ((obj (apply 'call-next-method gh-repos-repo newname args)))
     (when (and (not (slot-boundp obj 'name))
                (not (oref obj owner)))
       (with-slots (name owner)
@@ -105,8 +107,10 @@
         (when (slot-boundp obj 'full-name)
           (setq newname (oref obj :full-name)))
         (when (string-match "^\\([^/]+\\)/\\([^/]+\\)$" newname)
-          (setq name (match-string 2 newname)
-                owner (gh-user "owner" :login (match-string 1 newname))))))
+          (setq login (match-string 1 newname)
+                name  (match-string 2 newname)
+                owner (gh-user login :login login))
+          (aset obj object-name name))))
     obj))
 
 (defmethod gh-object-read-into ((repo gh-repos-repo) data)
@@ -290,12 +294,20 @@
 
 ;;; Forks sub-API
 
-(defmethod gh-repos-forks-list ((api gh-repos-api) repo)
-  (gh-api-authenticated-request
-   api (gh-object-list-reader (oref api repo-cls)) "GET"
-   (format "/repos/%s/%s/forks"
-           (oref (oref repo :owner) :login)
-           (oref repo :name))))
+(defmethod gh-repos-forks-list ((api gh-repos-api) repo &optional recursive)
+  (let ((resp (gh-api-authenticated-request
+               api (gh-object-list-reader (oref api repo-cls)) "GET"
+               (format "/repos/%s/%s/forks"
+                       (oref (oref repo :owner) :login)
+                       (oref repo :name)))))
+    (when recursive
+      (let ((forks (oref resp :data)))
+        (oset resp :data
+              (nconc forks
+                     (mapcan (lambda (f)
+                               (oref (gh-repos-forks-list api f t) data))
+                             forks)))))
+    resp))
 
 (defmethod gh-repos-fork ((api gh-repos-api) repo &optional org)
   (gh-api-authenticated-request

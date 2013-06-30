@@ -1,5 +1,7 @@
 ;;; js2-imenu-extras.el --- Imenu support for additional constructs
 
+;; Copyright (C) 2012-2013  Free Software Foundation, Inc.
+
 ;; Author:    Dmitry Gutov <dgutov@yandex.ru>
 ;; Keywords:  languages, javascript, imenu
 
@@ -21,14 +23,11 @@
 ;;; Commentary:
 
 ;; This package adds Imenu support for additional framework constructs and
-;; general patterns to `js2-mode'.
+;; structural patterns to `js2-mode'.
 
 ;; Usage:
 
-;; (eval-after-load 'js2-mode
-;;   '(progn
-;;      (require 'js2-imenu-extras)
-;;      (js2-imenu-extras-setup)))
+;; (add-hook 'js2-mode-hook 'js2-imenu-extras-mode)
 
 ;; To customize how it works:
 ;;   M-x customize-group RET js2-imenu RET
@@ -100,11 +99,13 @@ prefix any functions defined inside the IIFE with the module name."
 ;;;###autoload
 (defun js2-imenu-extras-setup ()
   (when js2-imenu-enabled-frameworks
-    (add-to-list 'js2-post-parse-callbacks 'js2-imenu-record-declarations t))
+    (add-hook 'js2-post-parse-callbacks 'js2-imenu-record-declarations t t))
   (when (or js2-imenu-show-other-functions js2-imenu-show-module-pattern)
-    (add-to-list 'js2-post-parse-callbacks 'js2-imenu-walk-ast t)))
+    (add-hook 'js2-post-parse-callbacks 'js2-imenu-walk-ast t t)))
 
-(declare (special root))
+(defun js2-imenu-extras-remove ()
+  (remove-hook 'js2-post-parse-callbacks 'js2-imenu-record-declarations t)
+  (remove-hook 'js2-post-parse-callbacks 'js2-imenu-walk-ast t))
 
 (defun js2-imenu-record-declarations ()
   (let* ((styles (loop for style in js2-imenu-extension-styles
@@ -113,9 +114,7 @@ prefix any functions defined inside the IIFE with the module name."
                        collect style))
          (re (mapconcat (lambda (style)
                           (concat "\\(" (plist-get style :call-re) "\\)"))
-                        styles "\\|"))
-         ;; Dynamic scoping. Ew.
-         (js2-mode-ast root))
+                        styles "\\|")))
     (goto-char (point-min))
     (while (js2-re-search-forward re nil t)
       (loop for i from 0 to (1- (length styles))
@@ -163,7 +162,7 @@ prefix any functions defined inside the IIFE with the module name."
 
 (defun js2-imenu-walk-ast ()
   (js2-visit-ast
-   root
+   js2-mode-ast
    (lambda (node end-p)
      (unless end-p
        (cond
@@ -211,5 +210,13 @@ NODE must be `js2-assign-node'."
                                            (js2-node-abs-pos retval))
                 (js2-record-imenu-entry fn target-qname
                                         (js2-node-abs-pos target))))))))))
+
+;;;###autoload
+(define-minor-mode js2-imenu-extras-mode
+  "Toggle Imenu support for frameworks and structural patterns."
+  :lighter ""
+  (if js2-imenu-extras-mode
+      (js2-imenu-extras-setup)
+    (js2-imenu-extras-remove)))
 
 (provide 'js2-imenu-extras)

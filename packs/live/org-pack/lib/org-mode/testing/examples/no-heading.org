@@ -1,0 +1,9 @@
+This is an example file for use by the Org-mode tests.
+
+This file is special because it has no headings, which can be
+erroneously assumed by some code.
+
+#+begin_src emacs-lisp :tangle no
+  ;; 94839181-184f-4ff4-a72f-94214df6f5ba
+  (message "I am code")
+#+end_src

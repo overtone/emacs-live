@@ -95,6 +95,15 @@
      (git-gutter:deleted ((t (:foreground "gray10" :background "gray60"))) )
      (git-gutter:added ((t (:foreground "#61CE3C" :background "gray60" ))) )
      (git-gutter:unchanged ((t (:background "gray60" ))) )
+
+     (term-color-black ((t (:background "black" :foreground "black"))))
+     (term-color-blue ((t (:background "blue2" :foreground "blue2"))))
+     (term-color-cyan ((t (:background "cyan3" :foreground "cyan3"))))
+     (term-color-green ((t (:background "green3" :foreground "green3"))))
+     (term-color-magenta ((t (:background "magenta3" :foreground "magenta3"))))
+     (term-color-red ((t (:background "red3" :foreground "red3"))))
+     (term-color-white ((t (:background "white" :foreground "white"))))
+     (term-color-yellow ((t (:background "yellow3" :foreground "yellow3"))))
      )
    ))
 

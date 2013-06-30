@@ -44,8 +44,13 @@
     `(let ((,f ,file))
        (with-temp-buffer
          (magit-with-silent-modifications
-          (magit-git-insert
-           (list "cat-file" "-p" (concat ,commit ":" ,f))))
+           ;; (magit-git-insert
+           ;;  (list "cat-file" "-p" (concat ,commit ":" ,f)))
+           ;; work around https://github.com/magit/magit/issues/544
+           (apply #'process-file
+                  magit-git-executable
+                  nil (list t nil) nil
+                  (list "cat-file" "-p" (concat ,commit ":" ,f))))
          (setq buffer-file-name ,f)
          (packed-set-coding-system ,f)
          (set-buffer-modified-p nil)

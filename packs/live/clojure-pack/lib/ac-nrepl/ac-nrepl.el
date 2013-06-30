@@ -114,30 +114,24 @@ Result is a plist, as returned from `nrepl-send-string-sync'."
   (ac-nrepl-candidates*
    (ac-nrepl-filtered-clj "(complete.core/ns-classes *ns*)")))
 
-(defun ac-nrepl-fetch-all-classes ()
-  "Return all class candidates."
-  (ac-nrepl-candidates*
-   (ac-nrepl-unfiltered-clj "(concat @complete.core/nested-classes
-                                     @complete.core/top-level-classes)")))
-
 (defvar ac-nrepl-all-classes-cache nil
   "Cached list of all classes loaded in the JVM backend.")
 
-;;;###autoload
-(defun ac-nrepl-clear-class-cache ()
-  "Clear the class cache to prevent stale results."
-  (setq ac-nrepl-all-classes-cache nil))
-
-(defun ac-nrepl-cache-all-classes ()
-  "Return a cached list of all class names loaded in the JVM backend."
-  (setq ac-nrepl-all-classes-cache (ac-nrepl-fetch-all-classes)))
-
 (defun ac-nrepl-refresh-class-cache ()
-  "Refresh class cache"
-  (ac-nrepl-clear-class-cache)
-  (message "Caching JVM class names...")
-  (ac-nrepl-cache-all-classes)
-  (message ""))
+  "Clear `ac-nrepl-all-classes-cache' and then refill it asynchronously."
+  (setq ac-nrepl-all-classes-cache nil)
+  (nrepl-eval-async
+   (concat "(require 'complete.core)"
+           (ac-nrepl-unfiltered-clj "(concat @complete.core/nested-classes
+                                       @complete.core/top-level-classes)"))
+   (nrepl-make-response-handler
+    (nrepl-current-connection-buffer)
+    (lambda (buffer value)
+      (setq ac-nrepl-all-classes-cache (car (read-from-string value))))
+    nil nil nil)
+   (nrepl-current-ns)
+   (nrepl-current-tooling-session)))
+
 
 ;;;###autoload
 (add-hook 'nrepl-connected-hook 'ac-nrepl-refresh-class-cache t)
