@@ -77,22 +77,42 @@ provide you with an early productivity boost:
 
 `C-c f` **winner-redo** - Redo last window modification (i.e. splitting planes or closing windows)
 
+`C-l` **recenter-top-bottom** - Center current window around point (cursor)
+
 ## Navigation
-
-`C-a` **move-beginning-of-line** - Move to start of line
-
-`C-e` **move-end-of-line** - Move to end of line
 
 `C-n` **next-line** - Move down one line.
 
 `C-p` **previous-line** - Move up one line
 
+`C-f` **forward-char** - Move forward one character
+
+`C-b` **backward-char** - Move backward one character
+
+`C-a` **move-beginning-of-line** - Move to start of line
+
+`C-e` **move-end-of-line** - Move to end of line
+
+`M-f` **forward-word** - Move forward one word
+
+`M-b` **backward-word** - Move backward one word
+
 `ESC->` **end-of-buffer** - Move to the end of the buffer
 
 `ESC-<` **beginning-of-buffer** - Move to the beginning of the buffer
 
+## Search Navigation
+
+`C-o` **ace-jump-mode** - Quickly jump to any visible word. Type the first character of the word you want to visit, the first char of the word you wish to jump to will now change to another, type that and you'll jump directly there.
+
+`C-s` **isearch-forward** - Search forward for matching word. Subsequent `s` presses (whilst continuing to  hold down `C`) will skip through all matches. Whilst in search mode, `C-w` will extend the search term based on the rest of the currently matched word.
+
+`C-r` **isearch-backward** - Search backward for matching word. Subsequent `r` presses (whilst continuing to  hold down `C`) will skip through all matches. Whilst in search mode, `C-w` will extend the search term based on the rest of the currently matched word.
+
 
 ## Editing
+
+`C-h` **delete-backward-char** - Delete the previous character
 
 `C-_` **undo-tree-undo** - Undo
 
@@ -117,6 +137,10 @@ provide you with an early productivity boost:
 `M-\` **delete-horizontal-space** - Delete all whitespace between last and next words
 
 `C-t` **transpose-chars** - Swap adjacent characters
+
+`M-u` **upcase-word** - Make following word ALL-CAPS
+
+`M-c` **capitalize-word** - Make the followign word Capitalised
 
 ## Quitting
 `C-x C-c` **save-buffers-kill-terminal** - Quit Emacs
