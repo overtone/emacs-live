@@ -6,7 +6,7 @@ layout: doc
 
 ---
 
-# --> First Steps
+# --> Useful Shortcuts
 
 If you're new to Emacs, it's worth taking the time to read the
 tutorial. You can open it from inside Emacs Live using `M-h t` (should
@@ -146,14 +146,18 @@ provide you with an early productivity boost:
 `C-x C-c` **save-buffers-kill-terminal** - Quit Emacs
 
 
-
-
-The tutorial covers all these and more, so give it a read through and get hacking!
+The tutorial covers many of these and more, so give it a read through and get hacking!
 
 # --> Go spelunking
 
-There's a lot to love in Emacs Live. One interesting place to start exploring is in the [default key bindings](https://github.com/overtone/emacs-live/blob/master/packs/live/bindings-pack/config/default-bindings.el) in `packs/live/bindings-pack/config/default-bindings.el`. Have a look around and you may find something interesting.
+There's a lot to love in Emacs Live. One interesting place to start
+exploring is in the
+[default key bindings](https://github.com/overtone/emacs-live/blob/master/packs/live/bindings-pack/config/default-bindings.el)
+in `packs/live/bindings-pack/config/default-bindings.el`. Have a look
+around and you may find something interesting.
 
 # --> And on to Clojure
 
-Once you've got a handle on Emacs basics, head over to the [Clojure Hacking](doc-clojure.html) documentation to learn more about using Emacs Live to work on Clojure code!
+Once you've got a handle on Emacs basics, head over to the
+[Clojure Hacking](doc-clojure.html) documentation to learn more about
+using Emacs Live to work on Clojure code!

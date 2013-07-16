@@ -11,7 +11,7 @@ layout: doc
 
 * [Installing Emacs Live](doc-installation.html)
 * [Starting Emacs Live](doc-starting.html)
-* [First Steps](doc-first-steps.html)
+* [Useful Shortcuts](doc-shortcuts.html)
 * [Clojure Hacking](doc-clojure.html)
 * [Personal Customisation](doc-customisation.html)
 * [Pack Structure](doc-pack-structure.html)
