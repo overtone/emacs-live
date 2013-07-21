@@ -71,8 +71,9 @@
 ;;remove all trailing whitespace and trailing blank lines before
 ;;saving the file
 (defun live-cleanup-whitespace ()
-  (let ((whitespace-style '(trailing empty)) )
-    (whitespace-cleanup)))
+  (if (not (eq 'markdown-mode major-mode))
+    (let ((whitespace-style '(trailing empty)) )
+      (whitespace-cleanup)))
 
 (add-hook 'before-save-hook 'live-cleanup-whitespace)
 
