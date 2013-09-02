@@ -120,3 +120,6 @@
 [submodule "packs/dev/org-pack/vendor/submodules/org-mode"]
 	path = packs/dev/org-pack/vendor/submodules/org-mode
 	url = git://orgmode.org/org-mode.git
+[submodule "packs/dev/git-pack/vendor/submodules/git-modes"]
+	path = packs/dev/git-pack/vendor/submodules/git-modes
+	url = git://github.com/magit/git-modes.git
