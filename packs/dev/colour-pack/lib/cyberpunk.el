@@ -106,6 +106,7 @@
      (ido-only-match ((t (:foreground "deep pink" :background "black"))))
      (ido-subdir ((t (:foreground "gray60" :background "black"))))
      (ido-indicator ((t (:foreground "black" :background "deep pink"))))
+     (flx-highlight-face ((t (:foreground "deep pink" :background "black"))))
 
      (match ((t (:foreground "deep pink" :background "blackn"))))
      (minibuffer-prompt ((t (:foreground "#61CE3C" :background "black"))))

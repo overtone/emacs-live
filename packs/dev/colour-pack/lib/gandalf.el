@@ -64,7 +64,8 @@
      (ido-only-match ((t (:foreground "black" :background "grey95"))))
      (ido-subdir ((t (:foreground "white" :background "#758BC6"))))
      (ido-indicator ((t (:foreground "black" :background "deep pink"))))
-     (minibuffer-prompt ((t (:foreground "dark blue" :background "grey85"))))
+     (ido-indicator ((t (:foreground "black" :background "deep pink"))))
+     (flx-highlight-face ((t (:foreground "black" :background "deep pink"))))
 
      ;; magit
      (magit-item-highlight ((t (:background "gray15"))))
