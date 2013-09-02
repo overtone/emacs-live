@@ -25,7 +25,6 @@
   '(add-to-list 'ffip-patterns "*.clj"))
 
 (require 'clojure-mode)
-(require 'clojure-test-mode)
 
 (add-hook 'clojure-mode-hook
           (lambda ()

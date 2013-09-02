@@ -1,0 +1,1 @@
+(require 'clojure-test-mode)
