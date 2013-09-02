@@ -115,9 +115,7 @@
 (define-key paredit-mode-map (kbd "C-M-n")   'paredit-forward-up)
 (define-key paredit-mode-map (kbd "C-M-p")   'paredit-backward-down)
 (define-key paredit-mode-map (kbd "C-M-u")   'paredit-backward-up)
-
-
-(define-key nrepl-interaction-mode-map (kbd "C-M-i")   'paredit-forward-down)
+(define-key paredit-mode-map (kbd "M-T")     'transpose-sexps)
 
 ;; org-mode
 (define-key org-mode-map (kbd "C-M-f")    'org-metadown)
