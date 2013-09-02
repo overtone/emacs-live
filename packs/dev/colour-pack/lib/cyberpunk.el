@@ -78,8 +78,7 @@
 
      (eval-sexp-fu-flash ((t (:background "grey15" :foreground "DeepPink3"))))
      (nrepl-eval-sexp-fu-flash ((t (:background "grey15" :foreground "DeepPink3"))))
-     (nrepl-error-highlight-face ((t (:background "black" :foreground "red" :underline t))))
-
+     (nrepl-error-highlight-face ((t (:background "color-52"))))
      (ac-completion-face ((t (:foreground "darkgray" :underline t))))
      (ac-candidate-face ((t (:background "gray60" :foreground "black"))))
      (ac-selection-face ((t (:background "deep pink" :foreground "black"))))
