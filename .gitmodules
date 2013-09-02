@@ -123,3 +123,12 @@
 [submodule "packs/dev/git-pack/vendor/submodules/git-modes"]
 	path = packs/dev/git-pack/vendor/submodules/git-modes
 	url = git://github.com/magit/git-modes.git
+[submodule "packs/dev/foundation-pack/vendor/submodules/dash"]
+	path = packs/dev/foundation-pack/vendor/submodules/dash
+	url = git://github.com/magnars/dash.el.git
+[submodule "packs/dev/foundation-pack/vendor/submodules/pkg-info"]
+	path = packs/dev/foundation-pack/vendor/submodules/pkg-info
+	url = git://github.com/lunaryorn/pkg-info.el.git
+[submodule "packs/dev/foundation-pack/vendor/submodules/s"]
+	path = packs/dev/foundation-pack/vendor/submodules/s
+	url = https://github.com/magnars/s.el.git
