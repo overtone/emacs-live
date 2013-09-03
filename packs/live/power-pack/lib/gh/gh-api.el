@@ -141,24 +141,17 @@
 (defclass gh-api-paged-response (gh-api-response)
   ())
 
-(defun gh-api-paging-links (links-header)
-  (when links-header
-    (let ((links nil)
-          (items (split-string links-header ", ")))
-      (loop for item in items
-            if (string-match
-                "^<\\(.*\\)>; rel=\"\\(.*\\)\""
-                item)
-            do
-            (push (cons (match-string 2 item)
-                        (match-string 1 item))
-                  links))
-      links)))
+(defmethod gh-api-paging-links ((resp gh-api-paged-response))
+  (let ((links-header (cdr (assoc "Link" (oref resp :headers)))))
+    (when links-header
+      (loop for item in (split-string links-header ", ")
+            when (string-match "^<\\(.*\\)>; rel=\"\\(.*\\)\"" item)
+            collect (cons (match-string 2 item)
+                          (match-string 1 item))))))
 
 (defmethod gh-url-response-set-data ((resp gh-api-paged-response) data)
-  (let* ((previous-data (oref resp :data))
-         (links (gh-api-paging-links (cdr (assoc "Link" (oref resp :headers)))))
-         (next (cdr (assoc "next" links))))
+  (let ((previous-data (oref resp :data))
+        (next (cdr (assoc "next" (gh-api-paging-links resp)))))
     (call-next-method)
     (oset resp :data (append previous-data (oref resp :data)))
     (when next

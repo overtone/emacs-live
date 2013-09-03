@@ -1,0 +1,10 @@
+Small Org file with an include keyword.
+
+#+BEGIN_SRC emacs-lisp :exports results
+(+ 2 1)
+#+END_SRC
+
+#+INCLUDE: "include2.org"
+
+* Heading
+body

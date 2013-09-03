@@ -296,6 +296,7 @@
         (overlay-put overlay 'face (if (equal event :fail)
                                        'clojure-test-failure-face
                                      'clojure-test-error-face))
+        (overlay-put overlay 'help-echo message)
         (overlay-put overlay 'message message)
         (overlay-put overlay 'actual pp-actual)))))
 
@@ -522,15 +523,26 @@ Clojure src file for the given test namespace.")
 
 (add-hook 'nrepl-connected-hook 'clojure-test-load-reporting)
 
+(defconst clojure-test-regex
+  (rx "clojure.test"))
+
+;;;###autoload
+(defun clojure-find-clojure-test ()
+  (let ((regexp clojure-test-regex))
+    (save-restriction
+      (save-excursion
+        (save-match-data
+          (goto-char (point-min))
+          (when (re-search-forward regexp nil t)
+            (match-string-no-properties 0)))))))
+
 ;;;###autoload
 (progn
   (defun clojure-test-maybe-enable ()
-    "Enable clojure-test-mode if the current buffer contains a namespace
-with a \"test.\" bit on it."
-    (let ((ns (clojure-find-package))) ; defined in clojure-mode.el
-      (when (and ns (string-match "test\\(\\.\\|$\\)" ns))
-        (save-window-excursion
-          (clojure-test-mode t)))))
+    "Enable clojure-test-mode if the current buffer contains a \"clojure.test\" bit in it."
+    (when (clojure-find-clojure-test)
+      (save-window-excursion
+        (clojure-test-mode t))))
 
   (add-hook 'clojure-mode-hook 'clojure-test-maybe-enable))
 

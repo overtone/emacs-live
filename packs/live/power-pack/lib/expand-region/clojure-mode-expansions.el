@@ -39,11 +39,11 @@
   (interactive)
   (let ((word-regexp "\\(\\sw\\|-\\)"))
     (when (or (looking-at word-regexp)
-              (looking-back word-regexp))
+              (er/looking-back-on-line word-regexp))
       (while (looking-at word-regexp)
         (forward-char))
       (set-mark (point))
-      (while (looking-back word-regexp)
+      (while (er/looking-back-on-line word-regexp)
         (backward-char)))))
 
 (defun er/mark-clj-set-literal ()
@@ -51,7 +51,7 @@
 If point is inside the brackets, those will be marked first anyway."
   (interactive)
   (when (or (looking-at "#{")
-            (looking-back "#"))
+            (er/looking-back-exact "#"))
     (forward-char 1)
     (search-backward "#")
     (set-mark (point))
@@ -65,7 +65,7 @@ If point is inside the brackets, those will be marked first anyway."
 If point is inside the string, the quotes will be marked first anyway."
   (interactive)
   (when (or (looking-at "#\"")
-            (looking-back "#"))
+            (er/looking-back-exact "#"))
     (forward-char 1)
     (search-backward "#")
     (set-mark (point))
@@ -79,7 +79,7 @@ If point is inside the string, the quotes will be marked first anyway."
 If point is inside the parens, they will be marked first anyway."
   (interactive)
   (when (or (looking-at "#(")
-            (looking-back "#"))
+            (er/looking-back-exact "#"))
     (forward-char)
     (search-backward "#")
     (set-mark (point))

@@ -1,8 +1,9 @@
-;;; multiple-cursors.el --- An experiment in multiple cursors for emacs.
+;;; multiple-cursors.el --- Multiple cursors for emacs.
 
-;; Copyright (C) 2012 Magnar Sveen
+;; Copyright (C) 2012-2013 Magnar Sveen
 
 ;; Author: Magnar Sveen <magnars@gmail.com>
+;; Version: 1.2.2
 ;; Keywords: editing cursors
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -181,6 +182,7 @@
 (require 'mc-edit-lines)
 (require 'mc-cycle-cursors)
 (require 'mc-mark-more)
+(require 'mc-mark-pop)
 (require 'rectangular-region-mode)
 (require 'mc-separate-operations)
 

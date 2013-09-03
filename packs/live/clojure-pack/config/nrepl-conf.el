@@ -73,8 +73,7 @@
                                (nrepl-current-ns)
                                (nrepl-current-tooling-session)))
           (with-current-buffer nrepl-error-buffer
-            (compilation-minor-mode 1))
-          ))))
+            (compilation-minor-mode 1))))))
 
 ;;(setq nrepl-err-handler 'live-nrepl-err-handler)
 
@@ -114,3 +113,14 @@
                        (nrepl-current-tooling-session))))
 
 (setq nrepl-port "4555")
+
+(defun nrepl-interactive-eval-print-handler (buffer)
+  "Make a handler for evaluating and printing result in BUFFER."
+  (nrepl-make-response-handler buffer
+                               (lambda (buffer value)
+                                 (with-current-buffer buffer
+                                   (insert (format " ;;=> %s" value))))
+                               '()
+                               (lambda (buffer err)
+                                 (message "%s" err))
+                               '()))

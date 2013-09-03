@@ -50,6 +50,19 @@
 
 ;; Changes from 1.4 to 1.5:
 
+;; * 2013-Aug-10: Ethan Glasser-Camp
+;;   Fix browse-kill-ring-update. Commit ca0b5f4 broke it. Fixing it
+;;   also exposed some problems with how the overlay is handled.
+
+;; * 2013-Jul-29: Ethan Glasser-Camp
+;;   Make `browse-kill-ring-quit-action' default to
+;;   `save-and-restore'. This seems to DWIM in most cases: running
+;;   browse-kill-ring with only one window and then pressing q will
+;;   close that window, but if you have two windows open when you run
+;;   browse-kill-ring, it will restore the windows you had open. For
+;;   more information and history, see
+;;   https://github.com/browse-kill-ring/browse-kill-ring/issues/11.
+
 ;; * 2013-Jan-19: Ethan Glasser-Camp
 ;;   browse-kill-ring-mode now uses an overlay to show what your
 ;;   buffer would look like if you inserted the current item.
@@ -291,17 +304,18 @@ entries."
                  (const :tag "Separated" separated))
   :group 'browse-kill-ring)
 
-(defcustom browse-kill-ring-quit-action 'bury-and-delete-window
+(defcustom browse-kill-ring-quit-action 'save-and-restore
   "What action to take when `browse-kill-ring-quit' is called.
 
 If `bury-buffer', then simply bury the *Kill Ring* buffer, but keep
 the window.
 
 If `bury-and-delete-window', then bury the buffer, and (if there is
-more than one window) delete the window.  This is the default.
+more than one window) delete the window.
 
 If `save-and-restore', then save the window configuration when
-`browse-kill-ring' is called, and restore it at quit.
+`browse-kill-ring' is called, and restore it at quit.  This is
+the default.
 
 If `kill-and-delete-window', then kill the *Kill Ring* buffer, and
 delete the window on close.
@@ -593,7 +607,12 @@ of the *Kill Ring*."
   "Helper function to insert text at point, highlighting it if appropriate."
   (let ((before-insert (point)))
     (let (deactivate-mark)
-      (insert-for-yank str))
+      (insert-for-yank str)
+      (mapc
+       (lambda (w)
+         (when (eq (current-buffer) (window-buffer w))
+           (set-window-point w (point))))
+       (window-list)))
 
     (when browse-kill-ring-highlight-inserted-item
       (let ((o (make-overlay before-insert (point))))
@@ -801,6 +820,9 @@ entry."
     (delete-overlay browse-kill-ring-preview-overlay))
   (case browse-kill-ring-quit-action
     (save-and-restore
+     ;; FIXME: after everyone is on emacs >24, maybe we can just use
+     ;; quit-window and not have to mess around with
+     ;; window-configurations directly.
      (let (buf (current-buffer))
        (set-window-configuration browse-kill-ring-original-window-config)
        (kill-buffer buf)))
@@ -1023,6 +1045,7 @@ directly; use `browse-kill-ring' instead.
   (interactive)
   (assert (eq major-mode 'browse-kill-ring-mode))
   (browse-kill-ring-setup (current-buffer)
+                          browse-kill-ring-original-buffer
                           browse-kill-ring-original-window)
   (browse-kill-ring-resize-window))
 
@@ -1052,8 +1075,10 @@ directly; use `browse-kill-ring' instead.
                   (max (point) (mark))
                 (point))))
     (when browse-kill-ring-show-preview
+      (when browse-kill-ring-preview-overlay
+        (delete-overlay browse-kill-ring-preview-overlay))
       (setq browse-kill-ring-preview-overlay
-            (make-overlay start end (current-buffer)))))
+            (make-overlay start end orig-buf))))
   (overlay-put browse-kill-ring-preview-overlay
                'invisible t)
   (with-current-buffer kill-buf

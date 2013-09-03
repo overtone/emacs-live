@@ -41,13 +41,13 @@
 ;;; Code:
 
 (require 'bytecomp)
-
-(eval-when-compile
-  (require 'cl-lib))
+(require 'cl-lib)
 
 (declare-function autoload-rubric "autoload")
 (declare-function autoload-find-destination "autoload")
 (declare-function autoload-file-load-name "autoload")
+(declare-function info-initialize "info")
+(defvar Info-directory-list)
 
 
 ;;; Options.
@@ -154,7 +154,7 @@ and the file name is displayed in the echo area."
     file))
 
 (defconst packed-ignore-library-regexp
-  (regexp-opt (list "^t$" "test" "^ert.el$")))
+  (regexp-opt (list "^t$" "test")))
 
 (defconst packed-ignore-directory-regexp
   (regexp-opt (list "RCS" "CVS" "^t$" "test")))
@@ -228,7 +228,7 @@ ert.  All of this might not always be successful but at least we
 tried.
 
 Note that the callers might also ignore files for which this
-function would return t.  See `packed-ignore-directory-p."
+function would return t.  See `packed-ignore-directory-p'."
   (and (packed-library-name-p file package)
        (packed-library-feature file)))
 
@@ -267,17 +267,15 @@ relative to DIRECTORY.
 
 If optional NONRECURSIVE only return libraries directly located
 in DIRECTORY."
-  ;; avoid cl blasphemy
-  (let (libraries)
-    (dolist (elt (packed-libraries-1
-                  directory (or package (packed-filename directory))
-                  nonrecursive))
-      (when (cdr elt)
-        (setq libraries (cons (if full
-                                  (car elt)
-                                (file-relative-name (car elt) directory))
-                              libraries))))
-    libraries))
+  (cl-mapcan
+   (lambda (elt)
+     (when (cdr elt)
+       (list (if full
+                 (car elt)
+               (file-relative-name (car elt) directory)))))
+   (packed-libraries-1 directory
+                       (or package (packed-filename directory))
+                       nonrecursive)))
 
 (defun packed-libraries-1 (directory &optional package nonrecursive)
   "Return a list of Emacs lisp files in the package directory DIRECTORY.
@@ -383,19 +381,22 @@ non-nil return nil."
 ;;; Load Path.
 
 (defun packed-add-to-load-path (directory &optional package)
+  "Add DIRECTORY and subdirectories to `load-path' if they contain libraries."
   (mapc (apply-partially 'add-to-list 'load-path)
         (packed-load-path directory package)))
 
-(defun packed-remove-from-load-path (directory &optional package recursive)
-  (cond (recursive
-         (dolist (path load-path)
-           (when (string-match (concat (regexp-quote directory) "^") path)
-             (setq load-path (delete path load-path)))))
-        (t
-         (dolist (path (packed-load-path directory package))
-           (setq load-path (delete path load-path))))))
+(defun packed-remove-from-load-path (directory)
+  "Remove DIRECTORY and it's subdirectories from `load-path'.
+Elements of `load-path' which no longer exist are not removed."
+  (setq directory (directory-file-name (expand-file-name directory)))
+  (setq load-path (delete directory load-path))
+  (mapc (lambda (f)
+          (when (file-directory-p f)
+            (packed-remove-from-load-path f)))
+        (directory-files directory t "^[^.]" t)))
 
 (defun packed-load-path (directory &optional package)
+  "Return a list of directories below DIRECTORY that contain libraries."
   (let (lp in-lp)
     (dolist (f (directory-files directory t "^[^.]"))
       (cond ((file-regular-p f)
@@ -411,6 +412,17 @@ non-nil return nil."
 
 
 ;;; Byte Compile.
+
+(defmacro packed-without-mode-hooks (&rest body)
+  (declare (indent 0))
+  `(let (after-change-major-mode-hook
+         prog-mode-hook
+         emacs-lisp-mode-hook)
+     ,@body))
+
+(defun packed-byte-compile-file (filename &optional load)
+  "Like `byte-compile-file' but don't run any mode hooks."
+  (packed-without-mode-hooks (byte-compile-file filename load)))
 
 (defun packed-compile-package (directory &optional package force)
   (unless noninteractive
@@ -451,10 +463,12 @@ non-nil return nil."
 ;;; Autoloads.
 
 (defun packed-loaddefs-file (&optional directory)
-  (locate-dominating-file (or directory default-directory)
-                          packed-loaddefs-filename))
+  (let ((dir (locate-dominating-file (or directory default-directory)
+                                     packed-loaddefs-filename)))
+    (when dir
+      (expand-file-name packed-loaddefs-filename dir))))
 
-(defun packed-load-autoloads (&optional directory)
+(defun packed-load-loaddefs (&optional directory)
   (let ((file (packed-loaddefs-file directory)))
     (if file
         (load file)
@@ -462,14 +476,10 @@ non-nil return nil."
 
 (defmacro packed-with-loaddefs (dest &rest body)
   (declare (indent 1))
-  `(let ((generated-autoload-file dest)
-         ;; Generating autoloads runs theses hooks; disable them.
-         fundamental-mode-hook
-         prog-mode-hook
-         emacs-lisp-mode-hook)
+  `(packed-without-mode-hooks
      (require 'autoload)
-     (prog1 (progn ,@body)
-       (let (buf)
+     (let ((generated-autoload-file ,dest) buf)
+       (prog1 (progn ,@body)
          (while (setq buf (find-buffer-visiting generated-autoload-file))
            (with-current-buffer buf
              (save-buffer)
@@ -489,6 +499,7 @@ non-nil return nil."
       (with-temp-buffer
         (let ((autoload-modified-buffers (list (current-buffer))))
           (dolist (d path)
+            (setq d (file-name-as-directory d))
             (when (and (file-directory-p d)
                        (file-exists-p d))
               (dolist (f (directory-files d t (packed-el-regexp)))
@@ -637,7 +648,8 @@ DIR-FILE."
           (delete-file f)
           (setq f (concat (file-name-sans-extension f) ".info")))
         (call-process packed-ginstall-info nil nil nil "--delete" f "dir")
-        (delete-file f)))))
+        (when (file-exists-p f)
+          (delete-file f))))))
 
 (defun packed-info-files (directory)
   "Return a list of info and texinfo files in DIRECTORY.

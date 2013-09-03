@@ -70,7 +70,7 @@
 (ert-deftest primary-field-transformation ()
   (with-temp-buffer
     (yas-minor-mode 1)
-    (let ((snippet "${1:$$(upcase yas/text)}${1:$(concat \"bar\" yas/text)}"))
+    (let ((snippet "${1:$$(upcase yas-text)}${1:$(concat \"bar\" yas-text)}"))
       (yas-expand-snippet snippet)
       (should (string= (yas--buffer-contents) "bar"))
       (ert-simulate-command `(yas-mock-insert "foo"))
@@ -172,33 +172,33 @@
 (ert-deftest be-careful-when-escaping-in-yas-selected-text ()
   (with-temp-buffer
     (yas-minor-mode 1)
-    (let ((yas/selected-text "He\\\\o world!"))
-      (yas-expand-snippet "Look ma! `(yas/selected-text)`")
+    (let ((yas-selected-text "He\\\\o world!"))
+      (yas-expand-snippet "Look ma! `(yas-selected-text)`")
       (should (string= (yas--buffer-contents) "Look ma! He\\\\o world!")))
     (yas-exit-all-snippets)
     (erase-buffer)
-    (let ((yas/selected-text "He\"o world!"))
-      (yas-expand-snippet "Look ma! `(yas/selected-text)`")
+    (let ((yas-selected-text "He\"o world!"))
+      (yas-expand-snippet "Look ma! `(yas-selected-text)`")
       (should (string= (yas--buffer-contents) "Look ma! He\"o world!")))
     (yas-exit-all-snippets)
     (erase-buffer)
-    (let ((yas/selected-text "He\"\)\\o world!"))
-      (yas-expand-snippet "Look ma! `(yas/selected-text)`")
+    (let ((yas-selected-text "He\"\)\\o world!"))
+      (yas-expand-snippet "Look ma! `(yas-selected-text)`")
       (should (string= (yas--buffer-contents) "Look ma! He\"\)\\o world!")))
     (yas-exit-all-snippets)
     (erase-buffer)))
 
 (ert-deftest be-careful-when-escaping-in-yas-selected-text-2 ()
   (with-temp-buffer
-    (let ((yas/selected-text "He)}o world!"))
-      (yas-expand-snippet "Look ma! ${1:`(yas/selected-text)`} OK?")
+    (let ((yas-selected-text "He)}o world!"))
+      (yas-expand-snippet "Look ma! ${1:`(yas-selected-text)`} OK?")
       (should (string= (yas--buffer-contents) "Look ma! He)}o world! OK?")))))
 
 (ert-deftest example-for-issue-271 ()
   (with-temp-buffer
     (yas-minor-mode 1)
     (let ((yas-selected-text "aaa")
-          (snippet "if ${1:condition}\n`yas/selected-text`\nelse\n$3\nend"))
+          (snippet "if ${1:condition}\n`yas-selected-text`\nelse\n$3\nend"))
       (yas-expand-snippet snippet)
       (yas-next-field)
       (ert-simulate-command `(yas-mock-insert "bbb"))
@@ -213,7 +213,7 @@
                      :passed)
   (with-temp-buffer
     (yas-minor-mode 1)
-    (let ((snippet "\\${${1:1}:`yas/selected-text`}"))
+    (let ((snippet "\\${${1:1}:`yas-selected-text`}"))
       (insert "aaabbbccc")
       (set-mark 4)
       (goto-char 7)
@@ -236,7 +236,7 @@
     (yas-minor-mode 1)
     ;; the rule here is: To use regexps in embedded `(elisp)` expressions,
     ;; escape backslashes once, i.e. to use \\( \\) constructs, write \\\\( \\\\).
-    (let ((snippet "$1${1:$(if (string-match \"foo\\\\\\\\(ba+r\\\\\\\\)baz\" yas/text)
+    (let ((snippet "$1${1:$(if (string-match \"foo\\\\\\\\(ba+r\\\\\\\\)baz\" yas-text)
                                 \"ok\"
                                 \"fail\")}"))
       (yas-expand-snippet snippet)
@@ -264,8 +264,41 @@ TODO: correct this bug!"
 
 ;;; Loading
 ;;;
+(defun yas--call-with-temporary-redefinitions (function
+                                               &rest function-names-and-overriding-functions)
+  (let* ((overrides (remove-if-not #'(lambda (fdef)
+                                       (fboundp (first fdef)))
+                                   function-names-and-overriding-functions))
+         (definition-names (mapcar #'first overrides))
+         (overriding-functions (mapcar #'second overrides))
+         (saved-functions (mapcar #'symbol-function definition-names)))
+    ;; saving all definitions before overriding anything ensures FDEFINITION
+    ;; errors don't cause accidental permanent redefinitions.
+    ;;
+    (cl-flet ((set-fdefinitions (names functions)
+                                (loop for name in names
+                                      for fn in functions
+                                      do (fset name fn))))
+      (set-fdefinitions definition-names overriding-functions)
+      (unwind-protect (funcall function)
+	(set-fdefinitions definition-names saved-functions)))))
+
+(defmacro yas--with-temporary-redefinitions (fdefinitions &rest body)
+  ;; "Temporarily (but globally) redefine each function in FDEFINITIONS.
+  ;; E.g.: (yas--with-temporary-redefinitions ((foo (x) ...)
+  ;;                                           (bar (x) ...))
+  ;;         ;; code that eventually calls foo, bar of (setf foo)
+  ;;         ...)"
+  ;; FIXME: This is hideous!  Better use defadvice (or at least letf).
+  `(yas--call-with-temporary-redefinitions
+    (lambda () ,@body)
+    ,@(mapcar #'(lambda (thingy)
+                  `(list ',(first thingy)
+                         (lambda ,@(rest thingy))))
+              fdefinitions)))
+
 (defmacro yas-with-overriden-buffer-list (&rest body)
-  (let ((saved-sym (gensym)))
+  (let ((saved-sym (make-symbol "yas--buffer-list")))
     `(let ((,saved-sym (symbol-function 'buffer-list)))
        (yas--with-temporary-redefinitions
            ((buffer-list ()
@@ -275,24 +308,26 @@ TODO: correct this bug!"
                                     (funcall ,saved-sym))))
          ,@body))))
 
+
 (defmacro yas-with-some-interesting-snippet-dirs (&rest body)
   `(yas-saving-variables
     (yas-with-overriden-buffer-list
      (yas-with-snippet-dirs
-      '((".emacs.d/snippets"
-         ("c-mode"
-          (".yas-parents" . "cc-mode")
-          ("printf" . "printf($1);"))  ;; notice the overriding for issue #281
-         ("emacs-lisp-mode" ("ert-deftest" . "(ert-deftest ${1:name} () $0)"))
-         ("lisp-interaction-mode" (".yas-parents" . "emacs-lisp-mode")))
-        ("library/snippets"
-         ("c-mode"
-          (".yas-parents" . "c++-mode")
-          ("printf" . "printf"))
-         ("cc-mode" ("def" . "# define"))
-         ("emacs-lisp-mode" ("dolist" . "(dolist)"))
-         ("lisp-interaction-mode" ("sc" . "brother from another mother"))))
-      ,@body))))
+       '((".emacs.d/snippets"
+          ("c-mode"
+           (".yas-parents" . "cc-mode")
+           ("printf" . "printf($1);"))  ;; notice the overriding for issue #281
+          ("emacs-lisp-mode" ("ert-deftest" . "(ert-deftest ${1:name} () $0)"))
+          ("lisp-interaction-mode" (".yas-parents" . "emacs-lisp-mode")))
+         ("library/snippets"
+          ("c-mode"
+           (".yas-parents" . "c++-mode")
+           ("printf" . "printf"))
+          ("cc-mode" ("def" . "# define"))
+          ("emacs-lisp-mode" ("dolist" . "(dolist)"))
+          ("lisp-interaction-mode" ("sc" . "brother from another mother"))))
+       ,@body))))
+
 
 (ert-deftest basic-jit-loading ()
   "Test basic loading and expansion of snippets"
@@ -306,13 +341,38 @@ TODO: correct this bug!"
    (yas-reload-all)
    (yas-recompile-all)
    (yas--with-temporary-redefinitions ((yas--load-directory-2
-                                        (&rest dummies)
-                                        (declare (ignore dummies))
+                                        (&rest _dummies)
                                         (ert-fail "yas--load-directory-2 shouldn't be called when snippets have been compiled")))
      (yas-reload-all)
      (yas--basic-jit-loading-1))))
 
-(defun yas--basic-jit-loading-1 (&optional compile)
+(ert-deftest loading-with-cyclic-parenthood ()
+  "Test loading when cyclic parenthood is setup."
+  (yas-saving-variables
+   (yas-with-snippet-dirs '((".emacs.d/snippets"
+                             ("c-mode"
+                              (".yas-parents" . "cc-mode"))
+                             ("cc-mode"
+                              (".yas-parents" . "yet-another-c-mode and-that-one"))
+                             ("yet-another-c-mode"
+                              (".yas-parents" . "c-mode and-also-this-one lisp-interaction-mode"))))
+     (yas-reload-all)
+     (with-temp-buffer
+       (let* ((major-mode 'c-mode)
+              (expected '(c-mode
+                          cc-mode
+                          yet-another-c-mode
+                          and-also-this-one
+                          and-that-one
+                          prog-mode
+                          emacs-lisp-mode
+                          lisp-interaction-mode))
+              (observed (yas--modes-to-activate)))
+         (should (null (cl-set-exclusive-or expected observed)))
+         (should (= (length expected)
+                    (length observed))))))))
+
+(defun yas--basic-jit-loading-1 ()
   (with-temp-buffer
     (should (= 4 (hash-table-count yas--scheduled-jit-loads)))
     (should (= 0 (hash-table-count yas--tables)))
@@ -341,34 +401,34 @@ TODO: correct this bug!"
 (defmacro yas-with-even-more-interesting-snippet-dirs (&rest body)
   `(yas-saving-variables
     (yas-with-snippet-dirs
-     `((".emacs.d/snippets"
-        ("c-mode"
-         (".yas-make-groups" . "")
-         ("printf" . "printf($1);")
-         ("foo-group-a"
-          ("fnprintf" . "fprintf($1);")
-          ("snprintf" . "snprintf($1);"))
-         ("foo-group-b"
-          ("strcmp" . "strecmp($1);")
-          ("strcasecmp" . "strcasecmp($1);")))
-        ("lisp-interaction-mode"
-         ("ert-deftest" . "# group: barbar\n# --\n(ert-deftest ${1:name} () $0)"))
-        ("fancy-mode"
-         ("a-guy" . "# uuid: 999\n# --\nyo!")
-         ("a-sir" . "# uuid: 12345\n# --\nindeed!")
-         ("a-lady" . "# uuid: 54321\n# --\noh-la-la!")
-         ("a-beggar" . "# uuid: 0101\n# --\narrrgh!")
-         ("an-outcast" . "# uuid: 666\n# --\narrrgh!")
-         (".yas-setup.el" . , (pp-to-string
-                               '(yas-define-menu 'fancy-mode
-                                                 '((yas-ignore-item "0101")
-                                                   (yas-item "999")
-                                                   (yas-submenu "sirs"
-                                                                ((yas-item "12345")))
-                                                   (yas-submenu "ladies"
-                                                                ((yas-item "54321"))))
-                                                 '("666")))))))
-     ,@body)))
+      `((".emacs.d/snippets"
+         ("c-mode"
+          (".yas-make-groups" . "")
+          ("printf" . "printf($1);")
+          ("foo-group-a"
+           ("fnprintf" . "fprintf($1);")
+           ("snprintf" . "snprintf($1);"))
+          ("foo-group-b"
+           ("strcmp" . "strecmp($1);")
+           ("strcasecmp" . "strcasecmp($1);")))
+         ("lisp-interaction-mode"
+          ("ert-deftest" . "# group: barbar\n# --\n(ert-deftest ${1:name} () $0)"))
+         ("fancy-mode"
+          ("a-guy" . "# uuid: 999\n# --\nyo!")
+          ("a-sir" . "# uuid: 12345\n# --\nindeed!")
+          ("a-lady" . "# uuid: 54321\n# --\noh-la-la!")
+          ("a-beggar" . "# uuid: 0101\n# --\narrrgh!")
+          ("an-outcast" . "# uuid: 666\n# --\narrrgh!")
+          (".yas-setup.el" . , (pp-to-string
+                                '(yas-define-menu 'fancy-mode
+                                                  '((yas-ignore-item "0101")
+                                                    (yas-item "999")
+                                                    (yas-submenu "sirs"
+                                                                 ((yas-item "12345")))
+                                                    (yas-submenu "ladies"
+                                                                 ((yas-item "54321"))))
+                                                  '("666")))))))
+      ,@body)))
 
 (ert-deftest test-yas-define-menu ()
   (let ((yas-use-menu t))
@@ -494,13 +554,11 @@ TODO: be meaner"
 
 ;;; Helpers
 ;;;
-(defun yas/ert ()
+(defun yas-batch-run-tests ()
   (interactive)
   (with-temp-buffer
     (yas--with-temporary-redefinitions
-        ((message (&rest args)        ;
-                  (declare (ignore args))
-                  nil))
+        ((message (&rest _args) nil))
       (ert t (buffer-name (current-buffer)))
       (princ (buffer-string)))))
 
@@ -578,6 +636,7 @@ TODO: be meaner"
           (delete-directory default-directory 'recursive))))))
 
 (defmacro yas-with-snippet-dirs (dirs &rest body)
+  (declare (indent defun))
   `(yas-call-with-snippet-dirs ,dirs
                                #'(lambda ()
                                    ,@body)))
@@ -585,7 +644,8 @@ TODO: be meaner"
 ;;; Older emacsen
 ;;;
 (unless (fboundp 'special-mode)
-  (define-minor-mode special-mode "Just a placeholder for something isn't in emacs 22"))
+  ;; FIXME: Why provide this default definition here?!?
+  (defalias 'special-mode 'fundamental))
 
 ;;; btw to test this in emacs22 mac osx:
 ;;; curl -L -O https://github.com/mirrors/emacs/raw/master/lisp/emacs-lisp/ert.el
@@ -593,8 +653,21 @@ TODO: be meaner"
 ;;; /usr/bin/emacs -nw -Q -L . -l yasnippet-tests.el --batch -e ert
 
 
+(put 'yas-saving-variables                   'edebug-form-spec t)
+(put 'yas-with-snippet-dirs                  'edebug-form-spec t)
+(put 'yas-with-overriden-buffer-list         'edebug-form-spec t)
+(put 'yas-with-some-interesting-snippet-dirs 'edebug-form-spec t)
+
+
+(put 'yas--with-temporary-redefinitions 'lisp-indent-function 1)
+(put 'yas--with-temporary-redefinitions 'edebug-form-spec '((&rest (defun*)) cl-declarations body))
+
+
+
+
 (provide 'yasnippet-tests)
 ;;; yasnippet-tests.el ends here
 ;; Local Variables:
 ;; lexical-binding: t
+;; byte-compile-warnings: (not cl-functions)
 ;; End:

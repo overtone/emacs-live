@@ -42,13 +42,13 @@
 (defmacro mc/add-fake-cursor-to-undo-list (&rest forms)
   "Make sure point is in the right place when undoing"
   (let ((uc (make-symbol "undo-cleaner")))
-   `(let ((,uc (cons 'apply (cons 'deactivate-cursor-after-undo (list id)))))
-      (setq buffer-undo-list (cons ,uc buffer-undo-list))
-      ,@forms
-      (if (eq ,uc (car buffer-undo-list)) ;; if nothing has been added to the undo-list
-          (setq buffer-undo-list (cdr buffer-undo-list)) ;; then pop the cleaner right off again
-        (setq buffer-undo-list ;; otherwise add a function to activate this cursor
-              (cons (cons 'apply (cons 'activate-cursor-for-undo (list id))) buffer-undo-list))))))
+    `(let ((,uc (cons 'apply (cons 'deactivate-cursor-after-undo (list id)))))
+       (setq buffer-undo-list (cons ,uc buffer-undo-list))
+       ,@forms
+       (if (eq ,uc (car buffer-undo-list)) ;; if nothing has been added to the undo-list
+           (setq buffer-undo-list (cdr buffer-undo-list)) ;; then pop the cleaner right off again
+         (setq buffer-undo-list ;; otherwise add a function to activate this cursor
+               (cons (cons 'apply (cons 'activate-cursor-for-undo (list id))) buffer-undo-list))))))
 
 (defun mc/all-fake-cursors (&optional start end)
   (remove-if-not 'mc/fake-cursor-p
@@ -63,11 +63,11 @@
 (defmacro mc/save-excursion (&rest forms)
   "Saves and restores all the state that multiple-cursors cares about."
   (let ((cs (make-symbol "current-state")))
-   `(let ((,cs (mc/store-current-state-in-overlay
-                          (make-overlay (point) (point) nil nil t))))
-      (overlay-put ,cs 'type 'original-cursor)
-      (save-excursion ,@forms)
-      (mc/pop-state-from-overlay ,cs))))
+    `(let ((,cs (mc/store-current-state-in-overlay
+                 (make-overlay (point) (point) nil nil t))))
+       (overlay-put ,cs 'type 'original-cursor)
+       (save-excursion ,@forms)
+       (mc/pop-state-from-overlay ,cs))))
 
 (defun mc--compare-by-overlay-start (o1 o2)
   (< (overlay-start o1) (overlay-start o2)))
@@ -75,27 +75,27 @@
 (defmacro mc/for-each-cursor-ordered (&rest forms)
   "Runs the body for each cursor, fake and real, bound to the name cursor"
   (let ((rci (make-symbol "real-cursor-id")))
-   `(let ((,rci (overlay-get (mc/create-fake-cursor-at-point) 'mc-id)))
-      (mapc #'(lambda (cursor)
-                (when (mc/fake-cursor-p cursor)
-                  ,@forms))
-            (sort (overlays-in (point-min) (point-max)) 'mc--compare-by-overlay-start))
-      (mc/pop-state-from-overlay (mc/cursor-with-id ,rci)))))
+    `(let ((,rci (overlay-get (mc/create-fake-cursor-at-point) 'mc-id)))
+       (mapc #'(lambda (cursor)
+                 (when (mc/fake-cursor-p cursor)
+                   ,@forms))
+             (sort (overlays-in (point-min) (point-max)) 'mc--compare-by-overlay-start))
+       (mc/pop-state-from-overlay (mc/cursor-with-id ,rci)))))
 
 (defmacro mc/save-window-scroll (&rest forms)
   "Saves and restores the window scroll position"
   (let ((p (make-symbol "p"))
         (s (make-symbol "start"))
         (h (make-symbol "hscroll")))
-   `(let ((,p (set-marker (make-marker) (point)))
-          (,s (set-marker (make-marker) (window-start)))
-          (,h (window-hscroll)))
-      ,@forms
-      (goto-char ,p)
-      (set-window-start nil ,s t)
-      (set-window-hscroll nil ,h)
-      (set-marker ,p nil)
-      (set-marker ,s nil))))
+    `(let ((,p (set-marker (make-marker) (point)))
+           (,s (set-marker (make-marker) (window-start)))
+           (,h (window-hscroll)))
+       ,@forms
+       (goto-char ,p)
+       (set-window-start nil ,s t)
+       (set-window-hscroll nil ,h)
+       (set-marker ,p nil)
+       (set-marker ,s nil))))
 
 (defun mc/make-cursor-overlay-at-eol (pos)
   "Create overlay to look like cursor at end of line."
@@ -124,22 +124,22 @@ highlights the entire width of the window."
     (overlay-put overlay 'type 'additional-region)
     overlay))
 
-(defvar mc/cursor-specific-vars '(autopair-action
+(defvar mc/cursor-specific-vars '(transient-mark-mode
+                                  kill-ring
+                                  kill-ring-yank-pointer
+                                  mark-ring
+                                  mark-active
+                                  yank-undo-function
+                                  kill-ring-yank-pointer
+                                  autopair-action
                                   autopair-wrap-action
-                                  transient-mark-mode
                                   er/history)
   "A list of vars that need to be tracked on a per-cursor basis.")
 
 (defun mc/store-current-state-in-overlay (o)
   "Store relevant info about point and mark in the given overlay."
   (overlay-put o 'point (set-marker (make-marker) (point)))
-  (overlay-put o 'kill-ring kill-ring)
-  (overlay-put o 'kill-ring-yank-pointer kill-ring-yank-pointer)
   (overlay-put o 'mark (set-marker (make-marker) (mark)))
-  (overlay-put o 'mark-ring mark-ring)
-  (overlay-put o 'mark-active mark-active)
-  (overlay-put o 'yank-undo-function yank-undo-function)
-  (overlay-put o 'kill-ring-yank-pointer kill-ring-yank-pointer)
   (dolist (var mc/cursor-specific-vars)
     (when (boundp var) (overlay-put o var (symbol-value var))))
   o)
@@ -147,13 +147,7 @@ highlights the entire width of the window."
 (defun mc/restore-state-from-overlay (o)
   "Restore point and mark from stored info in the given overlay."
   (goto-char (overlay-get o 'point))
-  (setq kill-ring (overlay-get o 'kill-ring))
-  (setq kill-ring-yank-pointer (overlay-get o 'kill-ring-yank-pointer))
   (set-marker (mark-marker) (overlay-get o 'mark))
-  (setq mark-ring (overlay-get o 'mark-ring))
-  (setq mark-active (overlay-get o 'mark-active))
-  (setq yank-undo-function (overlay-get o 'yank-undo-function))
-  (setq kill-ring-yank-pointer (overlay-get o 'kill-ring-yank-pointer))
   (dolist (var mc/cursor-specific-vars)
     (when (boundp var) (set var (overlay-get o var)))))
 
@@ -312,8 +306,10 @@ been remapped. And certain modes (cua comes to mind) will change their
 remapping based on state. So a command that changes the state will afterwards
 not be recognized through the command-remapping lookup."
   (unless mc--executing-command-for-fake-cursor
-    (setq mc--this-command (or (command-remapping this-original-command)
-                               this-original-command))))
+    (let ((cmd (or (command-remapping this-original-command)
+                   this-original-command)))
+      (setq mc--this-command (and (not (eq cmd 'god-mode-self-insert))
+                                  cmd)))))
 
 (defun mc/execute-this-command-for-all-cursors ()
   "Wrap around `mc/execute-this-command-for-all-cursors-1' to protect hook."
@@ -343,7 +339,6 @@ the original cursor, to inform about the lack of support."
 
     (if (eq 1 (mc/num-cursors)) ;; no fake cursors? disable mc-mode
         (multiple-cursors-mode 0)
-
       (when this-original-command
         (let ((original-command (or mc--this-command
                                     (command-remapping this-original-command)
@@ -396,19 +391,22 @@ you should disable multiple-cursors-mode."
   "Keymap while multiple cursors are active.
 Main goal of the keymap is to rebind C-g and <return> to conclude
 multiple cursors editing.")
-(if mc/keymap
-    nil
+(unless mc/keymap
   (setq mc/keymap (make-sparse-keymap))
   (define-key mc/keymap (kbd "C-g") 'mc/keyboard-quit)
-  (define-key mc/keymap (kbd "<return>") 'multiple-cursors-mode))
+  (define-key mc/keymap (kbd "<return>") 'multiple-cursors-mode)
+  (when (fboundp 'phi-search)
+    (define-key mc/keymap (kbd "C-s") 'phi-search))
+  (when (fboundp 'phi-search-backward)
+    (define-key mc/keymap (kbd "C-r") 'phi-search-backward)))
 
-(defun mc--all-equal (entries)
-  "Are all these entries equal?"
-  (let ((first (car entries))
+(defun mc--all-equal (list)
+  "Are all the items in LIST equal?"
+  (let ((first (car list))
         (all-equal t))
-    (while (and all-equal entries)
-      (setq all-equal (equal first (car entries)))
-      (setq entries (cdr entries)))
+    (while (and all-equal list)
+      (setq all-equal (equal first (car list)))
+      (setq list (cdr list)))
     all-equal))
 
 (defun mc--kill-ring-entries ()
@@ -426,7 +424,7 @@ So you can paste it in later with `yank-rectangle'."
     (unless (mc--all-equal entries)
       (setq killed-rectangle entries))))
 
-(defvar mc/unsupported-minor-modes '(auto-complete-mode)
+(defvar mc/unsupported-minor-modes '(auto-complete-mode flyspell-mode)
   "List of minor-modes that does not play well with multiple-cursors.
 They are temporarily disabled when multiple-cursors are active.")
 
@@ -582,6 +580,16 @@ for running commands with multiple cursors.")
                                      mc/cycle-forward
                                      mc/cycle-backward
                                      mc/add-cursor-on-click
+                                     mc/mark-pop
+                                     mc/add-cursors-to-all-matches
+                                     mc/mmlte--left
+                                     mc/mmlte--right
+                                     mc/mmlte--up
+                                     mc/mmlte--down
+                                     mc/unmark-next-like-this
+                                     mc/unmark-previous-like-this
+                                     mc/skip-to-next-like-this
+                                     mc/skip-to-previous-like-this
                                      rrm/switch-to-multiple-cursors
                                      save-buffer
                                      ido-exit-minibuffer
@@ -667,6 +675,7 @@ for running commands with multiple cursors.")
                                         backward-delete-char-untabify
                                         delete-char delete-forward-char
                                         delete-backward-char
+                                        py-electric-backspace
                                         c-electric-backspace
                                         org-delete-backward-char
                                         paredit-backward-delete

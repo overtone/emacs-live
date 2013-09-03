@@ -8,7 +8,7 @@ interactive auto-completion framework
 Where nrepl provides it, pop-up documentation for completed symbols
 will be displayed.
 
-**Latest stable version**: see the [latest numbered tag](https://github.com/purcell/ac-nrepl/tags), which
+**Latest stable version**: see the [latest numbered tag](https://github.com/clojure-emacs/ac-nrepl/tags), which
 will also be the latest version available via Marmalade.
 
 Installation
@@ -58,9 +58,10 @@ in which `nrepl-mode` is active and `auto-complete` is enabled. (The
 symbols "nrepl and "AC" should appear in the modeline.)
 
 Simply trigger auto-completion, and completion candidates supplied by
-nrepl should be displayed, with the symbol `n` on the right hand side
-of the completion pop-up. After a short delay, popup documentation
-for the completed symbol should also be displayed.
+nrepl should be displayed, with symbols on the right hand side of the
+completion pop-up to indicate the "flavour" of the completion
+candidate, e.g. "v" for variables. After a short delay, popup
+documentation for the completed symbol should also be displayed.
 
 
 
@@ -70,12 +71,11 @@ for the completed symbol should also be displayed.
 Acknowledgements
 ================
 
-Many thanks to the following contributors:
-
-* [Sam Aaron](https://github.com/samaaron)
-
+`ac-nrepl` was written by [Steve Purcell](https://github.com/purcell), with important contributions from [Sam Aaron](https://github.com/samaaron).
 
 <hr>
+
+Author links:
 
 [![](http://api.coderwall.com/purcell/endorsecount.png)](http://coderwall.com/purcell)
 

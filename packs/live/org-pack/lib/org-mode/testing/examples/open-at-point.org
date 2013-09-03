@@ -1,0 +1,8 @@
+
+* Header 1
+  :PROPERTIES:
+  :ID:       header1_with_great_id
+  :END:
+* Header 2
+  [[id:header1_with_great_id][Header 1]]
+  id:header1_with_great_id

@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/kingtim/nrepl.el.png?branch=master)](https://travis-ci.org/kingtim/nrepl.el)
+[![Build Status](https://travis-ci.org/clojure-emacs/nrepl.el.png?branch=master)](https://travis-ci.org/clojure-emacs/nrepl.el)
 
 # nrepl.el
 
@@ -45,7 +45,7 @@ And then you can install nREPL with the following command:
 or by adding this bit of Emacs Lisp code to your Emacs initialization file(`.emacs` or `init.el`):
 
 ```lisp
-(when (not (package-installed-p 'nrepl))
+(unless (package-installed-p 'nrepl)
   (package-install 'nrepl))
 ```
 
@@ -76,6 +76,12 @@ Keep in mind that `nrepl.el` depends on `clojure-mode` so you'll have to install
 `nrepl.el` comes bundled in
 [Emacs Prelude](https://github.com/bbatsov/prelude). If you're a
 Prelude user you can start using it right away.
+
+### Emacs Live
+
+`nrepl.el` comes bundled in
+[Emacs Live](https://github.com/overtone/emacs-live). If you're using
+Emacs Live you're already good to go.
 
 ## Configuration
 
@@ -127,6 +133,20 @@ than the REPL:
 (setq nrepl-popup-stacktraces-in-repl t)
 ```
 
+* The nrepl buffer name takes the format `*nrepl project-name*`.
+Change the separator from space to something else by overriding `nrepl-buffer-name-separator`.
+
+```lisp
+(setq nrepl-buffer-name-separator "-")
+```
+
+* The nrepl buffer name can also display the port on which the nrepl server is running.
+Buffer name will look like *nrepl project-name:port*.
+
+```lisp
+(setq nrepl-buffer-name-show-port t)
+```
+
 * Make <kbd>C-c C-z</kbd> switch to the `*nrepl*` buffer in the current window:
 
 ```lisp
@@ -152,6 +172,15 @@ enable `paredit` in the nREPL buffer as well:
 (add-hook 'nrepl-mode-hook 'paredit-mode)
 ```
 
+* [smartparens](https://github.com/Fuco1/smartparens) is an excellent
+  alternative to paredit. Many Clojure hackers have adopted it
+  recently and you might want to give it a try as well. To enable
+  `smartparens` in the nREPL buffer use the following code:
+
+```lisp
+(add-hook 'nrepl-mode-hook 'smartparens-mode)
+```
+
 * [RainbowDelimiters](https://github.com/jlr/rainbow-delimiters) is a
   minor mode which highlights parentheses, brackets, and braces
   according to their depth. Each successive level is highlighted in a
@@ -163,6 +192,12 @@ enable `paredit` in the nREPL buffer as well:
 ```lisp
 (add-hook 'nrepl-mode-hook 'rainbow-delimiters-mode)
 ```
+
+* [ac-nrepl](https://github.com/clojure-emacs/ac-nrepl) provides
+  completion source for the popular Emacs interactive auto-completion
+  framework [auto-complete](http://cx4a.org/software/auto-complete/).
+  Where nrepl provides it, pop-up documentation for completed symbols
+  will be displayed.
 
 ## Basic Usage
 
@@ -256,6 +291,9 @@ Keyboard shortcut                    | Description
 <kbd>C-c C-n</kbd>                   | Eval the ns form.
 <kbd>C-c M-n</kbd>                   | Switch the namespace of the repl buffer to the namespace of the current buffer.
 <kbd>C-c C-z</kbd>                   | Select the REPL buffer. With a prefix argument - changes the namespace of the REPL buffer to the one of the currently visited source file.
+<kbd>C-u C-u C-c C-z</kbd>           | Select the REPL buffer based on a user prompt for a directory.
+<kbd>C-c M-d</kbd>                   | Display current REPL connection details, including project directory name, buffer namespace, host and port.
+<kbd>C-c M-r</kbd>                   | Rotate and display the current REPL connection.
 <kbd>C-c M-o</kbd>                   | Clear the entire REPL buffer, leaving only a prompt. Useful if you're running the REPL buffer in a side by side buffer.
 <kbd>C-c C-k</kbd>                   | Load the current buffer.
 <kbd>C-c C-l</kbd>                   | Load a file.
@@ -284,6 +322,10 @@ Keyboard shortcut                    | Description
 <kbd>TAB</kbd> | Complete symbol at point.
 <kbd>C-c C-d</kbd> | Display doc string for the symbol at point.  If invoked with a prefix argument, or no symbol is found at point, prompt for a symbol
 <kbd>C-c C-j</kbd> | Display JavaDoc (in your default browser) for the symbol at point.  If invoked with a prefix argument, or no symbol is found at point, prompt for a symbol.
+<kbd>C-c C-z</kbd> | Select the last clojure buffer. <kbd>C-u C-c C-z</kbd> will switch the clojure buffer to the namespace in the current buffer.
+<kbd>C-u C-u C-c C-z</kbd> | Select the clojure buffer based on a user prompt for a directory.
+<kbd>C-c M-d</kbd> | Display current REPL connection details, including project directory name, buffer namespace, host and port.
+<kbd>C-c M-r</kbd> | Rotate and display the current REPL connection.
 
 ### Macroexpansion buffer commands:
 
@@ -304,6 +346,10 @@ nrepl.el commands in a clojure buffer use the default connection.  To make a
 connection default, switch to it's repl buffer and use
 <kbd>M-x nrepl-make-repl-connection-default</kbd>.
 
+To switch to the relevant nREPL buffer based on the clojure namespace in the current buffer, use: <kbd>C-c C-z</kbd>.
+
+You can display the current nREPL connection using <kbd>C-c M-d</kbd> and rotate through available connections using <kbd>C-c M-r</kbd>.
+
 ## Requirements:
 
 * [Leiningen](http://leiningen.org) 2.x
@@ -314,12 +360,42 @@ connection default, switch to it's repl buffer and use
 
 An extensive changelog is available [here](CHANGELOG.md).
 
+## Team
+
+* [Tim King](https://github.com/kingtim)
+* [Phil Hagelberg](https://github.com/technomancy)
+* [Bozhidar Batsov](https://github.com/bbatsov)
+* [Hugo Duncan](https://github.com/hugoduncan)
+* [Steve Purcell](https://github.com/purcell)
+
 ## Contributing
+
 * Mailing list: [https://groups.google.com/forum/#!forum/nrepl-el](https://groups.google.com/forum/#!forum/nrepl-el)
-* Please report issues on the [GitHub issue tracker](https://github.com/kingtim/nrepl.el/issues) or the mailing list.
+* Please report issues on the [GitHub issue tracker](https://github.com/clojure-emacs/nrepl.el/issues) or the mailing list.
+
+Bug reports and suggestions for improvements are always
+welcome. GitHub pull requests are even better! :-)
+
+### Running the tests in batch mode
+
+Install [cask](https://github.com/rejeep/cask.el) if you haven't
+already, then:
+
+```bash
+$ cd /path/to/nrepl
+$ cask
+```
+
+Run all tests with:
+
+```bash
+$ make test
+```
 
 ## License
 
-Copyright © 2012-2013 Tim King, Phil Hagelberg and [contributors](https://github.com/kingtim/nrepl.el/contributors).
+Copyright © 2012-2013 Tim King, Phil Hagelberg, Bozhidar Batsov, Hugo
+Duncan, Steve Purcell and
+[contributors](https://github.com/kingtim/nrepl.el/contributors).
 
 Distributed under the GNU General Public License, version 3

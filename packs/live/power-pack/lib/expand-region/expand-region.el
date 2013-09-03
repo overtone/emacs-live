@@ -137,6 +137,7 @@
 
 (require 'expand-region-core)
 (require 'expand-region-custom)
+(require 'er-basic-expansions)
 
 ;;;###autoload
 (defun er/expand-region (arg)
@@ -157,33 +158,36 @@ before calling `er/expand-region' for the first time."
                (not (memq last-command '(er/expand-region er/contract-region))))
       (er/prepare-for-more-expansions))))
 
-(eval-after-load "clojure-mode" '(require 'clojure-mode-expansions))
-(eval-after-load "css-mode"     '(require 'css-mode-expansions))
-(eval-after-load "erlang-mode"  '(require 'erlang-mode-expansions))
-(eval-after-load "feature-mode" '(require 'feature-mode-expansions))
-(eval-after-load "sgml-mode"    '(require 'html-mode-expansions)) ;; html-mode is defined in sgml-mode.el
-(eval-after-load "rhtml-mode"   '(require 'html-mode-expansions))
-(eval-after-load "nxhtml-mode"  '(require 'html-mode-expansions))
-(eval-after-load "web-mode"     '(require 'web-mode-expansions))
-(eval-after-load "js"           '(require 'js-mode-expansions))
-(eval-after-load "js2-mode"     '(require 'js-mode-expansions))
-(eval-after-load "js2-mode"     '(require 'js2-mode-expansions))
-(eval-after-load "js3-mode"     '(require 'js-mode-expansions))
-(eval-after-load "latex"        '(require 'latex-mode-expansions))
-(eval-after-load "nxml-mode"    '(require 'nxml-mode-expansions))
-(eval-after-load "octave-mod"   '(require 'octave-expansions))
-(eval-after-load "python"       '(progn
-                                   (when expand-region-guess-python-mode
-                                     (expand-region-guess-python-mode))
-                                   (if (eq 'python expand-region-preferred-python-mode)
-                                       (require 'python-el-expansions)
-                                     (require 'python-el-fgallina-expansions))))
-(eval-after-load "python-mode"  '(require 'python-mode-expansions))
-(eval-after-load "ruby-mode"    '(require 'ruby-mode-expansions))
-(eval-after-load "org"          '(require 'org-mode-expansions))
-(eval-after-load "cc-mode"      '(require 'cc-mode-expansions))
-(eval-after-load "text-mode"    '(require 'text-mode-expansions))
+(eval-after-load "clojure-mode"  '(require 'clojure-mode-expansions))
+(eval-after-load "css-mode"      '(require 'css-mode-expansions))
+(eval-after-load "erlang-mode"   '(require 'erlang-mode-expansions))
+(eval-after-load "feature-mode"  '(require 'feature-mode-expansions))
+(eval-after-load "sgml-mode"     '(require 'html-mode-expansions)) ;; html-mode is defined in sgml-mode.el
+(eval-after-load "rhtml-mode"    '(require 'html-mode-expansions))
+(eval-after-load "nxhtml-mode"   '(require 'html-mode-expansions))
+(eval-after-load "web-mode"      '(require 'web-mode-expansions))
+(eval-after-load "js"            '(require 'js-mode-expansions))
+(eval-after-load "js2-mode"      '(require 'js-mode-expansions))
+(eval-after-load "js2-mode"      '(require 'js2-mode-expansions))
+(eval-after-load "js3-mode"      '(require 'js-mode-expansions))
+(eval-after-load "latex"         '(require 'latex-mode-expansions))
+(eval-after-load "nxml-mode"     '(require 'nxml-mode-expansions))
+(eval-after-load "octave-mod"    '(require 'octave-expansions))
+(eval-after-load "octave"        '(require 'octave-expansions))
+(eval-after-load "python"        '(progn
+                                    (when expand-region-guess-python-mode
+                                      (expand-region-guess-python-mode))
+                                    (if (eq 'python expand-region-preferred-python-mode)
+                                        (require 'python-el-expansions)
+                                      (require 'python-el-fgallina-expansions))))
+(eval-after-load "python-mode"   '(require 'python-mode-expansions))
+(eval-after-load "ruby-mode"     '(require 'ruby-mode-expansions))
+(eval-after-load "org"           '(require 'the-org-mode-expansions))
+(eval-after-load "cc-mode"       '(require 'cc-mode-expansions))
+(eval-after-load "text-mode"     '(require 'text-mode-expansions))
 (eval-after-load "cperl-mode"    '(require 'cperl-mode-expansions))
+(eval-after-load "sml-mode"      '(require 'sml-mode-expansions))
+(eval-after-load "enh-ruby-mode" '(require 'enh-ruby-mode-expansions))
 
 (provide 'expand-region)
 

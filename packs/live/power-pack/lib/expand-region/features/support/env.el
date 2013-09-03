@@ -8,6 +8,7 @@
 (require 'expand-region)
 (require 'espuds)
 (require 'ert)
+(package-initialize)
 
 (Before
  (global-set-key (kbd "C-@") 'er/expand-region)

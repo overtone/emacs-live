@@ -75,5 +75,4 @@ Feature: cperl-mode expansions
     sub foo {
       foo_do_something;
     }
-
     """

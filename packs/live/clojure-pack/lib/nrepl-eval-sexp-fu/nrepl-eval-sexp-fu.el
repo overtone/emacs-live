@@ -336,45 +336,55 @@ such that ignores any prefix arguments."
        (paredit-forward-up)
        t))))
 
+;; bug#13952
+(if (version< "24.3.50" emacs-version)
+    (defmacro with-nesf-end-of-sexp (&rest body)
+      (declare (indent 0))
+      `(progn ,@body))
+  (defmacro with-nesf-end-of-sexp (&rest body)
+    (declare (indent 0))
+    `(save-excursion
+       (backward-char)
+       ,@body)))
+
+
 ;;; initialize.
 (defun nesf-initialize ()
   (define-nrepl-eval-sexp-fu-flash-command eval-last-sexp
-    (nrepl-eval-sexp-fu-flash (save-excursion
-                          (backward-char)
-                          (bounds-of-thing-at-point 'sexp))))
+    (nrepl-eval-sexp-fu-flash (with-nesf-end-of-sexp
+                               (bounds-of-thing-at-point 'sexp))))
   (define-nrepl-eval-sexp-fu-flash-command eval-defun
     (nrepl-eval-sexp-fu-flash (save-excursion
-                          (end-of-defun)
-                          (beginning-of-defun)
-                          (bounds-of-thing-at-point 'sexp))))
+                                (end-of-defun)
+                                (beginning-of-defun)
+                                (bounds-of-thing-at-point 'sexp))))
   (eval-after-load 'eev
     '(progn
-      ;; `eek-eval-last-sexp' is defined in eev.el.
-      (define-nrepl-eval-sexp-fu-flash-command eek-eval-last-sexp
-        (nrepl-eval-sexp-fu-flash (cons (save-excursion (eek-backward-sexp))
-                                  (point)))))))
+       ;; `eek-eval-last-sexp' is defined in eev.el.
+       (define-nrepl-eval-sexp-fu-flash-command eek-eval-last-sexp
+         (nrepl-eval-sexp-fu-flash (cons (save-excursion (eek-backward-sexp))
+                                         (point)))))))
 (defun nesf-initialize-nrepl ()
   (define-nrepl-eval-sexp-fu-flash-command nrepl-eval-last-expression
-    (nrepl-eval-sexp-fu-flash (save-excursion
-                                (backward-char)
-                                (bounds-of-thing-at-point 'sexp))))
+    (nrepl-eval-sexp-fu-flash (with-nesf-end-of-sexp
+                               (bounds-of-thing-at-point 'sexp))))
   (define-nrepl-eval-sexp-fu-flash-command nrepl-pprint-eval-last-expression
-    (nrepl-eval-sexp-fu-flash (save-excursion
-                                (backward-char)
-                                (bounds-of-thing-at-point 'sexp))))
+    (nrepl-eval-sexp-fu-flash (with-nesf-end-of-sexp
+                               (bounds-of-thing-at-point 'sexp))))
   (define-nrepl-eval-sexp-fu-flash-command nrepl-eval-expression-at-point
-    (nrepl-eval-sexp-fu-flash      (when (not (and (nesf-paredit-top-level-p)
-                                                   (save-excursion
-                                                     (ignore-errors (forward-char))
-                                                     (nesf-paredit-top-level-p))))
-                                     (save-excursion
-                                       (save-match-data
-                                         (ignore-errors (nesf-paredit-forward-down))
-                                         (paredit-forward-up)
-                                         (while (ignore-errors (paredit-forward-up) t))
-                                         (let ((end (point)))
-                                           (backward-sexp)
-                                           (cons (point) end)))))))
+    (nrepl-eval-sexp-fu-flash  (with-nesf-end-of-sexp
+                                (when (not (and (nesf-paredit-top-level-p)
+                                                (save-excursion
+                                                  (ignore-errors (forward-char))
+                                                  (nesf-paredit-top-level-p))))
+                                  (save-excursion
+                                    (save-match-data
+                                      (ignore-errors (nesf-paredit-forward-down))
+                                      (paredit-forward-up)
+                                      (while (ignore-errors (paredit-forward-up) t))
+                                      (let ((end (point)))
+                                        (backward-sexp)
+                                        (cons (point) end))))))))
 
   (progn
     ;; Defines:

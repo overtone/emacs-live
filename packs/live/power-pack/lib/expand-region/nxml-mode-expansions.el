@@ -35,10 +35,10 @@
   (interactive)
   (cond ((looking-at "<")
          (nxml-mark-token-after))
-        ((looking-back ">")
+        ((er/looking-back-exact ">")
          (backward-char 1)
          (nxml-mark-token-after))
-        ((looking-back "<[^<>]*")
+        ((er/looking-back-max "<[^<>]*" 1000)
          (nxml-mark-token-after))))
 
 (defun er/mark-nxml-element ()
@@ -70,7 +70,8 @@
 (defun er/mark-nxml-attribute-string ()
   "Marks an attribute string."
   (interactive)
-  (when (looking-back "[\"']")
+  (when (or (er/looking-back-exact "\"")
+            (er/looking-back-exact "'"))
     (backward-char 1))
   ;; Using syntax highlighting is a hack, but I can't figure out how
   ;; to use nxml-mode functions to do it.

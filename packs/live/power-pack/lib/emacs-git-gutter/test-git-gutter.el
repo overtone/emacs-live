@@ -27,9 +27,12 @@
 (require 'ert)
 (require 'git-gutter)
 
+;; suppress log message
+(setq git-gutter:verbosity 0)
+
 (ert-deftest git-gutter:root-directory ()
   "helper function `git-gutter:root-directory'"
-  (let ((file (buffer-file-name)))
+  (let ((file (concat default-directory "test-git-gutter.el")))
     (let ((expected (expand-file-name default-directory))
           (got (git-gutter:root-directory file)))
       (should (string= expected got)))
@@ -93,7 +96,7 @@
   "Should return nil if default-directory does not exist"
 
   ;; In git repository, but here is '.git'
-  (let ((file (buffer-file-name)))
+  (let ((file (concat default-directory "test-git-gutter.el")))
     (let ((buf (find-file-noselect ".git/config")))
       (with-current-buffer buf
         (should (null (git-gutter:in-git-repository-p file)))))
@@ -144,8 +147,11 @@ bar
   "Should return git diff command"
   (let ((git-gutter:diff-option "--binary"))
     (let ((got (git-gutter:diff-command "emacs/git.el"))
-          (expected "git --no-pager diff --no-color --no-ext-diff -U0 --binary \"emacs/git.el\""))
-      (should (string= got expected)))))
+          (expected "git --no-pager diff --no-color --no-ext-diff -U0 --binary emacs/git.el"))
+      (should (string= got expected))))
+  (let ((got (git-gutter:diff-command "has space.txt"))
+        (expected "git --no-pager diff --no-color --no-ext-diff -U0  has\\ space.txt"))
+    (should (string= got expected))))
 
 (ert-deftest git-gutter:set-window-margin ()
   "Should change window margin"
@@ -155,8 +161,56 @@ bar
 
 (ert-deftest git-gutter:file-path ()
   "Should return file path which is passed to 'git diff'"
-  (let ((expected (buffer-file-name))
-        (got (git-gutter:file-path default-directory (buffer-file-name))))
+  (let* ((file (concat default-directory "test-git-gutter.el"))
+         (expected file)
+         (got (git-gutter:file-path default-directory file)))
     (should (string= got expected))))
+
+(ert-deftest git-gutter-mode-success ()
+  "Case git-gutter-mode enabled"
+  (with-current-buffer (find-file-noselect "test-git-gutter.el")
+    (git-gutter-mode 1)
+    (should git-gutter-mode))
+  (kill-buffer "test-git-gutter.el"))
+
+(ert-deftest git-gutter-mode-failed ()
+  "Case git-gutter-mode disabled"
+  (with-temp-buffer
+    (git-gutter-mode 1)
+    (should (eq git-gutter-mode nil)))
+
+  (let ((default-directory nil))
+    (git-gutter-mode 1)
+    (should (not git-gutter-mode)))
+
+  (let ((default-directory "foo"))
+    (git-gutter-mode 1)
+    (should (not git-gutter-mode)))
+
+  (with-current-buffer (find-file-noselect ".git/config")
+    (git-gutter-mode 1)
+    (should (not git-gutter-mode))))
+
+(ert-deftest global-git-gutter-mode-success ()
+  "Case global-git-gutter-mode enabled"
+  (with-current-buffer (find-file-noselect "test-git-gutter.el")
+    (global-git-gutter-mode t)
+    (should git-gutter-mode))
+
+  (kill-buffer "test-git-gutter.el"))
+
+(ert-deftest global-git-gutter-mode-failed ()
+  "Case global-git-gutter-mode disabled"
+
+  (with-temp-buffer
+    (global-git-gutter-mode t)
+    (should (not git-gutter-mode)))
+
+  (let ((git-gutter:disabled-modes '(emacs-lisp-mode)))
+    (with-current-buffer (find-file-noselect "test-git-gutter.el")
+      (global-git-gutter-mode t)
+      (should (not git-gutter-mode))))
+
+  (kill-buffer "test-git-gutter.el"))
 
 ;;; test-git-gutter.el end here

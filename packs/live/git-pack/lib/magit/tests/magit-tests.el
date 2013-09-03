@@ -1,114 +1,135 @@
-(require 'ert)
-(eval-when-compile (require 'cl-lib))
+;;; magit-tests.el --- tests for Magit
 
-(eval-when-compile
-  (unless (require 'mocker nil t)
-    (cl-defmacro mocker-let (specs &rest body)
-      (error "Skipping tests, mocker.el is not available"))))
+(require 'cl)
+(require 'ert)
 
 (require 'magit)
 (require 'magit-blame)
 
-(defmacro with-temp-git-repo (repo &rest body)
-  (declare (indent 1) (debug t))
-  `(let* ((,repo (make-temp-file "tmp_git" t))
-          (default-directory (concat ,repo "/")))
-     (unwind-protect
-         (progn
-           (magit-init repo)
-           ,@body)
-       (delete-directory ,repo t))))
+;;; Utilities
 
-(defmacro with-opened-file (file &rest body)
+(defmacro magit-tests--with-temp-dir (&rest body)
+  (declare (indent 0) (debug t))
+  (let ((dir (gensym)))
+    `(let ((,dir (file-name-as-directory (make-temp-file "dir" t))))
+       (unwind-protect
+           (let ((default-directory ,dir)) ,@body)
+         (delete-directory ,dir t)))))
+
+(defmacro magit-tests--with-temp-repo (&rest body)
+  (declare (indent 0) (debug t))
+  `(magit-tests--with-temp-dir
+     (magit-run* (list magit-git-executable "init" "."))
+     ,@body))
+
+(defmacro magit-tests--with-temp-clone (url &rest body)
+  (declare (indent 1) (debug t))
+  (let ((repo (gensym)))
+    `(let ((,repo ,(or url 'default-directory)))
+       (magit-tests--with-temp-dir
+         (magit-run* (list magit-git-executable "clone" ,repo "."))
+         ,@body))))
+
+(defmacro magit-tests--with-open-file (filename &rest body)
   (declare (indent 1) (debug t))
   (let ((buffer (make-symbol "*buffer*")))
     `(let (,buffer)
        (unwind-protect
            (progn
-             (setq ,buffer (find-file-literally ,file))
+             (setq ,buffer (find-file-literally ,filename))
              ,@body)
          (when ,buffer (kill-buffer ,buffer))))))
 
-(defun magit-tests-section-has-item-title (title &optional section-path)
-  (let ((children (magit-section-children
-                   (or (and section-path
-                            (magit-find-section section-path
-                                                magit-top-section))))))
-    (should (member title
-                    (mapcar 'magit-section-title children)))))
+(defun magit-tests--modify-file (filename)
+  (with-temp-file (expand-file-name filename)
+    (insert (symbol-name (gensym "content")))))
 
-;;; magit.el tests
+(defun magit-tests--modify-and-commit (filename)
+  (magit-tests--modify-file filename)
+  (magit-run* (list magit-git-executable "add" filename))
+  (magit-run* (list magit-git-executable
+                    "-c" "user.name=foo bar"
+                    "-c" "user.email=foo@bar.baz"
+                    "commit"
+                    "-m" (symbol-name (gensym "message"))
+                    "--" filename)))
 
-(ert-deftest magit-init-test ()
-  (with-temp-git-repo repo
-    (should (magit-git-repo-p repo))))
+(defun magit-tests--head-hash ()
+  (magit-git-string
+   "rev-parse" (format "--short=%d" magit-sha1-abbrev-length) "HEAD"))
 
-(ert-deftest magit-init-nested ()
-  (with-temp-git-repo repo
-    (mocker-let
-        ((yes-or-no-p (prompt)
-                      ((:input-matcher
-                        (lambda (p)
-                          (string-match "^There is a Git repository" p))
-                        :output t))))
-      (let ((nested-repo (concat repo "/nested")))
-        (make-directory nested-repo)
-        (magit-init nested-repo)
-        (should (magit-git-repo-p nested-repo))))
-    (should (magit-git-repo-p repo))))
+(defun magit-tests--should-have-item-title (title section-path)
+  (magit-status default-directory)
+  (should (member title
+                  (mapcar 'magit-section-title
+                          (magit-section-children
+                           (magit-find-section section-path
+                                               magit-top-section))))))
+;;; Tests
+;;;; magit.el
+;;;;; init
 
-(ert-deftest magit-init-test-expansion ()
-  (let* ((dir "~/plop")
-         (exp-dir (file-name-as-directory (expand-file-name dir))))
-    (mocker-let
-        ;; make sure all steps have the expanded version of dir
-        ((magit-get-top-dir (dir)
-                            ((:input `(,exp-dir) :output nil)))
-         (file-directory-p (dir)
-                           ((:input `(,exp-dir) :output t)))
-         (magit-run* (args)
-                     ((:input `((,magit-git-executable "init"))
-                       :output t))))
-      (should (magit-init dir)))))
+(ert-deftest magit-init ()
+  (let* ((top-repo (file-name-as-directory (make-temp-file "top" t)))
+         (sub-repo (file-name-as-directory
+                    (expand-file-name (make-temp-name "sub") top-repo))))
+    (unwind-protect
+        (progn
+          (magit-init top-repo)
+          (should (magit-git-repo-p top-repo))
+          (make-directory sub-repo)
+          (let ((default-directory sub-repo))
+            (flet ((yes-or-no-p (create-sub-repo?) 'yes))
+              (magit-init sub-repo)))
+          (should (magit-git-repo-p sub-repo))
+          (should (magit-git-repo-p top-repo)))
+      (delete-directory top-repo t))))
 
-(ert-deftest magit-untracked-file ()
-  (let ((dummy-filename "foo"))
-    (with-temp-git-repo repo
-      (with-temp-buffer
-        (write-file (format "%s/%s" repo dummy-filename)))
-      (magit-status repo)
-      (magit-tests-section-has-item-title dummy-filename '(untracked)))))
+;;;;; status
 
-(ert-deftest magit-staged-file-from-all ()
-  (let ((dummy-filename "foo"))
-    (with-temp-git-repo repo
-      (with-temp-buffer
-        (write-file (format "%s/%s" repo dummy-filename)))
-      (magit-status repo)
-      (magit-stage-all t)
-      (magit-tests-section-has-item-title dummy-filename '(staged)))))
+(ert-deftest magit-status-untracked ()
+  (magit-tests--with-temp-repo
+    (magit-tests--modify-file "file")
+    (magit-tests--should-have-item-title "file" '(untracked))))
 
-(ert-deftest magit-get-boolean ()
-  (with-temp-git-repo repo
-    (magit-run* '("git" "config" "core.safecrlf" "true"))
-    (should (magit-get-boolean "core.safecrlf"))
-    (should (magit-get-boolean "core" "safecrlf"))
+(ert-deftest magit-status-staged-all ()
+  (magit-tests--with-temp-repo
+    (magit-tests--modify-file "file")
+    (magit-status default-directory)
+    (magit-stage-all t)
+    (magit-tests--should-have-item-title "file" '(staged))))
 
-    (magit-run* '("git" "config" "core.safecrlf" "false"))
-    (should-not (magit-get-boolean "core.safecrlf"))))
+(ert-deftest magit-status-unpushed ()
+  (magit-tests--with-temp-repo
+    (magit-tests--modify-and-commit "file")
 
-;;; magit-blame.el tests
+    (magit-tests--with-temp-clone default-directory
+      (magit-tests--modify-and-commit "file")
+      (magit-tests--should-have-item-title
+       (magit-tests--head-hash) '(unpushed))
+
+      (magit-tests--modify-and-commit "file")
+      (magit-tests--should-have-item-title
+       (magit-tests--head-hash) '(unpushed)))))
+
+;;;;; config
+
+(ert-deftest magit-config-get-boolean ()
+  (magit-tests--with-temp-repo
+    (magit-run* (list magit-git-executable "config" "a.b" "true"))
+    (should (magit-get-boolean "a.b"))
+    (should (magit-get-boolean "a" "b"))
+
+    (magit-run* (list magit-git-executable "config" "a.b" "false"))
+    (should-not (magit-get-boolean "a.b"))
+    (should-not (magit-get-boolean "a" "b"))))
+
+;;;; magit-blame.el
 
 (ert-deftest magit-blame-mode ()
-  (let ((dummy-filename "foo"))
-    (with-temp-git-repo repo
-      (with-temp-buffer
-        (insert "dummy content")
-        (write-file (format "%s/%s" repo dummy-filename)))
-      (magit-status repo)
-      (magit-stage-all t)
-      (magit-log-edit)
-      (insert "dummy message")
-      (magit-log-edit-commit)
-      (with-opened-file (format "%s/%s" repo dummy-filename)
-        (should (magit-blame-mode))))))
+  (magit-tests--with-temp-repo
+    (magit-tests--modify-and-commit "file")
+    (magit-tests--with-open-file "file"
+      (should (magit-blame-mode)))))
+
+;;; magit-tests.el ends here

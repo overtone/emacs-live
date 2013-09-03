@@ -68,6 +68,9 @@
 
      (diff-added ((t (:foreground "green"))))
      (diff-removed ((t (:foreground "red"))))
+     (diff-header ((t (:background "gray10" :foreground "#4c83ff"))))
+     (diff-file-header ((t (:background "gray10" :foreground "deep pink"))))
+
 
      (magit-diff-add ((t (:foreground "green"))))
      (magit-diff-del ((t (:foreground "red"))))
@@ -78,8 +81,7 @@
 
      (eval-sexp-fu-flash ((t (:background "grey15" :foreground "DeepPink3"))))
      (nrepl-eval-sexp-fu-flash ((t (:background "grey15" :foreground "DeepPink3"))))
-     (nrepl-error-highlight-face ((t (:background "black" :foreground "red" :underline t))))
-
+     (nrepl-error-highlight-face ((t (:background "color-52"))))
      (ac-completion-face ((t (:foreground "darkgray" :underline t))))
      (ac-candidate-face ((t (:background "gray60" :foreground "black"))))
      (ac-selection-face ((t (:background "deep pink" :foreground "black"))))
@@ -107,6 +109,7 @@
      (ido-only-match ((t (:foreground "deep pink" :background "black"))))
      (ido-subdir ((t (:foreground "gray60" :background "black"))))
      (ido-indicator ((t (:foreground "black" :background "deep pink"))))
+     (flx-highlight-face ((t (:foreground "deep pink" :background "black"))))
 
      (match ((t (:foreground "deep pink" :background "blackn"))))
      (minibuffer-prompt ((t (:foreground "#61CE3C" :background "black"))))
@@ -187,6 +190,21 @@
      (glsl-variable-name-face ((t (:foreground "grey57"))))
      (glsl-builtin-face ((t (:foreground "#FF6400"))))
 
+     (term-bold ((t (:bold t :weight bold))))
+     (term-color-black ((t (:background "black" :foreground "black"))))
+     (term-color-blue ((t (:background "#4c83ff" :foreground "#4c83ff"))))
+     (term-color-cyan ((t (:background "cyan3" :foreground "cyan3"))))
+     (term-color-green ((t (:background "green3" :foreground "green3"))))
+     (term-color-magenta ((t (:background "magenta3" :foreground "magenta3"))))
+     (term-color-red ((t (:background "red3" :foreground "red3"))))
+     (term-color-white ((t (:background "white" :foreground "white"))))
+     (term-color-yellow ((t (:background "yellow3" :foreground "yellow3"))))
+     (term-underline ((t (:underline t))))
+
+     (git-commit-comment-heading-face ((t (:background "black" :foreground "deep pink"))))
+     (git-commit-summary-face ((t (:background "black" :foreground "white"))))
+     (git-commit-branch-face ((t (:background "black" :foreground "#FF6400"))))
+     (git-commit-nonempty-second-line-face ((t (:background "black" :foreground "#FBDE2D"))))
      ))
   )
 

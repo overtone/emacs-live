@@ -120,7 +120,7 @@ a different REPL command.
 ### nrepl.el
 
 You can also use [Leiningen](http://leiningen.org) to start an
-enhanced REPL via [nrepl.el](https://github.com/kingtim/nrepl.el).
+enhanced REPL via [nrepl.el](https://github.com/clojure-emacs/nrepl.el).
 
 ### Ritz
 
@@ -137,6 +137,6 @@ SLIME support was removed in version 2.x in favor of `nrepl.el`.
 ## License
 
 Copyright © 2007-2013 Jeffrey Chu, Lennart Staflin, Phil Hagelberg,
-and [contributors](https://github.com/technomancy/clojure-mode/contributors).
+and [contributors](https://github.com/clojure-emacs/clojure-mode/contributors).
 
 Distributed under the GNU General Public License; type <kbd>C-h C-c</kbd> to view it.

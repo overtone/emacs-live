@@ -30,13 +30,17 @@ nature of the basic expansions:
 
     er/mark-word
     er/mark-symbol
+    er/mark-symbol-with-prefix
+    er/mark-next-accessor
     er/mark-method-call
-    er/mark-comment
-    er/mark-comment-block
     er/mark-inside-quotes
     er/mark-outside-quotes
     er/mark-inside-pairs
     er/mark-outside-pairs
+    er/mark-comment
+    er/mark-url
+    er/mark-email
+    er/mark-defun
 
 However, most languages also will benefit from some specially crafted
 expansions. For instance, expand-region comes with these extra expansions for
@@ -88,11 +92,11 @@ All changes must be accompanied by feature tests.
 They are written in [Ecukes](http://ecukes.info), a Cucumber for Emacs.
 
 To fetch the test dependencies, install
-[carton](https://github.com/rejeep/carton) if you haven't already,
+[cask](https://github.com/rejeep/cask.el) if you haven't already,
 then:
 
     $ cd /path/to/expand-region
-    $ carton
+    $ cask
 
 Run the tests with:
 
@@ -120,10 +124,24 @@ sure to add a set of basic tests around the functionality you're changing.
 * [Mark Hepburn](https://github.com/markhepburn) contributed Octave expansions.
 * [Rotem Yaari](https://github.com/vmalloc) also contributed an adapter for the region expansion in web-mode.
 * [Kang-min Liu](https://github.com/gugod) contributed Perl expansions.
+* [Alexis Gallagher](https://github.com/algal) contributs Standard ML expansions.
 
 Thanks!
 
 ## Changelist
+
+### From 0.8 to 0.9
+
+* Improve org-, clojure-, python-, latex-, cc- and ruby-modes
+* Add basic expansions: email and url
+* Add sml-mode expansions (Alexis Gallagher)
+* Add cperl-mode expansions (Kang-min Liu)
+* Add octave-mode expansions (Mark Hepburn)
+* Add web-mode expansions (Rotem Yaari)
+* Use Carton for dev-dependencies
+* Fix bad behavior in minibuffer (Sylvain Rousseau)
+* More robust comment expansions
+* Improve loading of expansions for all major modes
 
 ### From 0.7 to 0.8
 

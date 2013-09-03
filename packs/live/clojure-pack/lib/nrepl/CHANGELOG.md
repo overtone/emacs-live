@@ -1,10 +1,33 @@
 # Changelog
 
-## 0.1.8 (current)
+## 0.2.0
+
+* <kbd>C-c M-d</kbd> will display current nREPL connection details.
+* <kbd>C-c M-r</kbd> will rotate and display the current nREPL connection.
+* Setting the variable `nrepl-buffer-name-show-port` will display the port on which the nRepl server is running.
+* nRepl buffer name uses project directory name; `*nrepl*` will appear as `*nrepl project-directory-name*`.
+* <kbd>C-c C-Z</kbd> will select the nrepl buffer based on the current namespace.
+* <kbd>C-u C-c C-Z</kbd> will select the nrepl buffer based on a user project directory prompt.
+
+### Bugs fixed
+
+* <kbd>C-c M-s</kbd> (`nrepl-selector`) was bound to non-existing symbol.
+
+## 0.1.8 / 2013-08-08
 
 ### New features
 
+* Evaluate all namespace forms `(ns ...)` in the user namespace.
+* Add highlighting of compilation warnings in addition to existing highlighting of errors
+* Add support for selecting last Clojure source buffer with keybinding
+<kbd>C-c C-z</kbd> (the same as `nrepl-switch-to-repl-buffer`).
+* The content of `target/repl-port`, if present, will be used as the
+  default port for <kbd>M-x nrepl</kbd>
+* Added an extendable slime-style selector command and binding <kbd>C-c M-s</kbd>
+
 ### Bugs fixed
+
+* <kbd>M-.</kbd> (`nrepl-jump`) on remote nrepl connection (across OS hosts) has been fixed.
 
 ## 0.1.7 / 2013-03-13
 

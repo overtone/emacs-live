@@ -1,0 +1,37 @@
+* Test org lilypond file
+
+This is a simple file for test purposes
+
+** LilyPond Version
+
+#+begin_src lilypond
+  
+\version "2.12.3"
+
+#+end_src 
+
+** DONE lilypond block for test purposes
+
+#+begin_src lilypond
+  
+  \score {
+    \relative c' {
+      c8 d e f g a b c |
+      b a g f e d c4   |
+    }
+   
+#+end_src
+
+#+begin_src lilypond
+  
+    \layout {
+      }
+      \midi {
+        \context {
+          \Score
+          tempoWholesPerMinute = #(ly:make-moment 150 4)
+        }
+      }
+    }
+  
+#+end_src

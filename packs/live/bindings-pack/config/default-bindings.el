@@ -51,7 +51,6 @@
 (global-set-key (kbd "C-c n e b") 'nrepl-eval-buffer)
 
 
-
 ;;funky characters
 (global-set-key (kbd "C-c i l") (lambda () (interactive) (insert "λ")))
 (global-set-key (kbd "C-c i n") (lambda () (interactive) (insert "ℕ")))
@@ -111,11 +110,32 @@
 (define-key paredit-mode-map (kbd "M-d")     'live-paredit-forward-kill-sexp)
 (define-key paredit-mode-map (kbd "M-k")     'live-paredit-backward-kill)
 (define-key paredit-mode-map (kbd "M-\\")    'live-paredit-delete-horizontal-space)
+(define-key paredit-mode-map (kbd "C-M-i")   'paredit-forward-down)
+(define-key paredit-mode-map (kbd "C-M-n")   'paredit-forward-up)
+(define-key paredit-mode-map (kbd "C-M-p")   'paredit-backward-down)
+(define-key paredit-mode-map (kbd "C-M-u")   'paredit-backward-up)
+(define-key paredit-mode-map (kbd "M-T")     'transpose-sexps)
+(define-key paredit-mode-map (kbd "C-M-k")   'live-paredit-copy-sexp-at-point)
+
+;; org-mode
+(define-key org-mode-map (kbd "C-M-f")    'org-metadown)
+(define-key org-mode-map (kbd "C-M-b")    'org-metaup)
+(define-key org-mode-map (kbd "C-M-l")    'org-shiftright)
+(define-key org-mode-map (kbd "C-M-j")    'org-shiftleft)
+(define-key org-mode-map (kbd "C-M-i")    'org-shiftup)
+(define-key org-mode-map (kbd "C-M-k")    'org-shiftdown)
+(define-key org-mode-map (kbd "C-M-_")    'live-decrement-number-at-point)
+
+;;increment and decrement number at point
+(global-set-key (kbd "C-M-_")  'live-decrement-number-at-point)
+(global-set-key (kbd "M-=")    'live-increment-number-at-point)
+(global-set-key (kbd "C-M-=")    'live-increment-number-at-point)
+
 
 ;;browse kill ring (visual paste)
 (global-set-key (kbd "M-y") 'browse-kill-ring)
 
-;;make C-\ and M-\ cut and copy respectively
+;;make C-] and M-] cut and copy respectively
 (global-set-key (kbd "C-]") 'kill-region)
 (global-set-key (kbd "M-]") 'kill-ring-save)
 
@@ -135,6 +155,7 @@
 
 ;;redefine help shortcut
 (global-set-key (kbd "M-h") 'help-command)
+(define-key org-mode-map (kbd "M-h") 'help-command)
 
 ;;allow the deletion of words:
 ;;backward kill word (forward kill word is M-d)

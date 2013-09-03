@@ -92,8 +92,7 @@
 
 ;;; Code:
 
-(eval-when-compile
-  (require 'cl))
+(require 'cl)
 
 ;;;; ============================================
 ;;;; Utilities for ace-jump-mode
@@ -814,6 +813,11 @@ word-mode and char-mode"
 (defun ace-jump-char-mode (query-char)
   "AceJump char mode"
   (interactive (list (read-char "Query Char:")))
+
+  ;; We should prevent recursion call this function.  This can happen
+  ;; when you trigger the key for ace jump again when already in ace
+  ;; jump mode.  So we stop the previous one first.
+  (if ace-jump-current-mode (ace-jump-done))
   
   (if (eq (ace-jump-char-category query-char) 'other)
     (error "[AceJump] Non-printable character"))
@@ -833,6 +837,12 @@ buffer."
   (interactive (list (if ace-jump-word-mode-use-query-char
                          (read-char "Head Char:")
                        nil)))
+
+  ;; We should prevent recursion call this function.  This can happen
+  ;; when you trigger the key for ace jump again when already in ace
+  ;; jump mode.  So we stop the previous one first.
+  (if ace-jump-current-mode (ace-jump-done))
+
   (cond
    ((null head-char)
     ;; \<  - start of word
@@ -861,6 +871,12 @@ buffer."
   "AceJump line mode.
 Marked each no empty line and move there"
   (interactive)
+
+  ;; We should prevent recursion call this function.  This can happen
+  ;; when you trigger the key for ace jump again when already in ace
+  ;; jump mode.  So we stop the previous one first.
+  (if ace-jump-current-mode (ace-jump-done))
+  
   (setq ace-jump-current-mode 'ace-jump-line-mode)
   (ace-jump-do "^"))
 
@@ -967,7 +983,7 @@ You can constrol whether use the case sensitive via
                (setf (aj-visual-area-buffer va) original-buffer)
                (setf (aj-visual-area-recover-buffer va) nil)
                ;; kill indirect buffer
-               (kill-buffer fake-buffer))))
+               (ace-jump-kill-buffer fake-buffer))))
 
   ;; delete overlays in search tree
   (ace-jump-delete-overlay-in-search-tree ace-jump-search-tree)
@@ -977,6 +993,14 @@ You can constrol whether use the case sensitive via
 
   (remove-hook 'mouse-leave-buffer-hook 'ace-jump-done)
   (remove-hook 'kbd-macro-termination-hook 'ace-jump-done))
+
+(defun ace-jump-kill-buffer(buffer)
+  "Utility function to kill buffer for ace jump mode.
+We also need to handle the buffer which has clients on it"
+  (if (and (boundp 'server-buffer-clients)
+           server-buffer-clients)
+      (server-buffer-done buffer t))
+  (kill-buffer buffer))
 
 ;;;; ============================================
 ;;;; advice to sync emacs mark ring

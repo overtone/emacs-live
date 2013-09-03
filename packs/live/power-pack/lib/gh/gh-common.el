@@ -91,16 +91,17 @@
   "Returns a GitHub specific value from the global Git config."
   (let ((strip (lambda (string)
                  (if (> (length string) 0)
-                     (substring string 0 (- (length string) 1)))))
-        (git (executable-find "git")))
-  (funcall strip (shell-command-to-string
-                  (concat git " config " (gh-namespaced-key key))))))
+                     (substring string 0 (- (length string) 1))))))
+    (funcall strip (gh-command-to-string "config" (gh-namespaced-key key)))))
 
 (defun gh-set-config (key value)
   "Sets a GitHub specific value to the global Git config."
+  (gh-command-to-string "config" "--global" (gh-namespaced-key key) value))
+
+(defun gh-command-to-string (&rest args)
   (let ((git (executable-find "git")))
-    (shell-command-to-string
-     (concat git " config --global " (gh-namespaced-key key) " " value))))
+    (with-output-to-string
+      (apply 'process-file git nil standard-output nil args))))
 
 (provide 'gh-common)
 ;;; gh-common.el ends here

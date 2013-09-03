@@ -47,6 +47,15 @@ You can [watch an intro to multiple-cursors at Emacs Rocks](http://emacsrocks.co
  - `mc/mark-previous-symbol-like-this`: Like `mc/mark-previous-like-this` but only for whole symbols.
  - `mc/mark-more-like-this-extended`: Use arrow keys to quickly mark/skip next/previous occurances.
  - `mc/add-cursor-on-click`: Bind to a mouse event to add cursors by clicking. See tips-section.
+ - `mc/pop-mark`: Set a cursor at the current point and move to the next (different) position on the mark stack.  This allows for fine grained control over the placement of cursors.
+
+### Juggle around with the current cursors
+
+ - `mc/unmark-next-like-this`: Remove the cursor furthest down in the buffer.
+ - `mc/unmark-previous-like-this`: Remove the cursor furthest up in the buffer.
+ - `mc/skip-to-next-like-this`: Remove the cursor furthest down, marking the next occurance down.
+ - `mc/skip-to-previous-like-this`: Remove the cursor furthest up, marking the next occurance up.
+ - `mc/mark-next-like-this-extended`: Temporarily bind the arrow keys to mark/unmark/skip cursors.
 
 ### Mark many occurrences
 
@@ -143,14 +152,16 @@ You'll find the repo at:
 
     https://github.com/magnars/multiple-cursors.el
 
-To fetch the test dependencies:
+To fetch the test dependencies, install
+[cask](https://github.com/rejeep/cask.el) if you haven't already,
+then:
 
     $ cd /path/to/multiple-cursors
-    $ git submodule update --init
+    $ cask
 
 Run the tests with:
 
-    $ ./util/ecukes/ecukes --graphical
+    $ ./run-tests.sh
 
 ## Contributors
 
@@ -158,6 +169,7 @@ Run the tests with:
 * [Marco Baringer](https://github.com/segv) contributed looping to mc/cycle and adding cursors without region for mark-more.
 * [Ivan Andrus](https://github.com/gvol) added showing number of cursors in mode-line
 * [Fuco](https://github.com/Fuco1) added the first version of `mc/mark-all-like-this-dwim`
+* [Zach Kost-Smith](https://github.com/smithzvk) added `mc/mark-pop`
 
 Thanks!
 

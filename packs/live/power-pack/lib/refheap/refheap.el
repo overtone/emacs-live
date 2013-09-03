@@ -3,6 +3,7 @@
 ;;; Author: Anthony Grimes
 ;;; URL: https://github.com/Raynes/refheap.el
 ;;; Version: 0.0.3
+;;; Package-Requires: ((json "1.2"))
 
 (require 'json)
 (require 'url)

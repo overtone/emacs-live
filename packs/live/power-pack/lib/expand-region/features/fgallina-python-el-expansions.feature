@@ -1,3 +1,4 @@
+@requires-e24-3
 Feature: fgallinas python.el expansions
   In order to quickly and precisely mark Python code blocks
   As an Emacs user

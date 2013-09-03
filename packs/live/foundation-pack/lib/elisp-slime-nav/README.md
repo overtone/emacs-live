@@ -2,7 +2,7 @@
 
 
 Slime allows very convenient navigation to the symbol at point (using
-<kbd>M-.)</kbd>, and the ability to pop back to previous marks (using <kbd>M-,</kbd>).
+<kbd>M-.</kbd>), and the ability to pop back to previous marks (using <kbd>M-,</kbd>).
 
 This plugin provides similar navigation for Emacs Lisp, supporting
 navigation to the definitions of variables, functions, libraries and
@@ -22,6 +22,8 @@ add the following to your `~/.emacs` or `~/.emacs.d/init.el`:
 
 ``` lisp
 (require 'elisp-slime-nav)
+(dolist (hook '(emacs-lisp-mode-hook ielm-mode-hook))
+  (add-hook hook 'elisp-slime-nav-mode))
 ```
 
 ### MELPA
@@ -31,6 +33,15 @@ If you're an Emacs 24 user or you have a recent version of
 [MELPA](http://melpa.milkbox.net) repository. The version of
 `elisp-slime-nav` there will always be up-to-date. There are also
 packages in Marmalade.
+
+Enable `elisp-slime-nav` in `emacs-lisp-mode` and `ielm` by adding
+code such as the following to your emacs startup file:
+
+``` lisp
+(dolist (hook '(emacs-lisp-mode-hook ielm-mode-hook))
+  (add-hook hook 'elisp-slime-nav-mode))
+```
+
 
 ## About
 

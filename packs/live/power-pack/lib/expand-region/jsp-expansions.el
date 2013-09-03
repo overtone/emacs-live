@@ -43,7 +43,7 @@
 If point is inside the brackets, they will be marked first anyway."
     (interactive)
       (when (or (looking-at "\\${")
-            (looking-back "\\$"))
+            (er/looking-back-exact "$"))
     (forward-char 1)
     (search-backward "\$")
     (set-mark (point))

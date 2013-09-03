@@ -27,7 +27,7 @@
 ;;; Code:
 
 (require 'expand-region-core)
-(require 'octave-mod)
+
 
 ;;; Octave-mod received a major rewrite between versions 23 and 24 of
 ;;; Emacs, for example using the new smie package instead of
@@ -75,3 +75,4 @@ behaviour of `octave-mark-block' between emacs versions 23 and
 (er/enable-mode-expansions 'octave-mode 'er/add-octave-expansions)
 
 (provide 'octave-expansions)
+;;; octave-expansions.el ends here

@@ -33,7 +33,7 @@
 
 (defun js2-mark-parent-statement ()
   (interactive)
-  (let* ((parent-statement (if (not (looking-back ";"))
+  (let* ((parent-statement (if (not (er/looking-back-exact ";"))
                                (js2-node-parent-stmt (js2-node-at-point))
                              (forward-char -1)
                              (js2-node-at-point)))

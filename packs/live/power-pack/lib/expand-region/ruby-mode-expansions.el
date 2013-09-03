@@ -169,14 +169,14 @@ Assumes that point is at the @ - if it is inside the word, that will
 be marked first anyway."
   (when (looking-at "@")
     (forward-char 1))
-  (when (looking-back "@")
+  (when (er/looking-back-exact "@")
     (er/mark-symbol)
     (forward-char -1)))
 
 (defun er/add-ruby-mode-expansions ()
   "Adds Ruby-specific expansions for buffers in ruby-mode"
   (set (make-local-variable 'er/try-expand-list) (append
-                                                  er/try-expand-list
+                                                  (remove 'er/mark-defun er/try-expand-list)
                                                   '(er/mark-ruby-instance-variable
                                                     er/mark-ruby-block-up))))
 

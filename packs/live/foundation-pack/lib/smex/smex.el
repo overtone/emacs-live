@@ -1,10 +1,10 @@
 ;;; smex.el --- M-x interface with Ido-style fuzzy matching.
 
-;; Copyright (C) 2009-2012 Cornelius Mika
+;; Copyright (C) 2009-2013 Cornelius Mika and contributors
 ;;
-;; Author: Cornelius Mika <cornelius.mika@gmail.com>
+;; Author: Cornelius Mika <cornelius.mika@gmail.com> and contributors
 ;; URL: http://github.com/nonsequitur/smex/
-;; Version: 2.0
+;; Version: 2.1
 ;; Keywords: convenience, usability
 
 ;; This file is not part of GNU Emacs.
@@ -108,20 +108,24 @@ Set this to nil to disable fuzzy matching."
           (funcall action chosen-item))
       (unwind-protect
           (progn (setq prefix-arg current-prefix-arg)
+                 ;; Set the chosen command as the current command, like in
+                 ;; `execute-extended-command'
                  (setq this-command chosen-item)
+                 (setq real-this-command chosen-item)
                  (command-execute chosen-item 'record))
         (smex-rank chosen-item)
         (smex-show-key-advice chosen-item)
         ;; Todo: Is there a better way to manipulate 'last-repeatable-command'
         ;; from the inside of an interactively called function?
+        ;; (This is unneeded in Emacs >=24.3 when `real-this-command' has been set.)
         (run-at-time 0.01 nil (lambda (cmd) (setq last-repeatable-command cmd))
                      chosen-item)))))
 
 (defun smex-major-mode-commands ()
   "Like `smex', but limited to commands that are relevant to the active major mode."
   (interactive)
-  (let ((commands (delete-dups (append (extract-commands-from-keymap (current-local-map))
-                                       (extract-commands-from-features major-mode)))))
+  (let ((commands (delete-dups (append (smex-extract-commands-from-keymap (current-local-map))
+                                       (smex-extract-commands-from-features major-mode)))))
     (setq commands (smex-sort-according-to-cache commands))
     (setq commands (mapcar #'symbol-name commands))
     (smex-read-and-run commands)))
@@ -131,7 +135,8 @@ Set this to nil to disable fuzzy matching."
         (ido-setup-hook (cons 'smex-prepare-ido-bindings ido-setup-hook))
         (ido-enable-prefix nil)
         (ido-enable-flex-matching smex-flex-matching)
-        (ido-max-prospects 10))
+        (ido-max-prospects 10)
+        (minibuffer-completion-table choices))
     (ido-completing-read (smex-prompt-with-prefix-arg) choices nil nil
                          initial-input nil (car choices))))
 
@@ -149,6 +154,7 @@ Set this to nil to disable fuzzy matching."
      smex-prompt-string)))
 
 (defun smex-prepare-ido-bindings ()
+  (define-key ido-completion-map (kbd "TAB") 'minibuffer-complete)
   (define-key ido-completion-map (kbd "C-h f") 'smex-describe-function)
   (define-key ido-completion-map (kbd "C-h w") 'smex-where-is)
   (define-key ido-completion-map (kbd "M-.") 'smex-find-function)
@@ -246,7 +252,7 @@ Set this to nil to disable fuzzy matching."
           (condition-case nil
               (setq smex-history (read (current-buffer))
                     smex-data    (read (current-buffer)))
-            (error (if (save-file-not-empty-p)
+            (error (if (smex-save-file-not-empty-p)
                        (error "Invalid data in smex-save-file (%s). Can't restore history."
                               smex-save-file)
                      (if (not (boundp 'smex-history)) (setq smex-history))
@@ -434,21 +440,21 @@ Returns nil when reaching the end of the list."
   (let (message-log-max)
     (message "%s" string)))
 
-(defun extract-commands-from-keymap (map)
+(defun smex-extract-commands-from-keymap (map)
   (let (commands)
-    (parse-keymap map)
+    (smex-parse-keymap map commands)
     commands))
 
-(defun parse-keymap (map)
+(defun smex-parse-keymap (map commands)
   (map-keymap (lambda (binding element)
                 (if (and (listp element) (eq 'keymap (car element)))
-                    (parse-keymap element)
+                    (smex-parse-keymap element commands)
                           ; Strings are commands, too. Reject them.
                   (if (and (symbolp element) (commandp element))
-                      (setq commands (cons element commands)))))
+                      (push element commands))))
               map))
 
-(defun extract-commands-from-features (mode)
+(defun smex-extract-commands-from-features (mode)
   (let ((library-path (symbol-file mode))
         (mode-name (symbol-name mode))
         commands)

@@ -1,11 +1,13 @@
 ;;; js2-mode.el --- Improved JavaScript editing mode
 
-;; Copyright (C) 2009, 2011, 2012  Free Software Foundation, Inc.
+;; Copyright (C) 2009, 2011-2013  Free Software Foundation, Inc.
 
 ;; Author: Steve Yegge <steve.yegge@gmail.com>
 ;;         mooz <stillpedant@gmail.com>
 ;;         Dmitry Gutov <dgutov@yandex.ru>
-;; Version: 1.1
+;; URL:  https://github.com/mooz/js2-mode/
+;;       http://code.google.com/p/js2-mode/
+;; Version: 20130619
 ;; Keywords: languages, javascript
 ;; Package-Requires: ((emacs "24.1"))
 
@@ -47,12 +49,16 @@
 ;;
 ;; To install it as your major mode for JavaScript editing:
 
-;;   (add-to-list 'auto-mode-alist '("\\.js$" . js2-mode))
+;;   (add-to-list 'auto-mode-alist '("\\.js\\'" . js2-mode))
 
-;; Alternately, to install it as a minor mode just for JavaScript linting,
+;; Alternatively, to install it as a minor mode just for JavaScript linting,
 ;; you must add it to the appropriate major-mode hook.  Normally this would be:
 
 ;;   (add-hook 'js-mode-hook 'js2-minor-mode)
+
+;; You may also want to hook it in for shell scripts running via node.js:
+
+;;   (add-to-list 'interpreter-mode-alist '("node" . js2-mode))
 
 ;; To customize how it works:
 ;;   M-x customize-group RET js2-mode RET
@@ -72,6 +78,10 @@
 ;; and `mumamo', although it could be made to do so with some effort.
 ;; This means that `js2-mode' is currently only useful for editing JavaScript
 ;; files, and not for editing JavaScript within <script> tags or templates.
+
+;; The project page on GitHub is used for development and issue tracking.
+;; The original homepage at Google Code is mentioned here for posterity, it has
+;; outdated information and is mostly unmaintained.
 
 ;;; Code:
 
@@ -159,7 +169,10 @@
             DocumentRange Range RangeException
 
             ;; W3C XML
-            XPathResult XMLHttpRequest))
+            XPathResult XMLHttpRequest
+
+            ;; console object.  Provided by at least Chrome and Firefox.
+            console))
   "Browser externs.
 You can cause these to be included or excluded with the custom
 variable `js2-include-browser-externs'.")
@@ -174,13 +187,21 @@ variable `js2-include-browser-externs'.")
   "Mozilla Rhino externs.
 Set `js2-include-rhino-externs' to t to include them.")
 
-(defvar js2-gears-externs
+(defvar js2-node-externs
   (mapcar 'symbol-name
-          '(
-            ;; TODO(stevey):  add these
-            ))
-  "Google Gears externs.
-Set `js2-include-gears-externs' to t to include them.")
+          '(__dirname __filename Buffer clearInterval clearTimeout require
+            console exports global module process setInterval setTimeout))
+  "Node.js externs.
+Set `js2-include-node-externs' to t to include them.")
+
+(defvar js2-typed-array-externs
+  (mapcar 'symbol-name
+          '(ArrayBuffer Uint8ClampedArray DataView
+            Int8Array Uint8Array Int16Array Uint16Array Int32Array Uint32Array
+            Float32Array Float64Array))
+  "Khronos typed array externs. Available in most modern browsers and
+in node.js >= 0.6. If `js2-include-node-externs' or `js2-include-browser-externs'
+are enabled, these will also be included.")
 
 ;;; Variables
 
@@ -218,7 +239,6 @@ Similar to `c-basic-offset'."
   :group 'js2-mode
   :type 'integer)
 (js2-mark-safe-local 'js2-basic-offset 'integerp)
-
 
 (defcustom js2-bounce-indent-p nil
   "Non-nil to have indent-line function choose among alternatives.
@@ -272,8 +292,8 @@ If `js2-dynamic-idle-timer-adjust' is 0 or negative,
   :group 'js2-mode)
 
 (defcustom js2-concat-multiline-strings t
-  "Non-nil to automatically turn a newline in mid-string into a
-string concatenation.  When `eol', the '+' will be inserted at the
+  "When non-nil, `js2-line-break' in mid-string will make it a
+string concatenation. When `eol', the '+' will be inserted at the
 end of the line, otherwise, at the beginning of the next line."
   :type '(choice (const t) (const eol) (const nil))
   :group 'js2-mode)
@@ -292,8 +312,7 @@ even if this flag is non-nil."
 
 (defcustom js2-strict-trailing-comma-warning t
   "Non-nil to warn about trailing commas in array literals.
-Ecma-262 forbids them, but many browsers permit them.  IE is the
-big exception, and can produce bugs if you have trailing commas."
+Ecma-262-5.1 allows them, but older versions of IE raise an error."
   :type 'boolean
   :group 'js2-mode)
 
@@ -361,7 +380,7 @@ Examples:
   var foo = {int: 5, while: 6, continue: 7};
   foo.return = 8;
 
-Ecma-262 forbids this syntax, but many browsers support it."
+Ecma-262 5.1 allows this syntax, but some engines still don't."
   :type 'boolean
   :group 'js2-mode)
 
@@ -795,9 +814,9 @@ These are currently only used for highlighting undeclared variables,
 which only worries about top-level (unqualified) references.
 As js2-mode's processing improves, we will flesh out this list.
 
-The initial value is set to `js2-ecma-262-externs', unless you
-have set `js2-include-browser-externs', in which case the browser
-externs are also included.
+The initial value is set to `js2-ecma-262-externs', unless some
+of the `js2-include-?-externs' variables are set to t, in which
+case the browser, Rhino and/or Node.js externs are also included.
 
 See `js2-additional-externs' for more information.")
 
@@ -805,21 +824,18 @@ See `js2-additional-externs' for more information.")
   "Non-nil to include browser externs in the master externs list.
 If you work on JavaScript files that are not intended for browsers,
 such as Mozilla Rhino server-side JavaScript, set this to nil.
-You can always include them on a per-file basis by calling
-`js2-add-browser-externs' from a function on `js2-mode-hook'.
-
 See `js2-additional-externs' for more information about externs."
   :type 'boolean
   :group 'js2-mode)
 
-(defcustom js2-include-rhino-externs t
+(defcustom js2-include-rhino-externs nil
   "Non-nil to include Mozilla Rhino externs in the master externs list.
 See `js2-additional-externs' for more information about externs."
   :type 'boolean
   :group 'js2-mode)
 
-(defcustom js2-include-gears-externs t
-  "Non-nil to include Google Gears externs in the master externs list.
+(defcustom js2-include-node-externs nil
+  "Non-nil to include Node.js externs in the master externs list.
 See `js2-additional-externs' for more information about externs."
   :type 'boolean
   :group 'js2-mode)
@@ -838,12 +854,15 @@ First, you can add externs that are valid for all your JavaScript files.
 You should probably do this by adding them to `js2-global-externs', which
 is a global list used for all js2-mode files.
 
-Next, you can add a function to `js2-mode-hook' that adds additional
+Next, you can add a function to `js2-init-hook' that adds additional
 externs appropriate for the specific file, perhaps based on its path.
 These should go in `js2-additional-externs', which is buffer-local.
 
+Third, you can use JSLint's global declaration, as long as
+`js2-include-jslint-globals' is non-nil, which see.
+
 Finally, you can add a function to `js2-post-parse-callbacks',
-which is called after parsing completes, and `root' is bound to
+which is called after parsing completes, and `js2-mode-ast' is bound to
 the root of the parse tree.  At this stage you can set up an AST
 node visitor using `js2-visit-ast' and examine the parse tree
 for specific import patterns that may imply the existence of
@@ -1074,11 +1093,19 @@ Not currently used."
   '((t :foreground "orange"))
   "Face used to highlight undeclared variable identifiers.")
 
+(defcustom js2-init-hook nil
+  "List of functions to be called after `js2-mode' or
+`js2-minor-mode' has initialized all variables, before parsing
+the buffer for the first time."
+  :type 'hook
+  :group 'js2-mode
+  :version "20130608")
+
 (defcustom js2-post-parse-callbacks nil
-  "A list of callback functions invoked after parsing finishes.
+  "List of callback functions invoked after parsing finishes.
 Currently, the main use for this function is to add synthetic
 declarations to `js2-recorded-identifiers', which see."
-  :type 'list
+  :type 'hook
   :group 'js2-mode)
 
 (defcustom js2-highlight-external-variables t
@@ -1090,8 +1117,11 @@ another file, or you've got a potential bug."
   :type 'boolean
   :group 'js2-mode)
 
-(defcustom js2-auto-insert-catch-block t
-  "Non-nil to insert matching catch block on open-curly after `try'."
+(defcustom js2-include-jslint-globals t
+  "Non-nil to include the identifiers from JSLint global
+declaration (see http://www.jslint.com/lint.html#global) in the
+buffer-local externs list.  See `js2-additional-externs' for more
+information."
   :type 'boolean
   :group 'js2-mode)
 
@@ -1664,7 +1694,7 @@ the correct number of ARGS must be provided."
          "Code has no side effects")
 
 (js2-msg "msg.extra.trailing.comma"
-         "Trailing comma is not legal in an ECMA-262 object initializer")
+         "Trailing comma is not supported in some browsers")
 
 (js2-msg "msg.array.trailing.comma"
          "Trailing comma yields different behavior across browsers")
@@ -1952,12 +1982,6 @@ Returns nil if element is not found in the list."
   (and (>= pos (point-at-bol))
        (<= pos (point-at-eol))))
 
-(defun js2-same-line-2 (p1 p2)
-  "Return t if P1 is on the same line as P2."
-  (save-excursion
-    (goto-char p1)
-    (js2-same-line p2)))
-
 (defun js2-code-bug ()
   "Signal an error when we encounter an unexpected code path."
   (error "failed assertion"))
@@ -2185,12 +2209,6 @@ If any given node in NODES is nil, doesn't record that link."
 
 (put 'cl-struct-js2-scope 'js2-visitor 'js2-visit-block)
 (put 'cl-struct-js2-scope 'js2-printer 'js2-print-none)
-
-(defun js2-scope-set-parent-scope (scope parent)
-  (setf (js2-scope-parent-scope scope) parent
-        (js2-scope-top scope) (if (null parent)
-                                  scope
-                                (js2-scope-top parent))))
 
 (defun js2-node-get-enclosing-scope (node)
   "Return the innermost `js2-scope' node surrounding NODE.
@@ -4072,18 +4090,6 @@ If N has no parent pointer, returns N."
         (js2-node-root parent)
       n)))
 
-(defun js2-node-position-in-parent (node &optional parent)
-  "Return the position of NODE in parent's block-kids list.
-PARENT can be supplied if known.  Positioned returned is zero-indexed.
-Returns 0 if NODE is not a child of a block statement, or if NODE
-is not a statement node."
-  (let ((p (or parent (js2-node-parent node)))
-        (i 0))
-    (if (not (js2-block-node-p p))
-        i
-      (or (js2-position node (js2-block-node-kids p))
-          0))))
-
 (defsubst js2-node-short-name (n)
   "Return the short name of node N as a string, e.g. `js2-if-node'."
   (substring (symbol-name (aref n 0))
@@ -4186,7 +4192,7 @@ Note that the position may be nil in the case of a parse error."
    ((js2-call-node-p node)
     (js2-call-node-lp node))
    ((js2-paren-node-p node)
-    (js2-node-pos node))
+    0)
    ((js2-switch-node-p node)
     (js2-switch-node-lp node))
    ((js2-catch-node-p node)
@@ -4221,7 +4227,7 @@ Note that the position may be nil in the case of a parse error."
    ((js2-call-node-p node)
     (js2-call-node-rp node))
    ((js2-paren-node-p node)
-    (+ (js2-node-pos node) (js2-node-len node)))
+    (1- (js2-node-len node)))
    ((js2-switch-node-p node)
     (js2-switch-node-rp node))
    ((js2-catch-node-p node)
@@ -4488,25 +4494,6 @@ If NODE is the ast-root, returns nil."
       (setq node (js2-node-parent node)))
     node))
 
-(defun js2-nested-function-p (node)
-  "Return t if NODE is a nested function, or is inside a nested function."
-  (unless (js2-ast-root-p node)
-    (js2-function-node-p (if (js2-function-node-p node)
-                             (js2-node-parent-script-or-fn node)
-                           (js2-node-parent-script-or-fn
-                            (js2-node-parent-script-or-fn node))))))
-
-(defun js2-mode-shift-kids (kids start offset)
-  (dolist (kid kids)
-    (if (> (js2-node-pos kid) start)
-        (incf (js2-node-pos kid) offset))))
-
-(defun js2-mode-shift-children (parent start offset)
-  "Update start-positions of all children of PARENT beyond START."
-  (let ((root (js2-node-root parent)))
-    (js2-mode-shift-kids (js2-node-child-list parent) start offset)
-    (js2-mode-shift-kids (js2-ast-root-comments root) start offset)))
-
 (defun js2-node-is-descendant (node ancestor)
   "Return t if NODE is a descendant of ANCESTOR."
   (while (and node
@@ -4644,7 +4631,7 @@ You should use `js2-print-tree' instead of this function."
         (let ((expr (js2-expr-stmt-node-expr node)))
           (or (js2-node-has-side-effects expr)
               (when (js2-string-node-p expr)
-                (string= "use strict" (js2-string-node-value expr))))))
+                (member (js2-string-node-value expr) '("use strict" "use asm"))))))
        ((= tt js2-COMMA)
         (js2-node-has-side-effects (js2-infix-node-right node)))
        ((or (= tt js2-AND)
@@ -4660,28 +4647,6 @@ You should use `js2-print-tree' instead of this function."
         nil)
        (t
         (aref js2-side-effecting-tokens tt))))))
-
-(defun js2-member-expr-leftmost-name (node)
-  "For an expr such as foo.bar.baz, return leftmost node foo.
-NODE is any `js2-node' object.  If it represents a member expression,
-which is any sequence of property gets, element-gets, function calls,
-or xml descendants/filter operators, then we look at the lexically
-leftmost (first) node in the chain.  If it is a name-node we return it.
-Note that NODE can be a raw name-node and it will be returned as well.
-If NODE is not a name-node or member expression, or if it is a member
-expression whose leftmost target is not a name node, returns nil."
-  (let ((continue t)
-        result)
-    (while (and continue (not result))
-      (cond
-       ((js2-name-node-p node)
-        (setq result node))
-       ((js2-prop-get-node-p node)
-        (setq node (js2-prop-get-node-left node)))
-       ;; TODO:  handle call-nodes, xml-nodes, others?
-       (t
-        (setq continue nil))))
-    result))
 
 (defconst js2-stmt-node-types
   (list js2-BLOCK
@@ -6032,10 +5997,6 @@ corresponding number.  Otherwise return -1."
       (js2-xml-discard-string)
       nil)))
 
-(defun js2-scanner-get-line ()
-  "Return the text of the current scan line."
-  (buffer-substring (point-at-bol) (point-at-eol)))
-
 ;;; Highlighting
 
 (defun js2-set-face (beg end face &optional record)
@@ -6048,19 +6009,6 @@ corresponding number.  Otherwise return -1."
     (if record
         (push (list beg end face) js2-mode-fontifications)
       (put-text-property beg end 'font-lock-face face))))
-
-(defun js2-set-kid-face (pos kid len face)
-  "Set-face on a child node.
-POS is absolute buffer position of parent.
-KID is the child node.
-LEN is the length to fontify.
-FACE is the face to fontify with."
-  (js2-set-face (+ pos (js2-node-pos kid))
-                (+ pos (js2-node-pos kid) (js2-node-len kid))
-                face))
-
-(defsubst js2-fontify-kwd (start length)
-  (js2-set-face start (+ start length) 'font-lock-keyword-face))
 
 (defsubst js2-clear-face (beg end)
   (remove-text-properties beg end '(font-lock-face nil
@@ -6483,6 +6431,42 @@ it is considered declared."
           (js2-report-warning "msg.undeclared.variable" name pos (- end pos)
                               'js2-external-variable))))
     (setq js2-recorded-identifiers nil)))
+
+(defun js2-set-default-externs ()
+  "Set the value of `js2-default-externs' based on the various
+`js2-include-?-externs' variables."
+  (setq js2-default-externs
+        (append js2-ecma-262-externs
+                (if js2-include-browser-externs js2-browser-externs)
+                (if js2-include-rhino-externs js2-rhino-externs)
+                (if js2-include-node-externs js2-node-externs)
+                (if (or js2-include-browser-externs js2-include-node-externs)
+                    js2-typed-array-externs))))
+
+(defun js2-apply-jslint-globals ()
+  (setq js2-additional-externs
+        (nconc (js2-get-jslint-globals)
+               js2-additional-externs)))
+
+(defun js2-get-jslint-globals ()
+  (loop for node in (js2-ast-root-comments js2-mode-ast)
+        when (and (eq 'block (js2-comment-node-format node))
+                  (save-excursion
+                    (goto-char (js2-node-abs-pos node))
+                    (looking-at "/\\*global ")))
+        append (js2-get-jslint-globals-in
+                (match-end 0)
+                (js2-node-abs-end node))))
+
+(defun js2-get-jslint-globals-in (beg end)
+  (let (res)
+    (save-excursion
+      (goto-char beg)
+      (while (re-search-forward js2-mode-identifier-re end t)
+        (let ((match (match-string 0)))
+          (unless (member match '("true" "false"))
+            (push match res)))))
+    (nreverse res)))
 
 ;;; IMenu support
 
@@ -7187,11 +7171,11 @@ Scanner should be initialized."
         (push comment (js2-ast-root-comments root))
         (js2-node-add-children root comment)))
     (setf (js2-node-len root) (- end pos))
+    (setq js2-mode-ast root)  ; Make sure this is available for callbacks.
     ;; Give extensions a chance to muck with things before highlighting starts.
     (let ((js2-additional-externs js2-additional-externs))
       (save-excursion
-        (dolist (callback js2-post-parse-callbacks)
-          (funcall callback)))
+        (run-hooks 'js2-post-parse-callbacks))
       (js2-highlight-undeclared-vars))
     root))
 
@@ -9528,29 +9512,6 @@ of continued expressions.")
   (regexp-opt '("var" "let" "const") 'words)
   "Regular expression matching variable declaration keywords.")
 
-;; This function has horrible results if you're typing an array
-;; such as [[1, 2], [3, 4], [5, 6]].  Bounce indenting -really- sucks
-;; in conjunction with electric-indent, so just disabling it.
-(defsubst js2-code-at-bol-p ()
-  "Return t if the first character on line is non-whitespace."
-  nil)
-
-(defun js2-insert-and-indent (key)
-  "Run command bound to KEY and indent current line.
-Runs the command bound to KEY in the global keymap and indents
-the current line."
-  (interactive (list (this-command-keys)))
-  (let ((cmd (lookup-key (current-global-map) key)))
-    (if (commandp cmd)
-        (call-interactively cmd)))
-  ;; don't do the electric keys inside comments or strings,
-  ;; and don't do bounce-indent with them.
-  (let ((parse-state (syntax-ppss (point)))
-        (js2-bounce-indent-p (js2-code-at-bol-p)))
-    (unless (or (nth 3 parse-state)
-                (nth 4 parse-state))
-      (indent-according-to-mode))))
-
 (defun js2-re-search-forward-inner (regexp &optional bound count)
   "Auxiliary function for `js2-re-search-forward'."
   (let (parse saved-point)
@@ -9697,11 +9658,10 @@ to a multiline declaration statement.  See `js2-pretty-multiline-declarations'."
                         (js2-backward-sws)
                         (or (eq (char-before) ?,)
                             (and (not (eq (char-before) ?\;))
-                                 (and
-                                  (prog2 (skip-chars-backward "[[:punct:]]")
-                                      (looking-at js2-indent-operator-re)
-                                    (js2-backward-sws))
-                                  (not (eq (char-before) ?\;))))
+                                 (prog2 (skip-syntax-backward ".")
+                                     (looking-at js2-indent-operator-re)
+                                   (js2-backward-sws))
+                                 (not (eq (char-before) ?\;)))
                             (js2-same-line pos)))))
           (condition-case err
               (backward-sexp)
@@ -9729,6 +9689,8 @@ statement without braces, else returns nil."
                      (skip-chars-backward " \t" (point-at-bol)))
                    (let ((pt (point)))
                      (back-to-indentation)
+                     (when (looking-at "}[ \t]*")
+                       (goto-char (match-end 0)))
                      (and (looking-at js2-possibly-braceless-keywords-re)
                           (= (match-end 0) pt)
                           (not (js2-end-of-do-while-loop-p))))))
@@ -9906,14 +9868,6 @@ If POS is non-nil, go to that point and return indentation for that line."
     (goto-char (point-at-bol))
     (skip-chars-forward " \t")
     (looking-at "case\\s-.+:")))
-
-(defun js2-syntax-bol ()
-  "Return the point at the first non-whitespace char on the line.
-Returns `point-at-bol' if the line is empty."
-  (save-excursion
-    (beginning-of-line)
-    (skip-chars-forward " \t")
-    (point)))
 
 (defun js2-bounce-indent (normal-col parse-status &optional backwards)
   "Cycle among alternate computed indentation positions.
@@ -10153,11 +10107,7 @@ highlighting features of `js2-mode'."
   (set (make-local-variable 'max-lisp-eval-depth)
        (max max-lisp-eval-depth 3000))
   (setq next-error-function #'js2-next-error)
-  (setq js2-default-externs
-        (append js2-ecma-262-externs
-                (if js2-include-browser-externs js2-browser-externs)
-                (if js2-include-gears-externs js2-gears-externs)
-                (if js2-include-rhino-externs js2-rhino-externs)))
+  (js2-set-default-externs)
   ;; Experiment:  make reparse-delay longer for longer files.
   (if (plusp js2-dynamic-idle-timer-adjust)
       (setq js2-idle-timer-delay
@@ -10168,6 +10118,9 @@ highlighting features of `js2-mode'."
   (set (make-local-variable 'js2-highlight-level) 0) ; no syntax highlighting
   (add-hook 'after-change-functions #'js2-minor-mode-edit nil t)
   (add-hook 'change-major-mode-hook #'js2-minor-mode-exit nil t)
+  (when js2-include-jslint-globals
+    (add-hook 'js2-post-parse-callbacks 'js2-apply-jslint-globals nil t))
+  (run-hooks 'js2-init-hook)
   (js2-reparse))
 
 (defun js2-minor-mode-exit ()
@@ -10179,6 +10132,7 @@ highlighting features of `js2-mode'."
     (delete-overlay js2-mode-node-overlay)
     (setq js2-mode-node-overlay nil))
   (js2-remove-overlays)
+  (remove-hook 'js2-post-parse-callbacks 'js2-apply-jslint-globals t)
   (setq js2-mode-ast nil))
 
 (defvar js2-source-buffer nil "Linked source buffer for diagnostics view")
@@ -10294,8 +10248,10 @@ Selecting an error will jump it to the corresponding source-buffer error.
 (define-derived-mode js2-mode prog-mode "Javascript-IDE"
   ;; FIXME: Should derive from js-mode.
   "Major mode for editing JavaScript code."
-  (setq comment-start "//"  ; used by comment-region; don't change it
-        comment-end "")
+  ;; Used by comment-region; don't change it.
+  (set (make-local-variable 'comment-start) "//")
+  (set (make-local-variable 'comment-end) "")
+  (set (make-local-variable 'comment-start-skip) js2-comment-start-skip)
   (set (make-local-variable 'max-lisp-eval-depth)
        (max max-lisp-eval-depth 3000))
   (set (make-local-variable 'indent-line-function) #'js2-indent-line)
@@ -10324,7 +10280,6 @@ Selecting an error will jump it to the corresponding source-buffer error.
         c-line-comment-starter "//"
         c-paragraph-start js2-paragraph-start
         c-paragraph-separate "$"
-        comment-start-skip js2-comment-start-skip
         c-syntactic-ws-start js2-syntactic-ws-start
         c-syntactic-ws-end js2-syntactic-ws-end
         c-syntactic-eol js2-syntactic-eol)
@@ -10337,12 +10292,6 @@ Selecting an error will jump it to the corresponding source-buffer error.
     (make-local-variable 'adaptive-fill-mode)
     (make-local-variable 'adaptive-fill-regexp)
     (c-setup-paragraph-variables))
-
-  (setq js2-default-externs
-        (append js2-ecma-262-externs
-                (if js2-include-browser-externs js2-browser-externs)
-                (if js2-include-gears-externs js2-gears-externs)
-                (if js2-include-rhino-externs js2-rhino-externs)))
 
   (setq font-lock-defaults '(nil t))
 
@@ -10365,6 +10314,14 @@ Selecting an error will jump it to the corresponding source-buffer error.
         js2-mode-comments-hidden nil
         js2-mode-buffer-dirty-p t
         js2-mode-parsing nil)
+
+  (js2-set-default-externs)
+
+  (when js2-include-jslint-globals
+    (add-hook 'js2-post-parse-callbacks 'js2-apply-jslint-globals nil t))
+
+  (run-hooks 'js2-init-hook)
+
   (js2-reparse))
 
 (defun js2-mode-exit ()
@@ -10448,7 +10405,7 @@ buffer will only rebuild its `js2-mode-ast' if the buffer is dirty."
                     (js2-time
                      (setq interrupted-p
                            (catch 'interrupted
-                             (setq js2-mode-ast (js2-parse))
+                             (js2-parse)
                              ;; if parsing is interrupted, comments and regex
                              ;; literals stay ignored by `parse-partial-sexp'
                              (remove-text-properties (point-min) (point-max)
@@ -10606,8 +10563,9 @@ This ensures that the counts and `next-error' are correct."
 (defun js2-echo-error (old-point new-point)
   "Called by point-motion hooks."
   (let ((msg (get-text-property new-point 'help-echo)))
-    (when (and (stringp msg) (or (not (current-message))
-                                 (string= (current-message) "Quit")))
+    (when (and (stringp msg)
+               (not (active-minibuffer-window))
+               (not (current-message)))
       (message msg))))
 
 (defalias #'js2-echo-help #'js2-echo-error)
@@ -10730,48 +10688,6 @@ Also moves past comment delimiters when inside comments."
   (if (eolp)
       (skip-chars-backward " \t")
     (goto-char (point-at-eol))))
-
-(defsubst js2-mode-inside-string ()
-  "Return non-nil if inside a string.
-Actually returns the quote character that begins the string."
-  (nth 3 (syntax-ppss)))
-
-(defun js2-mode-inside-comment-or-string ()
-  "Return non-nil if inside a comment or string."
-  (or
-   (let ((comment-start
-          (save-excursion
-            (goto-char (point-at-bol))
-            (if (re-search-forward "//" (point-at-eol) t)
-                (match-beginning 0)))))
-     (and comment-start
-          (<= comment-start (point))))
-   (let ((parse-state (syntax-ppss)))
-     (or (nth 3 parse-state)
-         (nth 4 parse-state)))))
-
-
-(defun js2-insert-catch-skel (try-pos)
-  "Complete a try/catch block after inserting a { following a try keyword.
-Rationale is that a try always needs a catch or a finally, and the catch is
-the more likely of the two.
-
-TRY-POS is the buffer position of the try keyword.  The open-curly should
-already have been inserted."
-  (insert "{")
-  (let ((try-col (save-excursion
-                   (goto-char try-pos)
-                   (current-column))))
-    (insert "\n")
-    (undo-boundary)
-    (js2-indent-line) ;; indent the blank line where cursor will end up
-    (save-excursion
-      (insert "\n")
-      (indent-to try-col)
-      (insert "} catch (x) {\n\n")
-      (indent-to try-col)
-      (insert "}"))))
-
 
 (defun js2-mode-wait-for-parse (callback)
   "Invoke CALLBACK when parsing is finished.
@@ -11077,7 +10993,7 @@ move backward across N balanced expressions."
   (save-restriction
     (widen) ;; `blink-matching-open' calls `narrow-to-region'
     (js2-reparse))
-  (let ((scan-msg "Containing expression ends prematurely")
+  (let (forward-sexp-function
         node (start (point)) pos lp rp child)
     (cond
      ;; backward-sexp
@@ -11088,50 +11004,55 @@ move backward across N balanced expressions."
      ((and arg (minusp arg))
       (dotimes (i (- arg))
         (js2-backward-sws)
-        (forward-char -1)  ; enter the node we backed up to
+        (forward-char -1)   ; Enter the node we backed up to.
         (when (setq node (js2-node-at-point (point) t))
           (setq pos (js2-node-abs-pos node))
           (let ((parens (js2-mode-forward-sexp-parens node pos)))
             (setq lp (car parens)
-                  rp (cdr parens))))
-        (goto-char
-         (or (when (and lp (> start lp))
-               (if (and rp (<= start rp))
-                   (if (setq child (js2-node-closest-child node (point) lp t))
-                       (js2-node-abs-pos child)
-                     (goto-char start)
-                     (signal 'scan-error (list scan-msg lp lp)))
-                 lp))
-             pos
-             (point-min)))))
+                  rp (cdr parens)))
+          (when (and lp (> start lp))
+            (if (and rp (<= start rp))
+                ;; Between parens, check if there's a child node we can jump.
+                (when (setq child (js2-node-closest-child node (point) lp t))
+                  (setq pos (js2-node-abs-pos child)))
+              ;; Before both parens.
+              (setq pos lp)))
+          (let ((state (parse-partial-sexp start pos)))
+            (goto-char (if (not (zerop (car state)))
+                           ;; Stumble at the unbalanced paren if < 0, or
+                           ;; jump a bit further if > 0.
+                           (scan-sexps start -1)
+                         pos))))
+        (unless pos (goto-char (point-min)))))
      (t
       ;; forward-sexp
-      (js2-forward-sws)
       (dotimes (i arg)
         (js2-forward-sws)
         (when (setq node (js2-node-at-point (point) t))
           (setq pos (js2-node-abs-pos node))
           (let ((parens (js2-mode-forward-sexp-parens node pos)))
             (setq lp (car parens)
-                  rp (cdr parens))))
-        (goto-char
-         (or (when (and rp (<= start rp))
-               (if (> start lp)
-                   (if (setq child (js2-node-closest-child node (point) rp))
-                       (js2-node-abs-end child)
-                     (goto-char start)
-                     (signal 'scan-error (list scan-msg rp (1+ rp))))
-                 (1+ rp)))
-             (and pos
-                  (+ pos
-                     (js2-node-len
+                  rp (cdr parens)))
+          (or
+           (when (and rp (<= start rp))
+             (if (> start lp)
+                 (when (setq child (js2-node-closest-child node (point) rp))
+                   (setq pos (js2-node-abs-end child)))
+               (setq pos (1+ rp))))
+           ;; No parens or child nodes, looks for the end of the curren node.
+           (incf pos (js2-node-len
                       (if (js2-expr-stmt-node-p (js2-node-parent node))
-                          ;; stop after the semicolon
+                          ;; Stop after the semicolon.
                           (js2-node-parent node)
                         node))))
-             (point-max))))))))
+          (let ((state (save-excursion (parse-partial-sexp start pos))))
+            (goto-char (if (not (zerop (car state)))
+                           (scan-sexps start 1)
+                         pos))))
+        (unless pos (goto-char (point-max))))))))
 
 (defun js2-mode-forward-sexp-parens (node abs-pos)
+  "Return a cons cell with positions of main parens in NODE."
   (cond
    ((or (js2-array-node-p node)
         (js2-object-node-p node)
@@ -11219,6 +11140,8 @@ RESET means start over from the beginning."
           (if (zerop (decf count))
               (setq continue nil)))
         (setq errs (cdr errs)))
+      ;; Clear for `js2-echo-error'.
+      (message nil)
       (if err
           (goto-char (second err))
         ;; Wrap around to first error.

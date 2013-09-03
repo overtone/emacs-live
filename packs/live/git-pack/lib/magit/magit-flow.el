@@ -1,7 +1,13 @@
 ;;; magit-flow.el --- git-flow plug-in for Magit
 
-;; Copyright (C) 2012  Phil Jackson
+;; Copyright (C) 2013  The Magit Project Developers.
 ;;
+;; For a full list of contributors, see the AUTHORS.md file
+;; at the top-level directory of this distribution and at
+;; https://raw.github.com/magit/magit/master/AUTHORS.md
+
+;; Author: Phil Jackson <phil@shellarchive.co.uk>
+
 ;; Magit is free software; you can redistribute it and/or modify it
 ;; under the terms of the GNU General Public License as published by
 ;; the Free Software Foundation; either version 3, or (at your option)
@@ -18,7 +24,7 @@
 ;;; Commentary:
 
 ;; This plug-in provides git-flow functionality as a separate
-;; component of Magit. Only supports `feature` commands at the moment.
+;; component of Magit. Only supports `feature' commands at the moment.
 
 ;;; Code:
 
@@ -43,7 +49,7 @@
     (magit-run-git-flow "feature" "start" name)))
 
 (defun magit-flow-feature-list ()
-  "List the feature branches managed by flow"
+  "List the feature branches managed by flow."
   (let ((current-feature nil)
         (all-features nil))
     (dolist (name (magit-run-git-lines-flow "feature" "list"))

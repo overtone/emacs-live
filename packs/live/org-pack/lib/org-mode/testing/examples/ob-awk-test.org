@@ -1,0 +1,39 @@
+#+Title: a collection of examples for ob-awk tests
+#+OPTIONS: ^:nil
+
+* Simple tests
+  :PROPERTIES:
+  :ID:       9e998b2a-3581-43fe-b26d-07d3c507b86a
+  :END:
+Run without input stream
+#+begin_src awk :ouput silent :results silent
+  BEGIN {
+      print 42
+  }
+#+end_src
+
+Use a code block ouput as an input
+#+begin_src awk  :stdin genseq :results silent
+  {
+      print 42+$1
+  }
+#+end_src
+
+Use input file
+#+name: genfile
+#+begin_src awk  :in-file ob-awk-test.in :results silent
+    $0~/[\t]*#/{
+        # skip comments 
+        next
+    }
+    { 
+        print $1*10
+    }
+#+end_src
+
+* Input data generators
+A code block to generate input stream
+#+name: genseq
+#+begin_src emacs-lisp :results silent
+(print "1")
+#+end_src

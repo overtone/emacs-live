@@ -11,8 +11,10 @@ commands. And to all the other commands, too.
 ## Get started
 
 * Get Smex
-   * Via [package.el](http://marmalade-repo.org/packages/smex).
-   * Or manually download Smex and set-up your load path. [(Find out more.)](http://www.emacswiki.org/emacs/InstallingPackages)
+   * Via [Marmalade](http://marmalade-repo.org/packages/smex) or
+     [MELPA](http://melpa.milkbox.net/).
+   * Or manually download Smex and set-up your load path.
+     [(Find out more.)](http://www.emacswiki.org/emacs/InstallingPackages)
 
 * To auto-start Smex every time you open Emacs add these lines to your .emacs file:
 
@@ -85,6 +87,10 @@ Set `smex-prompt-string` for a custom prompt.
 Enable `smex-key-advice-ignore-menu-bar` to ignore clues to menu bar bindings.
 
 ## Changelog
+
+### 2.1
+  * Improved tab completion in the Smex minibuffer
+  * Add compatibility with command-frequency
 
 ### 2.0
   * Remove `smex-detect-legacy-save-file`.

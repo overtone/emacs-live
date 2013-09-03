@@ -832,6 +832,18 @@ KEYMAP is a keymap that will be put on the popup contents."
           (popup-scroll-top popup) scroll-top)
     (popup-draw popup)))
 
+(defun popup-page-next (popup)
+  "Select next item of POPUP per `popup-height' range.
+Pages down through POPUP."
+  (dotimes (counter (1- (popup-height popup)))
+    (popup-next popup)))
+
+(defun popup-page-previous (popup)
+  "Select previous item of POPUP per `popup-height' range.
+Pages up through POPUP."
+  (dotimes (counter (1- (popup-height popup)))
+    (popup-previous popup)))
+
 (defun popup-scroll-down (popup &optional n)
   "Scroll down N of POPUP and draw."
   (let ((scroll-top (min (+ (popup-scroll-top popup) (or n 1))
@@ -1195,6 +1207,10 @@ PROMPT is a prompt string when reading events during event loop."
         (popup-next menu))
        ((eq binding 'popup-previous)
         (popup-previous menu))
+       ((eq binding 'popup-page-next)
+        (popup-page-next menu))
+       ((eq binding 'popup-page-previous)
+        (popup-page-previous menu))
        ((eq binding 'popup-help)
         (popup-menu-show-help menu))
        ((eq binding 'popup-isearch)
@@ -1328,6 +1344,9 @@ the sub menu."
     (define-key map [down]      'popup-next)
     (define-key map "\C-p"      'popup-previous)
     (define-key map [up]        'popup-previous)
+
+    (define-key map [next]      'popup-page-next)
+    (define-key map [prior]     'popup-page-previous)
 
     (define-key map [f1]        'popup-help)
     (define-key map (kbd "\C-?") 'popup-help)
