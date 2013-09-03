@@ -1,5 +1,24 @@
 # Emacs Live Changelog
 
+## 1.0-BETA-23 (Tues 3rd Sept 2013)
+* Update many, many dependencies
+* Update Cyberpunk colour theme to handle more modes
+* Add function for setting `custom-file`
+* Fix sudo-edit fn
+* Add new default bindings
+* Add a shortcut for cycling through different coll types
+* Ensure js-mode snippets are loaded
+* Make M-T transpose-sexps
+* Pull in clojure-test-mode
+* Move to using flx rather than flex
+* Move back to vanilla nrepl.el now issues are resolved
+* Ensure nrepl-eval-sexp-fu works with latest Emacs
+* Remvoe live-reload-snippets - favour yas-reload-all
+* Add new dependencies: dash, pkg-info and s
+* Improve git highlighting with git-modes
+* Add live-paredit-copy-sexp-at-point bound to C-M-k
+
+
 ## 1.0-BETA-22 (Sat 30th March 2013)
 * Update many dependencies
 * Make grep highlights more permanent (rather than just flashing away)
