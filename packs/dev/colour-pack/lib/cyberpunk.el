@@ -202,7 +202,7 @@
      (term-underline ((t (:underline t))))
 
      (git-commit-comment-heading-face ((t (:background "black" :foreground "deep pink"))))
-     (git-commit-summary-face ((t (:background "black" :foreground "#4c83ff"))))
+     (git-commit-summary-face ((t (:background "black" :foreground "white"))))
      (git-commit-branch-face ((t (:background "black" :foreground "#FF6400"))))
      (git-commit-nonempty-second-line-face ((t (:background "black" :foreground "#FBDE2D"))))
      ))
