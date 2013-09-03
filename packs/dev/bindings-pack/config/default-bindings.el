@@ -51,7 +51,6 @@
 (global-set-key (kbd "C-c n e b") 'nrepl-eval-buffer)
 
 
-
 ;;funky characters
 (global-set-key (kbd "C-c i l") (lambda () (interactive) (insert "λ")))
 (global-set-key (kbd "C-c i n") (lambda () (interactive) (insert "ℕ")))
@@ -116,6 +115,7 @@
 (define-key paredit-mode-map (kbd "C-M-p")   'paredit-backward-down)
 (define-key paredit-mode-map (kbd "C-M-u")   'paredit-backward-up)
 (define-key paredit-mode-map (kbd "M-T")     'transpose-sexps)
+(define-key paredit-mode-map (kbd "C-M-k")   'live-paredit-copy-sexp-at-point)
 
 ;; org-mode
 (define-key org-mode-map (kbd "C-M-f")    'org-metadown)

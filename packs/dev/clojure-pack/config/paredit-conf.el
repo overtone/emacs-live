@@ -3,6 +3,7 @@
   '(define-key paredit-mode-map (kbd "M-)") 'paredit-forward-slurp-sexp))
 
 (require 'paredit)
+(require 'thingatpt)
 
 (defun live-paredit-next-top-level-form ()
   (interactive)
@@ -135,3 +136,7 @@
      (ignore-errors
        (paredit-forward-up)
        t))))
+
+(defun live-paredit-copy-sexp-at-point ()
+  (interactive)
+    (kill-new (thing-at-point 'sexp)))
