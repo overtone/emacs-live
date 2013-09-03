@@ -1,7 +1,7 @@
 ;;; -*-Emacs-Lisp-*-
 ;;;
-;;;  $Id: inf-ruby.el 38107 2012-12-01 08:13:04Z nobu $
-;;;  $Author: nobu $
+;;;  $Id: inf-ruby.el 42804 2013-09-03 09:29:22Z knu $
+;;;  $Author: knu $
 ;;;
 ;;; Inferior Ruby Mode - ruby process in a buffer.
 ;;;                      adapted from cmuscheme.el
@@ -156,6 +156,7 @@
        (define-key inferior-ruby-mode-map "\C-c\C-l" 'ruby-load-file)
 ))
 
+;;;###autoload
 (defun inf-ruby-keys ()
   "Set local key defs for inf-ruby in ruby-mode"
   (define-key ruby-mode-map "\M-\C-x" 'ruby-send-definition)
@@ -265,6 +266,7 @@ Defaults to a regexp ignoring all inputs of 0, 1, or 2 letters.")
                  (ruby-args-to-list (substring string pos
                                                  (length string)))))))))
 
+;;;###autoload
 (defun run-ruby (cmd)
   "Run an inferior Ruby process, input and output via buffer *ruby*.
 If there is a process already running in `*ruby*', switch to that buffer.
