@@ -13,7 +13,7 @@
 * Move to using flx rather than flex
 * Move back to vanilla nrepl.el now issues are resolved
 * Ensure nrepl-eval-sexp-fu works with latest Emacs
-* Remvoe live-reload-snippets - favour yas-reload-all
+* Remove live-reload-snippets - favour yas-reload-all
 * Add new dependencies: dash, pkg-info and s
 * Improve git highlighting with git-modes
 * Add live-paredit-copy-sexp-at-point bound to C-M-k
