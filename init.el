@@ -58,7 +58,7 @@
 
 (setq live-supported-emacsp t)
 
-(when (< emacs-major-version 24)
+(when (version< emacs-version "24.3")
   (setq live-supported-emacsp nil)
   (setq initial-scratch-message (concat "
 ;;                _.-^^---....,,--
@@ -73,7 +73,7 @@
 ;;                     | ;  :|
 ;;            _____.,-#%&$@%#&#~,._____
 ;;
-;; I'm sorry, Emacs Live is only supported on Emacs 24+.
+;; I'm sorry, Emacs Live is only supported on Emacs 24.3+.
 ;;
 ;; You are running: " emacs-version "
 ;;
