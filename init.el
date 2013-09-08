@@ -91,7 +91,7 @@
   (let* ((old-file (concat (file-name-as-directory "~") ".emacs-old.el")))
     (if (file-exists-p old-file)
       (load-file old-file)
-      (error (concat "Oops - your emacs isn't supported. Emacs Live only works on Emacs 24+ and you're running version: " emacs-version ". Please upgrade your Emacs and try again, or define ~/.emacs-old.el for a fallback")))))
+      (error (concat "Oops - your emacs isn't supported. Emacs Live only works on Emacs 24.3+ and you're running version: " emacs-version ". Please upgrade your Emacs and try again, or define ~/.emacs-old.el for a fallback")))))
 
 (let ((emacs-live-directory (getenv "EMACS_LIVE_DIR")))
   (when emacs-live-directory
