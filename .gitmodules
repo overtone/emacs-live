@@ -131,7 +131,7 @@
 	url = git://github.com/lunaryorn/pkg-info.el.git
 [submodule "packs/dev/foundation-pack/vendor/submodules/s"]
 	path = packs/dev/foundation-pack/vendor/submodules/s
-	url = https://github.com/magnars/s.el.git
+	url = git://github.com/magnars/s.el.git
 [submodule "packs/dev/foundation-pack/vendor/submodules/flx"]
 	path = packs/dev/foundation-pack/vendor/submodules/flx
 	url = https://github.com/lewang/flx.git
