@@ -134,4 +134,7 @@
 	url = git://github.com/magnars/s.el.git
 [submodule "packs/dev/foundation-pack/vendor/submodules/flx"]
 	path = packs/dev/foundation-pack/vendor/submodules/flx
-	url = https://github.com/lewang/flx.git
+	url = git://github.com/lewang/flx.git
+[submodule "packs/dev/power-pack/vendor/submodules/floobits"]
+	path = packs/dev/power-pack/vendor/submodules/floobits
+	url = git://github.com/Floobits/floobits-emacs.git
