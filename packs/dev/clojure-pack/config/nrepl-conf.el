@@ -114,3 +114,44 @@
                        (nrepl-current-tooling-session))))
 
 (setq nrepl-port "4555")
+(defun nrepl-make-response-handler
+ (buffer value-handler stdout-handler stderr-handler done-handler
+         &optional eval-error-handler)
+  "Make a response handler for BUFFER.
+Uses the specified VALUE-HANDLER, STDOUT-HANDLER, STDERR-HANDLER,
+DONE-HANDLER, and EVAL-ERROR-HANDLER as appropriate."
+  (lexical-let ((buffer buffer)
+                (value-handler value-handler)
+                (stdout-handler stdout-handler)
+                (stderr-handler stderr-handler)
+                (done-handler done-handler)
+                (eval-error-handler eval-error-handler))
+    (lambda (response)
+      (nrepl-dbind-response response (value ns out err status id ex root-ex
+                                            session)
+        (cond (value
+               (with-current-buffer buffer
+                 (if ns
+                     (setq nrepl-buffer-ns ns)))
+               (if value-handler
+                   (funcall value-handler buffer value)))
+              (out
+               (if stdout-handler
+                   (funcall stdout-handler buffer out)))
+              (err
+               (if stderr-handler
+                   (funcall stderr-handler buffer err)))
+              (status
+               (if (member "interrupted" status)
+                   (message "Evaluation interrupted."))
+               (if (member "eval-error" status)
+                   (funcall (or eval-error-handler nrepl-err-handler)
+                            buffer ex root-ex session))
+               (if (member "namespace-not-found" status)
+                   (message "Oops! You tried to evaluate something in a namespace that doesn't yet exist. Try evaluating the ns form at the top of the buffer."))
+               (if (member "need-input" status)
+                   (nrepl-need-input buffer))
+               (if (member "done" status)
+                   (progn (remhash id nrepl-requests)
+                          (if done-handler
+                              (funcall done-handler buffer))))))))))
