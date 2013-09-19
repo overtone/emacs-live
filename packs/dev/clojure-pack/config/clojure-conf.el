@@ -96,3 +96,14 @@
     (goto-char original-point)))
 
 (define-key clojure-mode-map (kbd "C->") 'live-cycle-clj-coll)
+
+
+(defun nrepl-warn-when-not-connected ()
+  (interactive)
+  (message "nREPL server not connected. Run M-x nrepl or M-x nrepl-jack-in to connect."))
+
+(define-key clojure-mode-map (kbd "C-M-x")   'nrepl-warn-when-not-connected)
+(define-key clojure-mode-map (kbd "C-x C-e") 'nrepl-warn-when-not-connected)
+(define-key clojure-mode-map (kbd "C-c C-e") 'nrepl-warn-when-not-connected)
+(define-key clojure-mode-map (kbd "C-c C-l") 'nrepl-warn-when-not-connected)
+(define-key clojure-mode-map (kbd "C-c C-r") 'nrepl-warn-when-not-connected)
