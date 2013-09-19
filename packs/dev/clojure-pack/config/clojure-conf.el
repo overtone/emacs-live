@@ -100,7 +100,7 @@
 
 (defun nrepl-warn-when-not-connected ()
   (interactive)
-  (message "nREPL server not connected. Run M-x nrepl or M-x nrepl-jack-in to connect."))
+  (message "Oops! You're not connected to an nREPL server. Please run M-x nrepl or M-x nrepl-jack-in to connect."))
 
 (define-key clojure-mode-map (kbd "C-M-x")   'nrepl-warn-when-not-connected)
 (define-key clojure-mode-map (kbd "C-x C-e") 'nrepl-warn-when-not-connected)
