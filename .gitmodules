@@ -138,3 +138,6 @@
 [submodule "packs/dev/power-pack/vendor/submodules/floobits"]
 	path = packs/dev/power-pack/vendor/submodules/floobits
 	url = git://github.com/Floobits/floobits-emacs.git
+[submodule "packs/dev/power-pack/vendor/submodules/wc-mode"]
+	path = packs/dev/power-pack/vendor/submodules/wc-mode
+	url = git://github.com/bnbeckwith/wc-mode.git
