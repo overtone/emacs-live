@@ -85,7 +85,7 @@
              (save-excursion
                (ignore-errors (forward-char))
                (live-paredit-top-level-p)))
-    (error "Not in a form"))
+    (error "Oops! You tried to evaluate whitespace. Move the point into in a form and try again."))
 
   (save-excursion
     (save-match-data
