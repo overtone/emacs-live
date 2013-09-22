@@ -1,5 +1,5 @@
 (live-add-pack-lib "nrepl")
-(require 'nrepl )
+(require 'smartparens)
 
 (defun live-windows-hide-eol ()
  "Do not show ^M in files containing mixed UNIX and DOS line endings."
@@ -14,16 +14,12 @@
 (add-hook 'nrepl-interaction-mode-hook
           (lambda ()
             (nrepl-turn-on-eldoc-mode)
-            (enable-paredit-mode)))
+            (smartparens-mode 1)))
 
 (add-hook 'nrepl-mode-hook
-          (lambda ()
+           (lambda ()
             (nrepl-turn-on-eldoc-mode)
-            (enable-paredit-mode)
-            (define-key nrepl-mode-map
-              (kbd "{") 'paredit-open-curly)
-            (define-key nrepl-mode-map
-              (kbd "}") 'paredit-close-curly)))
+            (smartparens-mode 1)))
 
 (setq nrepl-popup-stacktraces nil)
 (setq nrepl-popup-stacktraces-in-repl nil)
@@ -76,82 +72,82 @@
             (compilation-minor-mode 1))
           ))))
 
-;;(setq nrepl-err-handler 'live-nrepl-err-handler)
+(setq nrepl-err-handler 'live-nrepl-err-handler)
 
-;;; Region discovery fix
-(defun nrepl-region-for-expression-at-point ()
-  "Return the start and end position of defun at point."
-  (when (and (live-paredit-top-level-p)
-             (save-excursion
-               (ignore-errors (forward-char))
-               (live-paredit-top-level-p)))
-    (error "Oops! You tried to evaluate whitespace. Move the point into in a form and try again."))
+;; ;;; Region discovery fix
+;; (defun nrepl-region-for-expression-at-point ()
+;;   "Return the start and end position of defun at point."
+;;   (when (and (live-paredit-top-level-p)
+;;              (save-excursion
+;;                (ignore-errors (forward-char))
+;;                (live-paredit-top-level-p)))
+;;     (error "Oops! You tried to evaluate whitespace. Move the point into in a form and try again."))
 
-  (save-excursion
-    (save-match-data
-      (ignore-errors (live-paredit-forward-down))
-      (paredit-forward-up)
-      (while (ignore-errors (paredit-forward-up) t))
-      (let ((end (point)))
-        (backward-sexp)
-        (list (point) end)))))
+;;   (save-excursion
+;;     (save-match-data
+;;       (ignore-errors (live-paredit-forward-down))
+;;       (paredit-forward-up)
+;;       (while (ignore-errors (paredit-forward-up) t))
+;;       (let ((end (point)))
+;;         (backward-sexp)
+;;         (list (point) end)))))
 
-;;; Windows M-. navigation fix
-(defun nrepl-jump-to-def (var)
-  "Jump to the definition of the var at point."
-  (let ((form (format "((clojure.core/juxt
-                         (comp (fn [s] (if (clojure.core/re-find #\"[Ww]indows\" (System/getProperty \"os.name\"))
-                                           (.replace s \"file:/\" \"file:\")
-                                           s))
-                               clojure.core/str
-                               clojure.java.io/resource :file)
-                         (comp clojure.core/str clojure.java.io/file :file) :line)
-                        (clojure.core/meta (clojure.core/ns-resolve '%s '%s)))"
-                      (nrepl-current-ns) var)))
-    (nrepl-send-string form
-                       (nrepl-jump-to-def-handler (current-buffer))
-                       (nrepl-current-ns)
-                       (nrepl-current-tooling-session))))
+;; ;;; Windows M-. navigation fix
+;; (defun nrepl-jump-to-def (var)
+;;   "Jump to the definition of the var at point."
+;;   (let ((form (format "((clojure.core/juxt
+;;                          (comp (fn [s] (if (clojure.core/re-find #\"[Ww]indows\" (System/getProperty \"os.name\"))
+;;                                            (.replace s \"file:/\" \"file:\")
+;;                                            s))
+;;                                clojure.core/str
+;;                                clojure.java.io/resource :file)
+;;                          (comp clojure.core/str clojure.java.io/file :file) :line)
+;;                         (clojure.core/meta (clojure.core/ns-resolve '%s '%s)))"
+;;                       (nrepl-current-ns) var)))
+;;     (nrepl-send-string form
+;;                        (nrepl-jump-to-def-handler (current-buffer))
+;;                        (nrepl-current-ns)
+;;                        (nrepl-current-tooling-session))))
 
-(setq nrepl-port "4555")
-(defun nrepl-make-response-handler
- (buffer value-handler stdout-handler stderr-handler done-handler
-         &optional eval-error-handler)
-  "Make a response handler for BUFFER.
-Uses the specified VALUE-HANDLER, STDOUT-HANDLER, STDERR-HANDLER,
-DONE-HANDLER, and EVAL-ERROR-HANDLER as appropriate."
-  (lexical-let ((buffer buffer)
-                (value-handler value-handler)
-                (stdout-handler stdout-handler)
-                (stderr-handler stderr-handler)
-                (done-handler done-handler)
-                (eval-error-handler eval-error-handler))
-    (lambda (response)
-      (nrepl-dbind-response response (value ns out err status id ex root-ex
-                                            session)
-        (cond (value
-               (with-current-buffer buffer
-                 (if ns
-                     (setq nrepl-buffer-ns ns)))
-               (if value-handler
-                   (funcall value-handler buffer value)))
-              (out
-               (if stdout-handler
-                   (funcall stdout-handler buffer out)))
-              (err
-               (if stderr-handler
-                   (funcall stderr-handler buffer err)))
-              (status
-               (if (member "interrupted" status)
-                   (message "Evaluation interrupted."))
-               (if (member "eval-error" status)
-                   (funcall (or eval-error-handler nrepl-err-handler)
-                            buffer ex root-ex session))
-               (if (member "namespace-not-found" status)
-                   (message "Oops! You tried to evaluate something in a namespace that doesn't yet exist. Try evaluating the ns form at the top of the buffer."))
-               (if (member "need-input" status)
-                   (nrepl-need-input buffer))
-               (if (member "done" status)
-                   (progn (remhash id nrepl-requests)
-                          (if done-handler
-                              (funcall done-handler buffer))))))))))
+;; (setq nrepl-port "4555")
+;; (defun nrepl-make-response-handler
+;;  (buffer value-handler stdout-handler stderr-handler done-handler
+;;          &optional eval-error-handler)
+;;   "Make a response handler for BUFFER.
+;; Uses the specified VALUE-HANDLER, STDOUT-HANDLER, STDERR-HANDLER,
+;; DONE-HANDLER, and EVAL-ERROR-HANDLER as appropriate."
+;;   (lexical-let ((buffer buffer)
+;;                 (value-handler value-handler)
+;;                 (stdout-handler stdout-handler)
+;;                 (stderr-handler stderr-handler)
+;;                 (done-handler done-handler)
+;;                 (eval-error-handler eval-error-handler))
+;;     (lambda (response)
+;;       (nrepl-dbind-response response (value ns out err status id ex root-ex
+;;                                             session)
+;;         (cond (value
+;;                (with-current-buffer buffer
+;;                  (if ns
+;;                      (setq nrepl-buffer-ns ns)))
+;;                (if value-handler
+;;                    (funcall value-handler buffer value)))
+;;               (out
+;;                (if stdout-handler
+;;                    (funcall stdout-handler buffer out)))
+;;               (err
+;;                (if stderr-handler
+;;                    (funcall stderr-handler buffer err)))
+;;               (status
+;;                (if (member "interrupted" status)
+;;                    (message "Evaluation interrupted."))
+;;                (if (member "eval-error" status)
+;;                    (funcall (or eval-error-handler nrepl-err-handler)
+;;                             buffer ex root-ex session))
+;;                (if (member "namespace-not-found" status)
+;;                    (message "Oops! You tried to evaluate something in a namespace that doesn't yet exist. Try evaluating the ns form at the top of the buffer."))
+;;                (if (member "need-input" status)
+;;                    (nrepl-need-input buffer))
+;;                (if (member "done" status)
+;;                    (progn (remhash id nrepl-requests)
+;;                           (if done-handler
+;;                               (funcall done-handler buffer))))))))))

@@ -205,6 +205,11 @@
      (git-commit-summary-face ((t (:background "black" :foreground "white"))))
      (git-commit-branch-face ((t (:background "black" :foreground "#FF6400"))))
      (git-commit-nonempty-second-line-face ((t (:background "black" :foreground "#FBDE2D"))))
+
+
+     (sp-wrap-overlay-face ((t (:background "green"))))
+     (sp-pair-overlay-face ((t (:background "grey20"))))
+     (sp-wrap-tag-overlay-face ((t (:background "grey20"))))
      ))
   )
 

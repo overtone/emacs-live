@@ -1,4 +1,6 @@
 (live-add-pack-lib "clojure-mode")
+(require 'smartparens)
+
 
 (eval-after-load 'clojure-mode
   '(font-lock-add-keywords
@@ -53,7 +55,7 @@
                               auto-mode-alist))
 
 (dolist (x '(scheme emacs-lisp lisp clojure))
-  (add-hook (intern (concat (symbol-name x) "-mode-hook")) 'enable-paredit-mode)
+  (add-hook (intern (concat (symbol-name x) "-mode-hook")) '(lambda () (smartparens-strict-mode 1)))
   (add-hook (intern (concat (symbol-name x) "-mode-hook")) 'rainbow-delimiters-mode))
 
 (defun live-toggle-clj-keyword-string ()
