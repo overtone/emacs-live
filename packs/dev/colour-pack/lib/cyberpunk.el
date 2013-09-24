@@ -210,6 +210,12 @@
      (sp-wrap-overlay-face ((t (:background "green"))))
      (sp-pair-overlay-face ((t (:background "grey20"))))
      (sp-wrap-tag-overlay-face ((t (:background "grey20"))))
+
+     (apropos-symbol ((t (:foreground "deep pink"))))
+     (apropos-function-button ((t (:foreground "#4c83ffn"))))
+     (apropos-misc-button ((t (:foreground "yellow3"))))
+     (apropos-variable-button ((t (:foreground "dark green"))))
+
      ))
   )
 
