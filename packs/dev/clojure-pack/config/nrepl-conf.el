@@ -74,80 +74,108 @@
 
 (setq nrepl-err-handler 'live-nrepl-err-handler)
 
-;; ;;; Region discovery fix
-;; (defun nrepl-region-for-expression-at-point ()
-;;   "Return the start and end position of defun at point."
-;;   (when (and (live-paredit-top-level-p)
-;;              (save-excursion
-;;                (ignore-errors (forward-char))
-;;                (live-paredit-top-level-p)))
-;;     (error "Oops! You tried to evaluate whitespace. Move the point into in a form and try again."))
+;;; Region discovery fix
+(defun nrepl-region-for-expression-at-point ()
+  "Return the start and end position of defun at point."
+  (interactive)
+  (when (and (live-lisp-top-level-p)
+             (save-excursion
+               (ignore-errors (forward-char))
+               (live-lisp-top-level-p))
+             (live-whitespace-at-point-p))
+    (error "Oops! You tried to evaluate whitespace. Move the point into in a form and try again."))
 
-;;   (save-excursion
-;;     (save-match-data
-;;       (ignore-errors (live-paredit-forward-down))
-;;       (paredit-forward-up)
-;;       (while (ignore-errors (paredit-forward-up) t))
-;;       (let ((end (point)))
-;;         (backward-sexp)
-;;         (list (point) end)))))
+  (if (live-lisp-top-level-p)
+      (let ((bnd-cons (bounds-of-thing-at-point 'sexp)))
+        (list (car bnd-cons) (cdr bnd-cons)))
+    (save-excursion
+      (save-match-data
+        (forward-char)
+        (while (sp-up-sexp))
+        (let ((end (point)))
+          (backward-sexp)
+          (list (point) end))))))
 
-;; ;;; Windows M-. navigation fix
-;; (defun nrepl-jump-to-def (var)
-;;   "Jump to the definition of the var at point."
-;;   (let ((form (format "((clojure.core/juxt
-;;                          (comp (fn [s] (if (clojure.core/re-find #\"[Ww]indows\" (System/getProperty \"os.name\"))
-;;                                            (.replace s \"file:/\" \"file:\")
-;;                                            s))
-;;                                clojure.core/str
-;;                                clojure.java.io/resource :file)
-;;                          (comp clojure.core/str clojure.java.io/file :file) :line)
-;;                         (clojure.core/meta (clojure.core/ns-resolve '%s '%s)))"
-;;                       (nrepl-current-ns) var)))
-;;     (nrepl-send-string form
-;;                        (nrepl-jump-to-def-handler (current-buffer))
-;;                        (nrepl-current-ns)
-;;                        (nrepl-current-tooling-session))))
+;;; Windows M-. navigation fix
+(defun nrepl-jump-to-def (var)
+  "Jump to the definition of the var at point."
+  (let ((form (format "((clojure.core/juxt
+                         (comp (fn [s] (if (clojure.core/re-find #\"[Ww]indows\" (System/getProperty \"os.name\"))
+                                           (.replace s \"file:/\" \"file:\")
+                                           s))
+                               clojure.core/str
+                               clojure.java.io/resource :file)
+                         (comp clojure.core/str clojure.java.io/file :file) :line)
+                        (clojure.core/meta (clojure.core/ns-resolve '%s '%s)))"
+                      (nrepl-current-ns) var)))
+    (nrepl-send-string form
+                       (nrepl-jump-to-def-handler (current-buffer))
+                       (nrepl-current-ns)
+                       (nrepl-current-tooling-session))))
 
-;; (setq nrepl-port "4555")
-;; (defun nrepl-make-response-handler
-;;  (buffer value-handler stdout-handler stderr-handler done-handler
-;;          &optional eval-error-handler)
-;;   "Make a response handler for BUFFER.
-;; Uses the specified VALUE-HANDLER, STDOUT-HANDLER, STDERR-HANDLER,
-;; DONE-HANDLER, and EVAL-ERROR-HANDLER as appropriate."
-;;   (lexical-let ((buffer buffer)
-;;                 (value-handler value-handler)
-;;                 (stdout-handler stdout-handler)
-;;                 (stderr-handler stderr-handler)
-;;                 (done-handler done-handler)
-;;                 (eval-error-handler eval-error-handler))
-;;     (lambda (response)
-;;       (nrepl-dbind-response response (value ns out err status id ex root-ex
-;;                                             session)
-;;         (cond (value
-;;                (with-current-buffer buffer
-;;                  (if ns
-;;                      (setq nrepl-buffer-ns ns)))
-;;                (if value-handler
-;;                    (funcall value-handler buffer value)))
-;;               (out
-;;                (if stdout-handler
-;;                    (funcall stdout-handler buffer out)))
-;;               (err
-;;                (if stderr-handler
-;;                    (funcall stderr-handler buffer err)))
-;;               (status
-;;                (if (member "interrupted" status)
-;;                    (message "Evaluation interrupted."))
-;;                (if (member "eval-error" status)
-;;                    (funcall (or eval-error-handler nrepl-err-handler)
-;;                             buffer ex root-ex session))
-;;                (if (member "namespace-not-found" status)
-;;                    (message "Oops! You tried to evaluate something in a namespace that doesn't yet exist. Try evaluating the ns form at the top of the buffer."))
-;;                (if (member "need-input" status)
-;;                    (nrepl-need-input buffer))
-;;                (if (member "done" status)
-;;                    (progn (remhash id nrepl-requests)
-;;                           (if done-handler
-;;                               (funcall done-handler buffer))))))))))
+(setq nrepl-port "4555")
+
+;; I monkey patch this just to modify the ns not found message
+(defun nrepl-make-response-handler
+ (buffer value-handler stdout-handler stderr-handler done-handler
+         &optional eval-error-handler)
+  "Make a response handler for BUFFER.
+Uses the specified VALUE-HANDLER, STDOUT-HANDLER, STDERR-HANDLER,
+DONE-HANDLER, and EVAL-ERROR-HANDLER as appropriate."
+  (lexical-let ((buffer buffer)
+                (value-handler value-handler)
+                (stdout-handler stdout-handler)
+                (stderr-handler stderr-handler)
+                (done-handler done-handler)
+                (eval-error-handler eval-error-handler))
+    (lambda (response)
+      (nrepl-dbind-response response (value ns out err status id ex root-ex
+                                            session)
+        (cond (value
+               (with-current-buffer buffer
+                 (if ns
+                     (setq nrepl-buffer-ns ns)))
+               (if value-handler
+                   (funcall value-handler buffer value)))
+              (out
+               (if stdout-handler
+                   (funcall stdout-handler buffer out)))
+              (err
+               (if stderr-handler
+                   (funcall stderr-handler buffer err)))
+              (status
+               (if (member "interrupted" status)
+                   (message "Evaluation interrupted."))
+               (if (member "eval-error" status)
+                   (funcall (or eval-error-handler nrepl-err-handler)
+                            buffer ex root-ex session))
+               (if (member "namespace-not-found" status)
+                   (message "Oops! You tried to evaluate something in a namespace that doesn't yet exist. Try evaluating the ns form at the top of the buffer."))
+               (if (member "need-input" status)
+                   (nrepl-need-input buffer))
+               (if (member "done" status)
+                   (progn (remhash id nrepl-requests)
+                          (if done-handler
+                              (funcall done-handler buffer))))))))))
+
+
+
+(defun live-nrepl-last-expression ()
+  "Return the last sexp."
+  (interactive)
+  (let ((beg (save-excursion (beginning-of-line) (point))))
+    (when (string-match-p "^[ \t]*$" (buffer-substring beg (point)))
+      (error "Ooops! Attempted to eval whitespace.")))
+  (buffer-substring-no-properties
+   (save-excursion (backward-sexp) (point))
+   (point)))
+
+
+;;monkey-patch for better behaviour
+(defun nrepl-eval-last-expression (&optional prefix)
+  "Evaluate the expression preceding point.
+If invoked with a PREFIX argument, print the result in the current buffer."
+  (interactive "P")
+  (if prefix
+      (nrepl-interactive-eval-print (live-nrepl-last-expression))
+    (nrepl-interactive-eval (live-nrepl-last-expression))))
