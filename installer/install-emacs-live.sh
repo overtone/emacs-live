@@ -154,8 +154,7 @@ To revert back to your old Emacs configs simply:
     fi
 
     mkdir ~/.emacs.d
-    mv $tmp_dir/overtone*/* ~/.emacs.d
-    mv $tmp_dir/overtone*/.* ~/.emacs.d
+    cp -R $tmp_dir/overtone*/ ~/.emacs.d
     echo $(tput setaf 4)"Personal Pack"
     echo "-------------"$(tput sgr0)
     echo ""
