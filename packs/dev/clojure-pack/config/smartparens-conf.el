@@ -133,3 +133,6 @@
   (interactive)
   (just-one-space -1)
   (sp-backward-delete-char))
+
+;; Don't kill entire symbol with C-k
+(setq sp-hybrid-kill-entire-symbol nil)
