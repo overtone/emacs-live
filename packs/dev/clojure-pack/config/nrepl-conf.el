@@ -82,19 +82,19 @@
              (save-excursion
                (ignore-errors (forward-char))
                (live-lisp-top-level-p))
-             (live-whitespace-at-point-p))
+             (live-whitespace-at-point-p)
+             (not (save-excursion (sp-up-sexp))))
     (error "Oops! You tried to evaluate whitespace. Move the point into in a form and try again."))
 
-  (if (live-lisp-top-level-p)
-      (let ((bnd-cons (bounds-of-thing-at-point 'sexp)))
-        (list (car bnd-cons) (cdr bnd-cons)))
     (save-excursion
-      (save-match-data
-        (forward-char)
-        (while (sp-up-sexp))
-        (let ((end (point)))
-          (backward-sexp)
-          (list (point) end))))))
+    (save-match-data
+      (while (sp-up-sexp))
+      (if (live-whitespace-at-point-p)
+          (let ((end (point)))
+            (backward-sexp)
+            (list (point) end))
+        (let ((bnd-cons (bounds-of-thing-at-point 'sexp)))
+          (list (car bnd-cons) (cdr bnd-cons)))))))
 
 ;;; Windows M-. navigation fix
 (defun nrepl-jump-to-def (var)
