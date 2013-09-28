@@ -144,3 +144,6 @@
 [submodule "packs/dev/clojure-pack/vendor/submodules/smartparens"]
 	path = packs/dev/clojure-pack/vendor/submodules/smartparens
 	url = git://github.com/Fuco1/smartparens.git
+[submodule "packs/dev/lang-pack/vendor/submodules/haskell"]
+	path = packs/dev/lang-pack/vendor/submodules/haskell
+	url = git://github.com/haskell/haskell-mode.git
