@@ -1,0 +1,10 @@
+#name: space-organ
+# expand-env: ((yas/indent-line 'fixed) (yas/wrap-around-region 'nil))
+# --
+(defsynth space-organ []
+  (let [f     (map #(midicps (duty:kr % 0 (dseq [24 27 31 36 41] INF)))
+                   [1 1/2 1/4])
+        tones (map #(blip (* % %2) (mul-add:kr (lf-noise1:kr 1/4) 3 4))
+                   f
+                   [1 4 8])]
+    (out 0 (g-verb (sum tones) 200 8))))
