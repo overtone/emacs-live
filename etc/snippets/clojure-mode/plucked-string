@@ -10,4 +10,4 @@
         filt   (rlpf dist (* 12 freq) 0.6)
         clp    (clip2 filt 0.8)
         reverb (free-verb clp 0.4 0.8 0.2)]
-    (* amp (env-gen (perc 0.0001 dur) :action :free) reverb)))
+    (* amp (env-gen (perc 0.0001 dur) :action FREE) reverb)))
