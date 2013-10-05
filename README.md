@@ -53,9 +53,9 @@ in battle against the evil friction of poor text editor workflows.
     "Power of the horse, full force!"
                  The Space Stallions.
 
-### Requires Emacs 24
+### Requires Emacs 24.3
 
-Emacs Live is only compatible with Emacs 24 and above.
+Emacs Live is only compatible with Emacs 24.3 and above.
 
 ### Easy Install
 
