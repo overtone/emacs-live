@@ -156,17 +156,6 @@
       (message "%s" (concat "This is Emacs Live " live-version))
     live-version))
 
-;; Load `~/.emacs-live.el`. This allows you to override variables such
-;; as live-packs (allowing you to specify pack loading order)
-;; Does not load if running in safe mode
-(let* ((pack-file (concat (file-name-as-directory "~") ".emacs-live.el")))
-  (if (and (file-exists-p pack-file) (not live-safe-modep))
-      (load-file pack-file)))
-
-;; Load all packs - Power Extreme!
-(mapcar (lambda (pack-dir)
-          (live-load-pack pack-dir))
-        (live-pack-dirs))
 
 (setq live-welcome-messages
       (if (live-user-first-name-p)
@@ -215,7 +204,29 @@
 (if (not live-disable-zone)
     (add-hook 'term-setup-hook 'zone))
 
-(if (not custom-file)
-    (setq custom-file (concat live-custom-dir "custom-configuration.el")))
-(when (file-exists-p custom-file)
-  (load custom-file))
+;; perform all pack initialization after emacs itself is fully initialized,
+;; i.e. all ELPA packages have been init'ed, load-path updated, etc.
+(add-hook 'after-init-hook
+          (lambda () 
+            ;; Load `~/.emacs-live.el`. This allows you to override variables such
+            ;; as live-packs (allowing you to specify pack loading order)
+            ;; Does not load if running in safe mode
+            (let* ((pack-file (concat (file-name-as-directory "~") ".emacs-live.el")))
+              (if (and (file-exists-p pack-file) (not live-safe-modep))
+                  (load-file pack-file)))
+
+            ;; Load all packs - Power Extreme!
+            (mapcar (lambda (pack-dir)
+                      (live-load-pack pack-dir))
+                    (live-pack-dirs))
+
+            (if (not custom-file)
+                (setq custom-file (concat live-custom-dir "custom-configuration.el")))
+            (when (file-exists-p custom-file)
+              (load custom-file))))
+
+
+
+
+
+
