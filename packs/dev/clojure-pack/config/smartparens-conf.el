@@ -71,17 +71,8 @@
   "Feels more natural to move to the beginning of the next item
    in the sexp, not the end of the current one."
   (interactive)
-  (if (and (not (sp-point-in-string))
-           (save-excursion
-             (ignore-errors
-               (sp-forward-sexp)
-               (sp-forward-sexp)
-               t)))
-      (progn
-        (sp-forward-sexp)
-        (sp-forward-sexp)
-        (sp-backward-sexp))
-    (sp-forward-sexp)))
+  (sp-forward-sexp)
+  (sp-skip-forward-to-symbol))
 
 (defun live-sp-next-top-level-form ()
   (interactive)
