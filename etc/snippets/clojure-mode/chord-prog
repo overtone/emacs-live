@@ -1,7 +1,12 @@
 #name: chord-prog
 # --
+
+(defn play [s notes]
+  (doseq [n notes]
+    (s n)))
+
 (let [time (now)]
-  (at time (play piano (chord :D3 :major7)))
-  (at (+ 2000 time) (play piano (chord :A3 :major)))
-  (at (+ 3000 time) (play piano (chord :A3 :major7)))
-  (at (+ 4300 time) (play piano (chord :F3 :major7))))
+  (at time (play sampled-piano (chord :D3 :major7)))
+  (at (+ 2000 time) (play sampled-piano (chord :A3 :major)))
+  (at (+ 3000 time) (play sampled-piano (chord :A3 :major7)))
+  (at (+ 4300 time) (play sampled-piano (chord :F3 :major7))))

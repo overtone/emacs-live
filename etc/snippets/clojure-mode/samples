@@ -1,0 +1,12 @@
+#name: samples
+# --
+(do
+  (defonce cymbal-scrape (freesound 195228))
+  (defonce spooky-wind (freesound 82384))
+  (defonce bendy-guitar (freesound 87985))
+  (defonce train-leaving (freesound 125211))
+  (defonce drone1 (freesound 52139))
+  (defonce drone2 (freesound 53407))
+  (defonce drone3 (freesound 53406))
+  (defonce drone4 (freesound 53405))
+  (defonce drone5 (freesound 169013)))

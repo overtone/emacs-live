@@ -80,7 +80,6 @@
      (magit-branch ((t (:foreground "gold"))))
 
      (eval-sexp-fu-flash ((t (:background "grey15" :foreground "DeepPink3"))))
-     (nrepl-eval-sexp-fu-flash ((t (:background "grey15" :foreground "DeepPink3"))))
      (nrepl-error-highlight-face ((t (:background "color-52"))))
      (ac-completion-face ((t (:foreground "darkgray" :underline t))))
      (ac-candidate-face ((t (:background "gray60" :foreground "black"))))
@@ -206,7 +205,6 @@
      (git-commit-branch-face ((t (:background "black" :foreground "#FF6400"))))
      (git-commit-nonempty-second-line-face ((t (:background "black" :foreground "#FBDE2D"))))
 
-
      (sp-wrap-overlay-face ((t (:background "green"))))
      (sp-pair-overlay-face ((t (:background "grey20"))))
      (sp-wrap-tag-overlay-face ((t (:background "grey20"))))
@@ -218,8 +216,6 @@
 
      ))
   )
-
-
 
 (custom-set-faces
 

@@ -75,12 +75,6 @@
 [submodule "packs/dev/git-pack/vendor/submodules/magit"]
         path = packs/dev/git-pack/vendor/submodules/magit
         url = git://github.com/magit/magit.git
-[submodule "packs/dev/clojure-pack/vendor/submodules/nrepl-eval-sexp-fu"]
-        path = packs/dev/clojure-pack/vendor/submodules/nrepl-eval-sexp-fu
-        url = git://github.com/samaaron/nrepl-eval-sexp-fu.git
-[submodule "packs/dev/clojure-pack/vendor/submodules/nrepl"]
-        path = packs/dev/clojure-pack/vendor/submodules/nrepl
-        url = git://github.com/samaaron/nrepl.el.git
 [submodule "packs/dev/lang-pack/vendor/submodules/js2"]
         path = packs/dev/lang-pack/vendor/submodules/js2
         url = git://github.com/mooz/js2-mode.git
@@ -147,3 +141,9 @@
 [submodule "packs/dev/lang-pack/vendor/submodules/haskell"]
 	path = packs/dev/lang-pack/vendor/submodules/haskell
 	url = git://github.com/haskell/haskell-mode.git
+[submodule "packs/dev/clojure-pack/vendor/submodules/cider"]
+	path = packs/dev/clojure-pack/vendor/submodules/cider
+	url = git://github.com/clojure-emacs/cider.git
+[submodule "packs/dev/clojure-pack/vendor/submodules/eval-sexp-fu"]
+	path = packs/dev/clojure-pack/vendor/submodules/eval-sexp-fu
+	url = git@github.com:hchbaw/eval-sexp-fu.el.git

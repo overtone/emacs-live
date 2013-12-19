@@ -1,0 +1,5 @@
+#name: hickey
+# --
+(do
+  (defonce hickey-he-man (sample "~/Dropbox/jon-n-sam/audio-files/hickey-he-man.wav"))
+  (defonce hickey-no-to-complexity (sample "~/Dropbox/jon-n-sam/audio-files/hickey-no-to-complexity.wav")))

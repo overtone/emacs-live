@@ -1,0 +1,8 @@
+#name: freesounds
+# --
+(def dirty-kick (freesound 30669))
+(def ring-hat (freesound 12912))
+(def snare (freesound 26903))
+(def click (freesound 406))
+(def wop (freesound 85291))
+(def subby (freesound 25649))

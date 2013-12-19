@@ -23,7 +23,6 @@
 
 ;; winner undo and redo
 (global-set-key (kbd "C-c b") 'winner-undo)
-(define-key nrepl-interaction-mode-map (kbd "C-c b") 'winner-undo)
 (global-set-key (kbd "C-c f") 'winner-redo)
 
 ;; Git Gutter
@@ -48,7 +47,7 @@
 (global-set-key (kbd "C-c m n") 'eval-print-last-sexp)
 (global-set-key (kbd "C-c m r") 'eval-region)
 
-(global-set-key (kbd "C-c n e b") 'nrepl-eval-buffer)
+(global-set-key (kbd "C-c n e b") 'cider-eval-buffer)
 
 
 ;;funky characters
@@ -94,34 +93,32 @@
 (define-key clojure-mode-map (kbd "C-c l l") 'align-cljlet)
 (define-key clojure-mode-map (kbd "C-M-z")   'align-cljlet)
 
-;;smartparens
-(define-key smartparens-mode-map (kbd "C-c l k") 'sp-splice-sexp-killing-forward)
-(define-key smartparens-mode-map (kbd "C-c l w") 'sp-splice-sexp-killing-backward)
-
-(define-key smartparens-mode-map (kbd "C-c l t") 'fill-paragraph)
-(define-key smartparens-mode-map (kbd "C-c l j") 'live-sp-forward-slurp-sexp-neatly)
-(define-key smartparens-mode-map (kbd "C-M-e")   'sp-backward-barf-sexp)
-(define-key smartparens-mode-map (kbd "C-M-s")   'sp-backward-slurp-sexp)
-(define-key smartparens-mode-map (kbd "C-M-j")   'live-sp-forward-slurp-sexp-neatly)
-(define-key smartparens-mode-map (kbd "C-M-y")   'sp-forward-barf-sexp)
-
-(define-key smartparens-mode-map (kbd "M-P")     'live-sp-previous-top-level-form)
-(define-key smartparens-mode-map (kbd "M-N")     'live-sp-next-top-level-form)
-(define-key smartparens-mode-map (kbd "M-S")     'sp-split-sexp)
-(define-key smartparens-mode-map (kbd "M-s")     'sp-splice-sexp)
-(define-key smartparens-mode-map (kbd "M-j")     'sp-join-sexp)
-(define-key smartparens-mode-map (kbd "C-M-f")   'live-sp-forward)
-(define-key smartparens-mode-map (kbd "M-q")     'sp-indent-defun)
-(define-key smartparens-mode-map (kbd "M-d")     'live-sp-forward-kill-sexp)
-(define-key smartparens-mode-map (kbd "M-d")     'live-sp-forward-kill-sexp)
-(define-key smartparens-mode-map (kbd "M-k")     'live-sp-backward-kill)
-(define-key smartparens-mode-map (kbd "M-\\")    'live-sp-delete-horizontal-space)
-(define-key smartparens-mode-map (kbd "C-M-i")   'sp-down-sexp)
-(define-key smartparens-mode-map (kbd "C-M-n")   'sp-up-sexp)
-(define-key smartparens-mode-map (kbd "C-M-p")   'sp-backward-down-sexp)
-(define-key smartparens-mode-map (kbd "C-M-u")   'sp-backward-up-sexp)
-(define-key smartparens-mode-map (kbd "M-T")     'sp-transpose-sexp)
-(define-key smartparens-mode-map (kbd "C-M-k")   'sp-copy-sexp)
+(define-key paredit-mode-map (kbd "C-c l k") 'paredit-splice-sexp-killing-forward)
+(define-key paredit-mode-map (kbd "C-c l w") 'paredit-splice-sexp-killing-backward)
+(define-key paredit-mode-map (kbd "C-c l l") 'align-cljlet)
+(define-key paredit-mode-map (kbd "C-c l t") 'fill-paragraph)
+(define-key paredit-mode-map (kbd "C-c l j") 'live-paredit-forward-slurp-sexp-neatly)
+(define-key paredit-mode-map (kbd "C-M-e")   'paredit-backward-barf-sexp)
+(define-key paredit-mode-map (kbd "C-M-s")   'paredit-backward-slurp-sexp)
+(define-key paredit-mode-map (kbd "C-M-j")   'live-paredit-forward-slurp-sexp-neatly)
+(define-key paredit-mode-map (kbd "C-M-y")   'paredit-forward-barf-sexp)
+(define-key paredit-mode-map (kbd "C-M-z")   'align-cljlet)
+(define-key paredit-mode-map (kbd "M-S")     'paredit-split-sexp)
+(define-key paredit-mode-map (kbd "M-s")     'paredit-splice-sexp)
+(define-key paredit-mode-map (kbd "M-j")     'paredit-join-sexps)
+(define-key paredit-mode-map (kbd "M-P")     'live-paredit-previous-top-level-form)
+(define-key paredit-mode-map (kbd "M-N")     'live-paredit-next-top-level-form)
+(define-key paredit-mode-map (kbd "C-M-f")   'live-paredit-forward)
+(define-key paredit-mode-map (kbd "M-q")     'live-paredit-reindent-defun)
+(define-key paredit-mode-map (kbd "M-d")     'live-paredit-forward-kill-sexp)
+(define-key paredit-mode-map (kbd "M-k")     'live-paredit-backward-kill)
+(define-key paredit-mode-map (kbd "M-\\")    'live-paredit-delete-horizontal-space)
+(define-key paredit-mode-map (kbd "C-M-i")   'paredit-forward-down)
+(define-key paredit-mode-map (kbd "C-M-n")   'paredit-forward-up)
+(define-key paredit-mode-map (kbd "C-M-p")   'paredit-backward-down)
+(define-key paredit-mode-map (kbd "C-M-u")   'paredit-backward-up)
+(define-key paredit-mode-map (kbd "M-T")     'transpose-sexps)
+(define-key paredit-mode-map (kbd "C-M-k")   'live-paredit-copy-sexp-at-point)
 
 ;; org-mode
 (define-key org-mode-map (kbd "C-M-f")    'org-metadown)
@@ -157,7 +154,7 @@
 
 ;;make ^h delete rather than help
 (global-set-key (kbd "C-h") 'delete-backward-char)
-;;(define-key paredit-mode-map (kbd "C-h") 'paredit-backward-delete)
+(define-key paredit-mode-map (kbd "C-h") 'paredit-backward-delete)
 
 ;;redefine help shortcut
 (global-set-key (kbd "M-h") 'help-command)
@@ -167,7 +164,7 @@
 ;;backward kill word (forward kill word is M-d)
 (global-set-key (kbd "C-\\") 'backward-kill-word)
 (define-key ido-file-completion-map (kbd "C-\\") 'backward-kill-word)
-;; (define-key paredit-mode-map (kbd "C-\\") 'paredit-backward-kill-word)
+(define-key paredit-mode-map (kbd "C-\\") 'paredit-backward-kill-word)
 
 ;;kill line backwards
 (global-set-key (kbd "M-k") 'live-backwards-kill-line)
@@ -239,8 +236,8 @@
 
 ;; Show documentation/information with M-RET
 (define-key lisp-mode-shared-map (kbd "M-RET") 'live-lisp-describe-thing-at-point)
-(define-key nrepl-mode-map (kbd "M-RET") 'nrepl-doc)
-(define-key nrepl-interaction-mode-map (kbd "M-RET") 'nrepl-doc)
+(define-key cider-repl-mode-map (kbd "M-RET") 'cider-doc)
+(define-key cider-mode-map (kbd "M-RET") 'cider-doc)
 
 (global-set-key (kbd "C-x o") 'win-switch-dispatch)
 
