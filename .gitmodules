@@ -10,10 +10,6 @@
         path = packs/dev/clojure-pack/vendor/submodules/align-cljlet
         url = git://github.com/gstamp/align-cljlet.git
         ignore = untracked
-[submodule "packs/dev/clojure-pack/vendor/submodules/auto-complete"]
-        path = packs/dev/clojure-pack/vendor/submodules/auto-complete
-        url = git://github.com/samaaron/auto-complete.git
-        ignore = untracked
 [submodule "packs/dev/power-pack/vendor/submodules/volatile-highlights"]
         path = packs/dev/power-pack/vendor/submodules/volatile-highlights
         url = git://github.com/k-talo/volatile-highlights.el.git
