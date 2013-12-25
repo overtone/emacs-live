@@ -64,7 +64,7 @@
         ignore = untracked
 [submodule "packs/dev/clojure-pack/vendor/submodules/clojure-mode"]
         path = packs/dev/clojure-pack/vendor/submodules/clojure-mode
-        url = git://github.com/samaaron/clojure-mode.git
+        url = git://github.com/clojure-emacs/clojure-mode.git
 [submodule "packs/dev/clojure-pack/vendor/submodules/ac-nrepl"]
         path = packs/dev/clojure-pack/vendor/submodules/ac-nrepl
         url = git://github.com/purcell/ac-nrepl.git
