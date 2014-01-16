@@ -12,7 +12,6 @@ Before and after saving the buffer, this function runs
     ;; In an indirect buffer, save its base buffer instead.
     (if (buffer-base-buffer)
         (set-buffer (buffer-base-buffer)))
-
     (if (or (buffer-modified-p)
             ;; handle the case when no modification has been made but
             ;; the file disappeared since visited
@@ -20,8 +19,10 @@ Before and after saving the buffer, this function runs
                  (not (file-exists-p buffer-file-name))))
         (let ((recent-save (recent-auto-save-p))
               setmodes)
+          ;; Set buffer to currently selected frame if allowed
+          (unless (window-dedicated-p (frame-selected-window))
+              (set-window-buffer (frame-selected-window) (current-buffer)))
           ;; If buffer has no file name, ask user for one.
-          (set-window-buffer (frame-selected-window) (current-buffer))
           (when (or buffer-file-name
                    (y-or-n-p "Buffer has no associated file and not saved. Save it? "))
 
