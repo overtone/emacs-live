@@ -96,3 +96,10 @@
     (goto-char original-point)))
 
 (define-key clojure-mode-map (kbd "C->") 'live-cycle-clj-coll)
+
+;; Pull in the awesome clj-refactor lib by magnars
+(live-add-pack-lib "clj-refactor")
+(require 'clj-refactor)
+(add-hook 'clojure-mode-hook (lambda ()
+                               (clj-refactor-mode 1)
+                               (cljr-add-keybindings-with-prefix "C-c C-m")))
