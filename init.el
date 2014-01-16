@@ -137,11 +137,11 @@
 ;;default packs
 (let* ((pack-names '("foundation-pack"
                      "colour-pack"
-                     "clojure-pack"
                      "lang-pack"
                      "power-pack"
                      "git-pack"
                      "org-pack"
+                     "clojure-pack"
                      "bindings-pack"))
        (live-dir (file-name-as-directory "live"))
        (dev-dir  (file-name-as-directory "dev")))
