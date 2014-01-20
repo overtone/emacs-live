@@ -139,10 +139,10 @@
 	url = git://github.com/clojure-emacs/cider.git
 [submodule "packs/dev/clojure-pack/vendor/submodules/eval-sexp-fu"]
 	path = packs/dev/clojure-pack/vendor/submodules/eval-sexp-fu
-	url = git@github.com:hchbaw/eval-sexp-fu.el.git
+	url = git://github.com/hchbaw/eval-sexp-fu.el.git
 [submodule "packs/dev/clojure-pack/vendor/submodules/auto-complete"]
 	path = packs/dev/clojure-pack/vendor/submodules/auto-complete
-	url = git@github.com:auto-complete/auto-complete.git
+	url = git://github.com/auto-complete/auto-complete.git
 [submodule "packs/dev/clojure-pack/vendor/submodules/clj-refactor"]
 	path = packs/dev/clojure-pack/vendor/submodules/clj-refactor
-	url = git@github.com:magnars/clj-refactor.el.git
+	url = git://github.com/magnars/clj-refactor.el.git
