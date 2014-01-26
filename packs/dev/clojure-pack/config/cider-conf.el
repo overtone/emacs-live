@@ -40,7 +40,7 @@
 
 (add-hook 'nrepl-connected-hook 'live-nrepl-set-print-length)
 
-;; ;;; Monkey Patch nREPL with better behaviour:
+;;; Monkey Patch nREPL with better behaviour:
 
 ;; (defun live-nrepl-err-handler (buffer ex root-ex session)
 ;;   "Make an error handler for BUFFER, EX, ROOT-EX and SESSION."
@@ -96,7 +96,7 @@
 ;;         (let ((bnd-cons (bounds-of-thing-at-point 'sexp)))
 ;;           (list (car bnd-cons) (cdr bnd-cons)))))))
 
-;; TODO: See if thie file:/ replacement is still necessary and if so submit a patch to cider
+;; ;; TODO: See if thie file:/ replacement is still necessary and if so submit a patch to cider
 ;; ;;; Windows M-. navigation fix
 ;; ;; (defun nrepl-jump-to-def (var)
 ;; ;;   "Jump to the definition of the var at point."
@@ -116,7 +116,8 @@
 
 (setq nrepl-port "4555")
 
-;; ;; I monkey patch this just to modify the ns not found message
+
+;; I monkey patch this just to modify the ns not found message
 ;; (defun nrepl-make-response-handler
 ;;  (buffer value-handler stdout-handler stderr-handler done-handler
 ;;          &optional eval-error-handler)

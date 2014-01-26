@@ -1,5 +1,16 @@
 # Emacs Live Changelog
 
+## 1.0-BETA-24 (To be released)
+* Update many, many dependencies (As usual)
+* Add Magnar Sveen's clj-refactor bound to C-c C-m See: https://github.com/magnars/clj-refactor.el
+* Rename live pack directory to stable to clarify the distinction with the dev packs
+* Specify hard dependency on Emacs 24.3
+* Add support for Haskell
+* Add support for Extempore
+* Add support for floobits
+* Improve w
+
+
 ## 1.0-BETA-23 (Tues 3rd Sept 2013)
 * Update many, many dependencies
 * Update Cyberpunk colour theme to handle more modes
