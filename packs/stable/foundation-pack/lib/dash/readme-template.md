@@ -2,25 +2,6 @@
 
 A modern list api for Emacs. No 'cl required.
 
-## Breaking change 1.8.0 -> 2.0.0
-
-- The `-min` and `-max` functions are no longer variadic, but take a
-  list to be more in line with the other dash functions.
-
-- `-min-by` and `-max-by` now take a comparator function to sort by.
-
-The stated scope of dash is increasing. It now includes more
-functional style functions, like combinators and threading macros.
-These have been creeping in anyway, since they're so darn useful. Time
-to make it official. :)
-
-- `-rpartial`, `-juxt` and `-applify` are moved to a separate package.
-  Note that `-partial` is still in dash for backwards compatibility
-  reasons.
-
-These new combinators require Emacs 24 for its lexical scope. So
-they are offered in a separate package: `dash-functional`.
-
 ## Installation
 
 It's available on [marmalade](http://marmalade-repo.org/) and [Melpa](http://melpa.milkbox.net/):
@@ -38,11 +19,18 @@ If you want the function combinators, then also:
 
 Add this to the big comment block at the top:
 
-    ;; Package-Requires: ((dash "1.8.0"))
+    ;; Package-Requires: ((dash "2.5.0"))
 
 To get function combinators:
 
-    ;; Package-Requires: ((dash "1.8.0") (dash-functional "1.0.0") (emacs "24"))
+    ;; Package-Requires: ((dash "2.5.0") (dash-functional "1.0.0") (emacs "24"))
+
+## Syntax highlighting of dash functions
+
+Font lock of dash functions in emacs lisp buffers is now optional.
+Include this in your emacs settings to get syntax highlighting:
+
+    (eval-after-load "dash" '(dash-enable-font-lock))
 
 ## Functions
 
@@ -103,6 +91,21 @@ Change `readme-template.md` or `examples-to-docs.el` instead.
 
 ## Changelist
 
+### From 2.4.0 to 2.5.0
+
+- Add `-same-items?` (Johan Andersson)
+- A few bugfixes
+
+### From 2.3.0 to 2.4.0
+
+- Add `-snoc` (Matus Goljer)
+- Add `-replace-at`, `-update-at`, `-remove-at`, and `-remove-at-indices` (Matus Goljer)
+
+### From 2.2.0 to 2.3.0
+
+- Add tree operations (Matus Goljer)
+- Make font-lock optional
+
 ### From 2.1.0 to 2.2.0
 
 - Add `-compose` (Christina Whyte)
@@ -161,7 +164,7 @@ Change `readme-template.md` or `examples-to-docs.el` instead.
  - [Nic Ferrier](https://github.com/nicferrier) contributed `-cons*`.
  - [Wilfred Hughes](https://github.com/Wilfred) contributed `-slice`, `-first-item` and `-last-item`.
  - [Emanuel Evans](https://github.com/shosti) contributed `-if-let`, `-when-let` and `-insert-at`.
- - [Johan Andersson](https://github.com/rejeep) contributed `-sum` and `-product`.
+ - [Johan Andersson](https://github.com/rejeep) contributed `-sum`, `-product` and `-same-items?`
  - [Christina Whyte](https://github.com/kurisuwhyte) contributed `-compose`
 
 Thanks!

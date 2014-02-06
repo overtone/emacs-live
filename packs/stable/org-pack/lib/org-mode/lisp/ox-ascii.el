@@ -1,9 +1,11 @@
 ;;; ox-ascii.el --- ASCII Back-End for Org Export Engine
 
-;; Copyright (C) 2012, 2013  Free Software Foundation, Inc.
+;; Copyright (C) 2012-2014 Free Software Foundation, Inc.
 
 ;; Author: Nicolas Goaziou <n.goaziou at gmail dot com>
 ;; Keywords: outlines, hypermedia, calendar, wp
+
+;; This file is part of GNU Emacs.
 
 ;; GNU Emacs is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -21,19 +23,7 @@
 ;;; Commentary:
 ;;
 ;; This library implements an ASCII back-end for Org generic exporter.
-;;
-;; It provides two commands for export, depending on the desired
-;; output: `org-ascii-export-as-ascii' (temporary buffer) and
-;; `org-ascii-export-to-ascii' ("txt" file).  Also, three publishing
-;; functions are available: `org-ascii-publish-to-ascii',
-;; `org-ascii-publish-to-latin1' and `org-ascii-publish-to-utf8'.
-;;
-;; Output encoding is specified through `org-ascii-charset' variable,
-;; among `ascii', `latin1' and `utf-8' symbols.
-;;
-;; By default, horizontal rules span over the full text with, but with
-;; a given width attribute (set though #+ATTR_ASCII: :width <num>)
-;; they can be shortened and centered.
+;; See Org manual for more information.
 
 ;;; Code:
 
@@ -346,7 +336,8 @@ Otherwise, place it right after it."
   :package-version '(Org . "8.0")
   :type 'string)
 
-(defcustom org-ascii-format-drawer-function nil
+(defcustom org-ascii-format-drawer-function
+  (lambda (name contents width) contents)
   "Function called to format a drawer in ASCII.
 
 The function must accept three parameters:
@@ -357,63 +348,32 @@ The function must accept three parameters:
 The function should return either the string to be exported or
 nil to ignore the drawer.
 
-For example, the variable could be set to the following function
-in order to mimic default behaviour:
-
-\(defun org-ascii-format-drawer-default (name contents width)
-  \"Format a drawer element for ASCII export.\"
-  contents)"
+The default value simply returns the value of CONTENTS."
   :group 'org-export-ascii
   :version "24.4"
   :package-version '(Org . "8.0")
   :type 'function)
 
-(defcustom org-ascii-format-inlinetask-function nil
+(defcustom org-ascii-format-inlinetask-function
+  'org-ascii-format-inlinetask-default
   "Function called to format an inlinetask in ASCII.
 
-The function must accept six parameters:
-  TODO      the todo keyword, as a string
-  TODO-TYPE the todo type, a symbol among `todo', `done' and nil.
-  PRIORITY  the inlinetask priority, as a string
-  NAME      the inlinetask name, as a string.
-  TAGS      the inlinetask tags, as a list of strings.
-  CONTENTS  the contents of the inlinetask, as a string.
+The function must accept nine parameters:
+  TODO       the todo keyword, as a string
+  TODO-TYPE  the todo type, a symbol among `todo', `done' and nil.
+  PRIORITY   the inlinetask priority, as a string
+  NAME       the inlinetask name, as a string.
+  TAGS       the inlinetask tags, as a list of strings.
+  CONTENTS   the contents of the inlinetask, as a string.
+  WIDTH      the width of the inlinetask, as a number.
+  INLINETASK the inlinetask itself.
+  INFO       the info channel.
 
 The function should return either the string to be exported or
-nil to ignore the inline task.
-
-For example, the variable could be set to the following function
-in order to mimic default behaviour:
-
-\(defun org-ascii-format-inlinetask-default
-  \(todo type priority name tags contents\)
-  \"Format an inline task element for ASCII export.\"
-  \(let* \(\(utf8p \(eq \(plist-get info :ascii-charset\) 'utf-8\)\)
-           \(width org-ascii-inlinetask-width\)
-    \(org-ascii--indent-string
-     \(concat
-      ;; Top line, with an additional blank line if not in UTF-8.
-      \(make-string width \(if utf8p ?━ ?_\)\)  \"\\n\"
-      \(unless utf8p \(concat \(make-string width ? \) \"\\n\"\)\)
-      ;; Add title.  Fill it if wider than inlinetask.
-      \(let \(\(title \(org-ascii--build-title inlinetask info width\)\)\)
-	\(if \(<= \(length title\) width\) title
-	  \(org-ascii--fill-string title width info\)\)\)
-      \"\\n\"
-      ;; If CONTENTS is not empty, insert it along with
-      ;; a separator.
-      \(when \(org-string-nw-p contents\)
-        \(concat \(make-string width \(if utf8p ?─ ?-\)\) \"\\n\" contents\)\)
-      ;; Bottom line.
-      \(make-string width \(if utf8p ?━ ?_\)\)\)
-     ;; Flush the inlinetask to the right.
-     \(- \(plist-get info :ascii-width\)
-        \(plist-get info :ascii-margin\)
-        \(plist-get info :ascii-inner-margin\)
-        \(org-ascii--current-text-width inlinetask info\)\)"
+nil to ignore the inline task."
   :group 'org-export-ascii
   :version "24.4"
-  :package-version '(Org . "8.0")
+  :package-version '(Org . "8.3")
   :type 'function)
 
 
@@ -499,7 +459,7 @@ Empty lines are not indented."
 
 (defun org-ascii--box-string (s info)
   "Return string S with a partial box to its left.
-INFO is a plist used as a communicaton channel."
+INFO is a plist used as a communication channel."
   (let ((utf8p (eq (plist-get info :ascii-charset) 'utf-8)))
     (format (if utf8p "╭────\n%s\n╰────" ",----\n%s\n`----")
 	    (replace-regexp-in-string
@@ -570,8 +530,9 @@ INFO is a plist used as a communication channel."
 		   (+ (- (org-list-get-ind beg-item struct)
 			 (org-list-get-ind
 			  (org-list-get-top-point struct) struct))
-		      (length (org-ascii--checkbox parent-item info))
-		      (length
+		      (string-width (or (org-ascii--checkbox parent-item info)
+					""))
+		      (string-width
 		       (or (org-list-get-tag beg-item struct)
 			   (org-list-get-bullet beg-item struct)))))))))))))
 
@@ -629,7 +590,8 @@ possible.  It doesn't apply to `inlinetask' elements."
      (when tags
        (format
 	(format " %%%ds"
-		(max (- text-width  (1+ (length first-part))) (length tags)))
+		(max (- text-width  (1+ (string-width first-part)))
+		     (string-width tags)))
 	tags))
      ;; Maybe underline text, if ELEMENT type is `headline' and an
      ;; underline character has been defined.
@@ -640,7 +602,9 @@ possible.  It doesn't apply to `inlinetask' elements."
 			      org-ascii-underline)))))
 	 (and under-char
 	      (concat "\n"
-		      (make-string (length first-part) under-char))))))))
+		      (make-string (/ (string-width first-part)
+				      (char-width under-char))
+				   under-char))))))))
 
 (defun org-ascii--has-caption-p (element info)
   "Non-nil when ELEMENT has a caption affiliated keyword.
@@ -687,7 +651,7 @@ which the table of contents generation has been initiated."
   (let ((title (org-ascii--translate "Table of Contents" info)))
     (concat
      title "\n"
-     (make-string (length title)
+     (make-string (string-width title)
 		  (if (eq (plist-get info :ascii-charset) 'utf-8) ?─ ?_))
      "\n\n"
      (let ((text-width
@@ -714,13 +678,13 @@ generation.  INFO is a plist used as a communication channel."
   (let ((title (org-ascii--translate "List of Listings" info)))
     (concat
      title "\n"
-     (make-string (length title)
+     (make-string (string-width title)
 		  (if (eq (plist-get info :ascii-charset) 'utf-8) ?─ ?_))
      "\n\n"
      (let ((text-width
 	    (if keyword (org-ascii--current-text-width keyword info)
 	      (- org-ascii-text-width org-ascii-global-margin)))
-	   ;; Use a counter instead of retreiving ordinal of each
+	   ;; Use a counter instead of retrieving ordinal of each
 	   ;; src-block.
 	   (count 0))
        (mapconcat
@@ -728,9 +692,10 @@ generation.  INFO is a plist used as a communication channel."
 	  ;; Store initial text so its length can be computed.  This is
 	  ;; used to properly align caption right to it in case of
 	  ;; filling (like contents of a description list item).
-	  (let ((initial-text
-		 (format (org-ascii--translate "Listing %d:" info)
-			 (incf count))))
+	  (let* ((initial-text
+		  (format (org-ascii--translate "Listing %d:" info)
+			  (incf count)))
+		 (initial-width (string-width initial-text)))
 	    (concat
 	     initial-text " "
 	     (org-trim
@@ -740,8 +705,8 @@ generation.  INFO is a plist used as a communication channel."
 		(let ((caption (or (org-export-get-caption src-block t)
 				   (org-export-get-caption src-block))))
 		  (org-export-data caption info))
-		(- text-width (length initial-text)) info)
-	       (length initial-text))))))
+		(- text-width initial-width) info)
+	       initial-width)))))
 	(org-export-collect-listings info) "\n")))))
 
 (defun org-ascii--list-tables (keyword info)
@@ -752,13 +717,13 @@ generation.  INFO is a plist used as a communication channel."
   (let ((title (org-ascii--translate "List of Tables" info)))
     (concat
      title "\n"
-     (make-string (length title)
+     (make-string (string-width title)
 		  (if (eq (plist-get info :ascii-charset) 'utf-8) ?─ ?_))
      "\n\n"
      (let ((text-width
 	    (if keyword (org-ascii--current-text-width keyword info)
 	      (- org-ascii-text-width org-ascii-global-margin)))
-	   ;; Use a counter instead of retreiving ordinal of each
+	   ;; Use a counter instead of retrieving ordinal of each
 	   ;; src-block.
 	   (count 0))
        (mapconcat
@@ -766,9 +731,10 @@ generation.  INFO is a plist used as a communication channel."
 	  ;; Store initial text so its length can be computed.  This is
 	  ;; used to properly align caption right to it in case of
 	  ;; filling (like contents of a description list item).
-	  (let ((initial-text
-		 (format (org-ascii--translate "Table %d:" info)
-			 (incf count))))
+	  (let* ((initial-text
+		  (format (org-ascii--translate "Table %d:" info)
+			  (incf count)))
+		 (initial-width (string-width initial-text)))
 	    (concat
 	     initial-text " "
 	     (org-trim
@@ -778,8 +744,8 @@ generation.  INFO is a plist used as a communication channel."
 		(let ((caption (or (org-export-get-caption table t)
 				   (org-export-get-caption table))))
 		  (org-export-data caption info))
-		(- text-width (length initial-text)) info)
-	       (length initial-text))))))
+		(- text-width initial-width) info)
+	       initial-width)))))
 	(org-export-collect-tables info) "\n")))))
 
 (defun org-ascii--unique-links (element info)
@@ -892,14 +858,16 @@ INFO is a plist used as a communication channel."
 	 ((and (org-string-nw-p date) (org-string-nw-p author))
 	  (concat
 	   author
-	   (make-string (- text-width (length date) (length author)) ? )
+	   (make-string (- text-width (string-width date) (string-width author))
+			?\s)
 	   date
 	   (when (org-string-nw-p email) (concat "\n" email))
 	   "\n\n\n"))
 	 ((and (org-string-nw-p date) (org-string-nw-p email))
 	  (concat
 	   email
-	   (make-string (- text-width (length date) (length email)) ? )
+	   (make-string (- text-width (string-width date) (string-width email))
+			?\s)
 	   date "\n\n\n"))
 	 ((org-string-nw-p date)
 	  (concat
@@ -919,7 +887,10 @@ INFO is a plist used as a communication channel."
 	     (formatted-title (org-ascii--fill-string title title-len info))
 	     (line
 	      (make-string
-	       (min (+ (max title-len (length author) (length email)) 2)
+	       (min (+ (max title-len
+			    (string-width (or author ""))
+			    (string-width (or email "")))
+		       2)
 		    text-width) (if utf8p ?━ ?_))))
 	(org-ascii--justify-string
 	 (concat line "\n"
@@ -958,7 +929,7 @@ holding export options."
 	    (concat
 	     title "\n"
 	     (make-string
-	      (length title)
+	      (string-width title)
 	      (if (eq (plist-get info :ascii-charset) 'utf-8) ?─ ?_))))
 	  "\n\n"
 	  (let ((text-width (- org-ascii-text-width org-ascii-global-margin)))
@@ -1081,11 +1052,7 @@ CONTENTS holds the contents of the block.  INFO is a plist
 holding contextual information."
   (let ((name (org-element-property :drawer-name drawer))
 	(width (org-ascii--current-text-width drawer info)))
-    (if (functionp org-ascii-format-drawer-function)
-	(funcall org-ascii-format-drawer-function name contents width)
-      ;; If there's no user defined function: simply
-      ;; display contents of the drawer.
-      contents)))
+    (funcall org-ascii-format-drawer-function name contents width)))
 
 
 ;;;; Dynamic Block
@@ -1238,55 +1205,58 @@ contextual information."
 
 ;;;; Inlinetask
 
+(defun org-ascii-format-inlinetask-default
+  (todo type priority name tags contents width inlinetask info)
+  "Format an inline task element for ASCII export.
+See `org-ascii-format-inlinetask-function' for a description
+of the parameters."
+  (let* ((utf8p (eq (plist-get info :ascii-charset) 'utf-8))
+	 (width (or width org-ascii-inlinetask-width)))
+    (org-ascii--indent-string
+     (concat
+      ;; Top line, with an additional blank line if not in UTF-8.
+      (make-string width (if utf8p ?━ ?_)) "\n"
+      (unless utf8p (concat (make-string width ? ) "\n"))
+      ;; Add title.  Fill it if wider than inlinetask.
+      (let ((title (org-ascii--build-title inlinetask info width)))
+	(if (<= (string-width title) width) title
+	  (org-ascii--fill-string title width info)))
+      "\n"
+      ;; If CONTENTS is not empty, insert it along with
+      ;; a separator.
+      (when (org-string-nw-p contents)
+        (concat (make-string width (if utf8p ?─ ?-)) "\n" contents))
+      ;; Bottom line.
+      (make-string width (if utf8p ?━ ?_)))
+     ;; Flush the inlinetask to the right.
+     (- org-ascii-text-width org-ascii-global-margin
+	(if (not (org-export-get-parent-headline inlinetask)) 0
+	  org-ascii-inner-margin)
+	(org-ascii--current-text-width inlinetask info)))))
+
 (defun org-ascii-inlinetask (inlinetask contents info)
   "Transcode an INLINETASK element from Org to ASCII.
 CONTENTS holds the contents of the block.  INFO is a plist
 holding contextual information."
   (let ((width (org-ascii--current-text-width inlinetask info)))
-    ;; If `org-ascii-format-inlinetask-function' is provided, call it
-    ;; with appropriate arguments.
-    (if (functionp org-ascii-format-inlinetask-function)
-	(funcall org-ascii-format-inlinetask-function
-		 ;; todo.
-		 (and (plist-get info :with-todo-keywords)
-		      (let ((todo (org-element-property
-				   :todo-keyword inlinetask)))
-			(and todo (org-export-data todo info))))
-		 ;; todo-type
-		 (org-element-property :todo-type inlinetask)
-		 ;; priority
-		 (and (plist-get info :with-priority)
-		      (org-element-property :priority inlinetask))
-		 ;; title
-		 (org-export-data (org-element-property :title inlinetask) info)
-		 ;; tags
-		 (and (plist-get info :with-tags)
-		      (org-element-property :tags inlinetask))
-		 ;; contents and width
-		 contents width)
-      ;; Otherwise, use a default template.
-      (let* ((utf8p (eq (plist-get info :ascii-charset) 'utf-8)))
-	(org-ascii--indent-string
-	 (concat
-	  ;; Top line, with an additional blank line if not in UTF-8.
-	  (make-string width (if utf8p ?━ ?_))  "\n"
-	  (unless utf8p (concat (make-string width ? ) "\n"))
-	  ;; Add title.  Fill it if wider than inlinetask.
-	  (let ((title (org-ascii--build-title inlinetask info width)))
-	    (if (<= (length title) width) title
-	      (org-ascii--fill-string title width info)))
-	  "\n"
-	  ;; If CONTENTS is not empty, insert it along with
-	  ;; a separator.
-	  (when (org-string-nw-p contents)
-	    (concat (make-string width (if utf8p ?─ ?-)) "\n" contents))
-	  ;; Bottom line.
-	  (make-string width (if utf8p ?━ ?_)))
-	 ;; Flush the inlinetask to the right.
-	 (- org-ascii-text-width org-ascii-global-margin
-	    (if (not (org-export-get-parent-headline inlinetask)) 0
-	      org-ascii-inner-margin)
-	    (org-ascii--current-text-width inlinetask info)))))))
+    (funcall org-ascii-format-inlinetask-function
+	     ;; todo.
+	     (and (plist-get info :with-todo-keywords)
+		  (let ((todo (org-element-property
+			       :todo-keyword inlinetask)))
+		    (and todo (org-export-data todo info))))
+	     ;; todo-type
+	     (org-element-property :todo-type inlinetask)
+	     ;; priority
+	     (and (plist-get info :with-priority)
+		  (org-element-property :priority inlinetask))
+	     ;; title
+	     (org-export-data (org-element-property :title inlinetask) info)
+	     ;; tags
+	     (and (plist-get info :with-tags)
+		  (org-element-property :tags inlinetask))
+	     ;; contents and width
+	     contents width inlinetask info)))
 
 
 ;;;; Italic
@@ -1342,7 +1312,7 @@ contextual information."
      ;; Contents: Pay attention to indentation.  Note: check-boxes are
      ;; already taken care of at the paragraph level so they don't
      ;; interfere with indentation.
-     (let ((contents (org-ascii--indent-string contents (length bullet))))
+     (let ((contents (org-ascii--indent-string contents (string-width bullet))))
        (if (eq (org-element-type (car (org-element-contents item))) 'paragraph)
 	   (org-trim contents)
 	 (concat "\n" contents))))))
@@ -1657,8 +1627,7 @@ contextual information."
 	      (buffer-substring (point-min) (point))))
 	   (t (org-remove-indentation (org-element-property :value table))))
      ;; Possible add a caption string below.
-     (when (and caption (not org-ascii-caption-above))
-       (concat "\n" caption)))))
+     (and (not org-ascii-caption-above) caption))))
 
 
 ;;;; Table Cell
@@ -1694,7 +1663,7 @@ are ignored."
 	       (org-element-map table 'table-row
 		 (lambda (row)
 		   (setq max-width
-			 (max (length
+			 (max (string-width
 			       (org-export-data
 				(org-element-contents
 				 (elt (org-element-contents row) col))
@@ -1714,7 +1683,8 @@ a communication channel."
   ;; each cell in the column.
   (let ((width (org-ascii--table-cell-width table-cell info)))
     ;; When contents are too large, truncate them.
-    (unless (or org-ascii-table-widen-columns (<= (length contents) width))
+    (unless (or org-ascii-table-widen-columns
+		(<= (string-width (or contents "")) width))
       (setq contents (concat (substring contents 0 (- width 2)) "=>")))
     ;; Align contents correctly within the cell.
     (let* ((indent-tabs-mode nil)
@@ -1723,7 +1693,9 @@ a communication channel."
 	      (org-ascii--justify-string
 	       contents width
 	       (org-export-table-cell-alignment table-cell info)))))
-      (setq contents (concat data (make-string (- width (length data)) ? ))))
+      (setq contents
+	    (concat data
+		    (make-string (- width (string-width (or data ""))) ?\s))))
     ;; Return cell.
     (concat (format " %s " contents)
 	    (when (memq 'right (org-export-table-cell-borders table-cell info))
@@ -1902,23 +1874,8 @@ Export is done in a buffer named \"*Org ASCII Export*\", which
 will be displayed when `org-export-show-temporary-export-buffer'
 is non-nil."
   (interactive)
-  (if async
-      (org-export-async-start
-       (lambda (output)
-	 (with-current-buffer (get-buffer-create "*Org ASCII Export*")
-	   (erase-buffer)
-	   (insert output)
-	   (goto-char (point-min))
-	   (text-mode)
-	   (org-export-add-to-stack (current-buffer) 'ascii)))
-       `(org-export-as 'ascii ,subtreep ,visible-only ,body-only
-		       ',ext-plist))
-    (let ((outbuf (org-export-to-buffer
-		   'ascii "*Org ASCII Export*"
-		   subtreep visible-only body-only ext-plist)))
-      (with-current-buffer outbuf (text-mode))
-      (when org-export-show-temporary-export-buffer
-	(switch-to-buffer-other-window outbuf)))))
+  (org-export-to-buffer 'ascii "*Org ASCII Export*"
+    async subtreep visible-only body-only ext-plist (lambda () (text-mode))))
 
 ;;;###autoload
 (defun org-ascii-export-to-ascii
@@ -1950,15 +1907,9 @@ file-local settings.
 
 Return output file's name."
   (interactive)
-  (let ((outfile (org-export-output-file-name ".txt" subtreep)))
-    (if async
-	(org-export-async-start
-	 (lambda (f) (org-export-add-to-stack f 'ascii))
-	 `(expand-file-name
-	   (org-export-to-file
-	    'ascii ,outfile ,subtreep ,visible-only ,body-only ',ext-plist)))
-      (org-export-to-file
-       'ascii outfile subtreep visible-only body-only ext-plist))))
+  (let ((file (org-export-output-file-name ".txt" subtreep)))
+    (org-export-to-file 'ascii file
+      async subtreep visible-only body-only ext-plist)))
 
 ;;;###autoload
 (defun org-ascii-publish-to-ascii (plist filename pub-dir)

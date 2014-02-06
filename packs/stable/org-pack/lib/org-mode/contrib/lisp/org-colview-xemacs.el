@@ -1,6 +1,6 @@
 ;;; org-colview-xemacs.el --- Column View in Org-mode, XEmacs-specific version
 
-;; Copyright (C) 2004-2013
+;; Copyright (C) 2004-2014
 ;;   Carsten Dominik
 
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
@@ -477,6 +477,7 @@ This is the compiled version of the format.")
 (defvar org-colview-initial-truncate-line-value nil
   "Remember the value of `truncate-lines' across colview.")
 
+;;;###autoload
 (defun org-columns-remove-overlays ()
   "Remove all currently active column overlays."
   (interactive)
@@ -820,6 +821,7 @@ around it."
   (let ((value (get-char-property (point) 'org-columns-value)))
     (org-open-link-from-string value arg)))
 
+;;;###autoload
 (defun org-columns-get-format-and-top-level ()
   (let (fmt)
     (when (condition-case nil (org-back-to-heading) (error nil))
@@ -1091,6 +1093,7 @@ Don't set this, this is meant for dynamic scoping.")
                     (org-overlay-display ov (format fmt val))))))
 	    org-columns-overlays))))
 
+;;;###autoload
 (defun org-columns-compute (property)
   "Sum the values of property PROPERTY hierarchically, for the entire buffer."
   (interactive)
@@ -1187,6 +1190,7 @@ Don't set this, this is meant for dynamic scoping.")
 	(setq sum (+ (string-to-number (pop l)) (/ sum 60))))
       sum)))
 
+;;;###autoload
 (defun org-columns-number-to-string (n fmt &optional printf)
   "Convert a computed column number to a string value, according to FMT."
   (cond

@@ -163,7 +163,7 @@
   (let ((id (if (stringp gist-or-id) gist-or-id
               (oref gist-or-id :id))))
     (gh-api-authenticated-request
-     api 'ignore (if star "POST" "DELETE")
+     api 'ignore (if star "PUT" "DELETE")
      (format "/gists/%s/star" id))))
 
 (defmethod gh-gist-get-star ((api gh-gist-api) gist-or-id)
@@ -177,7 +177,7 @@
               (oref gist-or-id :id))))
     (gh-api-authenticated-request
      api (gh-object-reader (oref api gist-cls)) "POST"
-     (format "/gists/%s/fork" id))))
+     (format "/gists/%s/forks" id))))
 
 (defmethod gh-gist-delete ((api gh-gist-api) gist-or-id)
   (let ((id (if (stringp gist-or-id) gist-or-id

@@ -49,6 +49,7 @@ org-notmuch.el           --- Support for links to notmuch messages
 org-panel.el 	         --- Simple routines for us with bad memory
 org-registry.el          --- A registry for Org links
 org-screen.el            --- Visit screen sessions through Org-mode links
+org-screenshot.el        --- Take and manage screenshots in Org-mode files
 org-secretary.el         --- Team management with org-mode
 org-static-mathjax.el    --- Muse-like tags in Org-mode
 org-sudoku.el            --- Create and solve SUDOKU puzzles in Org tables

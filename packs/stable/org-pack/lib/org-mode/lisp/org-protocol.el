@@ -1,8 +1,8 @@
 ;;; org-protocol.el --- Intercept calls from emacsclient to trigger custom actions.
 ;;
-;; Copyright (C) 2008-2013 Free Software Foundation, Inc.
+;; Copyright (C) 2008-2014 Free Software Foundation, Inc.
 ;;
-;; Authors: Bastien Guerry <bzg AT gnu DOT org>
+;; Authors: Bastien Guerry <bzg@gnu.org>
 ;;       Daniel M German <dmg AT uvic DOT org>
 ;;       Sebastian Rose <sebastian_rose AT gmx DOT de>
 ;;       Ross Patterson <me AT rpatterson DOT net>
@@ -265,7 +265,7 @@ Here is an example:
 This is usually a single character string but can also be a
 string with two characters."
   :group 'org-protocol
-  :type 'string)
+  :type '(choice (const nil) (string)))
 
 (defcustom org-protocol-data-separator "/+\\|\\?"
   "The default data separator to use.

@@ -29,6 +29,7 @@
 (require 'gh-gist)
 (require 'gh-pulls)
 (require 'gh-issues)
+(require 'gh-users)
 
 (provide 'gh)
 ;;; gh.el ends here

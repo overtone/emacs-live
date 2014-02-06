@@ -27,6 +27,8 @@
 ;;; Code:
 
 (eval-when-compile (require 'cl))
+(require 'expand-region-custom)
+(declare-function er/expand-region "expand-region")
 
 (defvar er/history '()
   "A history of start and end points so we can contract after expanding.")
@@ -92,13 +94,14 @@ moving point or mark as little as possible."
         (ignore-errors
           (funcall (car try-list))
           (when (and (region-active-p)
-                     (er--this-expansion-is-better))
+                     (er--this-expansion-is-better start end best-start best-end))
             (setq best-start (point))
             (setq best-end (mark))
             (when (and er--show-expansion-message (not (minibufferp)))
               (message "%S" (car try-list))))))
       (setq try-list (cdr try-list)))
 
+    (setq deactivate-mark nil)
     (goto-char best-start)
     (set-mark best-end)
 
@@ -106,9 +109,9 @@ moving point or mark as little as possible."
 
     (when (and (= best-start (point-min))
                (= best-end (point-max))) ;; We didn't find anything new, so exit early
-      (setq arg 0))))
+      'early-exit)))
 
-(defun er--this-expansion-is-better ()
+(defun er--this-expansion-is-better (start end best-start best-end)
   "t if the current region is an improvement on previous expansions.
 
 This is provided as a separate function for those that would like

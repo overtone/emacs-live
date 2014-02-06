@@ -1,10 +1,10 @@
 ;;; git-gutter.el --- Port of Sublime Text plugin GitGutter
 
-;; Copyright (C) 2013 by Syohei YOSHIDA
+;; Copyright (C) 2014 by Syohei YOSHIDA
 
 ;; Author: Syohei YOSHIDA <syohex@gmail.com>
 ;; URL: https://github.com/syohex/emacs-git-gutter
-;; Version: 0.48
+;; Version: 0.53
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -26,7 +26,8 @@
 ;;; Code:
 
 (eval-when-compile
-  (require 'cl))
+  (require 'cl)
+  (defvar global-git-gutter-mode))
 
 (require 'tramp)
 
@@ -217,25 +218,26 @@ character for signs of changes"
   (let ((cmd (git-gutter:diff-command curfile))
         (regexp "^@@ -\\([0-9]+\\),?\\([0-9]*\\) \\+\\([0-9]+\\),?\\([0-9]*\\) @@")
         (file (git-gutter:base-file))) ;; for tramp
-    (with-temp-buffer
-      (when (zerop (git-gutter:execute-command cmd file))
-        (goto-char (point-min))
-        (loop while (re-search-forward regexp nil t)
-              for orig-line = (string-to-number (match-string 1))
-              for new-line  = (string-to-number (match-string 3))
-              for orig-changes = (git-gutter:changes-to-number (match-string 2))
-              for new-changes = (git-gutter:changes-to-number (match-string 4))
-              for type = (cond ((zerop orig-changes) 'added)
-                               ((zerop new-changes) 'deleted)
-                               (t 'modified))
-              for end-line = (if (eq type 'deleted)
-                                 new-line
-                               (1- (+ new-line new-changes)))
-              for content = (git-gutter:diff-content)
-              collect
-              (let ((start (if (zerop new-line) 1 new-line))
-                    (end (if (zerop end-line) 1 end-line)))
-                (git-gutter:make-diffinfo type content start end)))))))
+    (when file
+      (with-temp-buffer
+        (when (zerop (git-gutter:execute-command cmd file))
+          (goto-char (point-min))
+          (loop while (re-search-forward regexp nil t)
+                for orig-line = (string-to-number (match-string 1))
+                for new-line  = (string-to-number (match-string 3))
+                for orig-changes = (git-gutter:changes-to-number (match-string 2))
+                for new-changes = (git-gutter:changes-to-number (match-string 4))
+                for type = (cond ((zerop orig-changes) 'added)
+                                 ((zerop new-changes) 'deleted)
+                                 (t 'modified))
+                for end-line = (if (eq type 'deleted)
+                                   new-line
+                                 (1- (+ new-line new-changes)))
+                for content = (git-gutter:diff-content)
+                collect
+                (let ((start (if (zerop new-line) 1 new-line))
+                      (end (if (zerop end-line) 1 end-line)))
+                  (git-gutter:make-diffinfo type content start end))))))))
 
 (defun git-gutter:line-to-pos (line)
   (save-excursion
@@ -456,6 +458,9 @@ character for signs of changes"
   (dolist (line (git-gutter:collect-deleted-line content))
     (insert (concat line "\n"))))
 
+(defsubst git-gutter:delete-from-first-line-p (start-line end-line)
+  (and (not (= start-line 1)) (not (= end-line 1))))
+
 (defun git-gutter:do-revert-hunk (diffinfo)
   (save-excursion
     (goto-char (point-min))
@@ -464,10 +469,14 @@ character for signs of changes"
           (content (plist-get diffinfo :content)))
       (case (plist-get diffinfo :type)
         (added (git-gutter:delete-added-lines start-line end-line))
-        (deleted (forward-line start-line)
+        (deleted (when (git-gutter:delete-from-first-line-p start-line end-line)
+                   (forward-line start-line))
                  (git-gutter:insert-deleted-lines content))
         (modified (git-gutter:delete-added-lines start-line end-line)
                   (git-gutter:insert-deleted-lines content))))))
+
+(defsubst git-gutter:popup-buffer-window ()
+  (get-buffer-window (get-buffer git-gutter:popup-buffer)))
 
 ;;;###autoload
 (defun git-gutter:revert-hunk ()
@@ -479,7 +488,45 @@ character for signs of changes"
       (when (yes-or-no-p "Revert current hunk ?")
         (git-gutter:do-revert-hunk it)
         (save-buffer))
-      (delete-window (get-buffer-window (get-buffer git-gutter:popup-buffer))))))
+      (delete-window (git-gutter:popup-buffer-window)))))
+
+(defun git-gutter:current-file-path ()
+  (let ((file (or git-gutter:base-file-name (git-gutter:base-file))))
+    (git-gutter:file-path default-directory file)))
+
+(defun git-gutter:diff-header-index-info (path)
+  (with-temp-buffer
+    (let ((cmd (format "git diff %s" path)))
+      (when (zerop (git-gutter:execute-command cmd path))
+        (goto-char (point-min))
+        (forward-line 4)
+        (buffer-substring-no-properties (point-min) (point))))))
+
+(defun git-gutter:hunk-diff-header ()
+  (git-gutter:awhen (git-gutter:current-file-path)
+    (git-gutter:diff-header-index-info it)))
+
+(defun git-gutter:do-stage-hunk (diff-info)
+  (let ((content (plist-get diff-info :content))
+        (header (git-gutter:hunk-diff-header))
+        (patch (make-temp-name "git-gutter")))
+    (when header
+      (with-temp-file patch
+        (insert header)
+        (insert content)
+        (insert "\n"))
+      (let ((cmd (concat "git apply --unidiff-zero --cached " patch)))
+        (unless (zerop (call-process-shell-command cmd))
+          (message "Failed: %s" cmd))
+        (delete-file patch)))))
+
+;;;###autoload
+(defun git-gutter:stage-hunk ()
+  "Stage this hunk like 'git add -p'"
+  (interactive)
+  (git-gutter:awhen (git-gutter:search-here-diffinfo git-gutter:diffinfos)
+    (git-gutter:do-stage-hunk it)
+    (git-gutter)))
 
 ;;;###autoload
 (defun git-gutter:popup-hunk (&optional diffinfo)
@@ -489,11 +536,13 @@ character for signs of changes"
                         (git-gutter:search-here-diffinfo git-gutter:diffinfos))
     (save-selected-window
       (with-current-buffer (get-buffer-create git-gutter:popup-buffer)
+        (view-mode -1)
         (erase-buffer)
         (insert (plist-get it :content))
         (insert "\n")
         (goto-char (point-min))
         (diff-mode)
+        (view-mode +1)
         (pop-to-buffer (current-buffer))))))
 
 ;;;###autoload

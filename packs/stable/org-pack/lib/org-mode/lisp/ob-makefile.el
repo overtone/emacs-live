@@ -1,8 +1,9 @@
 ;;; ob-makefile.el --- org-babel functions for makefile evaluation
 
-;; Copyright (C) 2009-2012  Free Software Foundation, Inc.
+;; Copyright (C) 2009-2014 Free Software Foundation, Inc.
 
-;; Author: Eric Schulte and Thomas S. Dye
+;; Author: Eric Schulte
+;; 	   Thomas S. Dye
 ;; Keywords: literate programming, reproducible research
 ;; Homepage: http://orgmode.org
 

@@ -2,25 +2,6 @@
 
 A modern list api for Emacs. No 'cl required.
 
-## Breaking change 1.8.0 -> 2.0.0
-
-- The `-min` and `-max` functions are no longer variadic, but take a
-  list to be more in line with the other dash functions.
-
-- `-min-by` and `-max-by` now take a comparator function to sort by.
-
-The stated scope of dash is increasing. It now includes more
-functional style functions, like combinators and threading macros.
-These have been creeping in anyway, since they're so darn useful. Time
-to make it official. :)
-
-- `-rpartial`, `-juxt` and `-applify` are moved to a separate package.
-  Note that `-partial` is still in dash for backwards compatibility
-  reasons.
-
-These new combinators require Emacs 24 for its lexical scope. So
-they are offered in a separate package: `dash-functional`.
-
 ## Installation
 
 It's available on [marmalade](http://marmalade-repo.org/) and [Melpa](http://melpa.milkbox.net/):
@@ -38,11 +19,18 @@ If you want the function combinators, then also:
 
 Add this to the big comment block at the top:
 
-    ;; Package-Requires: ((dash "1.8.0"))
+    ;; Package-Requires: ((dash "2.5.0"))
 
 To get function combinators:
 
-    ;; Package-Requires: ((dash "1.8.0") (dash-functional "1.0.0") (emacs "24"))
+    ;; Package-Requires: ((dash "2.5.0") (dash-functional "1.0.0") (emacs "24"))
+
+## Syntax highlighting of dash functions
+
+Font lock of dash functions in emacs lisp buffers is now optional.
+Include this in your emacs settings to get syntax highlighting:
+
+    (eval-after-load "dash" '(dash-enable-font-lock))
 
 ## Functions
 
@@ -65,6 +53,10 @@ To get function combinators:
 * [-drop-while](#-drop-while-pred-list) `(pred list)`
 * [-rotate](#-rotate-n-list) `(n list)`
 * [-insert-at](#-insert-at-n-x-list) `(n x list)`
+* [-replace-at](#-replace-at-n-x-list) `(n x list)`
+* [-update-at](#-update-at-n-func-list) `(n func list)`
+* [-remove-at](#-remove-at-n-list) `(n list)`
+* [-remove-at-indices](#-remove-at-indices-indices-list) `(indices list)`
 
 ### Reductions
 
@@ -87,6 +79,7 @@ To get function combinators:
 * [-none?](#-none-pred-list) `(pred list)`
 * [-only-some?](#-only-some-pred-list) `(pred list)`
 * [-contains?](#-contains-list-element) `(list element)`
+* [-same-items?](#-same-items-list-list2) `(list list2)`
 
 ### Partitioning
 
@@ -122,6 +115,7 @@ To get function combinators:
 
 * [-repeat](#-repeat-n-x) `(n x)`
 * [-cons*](#-cons-rest-args) `(&rest args)`
+* [-snoc](#-snoc-list-elem-rest-elements) `(list elem &rest elements)`
 * [-interpose](#-interpose-sep-list) `(sep list)`
 * [-interleave](#-interleave-rest-lists) `(&rest lists)`
 * [-zip-with](#-zip-with-fn-list1-list2) `(fn list1 list2)`
@@ -131,6 +125,16 @@ To get function combinators:
 * [-first-item](#-first-item-list) `(list)`
 * [-last-item](#-last-item-list) `(list)`
 * [-sort](#-sort-comparator-list) `(comparator list)`
+* [-list](#-list-rest-args) `(&rest args)`
+
+### Tree operations
+
+* [-tree-map](#-tree-map-fn-tree) `(fn tree)`
+* [-tree-reduce](#-tree-reduce-fn-tree) `(fn tree)`
+* [-tree-reduce-from](#-tree-reduce-from-fn-init-value-tree) `(fn init-value tree)`
+* [-tree-mapreduce](#-tree-mapreduce-fn-folder-tree) `(fn folder tree)`
+* [-tree-mapreduce-from](#-tree-mapreduce-from-fn-folder-init-value-tree) `(fn folder init-value tree)`
+* [-clone](#-clone-list) `(list)`
 
 ### Threading macros
 
@@ -142,8 +146,8 @@ To get function combinators:
 
 * [-when-let](#-when-let-var-val-rest-body) `(var-val &rest body)`
 * [-when-let*](#-when-let-vars-vals-rest-body) `(vars-vals &rest body)`
-* [-if-let](#-if-let-var-val-then-optional-else) `(var-val then &optional else)`
-* [-if-let*](#-if-let-vars-vals-then-optional-else) `(vars-vals then &optional else)`
+* [-if-let](#-if-let-var-val-then-rest-else) `(var-val then &rest else)`
+* [-if-let*](#-if-let-vars-vals-then-rest-else) `(vars-vals then &rest else)`
 
 ### Side-effects
 
@@ -153,8 +157,8 @@ To get function combinators:
 
 ### Destructive operations
 
-* [!cons](#-cons-car-cdr) `(car cdr)`
-* [!cdr](#-cdr-list) `(list)`
+* [!cons](#cons-car-cdr) `(car cdr)`
+* [!cdr](#cdr-list) `(list)`
 
 ### Function combinators
 
@@ -368,6 +372,48 @@ Returns a list with `x` inserted into `list` at position `n`.
 (-insert-at 12 'x '(a b c)) ;; => '(a b c x)
 ```
 
+#### -replace-at `(n x list)`
+
+Return a list with element at Nth position in `list` replaced with `x`.
+
+```cl
+(-replace-at 0 9 '(0 1 2 3 4 5)) ;; => '(9 1 2 3 4 5)
+(-replace-at 1 9 '(0 1 2 3 4 5)) ;; => '(0 9 2 3 4 5)
+(-replace-at 4 9 '(0 1 2 3 4 5)) ;; => '(0 1 2 3 9 5)
+```
+
+#### -update-at `(n func list)`
+
+Return a list with element at Nth position in `list` replaced with `(func (nth n list))`.
+
+```cl
+(-update-at 0 (lambda (x) (+ x 9)) '(0 1 2 3 4 5)) ;; => '(9 1 2 3 4 5)
+(-update-at 1 (lambda (x) (+ x 8)) '(0 1 2 3 4 5)) ;; => '(0 9 2 3 4 5)
+(--update-at 2 (length it) '("foo" "bar" "baz" "quux")) ;; => '("foo" "bar" 3 "quux")
+```
+
+#### -remove-at `(n list)`
+
+Return a list with element at Nth position in `list` removed.
+
+```cl
+(-remove-at 0 '("0" "1" "2" "3" "4" "5")) ;; => '("1" "2" "3" "4" "5")
+(-remove-at 1 '("0" "1" "2" "3" "4" "5")) ;; => '("0" "2" "3" "4" "5")
+(-remove-at 2 '("0" "1" "2" "3" "4" "5")) ;; => '("0" "1" "3" "4" "5")
+```
+
+#### -remove-at-indices `(indices list)`
+
+Return a list whose elements are elements from `list` without
+elements selected as `(nth i list)` for all i
+from `indices`.
+
+```cl
+(-remove-at-indices '(0) '("0" "1" "2" "3" "4" "5")) ;; => '("1" "2" "3" "4" "5")
+(-remove-at-indices '(0 2 4) '("0" "1" "2" "3" "4" "5")) ;; => '("1" "3" "5")
+(-remove-at-indices '(0 5) '("0" "1" "2" "3" "4" "5")) ;; => '("1" "2" "3" "4")
+```
+
 
 ## Reductions
 
@@ -455,7 +501,7 @@ Return the sum of `list`.
 ```cl
 (-sum '()) ;; => 0
 (-sum '(1)) ;; => 1
-(-sum '(1 2 3)) ;; => 6
+(-sum '(1 2 3 4)) ;; => 10
 ```
 
 #### -product `(list)`
@@ -465,7 +511,7 @@ Return the product of `list`.
 ```cl
 (-product '()) ;; => 1
 (-product '(1)) ;; => 1
-(-product '(1 2 3)) ;; => 6
+(-product '(1 2 3 4)) ;; => 24
 ```
 
 #### -min `(list)`
@@ -488,8 +534,8 @@ comparing them.
 
 ```cl
 (-min-by '> '(4 3 6 1)) ;; => 1
-(-min-by '< '(4 3 6 1)) ;; => 6
-(--min-by (> (length it) (length other)) '((1 2 3) (1) (1 2))) ;; => '(1)
+(--min-by (> (car it) (car other)) '((1 2 3) (2) (3 2))) ;; => '(1 2 3)
+(--min-by (> (length it) (length other)) '((1 2 3) (2) (3 2))) ;; => '(2)
 ```
 
 #### -max `(list)`
@@ -512,8 +558,8 @@ comparing them.
 
 ```cl
 (-max-by '> '(4 3 6 1)) ;; => 6
-(--max-by (> (car it) (car other)) '((2 2 3) (3) (1 2))) ;; => '(3)
-(-max-by '< '(4 3 6 1)) ;; => 1
+(--max-by (> (car it) (car other)) '((1 2 3) (2) (3 2))) ;; => '(3 2)
+(--max-by (> (length it) (length other)) '((1 2 3) (2) (3 2))) ;; => '(1 2 3)
 ```
 
 
@@ -574,6 +620,18 @@ or with `-compare-fn` if that's non-nil.
 (-contains? '(1 2 3) 1) ;; => t
 (-contains? '(1 2 3) 2) ;; => t
 (-contains? '(1 2 3) 4) ;; => nil
+```
+
+#### -same-items? `(list list2)`
+
+Return true if `list` and `list2` has the same items.
+
+The order of the elements in the lists does not matter.
+
+```cl
+(-same-items? '(1 2 3) '(1 2 3)) ;; => t
+(-same-items? '(1 2 3) '(3 2 1)) ;; => t
+(-same-items? '(1 2 3) '(1 2 3 4)) ;; => nil
 ```
 
 
@@ -850,6 +908,20 @@ a dotted list.
 (-cons* 1) ;; => 1
 ```
 
+#### -snoc `(list elem &rest elements)`
+
+Append `elem` to the end of the list.
+
+This is like `cons`, but operates on the end of list.
+
+If `elements` is non nil, append these to the list as well.
+
+```cl
+(-snoc '(1 2 3) 4) ;; => '(1 2 3 4)
+(-snoc '(1 2 3) 4 5 6) ;; => '(1 2 3 4 5 6)
+(-snoc '(1 2 3) '(4 5 6)) ;; => '(1 2 3 (4 5 6))
+```
+
 #### -interpose `(sep list)`
 
 Returns a new list of all elements in `list` separated by `sep`.
@@ -952,6 +1024,110 @@ if the first element should sort before the second.
 (--sort (< it other) '(3 1 2)) ;; => '(1 2 3)
 ```
 
+#### -list `(&rest args)`
+
+Return a list with `args`.
+
+If first item of `args` is already a list, simply return `args`.  If
+not, return a list with `args` as elements.
+
+```cl
+(-list 1) ;; => '(1)
+(-list 1 2 3) ;; => '(1 2 3)
+```
+
+
+## Tree operations
+
+#### -tree-map `(fn tree)`
+
+Apply `fn` to each element of `tree` while preserving the tree structure.
+
+```cl
+(-tree-map '1+ '(1 (2 3) (4 (5 6) 7))) ;; => '(2 (3 4) (5 (6 7) 8))
+(-tree-map '(lambda (x) (cons x (expt 2 x))) '(1 (2 3) 4)) ;; => '((1 . 2) ((2 . 4) (3 . 8)) (4 . 16))
+(--tree-map (length it) '("<body>" ("<p>" "text" "</p>") "</body>")) ;; => '(6 (3 4 4) 7)
+```
+
+#### -tree-reduce `(fn tree)`
+
+Use `fn` to reduce elements of list `tree`.
+If elements of `tree` are lists themselves, apply the reduction recursively.
+
+`fn` is first applied to first element of the list and second
+element, then on this result and third element from the list etc.
+
+See `-reduce-r` for how exactly are lists of zero or one element handled.
+
+```cl
+(-tree-reduce '+ '(1 (2 3) (4 5))) ;; => 15
+(-tree-reduce 'concat '("strings" (" on" " various") ((" levels")))) ;; => "strings on various levels"
+(--tree-reduce (cond ((stringp it) (concat it " " acc)) (t (let ((sn (symbol-name it))) (concat "<" sn ">" acc "</" sn ">")))) '(body (p "some words") (div "more" (b "bold") "words"))) ;; => "<body><p>some words</p> <div>more <b>bold</b> words</div></body>"
+```
+
+#### -tree-reduce-from `(fn init-value tree)`
+
+Use `fn` to reduce elements of list `tree`.
+If elements of `tree` are lists themselves, apply the reduction recursively.
+
+`fn` is first applied to `init-value` and first element of the list,
+then on this result and second element from the list etc.
+
+The initial value is ignored on cons pairs as they always contain
+two elements.
+
+```cl
+(-tree-reduce-from '+ 1 '(1 (1 1) ((1)))) ;; => 8
+(--tree-reduce-from (-concat acc (list it)) nil '(1 (2 3 (4 5)) (6 7))) ;; => '((7 6) ((5 4) 3 2) 1)
+```
+
+#### -tree-mapreduce `(fn folder tree)`
+
+Apply `fn` to each element of `tree`, and make a list of the results.
+If elements of `tree` are lists themselves, apply `fn` recursively to
+elements of these nested lists.
+
+Then reduce the resulting lists using `folder` and initial value
+`init-value`. See `-reduce-r-from`.
+
+This is the same as calling `-tree-reduce` after `-tree-map`
+but is twice as fast as it only traverse the structure once.
+
+```cl
+(-tree-mapreduce 'list 'append '(1 (2 (3 4) (5 6)) (7 (8 9)))) ;; => '(1 2 3 4 5 6 7 8 9)
+(--tree-mapreduce 1 (+ it acc) '(1 (2 (4 9) (2 1)) (7 (4 3)))) ;; => 9
+(--tree-mapreduce 0 (max acc (1+ it)) '(1 (2 (4 9) (2 1)) (7 (4 3)))) ;; => 3
+```
+
+#### -tree-mapreduce-from `(fn folder init-value tree)`
+
+Apply `fn` to each element of `tree`, and make a list of the results.
+If elements of `tree` are lists themselves, apply `fn` recursively to
+elements of these nested lists.
+
+Then reduce the resulting lists using `folder` and initial value
+`init-value`. See `-reduce-r-from`.
+
+This is the same as calling `-tree-reduce-from` after `-tree-map`
+but is twice as fast as it only traverse the structure once.
+
+```cl
+(-tree-mapreduce-from 'identity '* 1 '(1 (2 (3 4) (5 6)) (7 (8 9)))) ;; => 362880
+(--tree-mapreduce-from (+ it it) (cons it acc) nil '(1 (2 (4 9) (2 1)) (7 (4 3)))) ;; => '(2 (4 (8 18) (4 2)) (14 (8 6)))
+(concat "{" (--tree-mapreduce-from (cond ((-cons-pair? it) (concat (symbol-name (car it)) " -> " (symbol-name (cdr it)))) (t (concat (symbol-name it) " : {"))) (concat it (unless (or (equal acc "}") (equal (substring it (1- (length it))) "{")) ", ") acc) "}" '((elips-mode (foo (bar . booze)) (baz . qux)) (c-mode (foo . bla) (bum . bam))))) ;; => "{elips-mode : {foo : {bar -> booze}, baz -> qux}, c-mode : {foo -> bla, bum -> bam}}"
+```
+
+#### -clone `(list)`
+
+Create a deep copy of `list`.
+The new list has the same elements and structure but all cons are
+replaced with new ones.  This is useful when you need to clone a
+structure such as plist or alist.
+
+```cl
+(let* ((a '(1 2 3)) (b (-clone a))) (nreverse a) b) ;; => '(1 2 3)
+```
+
 
 ## Threading macros
 
@@ -963,9 +1139,9 @@ already. If there are more forms, inserts the first form as the
 second item in second form, etc.
 
 ```cl
-(-> "Abc") ;; => "Abc"
-(-> "Abc" (concat "def")) ;; => "Abcdef"
-(-> "Abc" (concat "def") (concat "ghi")) ;; => "Abcdefghi"
+(-> '(2 3 5)) ;; => '(2 3 5)
+(-> '(2 3 5) (append '(8 13))) ;; => '(2 3 5 8 13)
+(-> '(2 3 5) (append '(8 13)) (-slice 1 -1)) ;; => '(3 5 8)
 ```
 
 #### ->> `(x form &rest more)`
@@ -976,9 +1152,9 @@ already. If there are more forms, inserts the first form as the
 last item in second form, etc.
 
 ```cl
-(->> "Abc" (concat "def")) ;; => "defAbc"
-(->> "Abc" (concat "def") (concat "ghi")) ;; => "ghidefAbc"
-(->> 5 (- 8)) ;; => 3
+(->> '(1 2 3) (-map 'square)) ;; => '(1 4 9)
+(->> '(1 2 3) (-map 'square) (-remove 'even?)) ;; => '(1 9)
+(->> '(1 2 3) (-map 'square) (-reduce '+)) ;; => 14
 ```
 
 #### --> `(x form &rest more)`
@@ -1019,7 +1195,7 @@ If all `vals` evaluate to true, bind them to their corresponding
 (-when-let* ((x 5) (y nil) (z 7)) (+ x y z)) ;; => nil
 ```
 
-#### -if-let `(var-val then &optional else)`
+#### -if-let `(var-val then &rest else)`
 
 If `val` evaluates to non-nil, bind it to `var` and do `then`,
 otherwise do `else`. `var-val` should be a (`var` `val`) pair.
@@ -1029,7 +1205,7 @@ otherwise do `else`. `var-val` should be a (`var` `val`) pair.
 (--if-let (even? 4) it nil) ;; => t
 ```
 
-#### -if-let* `(vars-vals then &optional else)`
+#### -if-let* `(vars-vals then &rest else)`
 
 If all `vals` evaluate to true, bind them to their corresponding
   `vars` and do `then`, otherwise do `else`. `vars-vals` should be a list
@@ -1278,6 +1454,21 @@ Change `readme-template.md` or `examples-to-docs.el` instead.
 
 ## Changelist
 
+### From 2.4.0 to 2.5.0
+
+- Add `-same-items?` (Johan Andersson)
+- A few bugfixes
+
+### From 2.3.0 to 2.4.0
+
+- Add `-snoc` (Matus Goljer)
+- Add `-replace-at`, `-update-at`, `-remove-at`, and `-remove-at-indices` (Matus Goljer)
+
+### From 2.2.0 to 2.3.0
+
+- Add tree operations (Matus Goljer)
+- Make font-lock optional
+
 ### From 2.1.0 to 2.2.0
 
 - Add `-compose` (Christina Whyte)
@@ -1336,7 +1527,7 @@ Change `readme-template.md` or `examples-to-docs.el` instead.
  - [Nic Ferrier](https://github.com/nicferrier) contributed `-cons*`.
  - [Wilfred Hughes](https://github.com/Wilfred) contributed `-slice`, `-first-item` and `-last-item`.
  - [Emanuel Evans](https://github.com/shosti) contributed `-if-let`, `-when-let` and `-insert-at`.
- - [Johan Andersson](https://github.com/rejeep) contributed `-sum` and `-product`.
+ - [Johan Andersson](https://github.com/rejeep) contributed `-sum`, `-product` and `-same-items?`
  - [Christina Whyte](https://github.com/kurisuwhyte) contributed `-compose`
 
 Thanks!

@@ -1,5 +1,5 @@
 ;;; org-bookmark.el - Support for links to bookmark
-;; Copyright (C) 2008-2013 Free Software Foundation, Inc.
+;; Copyright (C) 2008-2014 Free Software Foundation, Inc.
 ;;
 ;; Author: Tokuya Kameshima <kames AT fa2.so-net.ne.jp>
 ;; Version: 1.0

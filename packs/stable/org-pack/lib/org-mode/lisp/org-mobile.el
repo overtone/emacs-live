@@ -1,5 +1,5 @@
 ;;; org-mobile.el --- Code for asymmetric sync with a mobile device
-;; Copyright (C) 2009-2013 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2014 Free Software Foundation, Inc.
 ;;
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -319,23 +319,24 @@ create all custom agenda views, for upload to the mobile phone."
 	  (org-agenda-tag-filter org-agenda-tag-filter)
 	  (org-agenda-redo-command org-agenda-redo-command))
       (save-excursion
-	(save-window-excursion
-	  (run-hooks 'org-mobile-pre-push-hook)
-	  (org-mobile-check-setup)
-	  (org-mobile-prepare-file-lists)
-	  (message "Creating agendas...")
-	  (let ((inhibit-redisplay t)
-		(org-agenda-files (mapcar 'car org-mobile-files-alist)))
-	    (org-mobile-create-sumo-agenda))
-	  (message "Creating agendas...done")
-	  (org-save-all-org-buffers) ; to save any IDs created by this process
-	  (message "Copying files...")
-	  (org-mobile-copy-agenda-files)
-	  (message "Writing index file...")
-	  (org-mobile-create-index-file)
-	  (message "Writing checksums...")
-	  (org-mobile-write-checksums)
-	  (run-hooks 'org-mobile-post-push-hook)))
+	(save-restriction
+	  (save-window-excursion
+	    (run-hooks 'org-mobile-pre-push-hook)
+	    (org-mobile-check-setup)
+	    (org-mobile-prepare-file-lists)
+	    (message "Creating agendas...")
+	    (let ((inhibit-redisplay t)
+		  (org-agenda-files (mapcar 'car org-mobile-files-alist)))
+	      (org-mobile-create-sumo-agenda))
+	    (message "Creating agendas...done")
+	    (org-save-all-org-buffers) ; to save any IDs created by this process
+	    (message "Copying files...")
+	    (org-mobile-copy-agenda-files)
+	    (message "Writing index file...")
+	    (org-mobile-create-index-file)
+	    (message "Writing checksums...")
+	    (org-mobile-write-checksums)
+	    (run-hooks 'org-mobile-post-push-hook))))
       (setq org-agenda-buffer-name org-agenda-curbuf-name
 	    org-agenda-this-buffer-name org-agenda-curbuf-name))
     (redraw-display)
@@ -459,6 +460,7 @@ agenda view showing the flagged items."
 			      ((stringp x) x)
 			      ((eq (car x) :startgroup) "{")
 			      ((eq (car x) :endgroup) "}")
+			      ((eq (car x) :grouptags) nil)
 			      ((eq (car x) :newline) nil)
 			      ((listp x) (car x))))
 		      def-tags))

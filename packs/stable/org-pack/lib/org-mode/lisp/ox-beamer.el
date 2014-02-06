@@ -1,10 +1,12 @@
 ;;; ox-beamer.el --- Beamer Back-End for Org Export Engine
 
-;; Copyright (C) 2007-2013  Free Software Foundation, Inc.
+;; Copyright (C) 2007-2014 Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <carsten.dominik AT gmail DOT com>
 ;;         Nicolas Goaziou <n.goaziou AT gmail DOT com>
 ;; Keywords: org, wp, tex
+
+;; This file is part of GNU Emacs.
 
 ;; GNU Emacs is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -23,93 +25,7 @@
 ;;
 ;; This library implements both a Beamer back-end, derived from the
 ;; LaTeX one and a minor mode easing structure edition of the
-;; document.
-;;
-;; Depending on the desired output format, three commands are provided
-;; for export: `org-beamer-export-as-latex' (temporary buffer),
-;; `org-beamer-export-to-latex' ("tex" file) and
-;; `org-beamer-export-to-pdf' ("pdf" file).
-;;
-;; This back-end supports every buffer keyword, attribute and options
-;; items (see `org-latex-options-alist') already supported by `latex'
-;; back-end.  As such, it is suggested to add an entry in
-;; `org-latex-classes' variable which is appropriate for Beamer
-;; export.
-;;
-;; On top of this, the `beamer' back-end also introduces the following
-;; keywords: "BEAMER_THEME", "BEAMER_COLOR_THEME",
-;; "BEAMER_FONT_THEME", "BEAMER_INNER_THEME", "BEAMER_OUTER_THEME" and
-;; "BEAMER_HEADER".  All but the latter accept options in square
-;; brackets.
-;;
-;; Moreover, headlines now fall into three categories: sectioning
-;; elements, frames and blocks.
-;;
-;; - Headlines become frames when their level is equal to
-;;   `org-beamer-frame-level' (or "H" value in the OPTIONS line).
-;;   Though, if a headline in the current tree has a "BEAMER_env"
-;;   (see below) property set to either "frame" or "fullframe", its
-;;   level overrides the variable.  A "fullframe" is a frame with an
-;;   empty (ignored) title.
-;;
-;; - All frames' children become block environments.  Special block
-;;   types can be enforced by setting headline's "BEAMER_env" property
-;;   to an appropriate value (see `org-beamer-environments-default'
-;;   for supported value and `org-beamer-environments-extra' for
-;;   adding more).
-;;
-;; - As a special case, if the "BEAMER_env" property is set to either
-;;   "appendix", "note", "noteNH" or "againframe", the headline will
-;;   become, respectively, an appendix, a note (within frame or
-;;   between frame, depending on its level), a note with its title
-;;   ignored or an againframe command.  In the latter case,
-;;   a "BEAMER_ref" property is mandatory in order to refer to the
-;;   frame being resumed, and contents are ignored.
-;;
-;;   Also, a headline with an "ignoreheading" environment will have
-;;   its contents only inserted in the output.  This special value is
-;;   useful to have data between frames, or to properly close
-;;   a "column" environment.
-;;
-;; Along with "BEAMER_env", headlines also support the "BEAMER_act"
-;; and "BEAMER_opt" properties.  The former is translated as an
-;; overlay/action specification (or a default overlay specification
-;; when enclosed within square brackets) whereas the latter specifies
-;; options for the current frame ("fragile" option is added
-;; automatically, though).
-;;
-;; Moreover, headlines handle the "BEAMER_col" property.  Its value
-;; should be a decimal number representing the width of the column as
-;; a fraction of the total text width.  If the headline has no
-;; specific environment, its title will be ignored and its contents
-;; will fill the column created.  Otherwise, the block will fill the
-;; whole column and the title will be preserved.  Two contiguous
-;; headlines with a non-nil "BEAMER_col" value share the same
-;; "columns" LaTeX environment.  It will end before the next headline
-;; without such a property.  This environment is generated
-;; automatically.  Although, it can also be explicitly created, with
-;; a special "columns" value for "BEAMER_env" property (if it needs to
-;; be set up with some specific options, for example).
-;;
-;; Every plain list has support for `:environment', `:overlay' and
-;; `:options' attributes (through ATTR_BEAMER affiliated keyword).
-;; The first one allows to use a different environment, the second
-;; sets overlay specifications and the last one inserts optional
-;; arguments in current list environment.
-;;
-;; Table of contents generated from "toc:t" option item are wrapped
-;; within a "frame" environment.  Those generated from a TOC keyword
-;; aren't.  TOC keywords accept options enclosed within square
-;; brackets (e.g. #+TOC: headlines [currentsection]).
-;;
-;; Eventually, an export snippet with a value enclosed within angular
-;; brackets put at the beginning of an element or object whose type is
-;; among `bold', `item', `link', `radio-target' and `target' will
-;; control its overlay specifications.
-;;
-;; On the minor mode side, `org-beamer-select-environment' (bound by
-;; default to "C-c C-b") and `org-beamer-insert-options-template' are
-;; the two entry points.
+;; document.  See Org manual for more information.
 
 ;;; Code:
 
@@ -120,10 +36,7 @@
 (unless (assoc "beamer" org-latex-classes)
   (add-to-list 'org-latex-classes
 	       '("beamer"
-		 "\\documentclass[presentation]{beamer}
-\[DEFAULT-PACKAGES]
-\[PACKAGES]
-\[EXTRA]"
+		 "\\documentclass[presentation]{beamer}"
 		 ("\\section{%s}" . "\\section*{%s}")
 		 ("\\subsection{%s}" . "\\subsection*{%s}")
 		 ("\\subsubsection{%s}" . "\\subsubsection*{%s}"))))
@@ -194,12 +107,13 @@ open    The opening template for the environment, with the following escapes
         %A   the default action/overlay specification
         %o   the options argument of the template
         %h   the headline text
-        %H   if there is headline text, that text in {} braces
-        %U   if there is headline text, that text in [] brackets
+        %r   the raw headline text (i.e. without any processing)
+        %H   if there is headline text, that raw text in {} braces
+        %U   if there is headline text, that raw text in [] brackets
 close   The closing string of the environment."
   :group 'org-export-beamer
   :version "24.4"
-  :package-version '(Org . "8.0")
+  :package-version '(Org . "8.1")
   :type '(repeat
 	  (list
 	   (string :tag "Environment")
@@ -443,13 +357,32 @@ INFO is a plist used as a communication channel."
   "Format HEADLINE as a sectioning part.
 CONTENTS holds the contents of the headline.  INFO is a plist
 used as a communication channel."
-  ;; Use `latex' back-end output, inserting overlay specifications
-  ;; if possible.
-  (let ((latex-headline (org-export-with-backend 'latex headline contents info))
+  (let ((latex-headline
+	 (org-export-with-backend
+	  ;; We create a temporary export back-end which behaves the
+	  ;; same as current one, but adds "\protect" in front of the
+	  ;; output of some objects.
+	  (org-export-create-backend
+	   :parent 'latex
+	   :transcoders
+	   (let ((protected-output
+		  (function
+		   (lambda (object contents info)
+		     (let ((code (org-export-with-backend
+				  'beamer object contents info)))
+		       (if (org-string-nw-p code) (concat "\\protect" code)
+			 code))))))
+	     (mapcar #'(lambda (type) (cons type protected-output))
+		     '(bold footnote-reference italic strike-through timestamp
+			    underline))))
+	  headline
+	  contents
+	  info))
 	(mode-specs (org-element-property :BEAMER_ACT headline)))
     (if (and mode-specs
 	     (string-match "\\`\\\\\\(.*?\\)\\(?:\\*\\|\\[.*\\]\\)?{"
 			   latex-headline))
+	;; Insert overlay specifications.
 	(replace-match (concat (match-string 1 latex-headline)
 			       (format "<%s>" mode-specs))
 		       nil nil latex-headline 1)
@@ -538,11 +471,14 @@ used as a communication channel."
 			 ((not env) "column")
 			 ;; Use specified environment.
 			 (t env))))
-	 (env-format (unless (member environment '("column" "columns"))
-		       (assoc environment
-			      (append org-beamer-environments-special
-				      org-beamer-environments-extra
-				      org-beamer-environments-default))))
+	 (raw-title (org-element-property :raw-value headline))
+	 (env-format
+	  (cond ((member environment '("column" "columns")) nil)
+		((assoc environment
+			(append org-beamer-environments-extra
+				org-beamer-environments-default)))
+		(t (user-error "Wrong block type at a headline named \"%s\""
+			       raw-title))))
 	 (title (org-export-data (org-element-property :title headline) info))
 	 (options (let ((options (org-element-property :BEAMER_OPT headline)))
 		    (if (not options) ""
@@ -587,7 +523,7 @@ used as a communication channel."
 	       (if (equal environment "column") options "")
 	       (format "%s\\textwidth" column-width)))
      ;; Block's opening string.
-     (when env-format
+     (when (nth 2 env-format)
        (concat
 	(org-fill-template
 	 (nth 2 env-format)
@@ -608,12 +544,15 @@ used as a communication channel."
 		    (cons "A" "")))))
 	  (list (cons "o" options)
 		(cons "h" title)
-		(cons "H" (if (equal title "") "" (format "{%s}" title)))
-		(cons "U" (if (equal title "") "" (format "[%s]" title))))))
+		(cons "r" raw-title)
+		(cons "H" (if (equal raw-title "") ""
+			    (format "{%s}" raw-title)))
+		(cons "U" (if (equal raw-title "") ""
+			    (format "[%s]" raw-title))))))
 	"\n"))
      contents
-     ;; Block's closing string.
-     (when environment (concat (nth 3 env-format) "\n"))
+     ;; Block's closing string, if any.
+     (and (nth 3 env-format) (concat (nth 3 env-format) "\n"))
      (when column-width "\\end{column}\n")
      (when end-columns-p "\\end{columns}"))))
 
@@ -1058,23 +997,8 @@ Export is done in a buffer named \"*Org BEAMER Export*\", which
 will be displayed when `org-export-show-temporary-export-buffer'
 is non-nil."
   (interactive)
-  (if async
-      (org-export-async-start
-	  (lambda (output)
-	    (with-current-buffer (get-buffer-create "*Org BEAMER Export*")
-	      (erase-buffer)
-	      (insert output)
-	      (goto-char (point-min))
-	      (LaTeX-mode)
-	      (org-export-add-to-stack (current-buffer) 'beamer)))
-	`(org-export-as 'beamer ,subtreep ,visible-only ,body-only
-			',ext-plist))
-    (let ((outbuf (org-export-to-buffer
-		   'beamer "*Org BEAMER Export*"
-		   subtreep visible-only body-only ext-plist)))
-      (with-current-buffer outbuf (LaTeX-mode))
-      (when org-export-show-temporary-export-buffer
-	(switch-to-buffer-other-window outbuf)))))
+  (org-export-to-buffer 'beamer "*Org BEAMER Export*"
+    async subtreep visible-only body-only ext-plist (lambda () (LaTeX-mode))))
 
 ;;;###autoload
 (defun org-beamer-export-to-latex
@@ -1106,16 +1030,9 @@ file-local settings.
 
 Return output file's name."
   (interactive)
-  (let ((outfile (org-export-output-file-name ".tex" subtreep)))
-    (if async
-	(org-export-async-start
-	    (lambda (f) (org-export-add-to-stack f 'beamer))
-	  `(expand-file-name
-	    (org-export-to-file
-	     'beamer ,outfile ,subtreep ,visible-only ,body-only
-	     ',ext-plist)))
-      (org-export-to-file
-       'beamer outfile subtreep visible-only body-only ext-plist))))
+  (let ((file (org-export-output-file-name ".tex" subtreep)))
+    (org-export-to-file 'beamer file
+      async subtreep visible-only body-only ext-plist)))
 
 ;;;###autoload
 (defun org-beamer-export-to-pdf
@@ -1147,18 +1064,10 @@ file-local settings.
 
 Return PDF file's name."
   (interactive)
-  (if async
-      (let ((outfile (org-export-output-file-name ".tex" subtreep)))
-	(org-export-async-start
-	    (lambda (f) (org-export-add-to-stack f 'beamer))
-	  `(expand-file-name
-	    (org-latex-compile
-	     (org-export-to-file
-	      'beamer ,outfile ,subtreep ,visible-only ,body-only
-	      ',ext-plist)))))
-    (org-latex-compile
-     (org-beamer-export-to-latex
-      nil subtreep visible-only body-only ext-plist))))
+  (let ((file (org-export-output-file-name ".tex" subtreep)))
+    (org-export-to-file 'beamer file
+      async subtreep visible-only body-only ext-plist
+      (lambda (file) (org-latex-compile file)))))
 
 ;;;###autoload
 (defun org-beamer-select-environment ()
@@ -1182,6 +1091,7 @@ aid, but the tag does not have any semantic meaning."
 			  envs)
 		  '((:endgroup))
 		  '(("BMCOL" . ?|))))
+	 (org-use-fast-tag-selection t)
 	 (org-fast-tag-selection-single-key t))
     (org-set-tags)
     (let ((tags (or (ignore-errors (org-get-tags-string)) "")))

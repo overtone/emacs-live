@@ -62,6 +62,12 @@
             data))
     (oset resp :data-received t)))
 
+(defclass gh-url-callback ()
+  nil)
+
+(defmethod gh-url-callback-run ((cb gh-url-callback) resp)
+  nil)
+
 (defmethod gh-url-response-run-callbacks ((resp gh-url-response))
   (let ((copy-list (lambda (list)
                      (if (consp list)
@@ -71,9 +77,12 @@
                        (car list)))))
     (let ((data (oref resp :data)))
       (dolist (cb (funcall copy-list (oref resp :callbacks)))
-        (if (or (functionp cb) (symbolp cb))
-            (funcall cb data)
-          (apply (car cb) data (cdr cb)))
+        (cond ((and (object-p cb)
+                    (object-of-class-p cb 'gh-url-callback))
+               (gh-url-callback-run cb resp))
+              ((or (functionp cb) (symbolp cb))
+               (funcall cb data))
+              (t (apply (car cb) data (cdr cb))))
         (object-remove-from-list resp :callbacks cb))))
   resp)
 

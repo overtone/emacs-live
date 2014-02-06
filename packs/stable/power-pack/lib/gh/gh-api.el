@@ -154,7 +154,7 @@
         (next (cdr (assoc "next" (gh-api-paging-links resp)))))
     (call-next-method)
     (oset resp :data (append previous-data (oref resp :data)))
-    (when next
+    (when (and next (not (equal 304 (oref resp :http-status))))
       (let ((req (oref resp :-req)))
         (oset resp :data-received nil)
         (oset req :url next)
@@ -170,16 +170,19 @@
                          '(("Content-Type" .
                             "application/json")))))
          (cache (oref api :cache))
-         (key (and cache
-                   (member method (oref cache safe-methods))
-                   (list resource
+         (key (list resource
                          method
-                         (sha1 (format "%s" transformer)))))
-         (has-value (and key (pcache-has cache key)))
-         (value (and has-value (pcache-get cache key)))
+                         (sha1 (format "%s" transformer))))
+         (cache-key (and cache
+                         (member method (oref cache safe-methods))
+                         key))
+         (has-value (and cache-key (pcache-has cache cache-key)))
+         (value (and has-value (pcache-get cache cache-key)))
+         (is-outdated (and has-value (gh-cache-outdated-p cache cache-key)))
+         (etag (and is-outdated (gh-cache-etag cache cache-key)))
          (req
-          (and (not has-value) ;; we'll need the req only if value's not
-                               ;; already in cache
+          (and (or (not has-value)
+                   is-outdated)
                (gh-auth-modify-request
                 (oref api :auth)
                 ;; TODO: use gh-api-paged-request only when needed
@@ -189,22 +192,25 @@
                                             (gh-api-expand-resource
                                              api resource))
                                :query params
-                               :headers headers
+                               :headers (if etag
+                                            (cons (cons "If-None-Match" etag)
+                                                  headers)
+                                            headers)
                                :data (or (and (eq fmt :json)
                                               (gh-api-json-encode data))
                                          (and (eq fmt :form)
                                               (gh-url-form-encode data))
                                          ""))))))
-    (cond (has-value ;; got value from cache
+    (cond ((and has-value ;; got value from cache
+                (not is-outdated))
            (gh-api-response "cached" :data-received t :data value))
-          (key ;; no value, but cache exists and method is safe
+          (cache-key ;; no value, but cache exists and method is safe
            (let ((resp (make-instance (oref req default-response-cls)
                                       :transform transformer)))
              (gh-url-run-request req resp)
              (gh-url-add-response-callback
-              resp (list #'(lambda (value cache key)
-                             (pcache-put cache key value))
-                         cache key))
+              resp (make-instance 'gh-api-callback :cache cache :key cache-key
+                                  :revive etag))
              resp))
           (cache ;; unsafe method, cache exists
            (pcache-invalidate cache key)
@@ -215,6 +221,22 @@
            (gh-url-run-request req (make-instance
                                     (oref req default-response-cls)
                                     :transform transformer))))))
+
+(defclass gh-api-callback (gh-url-callback)
+  ((cache :initarg :cache)
+   (key :initarg :key)
+   (revive :initarg :revive)))
+
+(defmethod gh-url-callback-run ((cb gh-api-callback) resp)
+  (let ((cache (oref cb :cache))
+        (key (oref cb :key)))
+    (if (and (oref cb :revive) (equal (oref resp :http-status) 304))
+        (progn
+          (gh-cache-revive cache key)
+          (oset resp :data (pcache-get cache key)))
+      (pcache-put cache key (oref resp :data))
+      (gh-cache-set-etag cache key
+                         (cdr (assoc "ETag" (oref resp :headers)))))))
 
 (define-obsolete-function-alias 'gh-api-add-response-callback
   'gh-url-add-response-callback "0.6.0")

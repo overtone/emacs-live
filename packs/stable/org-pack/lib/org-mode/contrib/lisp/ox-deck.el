@@ -1,6 +1,6 @@
 ;;; ox-deck.el --- deck.js Presentation Back-End for Org Export Engine
 
-;; Copyright (C) 2013  Rick Frankel
+;; Copyright (C) 2013, 2014  Rick Frankel
 
 ;; Author: Rick Frankel <emacs at rickster dot com>
 ;; Keywords: outlines, hypermedia, slideshow
@@ -385,18 +385,14 @@ the \"slide\" class will be added to the to the list element,
 CONTENTS is the transcoded contents string.  INFO is a plist
 holding export options."
   (let ((pkg-info (org-deck--get-packages info))
-         (org-html--pre/postamble-class "deck-status")
-         (info (plist-put
-                (plist-put info :html-preamble (plist-get info :deck-preamble))
-                :html-postamble (plist-get info :deck-postamble))))
+	(org-html--pre/postamble-class "deck-status")
+	(info (plist-put
+	       (plist-put info :html-preamble (plist-get info :deck-preamble))
+	       :html-postamble (plist-get info :deck-postamble))))
     (mapconcat
      'identity
      (list
-      (let* ((dt (plist-get info :html-doctype))
-	     (dt-cons (assoc dt org-html-doctype-alist)))
-	(if dt-cons
-	    (cdr dt-cons)
-	  dt))
+      (org-html-doctype info)
       (let ((lang (plist-get info :language)))
         (mapconcat
          (lambda (x)
@@ -528,23 +524,8 @@ Export is done in a buffer named \"*Org deck.js Export*\", which
 will be displayed when `org-export-show-temporary-export-buffer'
 is non-nil."
   (interactive)
-  (if async
-      (org-export-async-start
-          (lambda (output)
-            (with-current-buffer (get-buffer-create "*Org deck.js Export*")
-              (erase-buffer)
-              (insert output)
-              (goto-char (point-min))
-              (nxml-mode)
-              (org-export-add-to-stack (current-buffer) 'deck)))
-        `(org-export-as 'deck ,subtreep ,visible-only ,body-only ',ext-plist))
-    (let ((outbuf (org-export-to-buffer
-                   'deck "*Org deck.js Export*"
-                   subtreep visible-only body-only ext-plist)))
-      ;; Set major mode.
-      (with-current-buffer outbuf (nxml-mode))
-      (when org-export-show-temporary-export-buffer
-        (switch-to-buffer-other-window outbuf)))))
+  (org-export-to-buffer 'deck "*Org deck.js Export*"
+    async subtreep visible-only body-only ext-plist (lambda () (nxml-mode))))
 
 (defun org-deck-export-to-html
   (&optional async subtreep visible-only body-only ext-plist)
@@ -577,17 +558,9 @@ Return output file's name."
   (interactive)
   (let* ((extension (concat "." org-html-extension))
          (file (org-export-output-file-name extension subtreep))
-         (org-export-coding-system org-html-coding-system))
-    (if async
-        (org-export-async-start
-            (lambda (f) (org-export-add-to-stack f 'deck))
-          (let ((org-export-coding-system org-html-coding-system))
-            `(expand-file-name
-              (org-export-to-file
-               'deck ,file ,subtreep ,visible-only ,body-only ',ext-plist))))
-      (let ((org-export-coding-system org-html-coding-system))
-        (org-export-to-file
-         'deck file subtreep visible-only body-only ext-plist)))))
+	 (org-export-coding-system org-html-coding-system))
+    (org-export-to-file 'deck file
+      async subtreep visible-only body-only ext-plist)))
 
 (defun org-deck-publish-to-html (plist filename pub-dir)
   "Publish an org file to deck.js HTML Presentation.

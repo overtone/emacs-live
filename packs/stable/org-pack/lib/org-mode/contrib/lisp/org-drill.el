@@ -104,7 +104,7 @@ Possible values:
   but a warning message is printed when each leech item is
   presented."
   :group 'org-drill
-  :type '(choice (const 'warn) (const 'skip) (const nil)))
+  :type '(choice (const warn) (const skip) (const nil)))
 
 (defface org-drill-visible-cloze-face
   '((t (:foreground "darkseagreen")))
@@ -256,10 +256,14 @@ directory            All files with the extension '.org' in the same
   ;; 'file-no-restriction' means current file/buffer, ignoring restrictions
   ;; 'directory' means all *.org files in current directory
   :group 'org-drill
-  :type '(choice (const 'file) (const 'tree) (const 'file-no-restriction)
-                 (const 'file-with-archives) (const 'agenda)
-                 (const 'agenda-with-archives) (const 'directory)
-                 list))
+  :type '(choice (const :tag "The current buffer, respecting the restriction if any." file)
+                 (const :tag "The subtree started with the entry at point" tree)
+                 (const :tag "The current buffer, without restriction" file-no-restriction)
+                 (const :tag "The current buffer, and any archives associated with it." file-with-archives)
+                 (const :tag "All agenda files" agenda)
+                 (const :tag "All agenda files with any archive files associated with them." agenda-with-archives)
+                 (const :tag "All files with the extension '.org' in the same directory as the current file (includes the current file if it is an .org file.)"  directory)
+                 (repeat :tag "List of files to scan for drill items." file)))
 
 (defcustom org-drill-save-buffers-after-drill-sessions-p t
   "If non-nil, prompt to save all modified buffers after a drill session
@@ -280,7 +284,7 @@ Available choices are:
   adjusting intervals when items are reviewed early or late has been taken
   from SM11, a later version of the algorithm, and included in Simple8."
   :group 'org-drill
-  :type '(choice (const 'sm2) (const 'sm5) (const 'simple8)))
+  :type '(choice (const sm2) (const sm5) (const simple8)))
 
 (defcustom org-drill-optimal-factor-matrix nil
   "DO NOT CHANGE THE VALUE OF THIS VARIABLE.

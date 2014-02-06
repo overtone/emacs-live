@@ -30,6 +30,10 @@
 ;;; Code:
 
 (require 'expand-region-core)
+(declare-function js2-node-parent-stmt "js2-mode")
+(declare-function js2-node-at-point "js2-mode")
+(declare-function js2-node-abs-pos "js2-mode")
+(declare-function js2-node-len "js2-mode")
 
 (defun js2-mark-parent-statement ()
   (interactive)

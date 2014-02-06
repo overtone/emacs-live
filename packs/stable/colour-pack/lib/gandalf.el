@@ -75,6 +75,9 @@
      (magit-diff-hunk-header ((t (:foreground "orange"))))
      (magit-branch ((t (:foreground "DarkGoldenRod"))))
 
+     (eval-sexp-fu-flash ((t (:background "DeepPink3" :foreground "black"))))
+     (cider-error-highlight-face ((t (:background "color-52"))))
+
      ;;rainbow-delimiters (
      (rainbow-delimiters-depth-1-face ((t (:foreground "gray50"))))
      (rainbow-delimiters-depth-2-face ((t (:foreground "black"))))
@@ -112,8 +115,6 @@
  ;;nXhtml colours
  '(mumamo-background-chunk-major ((((class color) (background dark)) (:background "black"))))
  '(mumamo-background-chunk-submode1 ((((class color) (background dark)) (:background "black"))))
-
- '(eval-sexp-fu-flash ((((class color) (background dark)) (:background "grey15" :foreground "DeepPink3"))))
 
  ;;diff colours
  '(diff-removed ((t (:foreground "Red"))) 'now)

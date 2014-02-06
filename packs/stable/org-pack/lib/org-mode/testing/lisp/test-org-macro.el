@@ -1,6 +1,6 @@
 ;;; test-org-macro.el --- Tests for org-macro.el
 
-;; Copyright (C) 2013  Nicolas Goaziou
+;; Copyright (C) 2013, 2014  Nicolas Goaziou
 
 ;; Author: Nicolas Goaziou <n.goaziou@gmail.com>
 

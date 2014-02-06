@@ -90,6 +90,48 @@
     (-insert-at 1 'x '(a b c)) => '(a x b c)
     (-insert-at 12 'x '(a b c)) => '(a b c x)))
 
+(defexamples -replace-at
+  (-replace-at 0 9 '(0 1 2 3 4 5)) => '(9 1 2 3 4 5)
+  (-replace-at 1 9 '(0 1 2 3 4 5)) => '(0 9 2 3 4 5)
+  (-replace-at 4 9 '(0 1 2 3 4 5)) => '(0 1 2 3 9 5)
+  (-replace-at 5 9 '(0 1 2 3 4 5)) => '(0 1 2 3 4 9))
+
+(defexamples -update-at
+  (-update-at 0 (lambda (x) (+ x 9)) '(0 1 2 3 4 5)) => '(9 1 2 3 4 5)
+  (-update-at 1 (lambda (x) (+ x 8)) '(0 1 2 3 4 5)) => '(0 9 2 3 4 5)
+  (--update-at 2 (length it) '("foo" "bar" "baz" "quux")) => '("foo" "bar" 3 "quux")
+  (--update-at 2 (concat it "zab") '("foo" "bar" "baz" "quux")) => '("foo" "bar" "bazzab" "quux"))
+
+(defexamples -remove-at
+  (-remove-at 0 '("0" "1" "2" "3" "4" "5")) => '("1" "2" "3" "4" "5")
+  (-remove-at 1 '("0" "1" "2" "3" "4" "5")) => '("0" "2" "3" "4" "5")
+  (-remove-at 2 '("0" "1" "2" "3" "4" "5")) => '("0" "1" "3" "4" "5")
+  (-remove-at 3 '("0" "1" "2" "3" "4" "5")) => '("0" "1" "2" "4" "5")
+  (-remove-at 4 '("0" "1" "2" "3" "4" "5")) => '("0" "1" "2" "3" "5")
+  (-remove-at 5 '("0" "1" "2" "3" "4" "5")) => '("0" "1" "2" "3" "4")
+  (-remove-at 5 '((a b) (c d) (e f g) h i ((j) k) l (m))) => '((a b) (c d) (e f g) h i l (m))
+  (-remove-at 0 '(((a b) (c d) (e f g) h i ((j) k) l (m)))) => nil)
+
+(defexamples -remove-at-indices
+  (-remove-at-indices '(0) '("0" "1" "2" "3" "4" "5")) => '("1" "2" "3" "4" "5")
+  (-remove-at-indices '(0 2 4) '("0" "1" "2" "3" "4" "5")) => '("1" "3" "5")
+  (-remove-at-indices '(0 5) '("0" "1" "2" "3" "4" "5")) => '("1" "2" "3" "4")
+  (-remove-at-indices '(1 2 3) '("0" "1" "2" "3" "4" "5")) => '("0" "4" "5")
+  (-remove-at-indices '(0 1 2 3 4 5) '("0" "1" "2" "3" "4" "5")) => nil
+  (-remove-at-indices '(2 0 4) '("0" "1" "2" "3" "4" "5")) => '("1" "3" "5")
+  (-remove-at-indices '(5 0) '("0" "1" "2" "3" "4" "5")) => '("1" "2" "3" "4")
+  (-remove-at-indices '(1 3 2) '("0" "1" "2" "3" "4" "5")) => '("0" "4" "5")
+  (-remove-at-indices '(0 3 4 2 5 1) '("0" "1" "2" "3" "4" "5")) => nil
+  (-remove-at-indices '(1) '("0" "1" "2" "3" "4" "5")) => '("0" "2" "3" "4" "5")
+  (-remove-at-indices '(2) '("0" "1" "2" "3" "4" "5")) => '("0" "1" "3" "4" "5")
+  (-remove-at-indices '(3) '("0" "1" "2" "3" "4" "5")) => '("0" "1" "2" "4" "5")
+  (-remove-at-indices '(4) '("0" "1" "2" "3" "4" "5")) => '("0" "1" "2" "3" "5")
+  (-remove-at-indices '(5) '("0" "1" "2" "3" "4" "5")) => '("0" "1" "2" "3" "4")
+  (-remove-at-indices '(1 2 4) '((a b) (c d) (e f g) h i ((j) k) l (m))) => '((a b) h ((j) k) l (m))
+  (-remove-at-indices '(5) '((a b) (c d) (e f g) h i ((j) k) l (m))) => '((a b) (c d) (e f g) h i l (m))
+  (-remove-at-indices '(0) '(((a b) (c d) (e f g) h i ((j) k) l (m)))) => nil
+  (-remove-at-indices '(2 3) '((0) (1) (2) (3) (4) (5) (6))) => '((0) (1) (4) (5) (6)))
+
 (def-example-group "Reductions" nil
   (defexamples -reduce-from
     (-reduce-from '- 10 '(1 2 3)) => 4
@@ -130,12 +172,12 @@
   (defexamples -sum
     (-sum '()) => 0
     (-sum '(1)) => 1
-    (-sum '(1 2 3)) => 6)
+    (-sum '(1 2 3 4)) => 10)
 
   (defexamples -product
     (-product '()) => 1
     (-product '(1)) => 1
-    (-product '(1 2 3)) => 6)
+    (-product '(1 2 3 4)) => 24)
 
   (defexamples -min
     (-min '(0)) => 0
@@ -144,8 +186,8 @@
 
   (defexamples -min-by
     (-min-by '> '(4 3 6 1)) => 1
-    (-min-by '< '(4 3 6 1)) => 6
-    (--min-by (> (length it) (length other)) '((1 2 3) (1) (1 2))) => '(1))
+    (--min-by (> (car it) (car other)) '((1 2 3) (2) (3 2))) => '(1 2 3)
+    (--min-by (> (length it) (length other)) '((1 2 3) (2) (3 2))) => '(2))
 
   (defexamples -max
     (-max '(0)) => 0
@@ -154,8 +196,8 @@
 
   (defexamples -max-by
     (-max-by '> '(4 3 6 1)) => 6
-    (--max-by (> (car it) (car other)) '((2 2 3) (3) (1 2))) => '(3)
-    (-max-by '< '(4 3 6 1)) => 1))
+    (--max-by (> (car it) (car other)) '((1 2 3) (2) (3 2))) => '(3 2)
+    (--max-by (> (length it) (length other)) '((1 2 3) (2) (3 2))) => '(1 2 3)))
 
 (def-example-group "Predicates" nil
   (defexamples -any?
@@ -184,7 +226,14 @@
     (-contains? '(1 2 3) 2) => t
     (-contains? '(1 2 3) 4) => nil
     (-contains? '() 1) => nil
-    (-contains? '() '()) => nil))
+    (-contains? '() '()) => nil)
+
+  (defexamples -same-items?
+    (-same-items? '(1 2 3) '(1 2 3)) => t
+    (-same-items? '(1 2 3) '(3 2 1)) => t
+    (-same-items? '(1 2 3) '(1 2 3 4)) => nil
+    (-same-items? '((a . 1) (b . 2)) '((a . 1) (b . 2))) => t
+    (-same-items? '(1 2 3) '(2 3 1)) => t))
 
 (def-example-group "Partitioning" nil
   (defexamples -split-at
@@ -263,11 +312,11 @@
     (-select-by-indices '(4 10 2 3 6) '("v" "e" "l" "o" "c" "i" "r" "a" "p" "t" "o" "r")) => '("c" "o" "l" "o" "r")
     (-select-by-indices '(2 1 0) '("a" "b" "c")) => '("c" "b" "a")
     (-select-by-indices '(0 1 2 0 1 3 3 1) '("f" "a" "r" "l")) => '("f" "a" "r" "f" "a" "l" "l" "a"))
-  
+
   (defexamples -grade-up
     (-grade-up '< '(3 1 4 2 1 3 3)) => '(1 4 3 0 5 6 2)
     (let ((l '(3 1 4 2 1 3 3))) (-select-by-indices (-grade-up '< l) l)) => '(1 1 2 3 3 3 4))
-  
+
   (defexamples -grade-down
     (-grade-down '< '(3 1 4 2 1 3 3)) => '(2 0 5 6 3 1 4)
     (let ((l '(3 1 4 2 1 3 3))) (-select-by-indices (-grade-down '< l) l)) => '(4 3 3 3 2 1 1)))
@@ -302,7 +351,14 @@
   (defexamples -cons*
     (-cons* 1 2) => '(1 . 2)
     (-cons* 1 2 3) => '(1 2 . 3)
-    (-cons* 1) => 1)
+    (-cons* 1) => 1
+    (-cons* 1 2 3 4) => '(1 2 3 . 4)
+    (apply '-cons* (number-sequence 1 10)) => '(1 2 3 4 5 6 7 8 9 . 10))
+
+  (defexamples -snoc
+    (-snoc '(1 2 3) 4) => '(1 2 3 4)
+    (-snoc '(1 2 3) 4 5 6) => '(1 2 3 4 5 6)
+    (-snoc '(1 2 3) '(4 5 6)) => '(1 2 3 (4 5 6)))
 
   (defexamples -interpose
     (-interpose "-" '()) => '()
@@ -347,19 +403,81 @@
     (-sort '< '(3 1 2)) => '(1 2 3)
     (-sort '> '(3 1 2)) => '(3 2 1)
     (--sort (< it other) '(3 1 2)) => '(1 2 3)
-    (let ((l '(3 1 2))) (-sort '> l) l) => '(3 1 2)))
+    (let ((l '(3 1 2))) (-sort '> l) l) => '(3 1 2))
+
+  (defexamples -list
+    (-list 1) => '(1)
+    (-list 1 2 3) => '(1 2 3)
+    (-list '(1 2 3) => '(1 2 3))
+    (-list '((1) (2)) => '((1) (2)))))
+
+(def-example-group "Tree operations" nil
+  (defexamples -tree-map
+    (-tree-map '1+ '(1 (2 3) (4 (5 6) 7))) => '(2 (3 4) (5 (6 7) 8))
+    (-tree-map '(lambda (x) (cons x (expt 2 x))) '(1 (2 3) 4)) => '((1 . 2) ((2 . 4) (3 . 8)) (4 . 16))
+    (--tree-map (length it) '("<body>" ("<p>" "text" "</p>") "</body>")) => '(6 (3 4 4) 7)
+    (--tree-map 1 '(1 2 (3 4) (5 6))) => '(1 1 (1 1) (1 1))
+    (--tree-map (cdr it) '((1 . 2) (3 . 4) (5 . 6))) => '(2 4 6))
+
+  (defexamples -tree-reduce
+    (-tree-reduce '+ '(1 (2 3) (4 5))) => 15
+    (-tree-reduce 'concat '("strings" (" on" " various") ((" levels")))) => "strings on various levels"
+    (--tree-reduce (cond
+                    ((stringp it) (concat it " " acc))
+                    (t (let ((sn (symbol-name it))) (concat "<" sn ">" acc "</" sn ">"))))
+                   '(body (p "some words") (div "more" (b "bold") "words"))) => "<body><p>some words</p> <div>more <b>bold</b> words</div></body>")
+
+  (defexamples -tree-reduce-from
+    (-tree-reduce-from '+ 1 '(1 (1 1) ((1)))) => 8
+    (--tree-reduce-from (-concat acc (list it)) nil '(1 (2 3 (4 5)) (6 7))) => '((7 6) ((5 4) 3 2) 1))
+
+  (defexamples -tree-mapreduce
+    (-tree-mapreduce 'list 'append '(1 (2 (3 4) (5 6)) (7 (8 9)))) => '(1 2 3 4 5 6 7 8 9)
+    (--tree-mapreduce 1 (+ it acc) '(1 (2 (4 9) (2 1)) (7 (4 3)))) => 9
+    (--tree-mapreduce 0 (max acc (1+ it)) '(1 (2 (4 9) (2 1)) (7 (4 3)))) => 3
+    (--tree-mapreduce (-value-to-list it)
+                      (-concat it acc)
+                      '((1 . 2) (3 . 4) (5 (6 7) 8)))
+    => '(1 2 3 4 5 6 7 8)
+    (--tree-mapreduce (if (-cons-pair? it) (cdr it) it)
+                      (concat it " " acc)
+                      '("foo" (bar . "bar") ((baz . "baz")) "quux" (qwop . "qwop")))
+    => "foo bar baz quux qwop"
+    (--tree-mapreduce (if (-cons-pair? it) (list (cdr it)) nil)
+                      (append it acc)
+                      '((elips-mode (foo (bar . booze)) (baz . qux)) (c-mode (foo . bla) (bum . bam))))
+    => '(booze qux bla bam))
+
+  (defexamples -tree-mapreduce-from
+    (-tree-mapreduce-from 'identity '* 1 '(1 (2 (3 4) (5 6)) (7 (8 9)))) => 362880
+    (--tree-mapreduce-from (+ it it) (cons it acc) nil '(1 (2 (4 9) (2 1)) (7 (4 3)))) => '(2 (4 (8 18) (4 2)) (14 (8 6)))
+    (concat "{" (--tree-mapreduce-from
+                 (cond
+                  ((-cons-pair? it)
+                   (concat (symbol-name (car it)) " -> " (symbol-name (cdr it))))
+                  (t (concat (symbol-name it) " : {")))
+                 (concat it (unless (or (equal acc "}")
+                                        (equal (substring it (1- (length it))) "{"))
+                              ", ") acc)
+                 "}"
+                 '((elips-mode (foo (bar . booze)) (baz . qux)) (c-mode (foo . bla) (bum . bam)))))
+    => "{elips-mode : {foo : {bar -> booze}, baz -> qux}, c-mode : {foo -> bla, bum -> bam}}")
+
+  (defexamples -clone
+    (let* ((a '(1 2 3)) (b (-clone a))) (nreverse a) b) => '(1 2 3)))
 
 (def-example-group "Threading macros" nil
   (defexamples ->
-    (-> "Abc") => "Abc"
-    (-> "Abc" (concat "def")) => "Abcdef"
-    (-> "Abc" (concat "def") (concat "ghi")) => "Abcdefghi"
+    (-> '(2 3 5)) => '(2 3 5)
+    (-> '(2 3 5) (append '(8 13))) => '(2 3 5 8 13)
+    (-> '(2 3 5) (append '(8 13)) (-slice 1 -1)) => '(3 5 8)
     (-> 5 square) => 25
     (-> 5 (+ 3) square) => 64)
 
   (defexamples ->>
-    (->> "Abc" (concat "def")) => "defAbc"
-    (->> "Abc" (concat "def") (concat "ghi")) => "ghidefAbc"
+    (->> '(1 2 3) (-map 'square)) => '(1 4 9)
+    (->> '(1 2 3) (-map 'square) (-remove 'even?)) => '(1 9)
+    (->> '(1 2 3) (-map 'square) (-reduce '+)) => 14
     (->> 5 (- 8)) => 3
     (->> 5 (- 3) square) => 4)
 

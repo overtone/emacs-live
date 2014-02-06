@@ -1,9 +1,11 @@
 ;;; ox-md.el --- Markdown Back-End for Org Export Engine
 
-;; Copyright (C) 2012, 2013  Free Software Foundation, Inc.
+;; Copyright (C) 2012-2014 Free Software Foundation, Inc.
 
 ;; Author: Nicolas Goaziou <n.goaziou@gmail.com>
 ;; Keywords: org, wp, markdown
+
+;; This file is part of GNU Emacs.
 
 ;; GNU Emacs is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -20,12 +22,9 @@
 
 ;;; Commentary:
 
-;; This library implements a Markdown back-end (vanilla flavour) for
-;; Org exporter, based on `html' back-end.
-;;
-;; It provides two commands for export, depending on the desired
-;; output: `org-md-export-as-markdown' (temporary buffer) and
-;; `org-md-export-to-markdown' ("md" file).
+;; This library implements a Markdown back-end (vanilla flavor) for
+;; Org exporter, based on `html' back-end.  See Org manual for more
+;; information.
 
 ;;; Code:
 
@@ -245,7 +244,8 @@ a communication channel."
 	      (off "[ ] "))
 	    (let ((tag (org-element-property :tag item)))
 	      (and tag (format "**%s:** "(org-export-data tag info))))
-	    (org-trim (replace-regexp-in-string "^" "    " contents)))))
+	    (and contents
+		 (org-trim (replace-regexp-in-string "^" "    " contents))))))
 
 
 ;;;; Line Break
@@ -438,21 +438,8 @@ Export is done in a buffer named \"*Org MD Export*\", which will
 be displayed when `org-export-show-temporary-export-buffer' is
 non-nil."
   (interactive)
-  (if async
-      (org-export-async-start
-	  (lambda (output)
-	    (with-current-buffer (get-buffer-create "*Org MD Export*")
-	      (erase-buffer)
-	      (insert output)
-	      (goto-char (point-min))
-	      (text-mode)
-	      (org-export-add-to-stack (current-buffer) 'md)))
-	`(org-export-as 'md ,subtreep ,visible-only))
-    (let ((outbuf (org-export-to-buffer
-		   'md "*Org MD Export*" subtreep visible-only)))
-      (with-current-buffer outbuf (text-mode))
-      (when org-export-show-temporary-export-buffer
-	(switch-to-buffer-other-window outbuf)))))
+  (org-export-to-buffer 'md "*Org MD Export*"
+    async subtreep visible-only nil nil (lambda () (text-mode))))
 
 ;;;###autoload
 (defun org-md-convert-region-to-md ()
@@ -487,12 +474,7 @@ contents of hidden elements.
 Return output file's name."
   (interactive)
   (let ((outfile (org-export-output-file-name ".md" subtreep)))
-    (if async
-	(org-export-async-start
-	    (lambda (f) (org-export-add-to-stack f 'md))
-	  `(expand-file-name
-	    (org-export-to-file 'md ,outfile ,subtreep ,visible-only)))
-      (org-export-to-file 'md outfile subtreep visible-only))))
+    (org-export-to-file 'md outfile async subtreep visible-only)))
 
 
 (provide 'ox-md)

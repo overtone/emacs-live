@@ -99,7 +99,8 @@
 (defmethod constructor :static ((repo gh-repos-repo) newname &rest args)
   (when (consp newname)
     (setq newname (concat (car newname) "/" (cdr newname))))
-  (let ((obj (apply 'call-next-method gh-repos-repo newname args)))
+  (let ((obj (apply 'call-next-method gh-repos-repo newname args))
+        login)
     (when (and (not (slot-boundp obj 'name))
                (not (oref obj owner)))
       (with-slots (name owner)
@@ -110,7 +111,7 @@
           (setq login (match-string 1 newname)
                 name  (match-string 2 newname)
                 owner (gh-user login :login login))
-          (aset obj object-name name))))
+          (oset obj object-name name))))
     obj))
 
 (defmethod gh-object-read-into ((repo gh-repos-repo) data)
@@ -303,10 +304,11 @@
     (when recursive
       (let ((forks (oref resp :data)))
         (oset resp :data
-              (nconc forks
-                     (mapcan (lambda (f)
-                               (oref (gh-repos-forks-list api f t) data))
-                             forks)))))
+              (apply 'nconc forks
+                     (mapcar
+                      (lambda (f)
+                        (oref (gh-repos-forks-list api f t) data))
+                      forks)))))
     resp))
 
 (defmethod gh-repos-fork ((api gh-repos-api) repo &optional org)

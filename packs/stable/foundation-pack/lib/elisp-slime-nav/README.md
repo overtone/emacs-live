@@ -39,7 +39,7 @@ code such as the following to your emacs startup file:
 
 ``` lisp
 (dolist (hook '(emacs-lisp-mode-hook ielm-mode-hook))
-  (add-hook hook 'elisp-slime-nav-mode))
+  (add-hook hook 'turn-on-elisp-slime-nav-mode))
 ```
 
 

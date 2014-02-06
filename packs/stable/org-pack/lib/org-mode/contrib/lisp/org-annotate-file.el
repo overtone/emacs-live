@@ -1,6 +1,6 @@
 ;;; org-annotate-file.el --- Annotate a file with org syntax
 
-;; Copyright (C) 2008-2013 Philip Jackson
+;; Copyright (C) 2008-2014 Philip Jackson
 
 ;; Author: Philip Jackson <phil@shellarchive.co.uk>
 ;; Version: 0.2

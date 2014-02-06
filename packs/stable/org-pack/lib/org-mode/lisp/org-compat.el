@@ -1,6 +1,6 @@
 ;;; org-compat.el --- Compatibility code for Org-mode
 
-;; Copyright (C) 2004-2013 Free Software Foundation, Inc.
+;; Copyright (C) 2004-2014 Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -113,17 +113,40 @@ any other entries, and any resulting duplicates will be removed entirely."
 
 ;;;; Emacs/XEmacs compatibility
 
-(defun org-defvaralias (new-alias base-variable &optional docstring)
-  "Compatibility function for defvaralias.
-Don't do the aliasing when `defvaralias' is not bound."
-  (declare (indent 1))
-  (when (fboundp 'defvaralias)
-    (defvaralias new-alias base-variable docstring)))
-
 (eval-and-compile
+  (defun org-defvaralias (new-alias base-variable &optional docstring)
+    "Compatibility function for defvaralias.
+Don't do the aliasing when `defvaralias' is not bound."
+    (declare (indent 1))
+    (when (fboundp 'defvaralias)
+      (defvaralias new-alias base-variable docstring)))
+
   (when (and (not (boundp 'user-emacs-directory))
 	     (boundp 'user-init-directory))
     (org-defvaralias 'user-emacs-directory 'user-init-directory)))
+
+(when (featurep 'xemacs)
+  (defadvice custom-handle-keyword
+    (around org-custom-handle-keyword
+	    activate preactivate)
+    "Remove custom keywords not recognized to avoid producing an error."
+    (cond
+     ((eq (ad-get-arg 1) :package-version))
+     (t ad-do-it)))
+  (defadvice define-obsolete-variable-alias
+    (around org-define-obsolete-variable-alias
+	    (obsolete-name current-name &optional when docstring)
+	    activate preactivate)
+    "Declare arguments defined in later versions of Emacs."
+    ad-do-it)
+  (defadvice define-obsolete-function-alias
+    (around org-define-obsolete-function-alias
+	    (obsolete-name current-name &optional when docstring)
+	    activate preactivate)
+    "Declare arguments defined in later versions of Emacs."
+    ad-do-it)
+  (defvar customize-package-emacs-version-alist nil)
+  (defvar temporary-file-directory (temp-directory)))
 
 ;; Keys
 (defconst org-xemacs-key-equivalents
@@ -167,10 +190,12 @@ If DELETE is non-nil, delete all those overlays."
     found))
 
 (defun org-get-x-clipboard (value)
-  "Get the value of the x clipboard, compatible with XEmacs, and GNU Emacs 21."
-  (if (eq window-system 'x)
-      (let ((x (org-get-x-clipboard-compat value)))
-	(if x (org-no-properties x)))))
+  "Get the value of the x or Windows clipboard, compatible with XEmacs, and GNU Emacs 21."
+  (cond ((eq window-system 'x)
+	 (let ((x (org-get-x-clipboard-compat value)))
+	   (if x (org-no-properties x))))
+	((and (eq window-system 'w32) (fboundp 'w32-get-clipboard-data))
+	 (w32-get-clipboard-data))))
 
 (defsubst org-decompose-region (beg end)
   "Decompose from BEG to END."
@@ -312,10 +337,11 @@ Works on both Emacs and XEmacs."
       (org-xemacs-without-invisibility (indent-line-to column))
     (indent-line-to column)))
 
-(defun org-move-to-column (column &optional force buffer)
-  (if (featurep 'xemacs)
-      (org-xemacs-without-invisibility (move-to-column column force buffer))
-    (move-to-column column force)))
+(defun org-move-to-column (column &optional force buffer ignore-invisible)
+  (let ((buffer-invisibility-spec ignore-invisible))
+    (if (featurep 'xemacs)
+	(org-xemacs-without-invisibility (move-to-column column force buffer))
+      (move-to-column column force))))
 
 (defun org-get-x-clipboard-compat (value)
   "Get the clipboard value on XEmacs or Emacs 21."
@@ -390,11 +416,11 @@ TIME defaults to the current time."
   "Suppress popup windows.
 Let-bind some variables to nil around BODY to achieve the desired
 effect, which variables to use depends on the Emacs version."
-    (if (org-version-check "24.2.50" "" :predicate)
-	`(let (pop-up-frames display-buffer-alist)
-	   ,@body)
-      `(let (pop-up-frames special-display-buffer-names special-display-regexps special-display-function)
-	 ,@body)))
+  (if (org-version-check "24.2.50" "" :predicate)
+      `(let (pop-up-frames display-buffer-alist)
+	 ,@body)
+    `(let (pop-up-frames special-display-buffer-names special-display-regexps special-display-function)
+       ,@body)))
 
 (if (fboundp 'string-match-p)
     (defalias 'org-string-match-p 'string-match-p)

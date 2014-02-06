@@ -1,6 +1,6 @@
 ;;; org-collector --- collect properties into tables
 
-;; Copyright (C) 2008-2013 Free Software Foundation, Inc.
+;; Copyright (C) 2008-2014 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte <schulte dot eric at gmail dot com>
 ;; Keywords: outlines, hypermedia, calendar, wp, experimentation,

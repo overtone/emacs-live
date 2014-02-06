@@ -1,6 +1,6 @@
 ;;; ob-ditaa.el --- org-babel functions for ditaa evaluation
 
-;; Copyright (C) 2009-2013 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2014 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;; Keywords: literate programming, reproducible research
@@ -58,6 +58,11 @@
   :group 'org-babel
   :type 'string)
 
+(defcustom org-babel-ditaa-java-cmd "java"
+  "Java executable to use when evaluating ditaa blocks."
+  :group 'org-babel
+  :type 'string)
+
 (defcustom org-ditaa-eps-jar-path
   (expand-file-name "DitaaEps.jar" (file-name-directory org-ditaa-jar-path))
   "Path to the DitaaEps.jar executable."
@@ -77,16 +82,16 @@ Do not leave leading or trailing spaces in this string."
   "Execute a block of Ditaa code with org-babel.
 This function is called by `org-babel-execute-src-block'."
   (let* ((result-params (split-string (or (cdr (assoc :results params)) "")))
-	 (out-file ((lambda (el)
-		      (or el
-			  (error
-			   "ditaa code block requires :file header argument")))
-		    (cdr (assoc :file params))))
+	 (out-file (let ((el (cdr (assoc :file params))))
+                     (or el
+                         (error
+                          "ditaa code block requires :file header argument"))))
 	 (cmdline (cdr (assoc :cmdline params)))
 	 (java (cdr (assoc :java params)))
 	 (in-file (org-babel-temp-file "ditaa-"))
 	 (eps (cdr (assoc :eps params)))
-	 (cmd (concat "java " java " " org-ditaa-jar-option " "
+	 (cmd (concat org-babel-ditaa-java-cmd
+		      " " java " " org-ditaa-jar-option " "
 		      (shell-quote-argument
 		       (expand-file-name
 			(if eps org-ditaa-eps-jar-path org-ditaa-jar-path)))

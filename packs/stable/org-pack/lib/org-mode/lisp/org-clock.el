@@ -1,6 +1,6 @@
 ;;; org-clock.el --- The time clocking code for Org-mode
 
-;; Copyright (C) 2004-2013 Free Software Foundation, Inc.
+;; Copyright (C) 2004-2014 Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -159,7 +159,7 @@ state to switch it to."
 This is the string shown in the mode line when a clock is running.
 The function is called with point at the beginning of the headline."
   :group 'org-clock
-  :type 'function)
+  :type '(choice (const nil) (function)))
 
 (defcustom org-clock-string-limit 0
   "Maximum length of clock strings in the mode line.  0 means no limit."
@@ -263,6 +263,7 @@ The function or program will be called with the notification
 string as argument."
   :group 'org-clock
   :type '(choice
+	  (const nil)
 	  (string :tag "Program")
 	  (function :tag "Function")))
 
@@ -361,13 +362,13 @@ play with them."
   "Format string for the total time cells."
   :group 'org-clock
   :version "24.1"
-  :type 'boolean)
+  :type 'string)
 
 (defcustom org-clock-file-time-cell-format "*%s*"
   "Format string for the file time cells."
   :group 'org-clock
   :version "24.1"
-  :type 'boolean)
+  :type 'string)
 
 (defcustom org-clock-clocked-in-display 'mode-line
   "When clocked in for a task, org-mode can display the current
@@ -423,7 +424,7 @@ to add an effort property.")
   "Hook run when stopping the current clock.")
 
 (defvar org-clock-cancel-hook nil
-  "Hook run when cancelling the current clock.")
+  "Hook run when canceling the current clock.")
 (defvar org-clock-goto-hook nil
   "Hook run when selecting the currently clocked-in entry.")
 (defvar org-clock-has-been-used nil
@@ -440,7 +441,7 @@ to add an effort property.")
 (defvar org-clock-start-time "")
 
 (defvar org-clock-leftover-time nil
-  "If non-nil, user cancelled a clock; this is when leftover time started.")
+  "If non-nil, user canceled a clock; this is when leftover time started.")
 
 (defvar org-clock-effort ""
   "Effort estimate of the currently clocking task.")
@@ -666,7 +667,7 @@ previous clocking intervals."
 VALUE can be a number of minutes, or a string with format hh:mm or mm.
 When the string starts with a + or a - sign, the current value of the effort
 property will be changed by that amount.  If the effort value is expressed
-as an `org-effort-durations' (e.g. \"3h\"), the modificied value will be
+as an `org-effort-durations' (e.g. \"3h\"), the modified value will be
 converted to a hh:mm duration.
 
 This command will update the \"Effort\" property of the currently
@@ -1113,6 +1114,7 @@ so long."
 
 (defvar org-clock-current-task nil "Task currently clocked in.")
 (defvar org-clock-out-time nil) ; store the time of the last clock-out
+(defvar org--msg-extra)
 
 ;;;###autoload
 (defun org-clock-in (&optional select start-time)
@@ -1132,7 +1134,7 @@ make this the default behavior.)"
   (catch 'abort
     (let ((interrupting (and (not org-clock-resolving-clocks-due-to-idleness)
 			     (org-clocking-p)))
-	  ts selected-task target-pos (msg-extra "")
+	  ts selected-task target-pos (org--msg-extra "")
 	  (leftover (and (not org-clock-resolving-clocks)
 			 org-clock-leftover-time)))
 
@@ -1304,7 +1306,7 @@ make this the default behavior.)"
 	      (setq org-clock-idle-timer nil))
 	    (setq org-clock-idle-timer
 		  (run-with-timer 60 60 'org-resolve-clocks-if-idle))
-	    (message "Clock starts at %s - %s" ts msg-extra)
+	    (message "Clock starts at %s - %s" ts org--msg-extra)
 	    (run-hooks 'org-clock-in-hook)))))))
 
 ;;;###autoload
@@ -1350,7 +1352,6 @@ for a todo state to switch to, overriding the existing value
     (org-back-to-heading t)
     (move-marker org-clock-default-task (point))))
 
-(defvar msg-extra)
 (defun org-clock-get-sum-start ()
   "Return the time from which clock times should be counted.
 This is for the currently running clock as it is displayed
@@ -1363,10 +1364,10 @@ decides which time to use."
 	(lr (org-entry-get nil "LAST_REPEAT")))
     (cond
      ((equal cmt "current")
-      (setq msg-extra "showing time in current clock instance")
+      (setq org--msg-extra "showing time in current clock instance")
       (current-time))
      ((equal cmt "today")
-      (setq msg-extra "showing today's task time.")
+      (setq org--msg-extra "showing today's task time.")
       (let* ((dt (decode-time (current-time))))
 	(setq dt (append (list 0 0 0) (nthcdr 3 dt)))
 	(if org-extend-today-until
@@ -1375,12 +1376,12 @@ decides which time to use."
      ((or (equal cmt "all")
 	  (and (or (not cmt) (equal cmt "auto"))
 	       (not lr)))
-      (setq msg-extra "showing entire task time.")
+      (setq org--msg-extra "showing entire task time.")
       nil)
      ((or (equal cmt "repeat")
 	  (and (or (not cmt) (equal cmt "auto"))
 	       lr))
-      (setq msg-extra "showing task time since last repeat.")
+      (setq org--msg-extra "showing task time since last repeat.")
       (if (not lr)
 	  nil
 	(org-time-string-to-time lr)))
@@ -1667,6 +1668,12 @@ Optional argument N tells to change by that many units."
   (message "Clock canceled")
   (run-hooks 'org-clock-cancel-hook))
 
+(defcustom org-clock-goto-before-context 2
+  "Number of lines of context to display before currently clocked-in entry.
+This applies when using `org-clock-goto'."
+  :group 'org-clock
+  :type 'integer)
+
 ;;;###autoload
 (defun org-clock-goto (&optional select)
   "Go to the currently clocked-in entry, or to the most recently clocked one.
@@ -1690,7 +1697,7 @@ With prefix arg SELECT, offer recently clocked tasks for selection."
     (org-show-entry)
     (org-back-to-heading t)
     (org-cycle-hide-drawers 'children)
-    (recenter)
+    (recenter org-clock-goto-before-context)
     (org-reveal)
     (if recent
 	(message "No running clock, this is the most recently clocked task"))
@@ -1864,6 +1871,7 @@ will be easy to remove."
       (overlay-put ov 'end-glyph (make-glyph tx)))
     (push ov org-clock-overlays)))
 
+;;;###autoload
 (defun org-clock-remove-overlays (&optional beg end noremove)
   "Remove the occur highlights from the buffer.
 BEG and END are ignored.  If NOREMOVE is nil, remove this function
@@ -2136,6 +2144,7 @@ If you can combine both, the month starting day will have priority."
    ((= n 3) "3rd")
    ((= n 4) "4th")))
 
+;;;###autoload
 (defun org-clocktable-shift (dir n)
   "Try to shift the :block date of the clocktable at point.
 Point must be in the #+BEGIN: line of a clocktable, or this function
@@ -2745,6 +2754,7 @@ This function is made for clock tables."
 (defvar org-clock-loaded nil
   "Was the clock file loaded?")
 
+;;;###autoload
 (defun org-clock-update-time-maybe ()
   "If this is a CLOCK line, update it and return t.
 Otherwise, return nil."

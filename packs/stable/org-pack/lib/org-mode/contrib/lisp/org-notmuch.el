@@ -1,6 +1,6 @@
 ;;; org-notmuch.el --- Support for links to notmuch messages from within Org-mode
 
-;; Copyright (C) 2010-2013  Matthieu Lemerre
+;; Copyright (C) 2010-2014  Matthieu Lemerre
 
 ;; Author: Matthieu Lemerre <racin@free.fr>
 ;; Keywords: outlines, hypermedia, calendar, wp

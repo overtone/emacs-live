@@ -1,6 +1,6 @@
 ;;; ob.el --- working with code blocks in org-mode
 
-;; Copyright (C) 2009-2013 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2014 Free Software Foundation, Inc.
 
 ;; Authors: Eric Schulte
 ;; Keywords: literate programming, reproducible research
@@ -22,6 +22,8 @@
 ;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
 ;;; Code:
+(require 'org-macs)
+(require 'org-compat)
 (require 'ob-eval)
 (require 'ob-core)
 (require 'ob-comint)

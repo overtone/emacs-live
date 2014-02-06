@@ -50,6 +50,28 @@ write (*, '(3f5.2)'), s
 write (*, '(2f5.2)'), s
 #+end_src
 
+* matrix
+  :PROPERTIES:
+  :ID:       3f73ab19-d25a-428d-8c26-e8c6aa933976
+  :END:
+Real matrix as input
+#+name: fortran-input-matrix1
+| 0.0 | 42.0 |
+| 0.0 |  0.0 |
+| 0.0 |  0.0 |
+
+#+name: fortran-input-matrix2
+| 0.0 | 0.0 | 0.0 |
+| 0.0 | 0.0 | 42.0 |
+
+#+begin_src fortran :var s=fortran-input-matrix1 :results silent
+write (*, '(i2)'), nint(s(1,2))
+#+end_src
+
+#+begin_src fortran :var s=fortran-input-matrix2 :results silent
+write (*, '(i2)'), nint(s(2,3))
+#+end_src
+
 * failing
   :PROPERTIES:
   :ID:       891ead4a-f87a-473c-9ae0-1cf348bcd04f

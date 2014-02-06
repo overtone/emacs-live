@@ -11,6 +11,8 @@
 (require 'dash)
 (live-add-pack-lib "s")
 (require 's)
+(live-add-pack-lib "epl")
+(require 'epl)
 (live-add-pack-lib "pkg-info")
 (require 'pkg-info)
 

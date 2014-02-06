@@ -1,6 +1,6 @@
 ;;; org-interactive-query.el --- Interactive modification of agenda query
 ;;
-;; Copyright 2007-2013 Free Software Foundation, Inc.
+;; Copyright 2007-2014 Free Software Foundation, Inc.
 ;;
 ;; Author: Christopher League <league at contrapunctus dot net>
 ;; Version: 1.0

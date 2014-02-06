@@ -560,6 +560,9 @@ whitespace. Keep point at same relative point in the line."
 ;; We need to make an adjustment to hideshow to work properly with AS syntax.
 (add-to-list 'hs-special-modes-alist '(actionscript-mode "{" "}" "/[*/]" nil hs-c-like-adjust-block-beginning))
 
+;;;###autoload
+(add-to-list 'auto-mode-alist '("\\.as$" . actionscript-mode))
+
 (provide 'actionscript-mode)
 
 ;; For testing

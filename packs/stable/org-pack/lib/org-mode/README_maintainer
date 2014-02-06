@@ -76,7 +76,30 @@ From there do
 to create the .tar.gz and .zip files, the documentation, and to
 upload everything at the right place.
 
-* Synchonization with Emacs
+* Available Org's builds on the server
+
+There are two cron tasks on the server: one that builds the ELPA
+packages and one that builds org-latest.tar.gz and org-latest.zip.
+
+ELPA packages are built from the *maint* branch.  One ELPA package
+contains Org's core, another one called "org-plus-contrib" contains
+Org and contributed libraries.
+
+org-latest* snapshots are built from the *master* branch.
+
+* Synchronization with Emacs
+
+** Updating etc/ORG-NEWS
+
+Latest changes in Emacs are described in Emacs =etc/NEWS=, and latest
+changes in major Emacs packages are described in =etc/ORG-NEWS=. 
+
+If a major release is meant to be merged with the Emacs trunk (as it
+always should), you need to update Org's =etc/ORG-NEWS= file so that
+you can merge it with that of Emacs.  There is one top-level section
+for each release that is merged with Emacs.
+
+** Merging with Emacs trunk branch
 
 This is still a significant headache.  Some hand work is needed here.
 
@@ -113,10 +136,8 @@ So the way I have been doing things with Emacs is this:
    version in Emacs starts diverging from my own.
 
    Careful: Copy /org.texi/ and /orgcard.tex/ into the right places,
-   and also copy the lisp files with *two exceptions*: Do *not* copy
-   /org-colview-xemacs.el/ and /org-loaddefs.el/.  The former does not
-   belong in Emacs.  And the latter would actually be harmful because
-   Emacs generates its own autoloads.
+   and also copy the lisp files with *one exception*: Do *not* copy
+   /org-loaddefs.el/, Emacs generates its own autoloads.
 
 4. Generate the ChangeLog entries
 

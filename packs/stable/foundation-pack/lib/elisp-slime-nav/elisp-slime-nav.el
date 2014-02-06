@@ -21,7 +21,7 @@
 ;;
 ;;   (require 'elisp-slime-nav) ;; optional if installed via package.el
 ;;   (dolist (hook '(emacs-lisp-mode-hook ielm-mode-hook))
-;;     (add-hook hook 'elisp-slime-nav-mode))
+;;     (add-hook hook 'turn-on-elisp-slime-nav-mode))
 ;;
 ;; Known issues:
 ;;
@@ -47,6 +47,11 @@
   "Enable Slime-style navigation of elisp symbols using M-. and M-,"
   nil " SliNav" elisp-slime-nav-mode-map)
 
+;;;###autoload
+(defun turn-on-elisp-slime-nav-mode ()
+  "Explicitly enable `elisp-slime-nav-mode'."
+  (elisp-slime-nav-mode 1))
+
 (defun elisp-slime-nav--all-navigable-symbol-names ()
   "Return a list of strings for the symbols to which navigation is possible."
   (cl-loop for x being the symbols
@@ -58,7 +63,7 @@
 If `current-prefix-arg' is not nil, the user is prompted for the symbol."
   (let* ((sym-at-point (symbol-at-point))
            (at-point (and sym-at-point (symbol-name sym-at-point))))
-      (if current-prefix-arg
+      (if (or current-prefix-arg (null at-point))
           (completing-read "Symbol: "
                            (elisp-slime-nav--all-navigable-symbol-names)
                            nil t at-point)
@@ -66,9 +71,12 @@ If `current-prefix-arg' is not nil, the user is prompted for the symbol."
 
 ;;;###autoload
 (defun elisp-slime-nav-find-elisp-thing-at-point (sym-name)
-  "Jump to the elisp thing at point, be it a function, variable, library or face.
-With a prefix arg, prompt for the symbol to jump to.
-Argument SYM-NAME thing to find."
+  "Find the elisp thing at point, be it a function, variable, library or face.
+
+With a prefix arg, or if there is no thing at point, prompt for
+the symbol to jump to.
+
+Argument SYM-NAME is the thing to find."
   (interactive (list (elisp-slime-nav--read-symbol-at-point)))
   (when sym-name
     (let ((sym (intern sym-name)))
@@ -89,9 +97,13 @@ Argument SYM-NAME thing to find."
 ;;;###autoload
 (defun elisp-slime-nav-describe-elisp-thing-at-point (sym-name)
   "Display the full documentation of the elisp thing at point.
+
 The named subject may be a function, variable, library or face.
-With a prefix arg, prompt for the symbol to jump to.
-Argument SYM-NAME thing to find."
+
+With a prefix arg, or if there is not \"thing\" at point, prompt
+for the symbol to jump to.
+
+Argument SYM-NAME is the thing to find."
   (interactive (list (elisp-slime-nav--read-symbol-at-point)))
   (help-xref-interned (intern sym-name)))
 

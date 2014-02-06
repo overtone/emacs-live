@@ -1,6 +1,6 @@
 ;;; ox-groff.el --- Groff Back-End for Org Export Engine
 
-;; Copyright (C) 2011-2013  Free Software Foundation, Inc.
+;; Copyright (C) 2011-2014  Free Software Foundation, Inc.
 
 ;; Author: Nicolas Goaziou <n.goaziou at gmail dot com>
 ;; Author: Luis R Anaya <papoanaya aroba hot mail punto com>
@@ -1855,20 +1855,11 @@ file-local settings.
 
 Return output file's name."
   (interactive)
-  (let ((outfile (org-export-output-file-name ".groff" subtreep)))
-    (if async
-	(org-export-async-start
-	    (lambda (f) (org-export-add-to-stack f 'groff))
-	  (let ((org-groff-registered-references nil)
-		(org-groff-special-content nil))
-	    `(expand-file-name
-	      (org-export-to-file
-	       'groff ,outfile ,subtreep ,visible-only ,body-only
-	       ',ext-plist))))
-      (let ((org-groff-registered-references nil)
-	    (org-groff-special-content nil))
-	(org-export-to-file
-	 'groff outfile subtreep visible-only body-only ext-plist)))))
+  (let ((outfile (org-export-output-file-name ".groff" subtreep))
+	(org-groff-registered-references nil)
+	(org-groff-special-content nil))
+    (org-export-to-file 'groff outfile
+      async subtreep visible-only body-only ext-plist)))
 
 (defun org-groff-export-to-pdf
   (&optional async subtreep visible-only body-only ext-plist)
@@ -1896,18 +1887,10 @@ file-local settings.
 
 Return PDF file's name."
   (interactive)
-  (if async
-      (let ((outfile (org-export-output-file-name ".groff" subtreep)))
-	(org-export-async-start
-	    (lambda (f) (org-export-add-to-stack f 'groff))
-	  `(expand-file-name
-	    (org-groff-compile
-	     (org-export-to-file
-	      'groff ,outfile ,subtreep ,visible-only ,body-only
-	      ',ext-plist)))))
-    (org-groff-compile
-     (org-groff-export-to-groff
-      nil subtreep visible-only body-only ext-plist))))
+  (let ((outfile (org-export-output-file-name ".groff" subtreep)))
+    (org-export-to-file 'groff outfile
+      async subtreep visible-only body-only ext-plist
+      (lambda (file) (org-groff-compile file)))))
 
 (defun org-groff-compile (file)
   "Compile a Groff file.

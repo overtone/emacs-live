@@ -1,6 +1,6 @@
 ;;; org-screen.el --- Integreate Org-mode with screen.
 
-;; Copyright (c) 2008-2013 Andrew Hyatt
+;; Copyright (c) 2008-2014 Andrew Hyatt
 ;;
 ;; Author: Andrew Hyatt <ahyatt at gmail dot com>
 ;; Maintainer: Carsten Dominik <carsten at orgmode dot org>

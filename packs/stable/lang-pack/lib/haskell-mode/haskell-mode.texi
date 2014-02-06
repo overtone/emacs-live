@@ -1,0 +1,435 @@
+\input texinfo          @c -*-texinfo-*-
+@c %**start of header
+@setfilename haskell-mode.info
+@documentencoding UTF-8
+@settitle Haskell Mode @@VERSION@@
+@c %**end of header
+
+@dircategory Emacs
+@direntry
+* Haskell Mode: (haskell-mode).             Haskell Development Environment for Emacs(en)
+@end direntry
+
+@copying
+This manual is for Haskell mode, version @@GIT_VERSION@@
+
+Copyright @copyright{} 2013 Haskell Mode contributors.
+
+@quotation
+Permission is granted to copy, distribute and/or modify this document under the terms of the @uref{http://www.gnu.org/licenses/fdl.html,GNU Free Documentation License}, Version 1.3 or any later version published by the Free Software Foundation; with no Invariant Sections, no Front-Cover Texts and no Back-Cover Texts.
+@end quotation
+@end copying
+
+@iftex
+@titlepage
+@title Haskell Mode
+@subtitle Haskell Development Environment for Emacs
+
+@page
+@vskip 0pt plus 1filll
+@insertcopying
+@end titlepage
+
+@contents
+@end iftex
+
+@ifhtml
+@titlepage
+@title Haskell Mode
+@subtitle Haskell Development Environment for Emacs
+
+@end titlepage
+@insertcopying
+@end ifhtml
+
+@ifnottex
+@node Top
+@top Haskell Mode
+
+Haskell Mode is an Haskell development Environment for GNU Emacs version 23 or later.  It provides syntax-based indentation, font locking, editing cabal files, and supports running an inferior Haskell interpreter (e.g. GHCi).
+
+@end ifnottex
+
+@menu
+* Introduction::
+* Getting Help and Reporting Bugs::
+* Getting Started::
+* Editing Haskell Code::
+* Unicode::
+* Indentation::
+* Compilation::
+* haskell-decl-scan-mode::
+* inferior-haskell-mode::
+* haskell-interactive-mode::
+* haskell-cabal-mode::
+* Concept index::
+* Function index::
+* Variable index::
+
+@end menu
+
+@node Introduction
+@chapter Introduction
+
+@dfn{Haskell Mode} is a major mode providing a convenient environment for editing @uref{http://www.haskell.org,Haskell} programs.
+
+Some of its major features are:
+
+@itemize
+@item
+Syntax highlighting (font lock),
+@item
+automatic indentation,
+@item
+on-the-fly documentation,
+@item
+interaction with inferior GHCi/Hugs instance, and
+@item
+scanning declarations and placing them in a menu.
+@end itemize
+
+@node Getting Help and Reporting Bugs
+@chapter Getting Help and Reporting Bugs
+
+This Info manual is work in progress and incomplete. However, you can find more information at these locations in the meantime:
+
+@itemize
+@item
+@uref{https://github.com/haskell/haskell-mode,Haskell Mode's GitHub Home}
+@item
+@uref{http://www.haskell.org/haskellwiki/Haskell_mode_for_Emacs,Haskell Wiki Emacs Page}
+@end itemize
+
+If you have any questions or like to discuss something regarding Haskell Mode, please consider sending an email to the @uref{http://projects.haskell.org/cgi-bin/mailman/listinfo/haskellmode-emacs, Haskellmode-emacs mailing list}. The mailing list is also available on @uref{http://gmane.org/, Gmane} via the @uref{http://dir.gmane.org/gmane.comp.lang.haskell.emacs, gmane.comp.lang.haskell.emacs} newsgroup.
+
+If you have discovered a bug or wish to request a new feature, you can @uref{https://github.com/haskell/haskell-mode/issues/new, file a new issue} with Haskell Mode's issue tracker. When filing a bug, please state your currently used software version (@kbd{M-x haskell-version}, @kbd{M-x version}) and what steps to perform in order to reproduce the bug you're experiencing. Finally, if you happen to be proficient in @ref{Top,Emacs Lisp,,elisp} you are welcome to submit patches via @uref{https://help.github.com/articles/using-pull-requests, GitHub Pull Requests}.
+
+@node Getting Started
+@chapter Getting Started
+
+If you are reading this, you have most likely already managed to install Haskell Mode in one way or another. However, just for the record, the officially recommended way is to install Haskell Mode via the @uref{http://marmalade-repo.org/packages/haskell-mode,Marmalade package archive} which contains the latest stable release of Haskell Mode.
+
+@findex haskell-customize
+Most of Haskell Mode's settings are configurable via customizable variables (@pxref{Easy Customization,,,emacs}, for details). You can use @kbd{M-x haskell-customize} to browse the @code{haskell} customization sub-tree.
+
+@vindex haskell-mode-hook
+One of the important setting you should customize is the @code{haskell-mode-hook} variable (@pxref{Hooks,,,emacs}) which gets run right after the @code{haskell-mode} major mode is initialized for a buffer. You can customize @code{haskell-mode-hook} by @kbd{M-x customize-variable @key{RET} haskell-mode-hook}. It's highly recommended you set up indentation to match your preferences; @xref{Indentation}, for more details about the indentation modes included with Haskell Mode.
+
+@c TODO:
+@c provide basic instructions to get up and running with haskell-mode
+@c tell about the most important commands
+
+@node Editing Haskell Code
+@chapter Editing Haskell Code
+
+@findex haskell-mode
+@cindex @code{haskell-mode}
+
+@dfn{Haskell Mode} is actually a collection of so-called major modes@footnote{for more information about the concept of @dfn{major modes} @pxref{Major Modes,,,emacs}} one of which is called @code{haskell-mode}.  To avoid confusion, when referring to this package the name ``Haskell mode'' is written in a normal font, whereas when referring the major mode of the same name @code{haskell-mode} written with a dash in-between in a typewriter font is used.
+
+As one might guess, @code{haskell-mode} is the (programming language@footnote{@code{haskell-mode} is derived from @code{prog-mode}}) major mode for editing (non-literate) Haskell source code. @code{haskell-mode} is associated with the file extensions listed below by default@footnote{for more information about file associations, @pxref{Choosing Modes,,,emacs}}.
+
+@table @file
+@item .hs
+official file extension for (non-literate) Haskell 98/2010 files
+@item .hsc
+``almost-Haskell'' input file for the @uref{http://www.haskell.org/ghc/docs/latest/html/users_guide/hsc2hs.html,hsc2hs} pre-processor
+@item .cpphs
+input file for the @uref{http://projects.haskell.org/cpphs/,cpphs} pre-processor
+@end table
+
+@cindex literate programming
+@findex literate-haskell-mode
+
+@noindent
+The major mode @code{literate-haskell-mode} (which is derived from @code{haskell-mode} and thus transitively from @code{prog-mode}) provides support for @uref{http://www.haskell.org/haskellwiki/Literate_programming,literate Haskell programs} and is associated with the @file{.lhs} file extension by default.
+
+@code{literate-haskell-mode} supports Bird-style as well as @TeX{}-style literate Haskell files. The currently detected literate Haskell variant is shown in the mode line (@pxref{Mode Line,,,emacs}) as either @samp{LitHaskell/bird} or @samp{LitHaskell/tex}.
+
+@section Font Lock Support
+
+@code{haskell-mode} supports @dfn{syntax highlighting} via Emacs' Font Lock minor mode which should be enabled by default in current Emacsen. @xref{Font Lock,,,emacs}, for more information on how to control @code{font-lock-mode}.
+
+@node Unicode
+@chapter Unicode support
+
+@cindex Unicode
+
+See the Haskell Wiki's entry on @uref{http://www.haskell.org/haskellwiki/Unicode-symbols, Unicode Symbols} for general information about Unicode support in Haskell.
+
+As Emacs supports editing files containing Unicode out of the box, so does Haskell Mode. As an add-on, Haskell Mode includes the @code{haskell-unicode} input method which allows you to easily type a number of Unicode symbols that are useful when writing Haskell code; @xref{Input Methods,,,emacs}, for more details.
+
+To automatically enable the @code{haskell-unicode} input method in haskell-mode buffers use @kbd{M-x customize-variable @key{RET} haskell-mode-hook} or put the following code in your @file{.emacs} file:
+
+@lisp
+(add-hook 'haskell-mode-hook 'turn-on-haskell-unicode-input-method)
+@end lisp
+
+@noindent
+To temporarily enable this input method for a single buffer you can use @kbd{M-x turn-on-haskell-unicode-input-method}.
+
+When the @code{haskell-unicode} input method is active, you can simply type @samp{->} and it is immediately replaced with @samp{→}. Use @kbd{C-\} to toggle the input method. To see a table of all key sequences use @kbd{M-x describe-input-method @key{RET} haskell-unicode}. A sequence like @samp{<=} is ambiguous and can mean either @samp{⇐} or @samp{≤}. Typing it presents you with a choice. Type @kbd{1} or @kbd{2} to select an option or keep typing to use the default option.
+
+If you don't like the highlighting of partially matching tokens you can turn it off by setting @code{input-method-highlight-flag} to @code{nil} via @kbd{M-x customize-variable}.
+
+@node Indentation
+@chapter Indentation
+
+@cindex indentation
+@cindex layout rule
+@cindex off-side rule
+
+For general information about indentation support in GNU Emacs, @pxref{Indentation,,,emacs}.
+
+In Haskell, code indentation has semantic meaning as it defines the block structure@footnote{Haskell also supports braces and semicolons notation for conveying the block structure. However, most Haskell programs written by humans use indentation for block structuring.}.
+
+As GNU Emacs' default indentation function (i.e. @code{indent-relative}) is not designed for use with Haskell's layout rule, Haskell mode includes three different indentation minor modes with different trade-offs:
+
+@ftable @code
+
+@item turn-on-haskell-simple-indent
+
+A very simple indentation scheme; In this scheme, @key{TAB} will now move the cursor to the next indent point in the previous non-blank line.  An indent point is a non-whitespace character following whitespace.
+
+@item turn-on-haskell-indent
+
+Intelligent semi-automatic indentation for Haskell's layout rule.  The basic idea is to have @key{TAB} cycle through possibilities indentation points based on some clever heuristics.
+
+The rationale and the implementation principles are described in more detail in the article @cite{Dynamic tabbing for automatic indentation with the layout rule} published in the Journal of Functional Programming 8.5 (1998).
+
+@item turn-on-haskell-indentation
+
+Improved variation of @code{turn-on-haskell-indent} indentation mode. Rebinds @key{RET} and @key{DEL}, so that indentations can be set and deleted as if they were real tabs.
+
+@end ftable
+
+To enable one of these three mutually exclusive indentation schemes, you just need call one (and only one!) of the @code{turn-on-*} commands while in the buffer you want the indentation scheme to be activated for.
+
+The recommended way is to add one of @code{turn-on-*} commands to @code{haskell-mode-hook}. This can be done either by using @kbd{M-x customize-variable @key{RET} haskell-mode-hook} which provides a convenient user interface or by adding @emph{one} of the following three lines to your @file{.emacs} file:
+
+@lisp
+(add-hook 'haskell-mode-hook 'turn-on-haskell-simple-indent)
+(add-hook 'haskell-mode-hook 'turn-on-haskell-indent)
+(add-hook 'haskell-mode-hook 'turn-on-haskell-indentation)
+@end lisp
+
+@section Interactive Block Indentation
+
+By inserting the key bindings for @kbd{C-,} and @kbd{C-.} (these bindings are convenient on keyboard layouts where @key{,} and @key{.} are adjacent keys) as shown below you can interactively de/indent either the following nested block or, if a region is active while in Transient Mark Mode (@pxref{Disabled Transient Mark,,,emacs}), de/indent the active region.
+
+By using a numeric prefix argument (@pxref{Prefix Command Arguments,,,elisp}) you can modify the shift-amount; for instance, @kbd{C-u C-,} increases indentation by 4 characters at once.
+
+@findex haskell-move-nested-left
+@findex haskell-move-nested-right
+
+@lisp
+(eval-after-load "haskell-mode"
+  '(progn
+     (define-key haskell-mode-map (kbd "C-,") 'haskell-move-nested-left)
+     (define-key haskell-mode-map (kbd "C-.") 'haskell-move-nested-right)))
+@end lisp
+
+@section Rectangle Commands
+
+@cindex rectangle
+@cindex CUA mode
+
+GNU Emacs provides so-called @dfn{rectangle commands} which operate on rectangular areas of text, which are particularly useful for languages with a layout rule such as Haskell. @xref{Rectangles,,,emacs}, to learn more about rectangle commands.
+
+Moreover, CUA mode (@pxref{CUA Bindings,,,emacs}) provides enhanced rectangle support with visible rectangle highlighting. When CUA mode is active, you can initiate a rectangle selection by @kbd{C-RET} and extend it simply by movement commands. You don't have to enable full CUA mode to benefit from these enhanced rectangle commands; you can activate CUA selection mode (without redefining  @kbd{C-x},@kbd{C-c},@kbd{C-v}, and @kbd{C-z}) by calling @kbd{M-x cua-selection-mode} (or adding @code{(cua-selection-mode nil)} to your @code{haskell-mode-hook}).
+
+@node haskell-decl-scan-mode
+@chapter @code{haskell-decl-scan-mode}
+
+@findex turn-on-haskell-decl-scan
+@findex haskell-decl-scan-mode
+@vindex haskell-decl-scan-mode-hook
+
+@code{haskell-decl-scan-mode} is a minor mode which performs declaration scanning and provides @kbd{M-x imenu} support (@pxref{Imenu,,,emacs} for more information).
+
+For non-literate and @TeX{}-style literate scripts, the common convention that top-level declarations start at the first column is assumed.  For Bird-style literate scripts, the common convention that top-level declarations start at the third column, ie. after @samp{> }, is assumed.
+
+When @code{haskell-decl-scan-mode} is active, the standard Emacs top-level definition movement commands (@pxref{Moving by Defuns,,,emacs}) are enabled to operate on Haskell declarations:
+
+@table @kbd
+@item C-M-a
+Move to beginning of current or preceding declaration (@code{beginning-of-defun}).
+
+@item C-M-e
+Move to end of current or following declaration (@code{end-of-defun}).
+
+@item C-M-h
+Select whole current or following declaration (@code{mark-defun}).
+@end table
+
+Moreover, if enabled via the option @code{haskell-decl-scan-add-to-menubar}, a menu item ``Declarations'' is added to the menu bar listing the scanned declarations and allowing to jump to declarations in the source buffer.
+
+It's recommended to have font lock mode enabled (@pxref{Font Lock,,,emacs}) as @code{haskell-decl-scan-mode} ignores text highlighted with @code{font-lock-comment-face}.
+
+As usual, in order to activate @code{haskell-decl-scan-mode} automatically for Haskell buffers, add @code{turn-on-haskell-decl-scan} to @code{haskell-mode-hook}:
+
+@lisp
+(add-hook 'haskell-mode-hook 'turn-on-haskell-decl-scan)
+@end lisp
+
+@code{haskell-decl-scan-mode} enables the use of features that build upon @code{imenu} support such as Speedbar Frames (@pxref{Speedbar,,,emacs}) or the global ``Which Function'' minor mode (@pxref{Which Function,,,emacs}).
+
+In order to enable @code{which-function-mode} for Haskell buffers you need to add the following to your Emacs initialization:
+
+@lisp
+(eval-after-load "which-func"
+  '(add-to-list 'which-func-modes 'haskell-mode))
+@end lisp
+
+@node Compilation
+@chapter Compilation
+
+@findex haskell-compile
+
+Haskell mode comes equipped with a specialized @dfn{Compilation mode} tailored to GHC's compiler messages with optional support for Cabal projects. @xref{Compilation Mode,,,emacs}, for more information about the basic commands provided by the Compilation mode which are available in the Haskell compilation sub-mode as well. The additional features provided compared to Emacs' basic Compilation mode are:
+
+@itemize
+@item
+DWIM-style auto-detection of compile command (including support for CABAL projects)
+@item
+Support for GHC's compile messages and recognizing error, warning and info source locations (including @option{-ferror-spans} syntax)
+@item
+Support for filtering out GHC's uninteresting @samp{Loading package...} linker messages
+@end itemize
+
+In order to use it, invoke the @code{haskell-compile} command instead of @code{compile} as you would for the ordinary Compilation mode. It's recommended to bind @code{haskell-compile} to a convenient key binding. For instance, you can add the following to your Emacs initialization to bind @code{haskell-compile} to @kbd{C-c C-c}.
+
+@lisp
+(eval-after-load "haskell-mode"
+    '(define-key haskell-mode-map (kbd "C-c C-c") 'haskell-compile))
+
+(eval-after-load "haskell-cabal"
+    '(define-key haskell-cabal-mode-map (kbd "C-c C-c") 'haskell-compile))
+@end lisp
+
+@noindent
+The following description assumes that @code{haskell-compile} has been bound to @kbd{C-c C-c}.
+
+@vindex haskell-compile-cabal-build-command
+@vindex haskell-compile-cabal-build-command-alt
+@vindex haskell-compile-command
+
+When invoked, @code{haskell-compile} tries to guess how to compile the Haskell program your currently visited buffer belongs to, by searching for a @file{.cabal} file in the current of enclosing parent folders. If a @file{.cabal} file was found, the command defined in the @code{haskell-compile-cabal-build-command} option is used. Moreover, when requesting to compile a @file{.cabal}-file is detected and a negative prefix argument (e.g. @kbd{C-- C-c C-c}) was given, the alternative @code{haskell-compile-cabal-build-command-alt} is invoked. By default, @code{haskell-compile-cabal-build-command-alt} contains a @samp{cabal clean -s} command in order to force a full rebuild.
+
+Otherwise if no @file{.cabal} could be found, a single-module compilation is assumed and @code{haskell-compile-command} is used (@emph{if} the currently visited buffer contains Haskell source code).
+
+You can also inspect and modify the compile command to be invoked temporarily by invoking @code{haskell-compile} with a prefix argument (e.g. @kbd{C-u C-c C-c}). If later-on you want to recompile using the same customized compile command, invoke @code{recompile} (bound to @kbd{g}) inside the @samp{*haskell-compilation*} buffer.
+
+@node inferior-haskell-mode
+@chapter @code{inferior-haskell-mode}
+
+@findex inferior-haskell-find-definition
+@findex inferior-haskell-find-haddock
+@findex inferior-haskell-info
+@findex inferior-haskell-load-and-run
+@findex inferior-haskell-load-file
+@findex inferior-haskell-mode
+@findex inferior-haskell-reload-file
+@findex inferior-haskell-start-process
+@findex inferior-haskell-type
+@vindex haskell-program-name
+@vindex inferior-haskell-mode-hook
+
+The major mode @code{inferior-haskell-mode} provides support for interacting with an inferior Haskell process based on @code{comint-mode}.
+
+By default the @code{haskell-mode-map} keymap is setup to use this mode:
+
+@table @kbd
+@item C-c C-z
+is bound to @code{switch-to-haskell}
+@item C-c C-b
+is bound to @code{switch-to-haskell}
+@item C-c C-l
+is bound to @code{inferior-haskell-load-file}
+@item C-c C-t
+is bound to @code{inferior-haskell-type}
+@item C-c C-i
+is bound to @code{inferior-haskell-info}
+@end table
+
+The Haskell interpreter used by the inferior Haskell mode is auto-detected by default, but is customizable via the @code{haskell-program-name} variable.
+
+Currently, GHCi and Hugs are support as Haskell interpreter.
+
+TODO/WRITEME
+@c write about supported features
+
+@node haskell-interactive-mode
+@chapter @code{haskell-interactive-mode}
+
+An alternative mode providing a @acronym{REPL,read–eval–print loop} via GHCi sessions is called @code{haskell-interactive-mode}, which effectively replaces @code{inferior-haskell-mode}, but comes with a different set of features:
+
+@itemize
+@item
+Separate sessions per Cabal project @file{haskell-session.el}.
+@item
+A new inferior Haskell process handling code @file{haskell-process.el}.
+@item
+New REPL implementation similiar to SLIME/IELM @file{haskell-interactive-mode.el}.
+@end itemize
+
+In order to use @code{haskell-interactive-mode} instead of the default @code{inferior-haskell-mode}, you need to replace some of the default keybindings in the @code{haskell-mode-map} keymap with the respective @code{haskell-interactive-mode} counterparts:
+
+@lisp
+(eval-after-load "haskell-mode"
+  '(progn
+    (define-key haskell-mode-map (kbd "C-x C-d") nil)
+    (define-key haskell-mode-map (kbd "C-c C-z") 'haskell-interactive-switch)
+    (define-key haskell-mode-map (kbd "C-c C-l") 'haskell-process-load-file)
+    (define-key haskell-mode-map (kbd "C-c C-b") 'haskell-interactive-switch)
+    (define-key haskell-mode-map (kbd "C-c C-t") 'haskell-process-do-type)
+    (define-key haskell-mode-map (kbd "C-c C-i") 'haskell-process-do-info)
+    (define-key haskell-mode-map (kbd "C-c M-.") nil)
+    (define-key haskell-mode-map (kbd "C-c C-d") nil)))
+@end lisp
+
+With @code{haskell-interactive-mode}, each Haskell source buffer is associated with at most one GHCi session, so when you call @code{haskell-process-load-file} for a Haskell source buffer which has no session associated yet, you're asked which GHCi session to create or associate with.
+
+TODO/WRITEME
+
+@node haskell-cabal-mode
+@chapter @code{haskell-cabal-mode}
+
+@findex haskell-cabal-mode
+@vindex haskell-cabal-mode-hook
+
+@code{haskell-cabal-mode} is a major mode for editing @uref{http://www.haskell.org/cabal/users-guide/developing-packages.html,Cabal package description files} and is automatically associated with files having a @file{.cabal} extension.
+
+@findex haskell-cabal-visit-file
+
+For quickly locating and jumping to the nearest @file{.cabal} file from a Haskell source buffer, you can use @kbd{M-x haskell-cabal-visit-file}; with a prefix argument (i.e. @kbd{C-u}) @code{find-file-other-window} is used to visit the @file{.cabal} file.  If you wish, you can bind @code{haskell-cabal-visit-file} to a convenient key sequence, e.g.
+
+@lisp
+(eval-after-load "haskell-mode"
+  (define-key haskell-mode-map (kbd "C-c v c") 'haskell-cabal-visit-file))
+@end lisp
+
+TODO/WRITEME
+
+@node Concept index
+@unnumbered Concept index
+
+@printindex cp
+
+@node Function index
+@unnumbered Function index
+
+@printindex fn
+
+@node Variable index
+@unnumbered Variable index
+
+@printindex vr
+
+@bye
+
+@c Local Variables:
+@c eval: (visual-line-mode t)
+@c eval: (linum-mode t)
+@c eval: (hl-line-mode t)
+@c End:

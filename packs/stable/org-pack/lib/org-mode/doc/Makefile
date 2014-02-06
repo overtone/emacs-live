@@ -54,8 +54,9 @@ clean-install:
 %:		%.texi org-version.inc
 	$(MAKEINFO) --no-split $< -o $@
 
-%.pdf:		LC_ALL=C	# work around a bug in texi2dvi
-%.pdf:		LANG=C		# work around a bug in texi2dvi
+# the following two lines work around a bug in some versions of texi2dvi
+%.pdf:		LC_ALL=C
+%.pdf:		LANG=C
 %.pdf:		%.texi org-version.inc
 	$(TEXI2PDF) $<
 %.pdf:		%.tex

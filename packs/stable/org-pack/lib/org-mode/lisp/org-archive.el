@@ -1,6 +1,6 @@
 ;;; org-archive.el --- Archiving for Org-mode
 
-;; Copyright (C) 2004-2013 Free Software Foundation, Inc.
+;; Copyright (C) 2004-2014 Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -135,6 +135,7 @@ information."
 	  (match-string 1))
 	 (t org-archive-location))))))
 
+;;;###autoload
 (defun org-add-archive-files (files)
   "Splice the archive files into the list of files.
 This implies visiting all these files and finding out what the

@@ -20,3 +20,6 @@ travis-ci:
 
 tests/ert.el:
 	wget "http://git.savannah.gnu.org/cgit/emacs.git/plain/lisp/emacs-lisp/ert.el" -O $@
+
+tests/cl-lib.el:
+	wget "http://elpa.gnu.org/packages/cl-lib-0.3.el" -O $@

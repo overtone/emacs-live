@@ -40,15 +40,16 @@
 ;;; Code:
 
 (require 'expand-region-core)
+(require 'python)
 
 (defvar er--python-string-delimiter "'\"")
 
 (defun er/mark-python-statement ()
   "Marks one Python statement, eg. x = 3"
   (interactive)
-  (python-end-of-statement)
+  (python-nav-end-of-statement)
   (set-mark (point))
-  (python-beginning-of-statement))
+  (python-nav-beginning-of-statement))
 
 (defun er/mark-outside-python-string ()
   "Marks region outside a (possibly multi-line) Python string"

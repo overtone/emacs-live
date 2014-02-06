@@ -31,8 +31,8 @@
 ;;
 ;; This program exists because I was tired of manually aligning let
 ;; statements in clojure.  This program is designed to quickly and
-;; easily allow let forms to be aligned.  This is my first emacs
-;; lisp program and as a result if probably less than optimal.  Feel
+;; easily allow let forms to be aligned.  This is my first Emacs
+;; Lisp program and as a result if probably less than optimal.  Feel
 ;; free to suggest improvements or send in patches.
 ;;
 ;; This program was inspired by align-let.el although does not share
@@ -72,6 +72,7 @@
 ;; used to determine how many columns to align in a defroute call.
 ;; Defaults to 1.
 ;;
+;;; Code:
 
 (defcustom defroute-columns 1
   "The number of columns to align in a defroute call"
@@ -230,11 +231,9 @@ be positioned on the first s-exp in the subform."
               (cond ((> difference 0)
                      (insert (make-string difference ? )))
                     ((< difference 0)
-                     (delete-backward-char (abs difference)))))))
+                     (delete-char difference))))))
       
-      (setq widths (cdr widths)))
-    )
-  )
+      (setq widths (cdr widths)))))
 
 (defun acl-respace-defroute-form (widths)
   "Respace the entire defroute definition. Point must be
@@ -244,8 +243,7 @@ positioned on the defroute form."
              (down-list)
              (acl-respace-subform widths)
              (up-list)
-             (acl-has-next-sexp)
-             ))
+             (acl-has-next-sexp)))
     (indent-region begin (point))))
 
 (defun acl-respace-form (width)
@@ -260,13 +258,12 @@ positioned on the defroute form."
   "Take n elements from a list returning a new list"
   (butlast xs (- (length xs) n)))
 
-
 (defun acl-start-align-defroute ()
   (progn
     (down-list 1)
     (forward-sexp 3)
     (backward-sexp)                 ; this position's us back at the start of the
-                                        ; first form.
+                                    ; first form.
     (acl-respace-defroute-form (acl-take-n defroute-columns (acl-calc-route-widths)))))
 
 (defun acl-position-to-start ()
@@ -318,6 +315,7 @@ from `beginning-of-defun'.  If it finds nothing then just go to
              (goto-char (1- (point))))))))
 
 
+;;;###autoload
 (defun align-cljlet ()
   "Align a let form so that the bindings neatly align into columns"
   (interactive)

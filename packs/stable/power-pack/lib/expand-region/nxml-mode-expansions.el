@@ -29,6 +29,7 @@
 
 (require 'expand-region-core)
 (require 'html-mode-expansions)
+(require 'nxml-mode)
 
 (defun er/mark-nxml-tag ()
   "Marks one nxml element e.g. <p>"

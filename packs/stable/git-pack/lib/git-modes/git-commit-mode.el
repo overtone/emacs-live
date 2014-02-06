@@ -35,11 +35,11 @@
 ;; to the guidelines for commit messages (see
 ;; http://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html).
 ;;
-;; Highlight the first line (aka "summary") specially if it exceeds 54
-;; characters.
+;; Highlight the first line (aka "summary") specially if it exceeds 50
+;; characters (configurable using `git-commit-summary-max-length').
 ;;
 ;; Enable `auto-fill-mode' and set the `fill-column' to 72 according to the
-;; aforementioned guidelines.
+;; aforementioned guidelines (configurable using `git-commit-fill-column').
 
 ;;;; Headers
 
@@ -61,11 +61,15 @@
 
 ;;; Code:
 
-(require 'saveplace)
+(require 'log-edit)
+(require 'ring)
 (require 'server)
 
+;;; Options
+;;;; Variables
+
 (defgroup git-commit nil
-  "Mode for editing git commit messages"
+  "Edit Git commit messages."
   :prefix "git-commit-"
   :group 'tools)
 
@@ -79,8 +83,41 @@ confirmation before committing."
   :type '(choice (const :tag "On style errors" t)
                  (const :tag "Never" nil)))
 
+(defcustom git-commit-mode-hook '(turn-on-auto-fill flyspell-mode)
+  "Hook run when entering Git Commit mode."
+  :options '(turn-on-auto-fill flyspell-mode git-commit-save-message)
+  :type 'hook
+  :group 'git-commit)
+
+(defcustom git-commit-kill-buffer-hook '(git-commit-save-message)
+  "Hook run when killing a Git Commit mode buffer.
+This hook is run by both `git-commit-commit'
+and `git-commit-abort'."
+  :options '(git-commit-save-message)
+  :type 'hook
+  :group 'git-commit)
+
+(defcustom git-commit-summary-max-length 50
+  "Fontify characters beyond this column in summary lines as errors."
+  :group 'git-commit
+  :type 'number)
+
+(defcustom git-commit-fill-column 72
+  "Automatically wrap commit message lines beyond this column."
+  :group 'git-commit
+  :type 'number)
+
+(defcustom git-commit-known-pseudo-headers
+  '("Signed-off-by" "Acked-by" "Cc"
+    "Suggested-by" "Reported-by" "Tested-by" "Reviewed-by")
+  "A list of git pseudo headers to be highlighted."
+  :group 'git-commit
+  :type '(repeat string))
+
+;;;; Faces
+
 (defgroup git-commit-faces nil
-  "Faces for highlighting git commit messages"
+  "Faces for highlighting Git commit messages."
   :prefix "git-commit-"
   :group 'git-commit
   :group 'faces)
@@ -143,9 +180,86 @@ git commit messages"
 default comments in git commit messages"
   :group 'git-commit-faces)
 
+;;; Keymap
+
+(defvar git-commit-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-c") 'git-commit-commit)
+    (define-key map (kbd "C-c C-k") 'git-commit-abort)
+    (define-key map (kbd "C-c C-s") 'git-commit-signoff)
+    (define-key map (kbd "C-c C-a") 'git-commit-ack)
+    (define-key map (kbd "C-c C-t") 'git-commit-test)
+    (define-key map (kbd "C-c C-r") 'git-commit-review)
+    (define-key map (kbd "C-c C-o") 'git-commit-cc)
+    (define-key map (kbd "C-c C-p") 'git-commit-reported)
+    (define-key map (kbd "C-c C-i") 'git-commit-suggested)
+    (define-key map (kbd "C-c M-s") 'git-commit-save-message)
+    (define-key map (kbd "M-p")     'git-commit-prev-message)
+    (define-key map (kbd "M-n")     'git-commit-next-message)
+    (define-key map [remap server-edit]          'git-commit-commit)
+    (define-key map [remap kill-buffer]          'git-commit-abort)
+    (define-key map [remap ido-kill-buffer]      'git-commit-abort)
+    (define-key map [remap iswitchb-kill-buffer] 'git-commit-abort)
+    ;; Old bindings to avoid confusion
+    (define-key map (kbd "C-c C-x s") 'git-commit-signoff)
+    (define-key map (kbd "C-c C-x a") 'git-commit-ack)
+    (define-key map (kbd "C-c C-x t") 'git-commit-test)
+    (define-key map (kbd "C-c C-x r") 'git-commit-review)
+    (define-key map (kbd "C-c C-x o") 'git-commit-cc)
+    (define-key map (kbd "C-c C-x p") 'git-commit-reported)
+    map)
+  "Key map used by `git-commit-mode'.")
+
+;;; Menu
+
+(require 'easymenu)
+(easy-menu-define git-commit-mode-menu git-commit-mode-map
+  "Git Commit Mode Menu"
+  '("Commit"
+    ["Previous" git-commit-prev-message t]
+    ["Next" git-commit-next-message t]
+    "-"
+    ["Ack" git-commit-ack :active t
+     :help "Insert an 'Acked-by' header"]
+    ["Sign-Off" git-commit-signoff :active t
+     :help "Insert a 'Signed-off-by' header"]
+    ["Tested-by" git-commit-test :active t
+     :help "Insert a 'Tested-by' header"]
+    ["Reviewed-by" git-commit-review :active t
+     :help "Insert a 'Reviewed-by' header"]
+    ["CC" git-commit-cc t
+     :help "Insert a 'Cc' header"]
+    ["Reported" git-commit-reported :active t
+     :help "Insert a 'Reported-by' header"]
+    ["Suggested" git-commit-suggested t
+     :help "Insert a 'Suggested-by' header"]
+    "-"
+    ["Save" git-commit-save-message t]
+    ["Cancel" git-commit-abort t]
+    ["Commit" git-commit-commit t]))
+
+;;; Committing
+
 (defvar git-commit-commit-hook nil
   "Hook run by `git-commit-commit' unless clients exist.
 Only use this if you know what you are doing.")
+
+(defvar git-commit-previous-winconf nil)
+
+(defmacro git-commit-restore-previous-winconf (&rest body)
+  "Run BODY and then restore `git-commit-previous-winconf'.
+When `git-commit-previous-winconf' is nil or was created from
+another frame do nothing."
+  (declare (indent 0))
+  (let ((winconf (make-symbol "winconf"))
+        (frame   (make-symbol "frame")))
+    `(let ((,winconf git-commit-previous-winconf)
+           (,frame (selected-frame)))
+       ,@body
+       (when (and ,winconf
+                  (equal ,frame (window-configuration-frame ,winconf)))
+         (set-window-configuration ,winconf)
+         (setq git-commit-previous-winconf nil)))))
 
 (defun git-commit-commit (&optional force)
   "Finish editing the commit message and commit.
@@ -163,38 +277,73 @@ Return t, if the commit was successful, or nil otherwise."
            (not (y-or-n-p "Commit despite stylistic errors?")))
       (message "Commit canceled due to stylistic errors.")
     (save-buffer)
-    (if (git-commit-buffer-clients)
-        (server-edit)
-      (run-hook-with-args 'git-commit-commit-hook)
-      (kill-buffer))))
+    (run-hooks 'git-commit-kill-buffer-hook)
+    (remove-hook 'kill-buffer-query-functions
+                 'git-commit-kill-buffer-noop t)
+    (git-commit-restore-previous-winconf
+      (if (git-commit-buffer-clients)
+          (server-edit)
+        (run-hook-with-args 'git-commit-commit-hook)
+        (kill-buffer)))))
 
 (defun git-commit-abort ()
   "Abort the commit.
 The commit message is saved to the kill ring."
   (interactive)
+  (when (< emacs-major-version 24)
+    ;; Emacsclient doesn't exit with non-zero when -error is used.
+    ;; Instead cause Git to error out by feeding it an empty file.
+    (erase-buffer))
   (save-buffer)
-  (kill-ring-save (point-min) (point-max))
-  (let ((clients (git-commit-buffer-clients)))
-    (if clients
-        (dolist (client clients)
-          (server-send-string client "-error Commit aborted by user")
-          (delete-process client))
-      (kill-buffer)))
-  (message "Commit aborted.  Message saved to kill ring."))
+  (run-hooks 'git-commit-kill-buffer-hook)
+  (remove-hook 'kill-buffer-hook 'server-kill-buffer t)
+  (remove-hook 'kill-buffer-query-functions 'git-commit-kill-buffer-noop t)
+  (git-commit-restore-previous-winconf
+    (let ((clients (git-commit-buffer-clients)))
+      (if clients
+          (dolist (client clients)
+            (server-send-string client "-error Commit aborted by user")
+            (delete-process client))
+        (kill-buffer))))
+  (message (concat "Commit aborted."
+                   (when (memq 'git-commit-save-message
+                               git-commit-kill-buffer-hook)
+                     "  Message saved to `log-edit-comment-ring'."))))
 
 (defun git-commit-buffer-clients ()
   (and (fboundp 'server-edit)
        (boundp 'server-buffer-clients)
        server-buffer-clients))
 
-(defconst git-commit-known-pseudo-headers
-  '("Signed-off-by"
-    "Acked-by"
-    "Cc"
-    "Reported-by"
-    "Tested-by"
-    "Reviewed-by")
-  "A list of git pseudo headers to be highlighted.")
+;;; History
+
+(defun git-commit-save-message ()
+  "Save current message to `log-edit-comment-ring'."
+  (interactive)
+  (let ((message (buffer-substring
+                  (point-min)
+                  (git-commit-find-pseudo-header-position))))
+    (when (and (string-match "^\\s-*\\sw" message)
+               (or (ring-empty-p log-edit-comment-ring)
+                   (not (ring-member log-edit-comment-ring message))))
+      (ring-insert log-edit-comment-ring message))))
+
+(defun git-commit-prev-message (arg)
+  "Cycle backward through message history, after saving current message.
+With a numeric prefix ARG, go back ARG comments."
+  (interactive "*p")
+  (git-commit-save-message)
+  (save-restriction
+    (narrow-to-region (point-min) (git-commit-find-pseudo-header-position))
+    (log-edit-previous-comment arg)))
+
+(defun git-commit-next-message (arg)
+  "Cycle forward through message history, after saving current message.
+With a numeric prefix ARG, go forward ARG comments."
+  (interactive "*p")
+  (git-commit-prev-message (- arg)))
+
+;;; Headers
 
 (defun git-commit-find-pseudo-header-position ()
   "Find the position at which commit pseudo headers should be inserted.
@@ -204,17 +353,14 @@ before any trailing comments git or the user might have
 inserted."
   (save-excursion
     (goto-char (point-max))
-    (if (not (re-search-backward "^\\S<.+$" nil t))
-        ;; no comment lines anywhere before end-of-buffer, so we
-        ;; want to insert right there
-        (point-max)
-      ;; there's some comments at the end, so we want to insert before
-      ;; those; keep going until we find the first non-empty line
-      ;; NOTE: if there is no newline at the end of (point),
-      ;; (forward-line 1) will take us to (point-at-eol).
-      (if (eq (point-at-bol) (point-at-eol)) (re-search-backward "^.+$" nil t))
-      (forward-line 1)
-      (point))))
+    (if (re-search-backward "^[^#\n]" nil t)
+        ;; we found last non-empty non-comment line, headers go after
+        (forward-line 1)
+      ;; there's only blanks & comments, headers go before comments
+      (goto-char (point-min))
+      (and (re-search-forward "^#" nil t) (forward-line 0)))
+    (skip-chars-forward "\n")
+    (point)))
 
 (defun git-commit-determine-pre-for-pseudo-header ()
   "Find the characters to insert before the pseudo header.
@@ -310,27 +456,28 @@ minibuffer."
               (read-string "Email: ")))
        (git-commit-insert-header ,header name email))))
 
-(git-define-git-commit "cc" "Cc")
-(git-define-git-commit "reported" "Reported-by")
+(git-define-git-commit "cc"        "Cc")
+(git-define-git-commit "reported"  "Reported-by")
+(git-define-git-commit "suggested" "Suggested-by")
 
 (defconst git-commit-comment-headings-alist
-  '(("Not currently on any branch." . git-commit-no-branch-face)
-    ("Changes to be committed:" . git-commit-comment-heading-face)
-    ("Untracked files:" . git-commit-comment-heading-face)
-    ("Changed but not updated:" . git-commit-comment-heading-face)
+  '(("Not currently on any branch."   . git-commit-no-branch-face)
+    ("Changes to be committed:"       . git-commit-comment-heading-face)
+    ("Untracked files:"               . git-commit-comment-heading-face)
+    ("Changed but not updated:"       . git-commit-comment-heading-face)
     ("Changes not staged for commit:" . git-commit-comment-heading-face)
-    ("Unmerged paths:" . git-commit-comment-heading-face))
+    ("Unmerged paths:"                . git-commit-comment-heading-face))
   "Headings in message comments.
 
 The `car' of each cell is the heading text, the `cdr' the face to
 use for fontification.")
 
-(defun git-commit-build-summary-regexp (max-summary-col)
+(defun git-commit-summary-regexp ()
   (concat
    ;; Skip empty lines or comments before the summary
    "\\`\\(?:^\\(?:\\s-*\\|\\s<.*\\)\n\\)*"
    ;; The summary line
-   (format "\\(.\\{0,%d\\}\\)\\(.*\\)" max-summary-col)
+   (format "\\(.\\{0,%d\\}\\)\\(.*\\)" git-commit-summary-max-length)
    ;; Non-empty non-comment second line
    ;;
    ;; For instant highlighting of non-empty second lines in font-lock,
@@ -340,22 +487,6 @@ use for fontification.")
    ;; which captures 'nil', can't be used.
    "\\(?:\n\\#\\|\n\\(.*\\)\\)?"))
 
-(defvar git-commit-summary-regexp nil
-  "Regexp to match the summary line.")
-
-(defcustom git-commit-max-summary-line-length 50
-  "Fontify characters beyond this column in summary lines as errors."
-  :group 'git-commit
-  :type 'number
-  :initialize
-  (lambda (symbol value)
-    (let ((val (eval value)))
-      ;; set the value
-      (set-default symbol val)
-      ;; update `git-commit-summary-regexp'
-      (set-default 'git-commit-summary-regexp
-                   (git-commit-build-summary-regexp val)))))
-
 (defun git-commit-has-style-errors-p ()
   "Check whether the current buffer has style errors.
 
@@ -363,9 +494,11 @@ Return t, if the current buffer has style errors, or nil
 otherwise."
   (save-excursion
     (goto-char (point-min))
-    (when (re-search-forward git-commit-summary-regexp nil t)
+    (when (re-search-forward (git-commit-summary-regexp) nil t)
       (or (string-match-p ".+" (or (match-string 2) ""))
           (string-match-p "^.+$" (or (match-string 3) ""))))))
+
+;;; Font-Lock
 
 (defun git-commit-mode-summary-font-lock-keywords (&optional errors)
   "Create font lock keywords to fontify the Git summary.
@@ -373,10 +506,10 @@ otherwise."
 If ERRORS is non-nil create keywords that highlight errors in the
 summary line, not the summary line itself."
   (if errors
-      `(,git-commit-summary-regexp
+      `(,(git-commit-summary-regexp)
         (2 'git-commit-overlong-summary-face t t)
         (3 'git-commit-nonempty-second-line-face t t))
-    `(,git-commit-summary-regexp
+    `(,(git-commit-summary-regexp)
       (1 'git-commit-summary-face t))))
 
 (defun git-commit-mode-heading-keywords ()
@@ -388,7 +521,7 @@ Known comment headings are provided by `git-commit-comment-headings'."
                            (1 ',(cdr cell) t)))
           git-commit-comment-headings-alist))
 
-(defvar git-commit-mode-font-lock-keywords
+(defun git-commit-mode-font-lock-keywords ()
   (append
    `(("^\\s<.*$" . 'font-lock-comment-face)
      ("^\\s<\\s-On branch \\(.*\\)$" (1 'git-commit-branch-face t))
@@ -407,34 +540,6 @@ Known comment headings are provided by `git-commit-comment-headings'."
      ;; everything
      (eval . (git-commit-mode-summary-font-lock-keywords t)))
    (git-commit-mode-heading-keywords)))
-
-(defvar git-commit-mode-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-c C-c") 'git-commit-commit)
-    (define-key map (kbd "C-c C-k") 'git-commit-abort)
-    (define-key map (kbd "C-c C-s") 'git-commit-signoff)
-    (define-key map (kbd "C-c C-a") 'git-commit-ack)
-    (define-key map (kbd "C-c C-t") 'git-commit-test)
-    (define-key map (kbd "C-c C-r") 'git-commit-review)
-    (define-key map (kbd "C-c C-o") 'git-commit-cc)
-    (define-key map (kbd "C-c C-p") 'git-commit-reported)
-    ;; Old bindings to avoid confusion
-    (define-key map (kbd "C-c C-x s") 'git-commit-signoff)
-    (define-key map (kbd "C-c C-x a") 'git-commit-ack)
-    (define-key map (kbd "C-c C-x t") 'git-commit-test)
-    (define-key map (kbd "C-c C-x r") 'git-commit-review)
-    (define-key map (kbd "C-c C-x o") 'git-commit-cc)
-    (define-key map (kbd "C-c C-x p") 'git-commit-reported)
-    map)
-  "Key map used by `git-commit-mode'.")
-
-(defvar git-commit-mode-syntax-table
-  (let ((table (make-syntax-table text-mode-syntax-table)))
-    (modify-syntax-entry ?# "<" table)
-    (modify-syntax-entry ?\n ">" table)
-    (modify-syntax-entry ?\r ">" table)
-    table)
-  "Syntax table used by `git-commit-mode'.")
 
 (defun git-commit-font-lock-diff ()
   "Add font lock on diff."
@@ -461,6 +566,16 @@ Known comment headings are provided by `git-commit-comment-headings'."
           (delete-region beg (point-max))
           (insert text))))))
 
+;;; Mode
+
+(defvar git-commit-mode-syntax-table
+  (let ((table (make-syntax-table text-mode-syntax-table)))
+    (modify-syntax-entry ?#  "<" table)
+    (modify-syntax-entry ?\n ">" table)
+    (modify-syntax-entry ?\r ">" table)
+    table)
+  "Syntax table used by `git-commit-mode'.")
+
 ;;;###autoload
 (define-derived-mode git-commit-mode text-mode "Git Commit"
   "Major mode for editing git commit messages.
@@ -469,24 +584,65 @@ This mode helps with editing git commit messages both by
 providing commands to do common tasks, and by highlighting the
 basic structure of and errors in git commit messages."
   ;; Font locking
-  (setq font-lock-defaults '(git-commit-mode-font-lock-keywords t))
+  (setq font-lock-defaults (list (git-commit-mode-font-lock-keywords) t))
   (set (make-local-variable 'font-lock-multiline) t)
   (git-commit-font-lock-diff)
   ;; Filling according to the guidelines
-  (setq fill-column 72)
-  (turn-on-auto-fill)
+  (setq fill-column git-commit-fill-column)
   ;; Recognize changelog-style paragraphs
   (set (make-local-variable 'paragraph-start)
        (concat paragraph-start "\\|*\\|("))
+  ;; Treat lines starting with a hash/pound as comments
+  (set (make-local-variable 'comment-start) "#")
+  (set (make-local-variable 'comment-start-skip)
+       (concat "^" (regexp-quote comment-start) "+"
+               "\\s-*"))
+  (set (make-local-variable 'comment-use-syntax) nil)
   ;; Do not remember point location in commit messages
-  (when (fboundp 'toggle-save-place)
-    (setq save-place nil)))
+  (when (boundp 'save-place)
+    (setq save-place nil))
+  ;; If the commit summary is empty, insert a newline after point
+  (when (string= "" (buffer-substring-no-properties
+                     (line-beginning-position)
+                     (line-end-position)))
+    (open-line 1))
+  ;; Make sure `git-commit-abort' cannot be by-passed
+  (add-hook 'kill-buffer-query-functions
+            'git-commit-kill-buffer-noop nil t)
+  ;; Make the wrong usage info from `server-execute' go way
+  (run-with-timer 0.01 nil (lambda (m) (message "%s" m))
+                  (substitute-command-keys
+                   (concat "Type \\[git-commit-commit] "
+                           (let ((n (buffer-file-name)))
+                             (cond ((equal n "TAG_EDITMSG") "to tag")
+                                   ((or (equal n "NOTES_EDITMSG")
+                                        (equal n "PULLREQ_EDITMSG"))
+                                    "when done")
+                                   (t "to commit")))
+                           " (\\[git-commit-abort] to abort)."))))
+
+(defun git-commit-kill-buffer-noop ()
+  (message
+   (substitute-command-keys
+    "Don't kill this buffer.  Instead abort using \\[git-commit-abort]."))
+  nil)
+
+(defun git-commit-mode-flyspell-verify ()
+  (not (nth 4 (syntax-ppss)))) ; not inside a comment
+
+(eval-after-load 'flyspell
+  '(put 'git-commit-mode 'flyspell-mode-predicate
+        'git-commit-mode-flyspell-verify))
 
 ;;;###autoload
 (dolist (pattern '("/COMMIT_EDITMSG\\'" "/NOTES_EDITMSG\\'"
                    "/MERGE_MSG\\'" "/TAG_EDITMSG\\'"
                    "/PULLREQ_EDITMSG\\'"))
   (add-to-list 'auto-mode-alist (cons pattern 'git-commit-mode)))
+
+(defun git-commit-auto-mode-enable ()
+  (message "git-commit-auto-mode-enable is obsolete and doesn't do anything"))
+(make-obsolete 'git-commit-auto-mode-enable "This mode is a noop now" "")
 
 (provide 'git-commit-mode)
 ;; Local Variables:

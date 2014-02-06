@@ -153,7 +153,8 @@ before calling `er/expand-region' for the first time."
     (er--prepare-expanding)
     (while (>= arg 1)
       (setq arg (- arg 1))
-      (er--expand-region-1))
+      (when (eq 'early-exit (er--expand-region-1))
+        (setq arg 0)))
     (when (and expand-region-fast-keys-enabled
                (not (memq last-command '(er/expand-region er/contract-region))))
       (er/prepare-for-more-expansions))))

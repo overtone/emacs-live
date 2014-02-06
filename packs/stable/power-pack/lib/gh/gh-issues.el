@@ -95,7 +95,7 @@
                    closed_issues created_at due_on)
       issue
     (setq url (gh-read data 'url)
-          html-url (gh-read data 'html-url)
+          html-url (gh-read data 'html_url)
           number (gh-read data 'number)
           state (gh-read data 'state)
           title (gh-read data 'title)

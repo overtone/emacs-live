@@ -1,6 +1,6 @@
 ;;; ob-oz.el --- Org-babel functions for Oz evaluation
 
-;; Copyright (C) 2009-2013 Torsten Anders and Eric Schulte
+;; Copyright (C) 2009-2014 Torsten Anders and Eric Schulte
 
 ;; Author: Torsten Anders and Eric Schulte
 ;; Keywords: literate programming, reproducible research
@@ -90,7 +90,7 @@
 
 (require 'ob)
 ;;; major mode for editing Oz programs
-(require 'mozart)
+(require 'mozart nil t)
 
 ;;
 ;; Interface to communicate with Oz.

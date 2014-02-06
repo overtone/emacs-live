@@ -1,6 +1,6 @@
 ;;; test-ob-fortran.el --- tests for ob-fortran.el
 
-;; Copyright (c) 2010-2013 Sergey Litvinov
+;; Copyright (c) 2010-2014 Sergey Litvinov
 ;; Authors: Sergey Litvinov
 
 ;; This file is not part of GNU Emacs.
@@ -67,6 +67,18 @@
   (org-test-at-id "c28569d9-04ce-4cad-ab81-1ea29f691465"
     (org-babel-next-src-block 2)
     (should (equal "1.00 2.00" (org-babel-execute-src-block)))))
+
+(ert-deftest ob-fortran/list-matrix-from-table1 ()
+  "Test real matrix from a table"
+  (org-test-at-id "3f73ab19-d25a-428d-8c26-e8c6aa933976"
+    (org-babel-next-src-block 1)
+    (should (= 42 (org-babel-execute-src-block)))))
+
+(ert-deftest ob-fortran/list-matrix-from-table2 ()
+  "Test real matrix from a table"
+  (org-test-at-id "3f73ab19-d25a-428d-8c26-e8c6aa933976"
+    (org-babel-next-src-block 2)
+    (should (= 42 (org-babel-execute-src-block)))))
 
 (ert-deftest ob-fortran/no-variables-with-main ()
   "Test :var with explicit 'program'"

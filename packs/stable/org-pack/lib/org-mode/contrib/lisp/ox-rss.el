@@ -1,8 +1,8 @@
 ;;; ox-rss.el --- RSS 2.0 Back-End for Org Export Engine
 
-;; Copyright (C) 2013  Bastien Guerry
+;; Copyright (C) 2013, 2014  Bastien Guerry
 
-;; Author: Bastien Guerry <bzg at gnu dot org>
+;; Author: Bastien Guerry <bzg@gnu.org>
 ;; Keywords: org, wp, blog, feed, rss
 
 ;; This file is not yet part of GNU Emacs.
@@ -51,6 +51,7 @@
 ;;    :base-extension "org"
 ;;    :rss-image-url "http://lumiere.ens.fr/~guerry/images/faces/15.png"
 ;;    :html-link-home "http://lumiere.ens.fr/~guerry/"
+;;    :html-link-use-abs-url t
 ;;    :rss-extension "xml"
 ;;    :publishing-directory "/home/guerry/public_html/"
 ;;    :publishing-function (org-rss-publish-to-rss)
@@ -160,21 +161,8 @@ non-nil."
   (let ((file (buffer-file-name (buffer-base-buffer))))
     (org-icalendar-create-uid file 'warn-user)
     (org-rss-add-pubdate-property))
-  (if async
-      (org-export-async-start
-	  (lambda (output)
-	    (with-current-buffer (get-buffer-create "*Org RSS Export*")
-	      (erase-buffer)
-	      (insert output)
-	      (goto-char (point-min))
-	      (text-mode)
-	      (org-export-add-to-stack (current-buffer) 'rss)))
-	`(org-export-as 'rss ,subtreep ,visible-only))
-    (let ((outbuf (org-export-to-buffer
-		   'rss "*Org RSS Export*" subtreep visible-only)))
-      (with-current-buffer outbuf (text-mode))
-      (when org-export-show-temporary-export-buffer
-	(switch-to-buffer-other-window outbuf)))))
+  (org-export-to-buffer 'rss "*Org RSS Export*"
+    async subtreep visible-only nil nil (lambda () (text-mode))))
 
 ;;;###autoload
 (defun org-rss-export-to-rss (&optional async subtreep visible-only)
@@ -203,12 +191,7 @@ Return output file's name."
     (org-rss-add-pubdate-property))
   (let ((outfile (org-export-output-file-name
 		  (concat "." org-rss-extension) subtreep)))
-    (if async
-	(org-export-async-start
-	    (lambda (f) (org-export-add-to-stack f 'rss))
-	  `(expand-file-name
-	    (org-export-to-file 'rss ,outfile ,subtreep ,visible-only)))
-      (org-export-to-file 'rss outfile subtreep visible-only))))
+    (org-export-to-file 'rss outfile async subtreep visible-only)))
 
 ;;;###autoload
 (defun org-rss-publish-to-rss (plist filename pub-dir)
@@ -219,6 +202,14 @@ is the property list for the given project.  PUB-DIR is the
 publishing directory.
 
 Return output file name."
+  (let ((bf (get-file-buffer filename)))
+    (if bf
+	(with-current-buffer bf
+	  (org-rss-add-pubdate-property)
+	  (write-file filename))
+      (find-file filename)
+      (org-rss-add-pubdate-property)
+      (write-file filename) (kill-buffer)))
   (org-publish-org-to
    'rss filename (concat "." org-rss-extension) plist pub-dir))
 
@@ -245,7 +236,7 @@ communication channel."
 	   (pubdate
 	    (let ((system-time-locale "C"))
 	      (format-time-string
-	       "%a, %d %h %Y %H:%M:%S %z"
+	       "%a, %d %b %Y %H:%M:%S %z"
 	       (org-time-string-to-time
 		(or (org-element-property :PUBDATE headline)
 		    (error "Missing PUBDATE property"))))))
@@ -317,7 +308,7 @@ as a communication channel."
 	 (author (and (plist-get info :with-author)
 		      (let ((auth (plist-get info :author)))
 			(and auth (org-export-data auth info)))))
-	 (date (format-time-string "%a, %d %h %Y %H:%M:%S %z")) ;; RFC 882
+	 (date (format-time-string "%a, %d %b %Y %H:%M:%S %z")) ;; RFC 882
 	 (description (org-export-data (plist-get info :description) info))
 	 (lang (plist-get info :language))
 	 (keywords (plist-get info :keywords))

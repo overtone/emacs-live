@@ -224,7 +224,7 @@ src_sh{echo 3} Here is one at the beginning of a line.
   :noweb-sep: ""
   :END:
 
-#+begin_src sh :tangle yes :noweb yes :shebang #!/bin/sh
+#+begin_src sh :tangle yes :noweb yes :shebang "#!/bin/sh"
   <<fullest-disk>>
 #+end_src
 
@@ -358,4 +358,95 @@ Here is a call line with more than just the results exported.
 #+BEGIN_SRC sh :noweb strip-export :exports code :results silent
   <<strip-export-1>>
   echo "1$i"
+#+END_SRC
+
+* use case of reading entry properties
+  :PROPERTIES:
+  :ID:       cc5fbc20-bca5-437a-a7b8-2b4d7a03f820
+  :END:
+
+Use case checked and documented with this test: During their
+evaluation the source blocks read values from properties from the
+entry where the call has been made unless the value is overridden with
+the optional argument of the caller.
+
+** section
+   :PROPERTIES:
+   :a:        1
+   :c:        3
+   :END:
+
+Note: Just export of a property can be done with a macro: {{{property(a)}}}.
+
+#+NAME: src_block_location_shell sect call
+#+CALL: src_block_location_shell()
+
+#+NAME: src_block_location_elisp sect call
+#+CALL: src_block_location_elisp()
+
+- sect inline call_src_block_location_shell()
+- sect inline call_src_block_location_elisp()
+
+*** subsection
+    :PROPERTIES:
+    :b:        2
+    :c:        4
+    :END:
+
+#+NAME: src_block_location_shell sub0 call
+#+CALL: src_block_location_shell()
+
+#+NAME: src_block_location_elisp sub0 call
+#+CALL: src_block_location_elisp()
+
+- sub0 inline call_src_block_location_shell()
+- sub0 inline call_src_block_location_elisp()
+
+#+NAME: src_block_location_shell sub1 call
+#+CALL: src_block_location_shell(c=5, e=6)
+
+#+NAME: src_block_location_elisp sub1 call
+#+CALL: src_block_location_elisp(c=5, e=6)
+
+- sub1 inline call_src_block_location_shell(c=5, e=6)
+- sub1 inline call_src_block_location_elisp(c=5, e=6)
+
+**** function definition
+
+#+NAME: src_block_location_shell
+#+HEADER: :var a=(or (org-entry-get org-babel-current-src-block-location "a" t) "0")
+#+HEADER: :var b=(or (org-entry-get org-babel-current-src-block-location "b" t) "0")
+#+HEADER: :var c=(or (org-entry-get org-babel-current-src-block-location "c" t) "0")
+#+HEADER: :var d=(or (org-entry-get org-babel-current-src-block-location "d" t) "0")
+#+HEADER: :var e=(or (org-entry-get org-babel-current-src-block-location "e" t) "0")
+#+BEGIN_SRC sh :shebang #!/bin/sh :exports results :results verbatim
+  printf "shell a:$a, b:$b, c:$c, d:$d, e:$e"
+#+END_SRC
+
+#+RESULTS: src_block_location_shell
+
+#+NAME: src_block_location_elisp
+#+HEADER: :var a='nil
+#+HEADER: :var b='nil
+#+HEADER: :var c='nil
+#+HEADER: :var d='nil
+#+HEADER: :var e='nil
+#+BEGIN_SRC emacs-lisp :exports results
+  (setq
+   a (or a (string-to-number
+            (or (org-entry-get org-babel-current-src-block-location "a" t)
+                "0")))
+   b (or b (string-to-number
+            (or (org-entry-get org-babel-current-src-block-location "b" t)
+                "0")))
+   c (or c (string-to-number
+            (or (org-entry-get org-babel-current-src-block-location "c" t)
+                "0")))
+   d (or d (string-to-number
+            (or (org-entry-get org-babel-current-src-block-location "e" t)
+                "0")))
+   e (or e (string-to-number
+            (or (org-entry-get org-babel-current-src-block-location "d" t)
+                "0"))))
+  (format "elisp a:%d, b:%d, c:%d, d:%d, e:%d" a b c d e)
 #+END_SRC

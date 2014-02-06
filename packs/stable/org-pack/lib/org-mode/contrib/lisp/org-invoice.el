@@ -1,6 +1,6 @@
 ;;; org-invoice.el --- Help manage client invoices in OrgMode
 ;;
-;; Copyright (C) 2008-2013 pmade inc. (Peter Jones pjones@pmade.com)
+;; Copyright (C) 2008-2014 pmade inc. (Peter Jones pjones@pmade.com)
 ;;
 ;; This file is not part of GNU Emacs.
 ;;

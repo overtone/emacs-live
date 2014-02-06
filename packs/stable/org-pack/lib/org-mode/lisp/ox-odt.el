@@ -1,6 +1,6 @@
 ;;; ox-odt.el --- OpenDocument Text Exporter for Org Mode
 
-;; Copyright (C) 2010-2013 Free Software Foundation, Inc.
+;; Copyright (C) 2010-2014 Free Software Foundation, Inc.
 
 ;; Author: Jambunathan K <kjambunathan at gmail dot com>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -27,7 +27,7 @@
 
 (eval-when-compile
   (require 'cl)
-  (require 'table))
+  (require 'table nil 'noerror))
 (require 'format-spec)
 (require 'ox)
 (require 'org-compat)
@@ -223,7 +223,7 @@ standard Emacs.")
 (defconst org-odt-table-style-format
   "
 <style:style style:name=\"%s\" style:family=\"table\">
-  <style:table-properties style:rel-width=\"%d%%\" fo:margin-top=\"0cm\" fo:margin-bottom=\"0.20cm\" table:align=\"center\"/>
+  <style:table-properties style:rel-width=\"%s%%\" fo:margin-top=\"0cm\" fo:margin-bottom=\"0.20cm\" table:align=\"center\"/>
 </style:style>
 "
   "Template for auto-generated Table styles.")
@@ -288,38 +288,37 @@ according to the default face identified by the `htmlfontify'.")
     ("category-and-value" "%e %n: %c" "category-and-value" "%e %n")
     ("value" "%e %n: %c" "value" "%n"))
   "Specify how labels are applied and referenced.
-This is an alist where each element is of the
-form (LABEL-STYLE-NAME LABEL-ATTACH-FMT LABEL-REF-MODE
-LABEL-REF-FMT).
 
-LABEL-ATTACH-FMT controls how labels and captions are attached to
-an entity.  It may contain following specifiers - %e, %n and %c.
-%e is replaced with the CATEGORY-NAME.  %n is replaced with
+This is an alist where each element is of the form:
+
+  \(STYLE-NAME ATTACH-FMT REF-MODE REF-FMT)
+
+ATTACH-FMT controls how labels and captions are attached to an
+entity.  It may contain following specifiers - %e and %c.  %e is
+replaced with the CATEGORY-NAME.  %n is replaced with
 \"<text:sequence ...> SEQNO </text:sequence>\".  %c is replaced
-with CAPTION. See `org-odt-format-label-definition'.
+with CAPTION.
 
-LABEL-REF-MODE and LABEL-REF-FMT controls how label references
-are generated.  The following XML is generated for a label
-reference - \"<text:sequence-ref
-text:reference-format=\"LABEL-REF-MODE\" ...> LABEL-REF-FMT
-</text:sequence-ref>\".  LABEL-REF-FMT may contain following
+REF-MODE and REF-FMT controls how label references are generated.
+The following XML is generated for a label reference -
+\"<text:sequence-ref text:reference-format=\"REF-MODE\" ...>
+REF-FMT </text:sequence-ref>\".  REF-FMT may contain following
 specifiers - %e and %n.  %e is replaced with the CATEGORY-NAME.
-%n is replaced with SEQNO. See
-`org-odt-format-label-reference'.")
+%n is replaced with SEQNO.
+
+See also `org-odt-format-label'.")
 
 (defvar org-odt-category-map-alist
   '(("__Table__" "Table" "value" "Table" org-odt--enumerable-p)
     ("__Figure__" "Illustration" "value" "Figure" org-odt--enumerable-image-p)
     ("__MathFormula__" "Text" "math-formula" "Equation" org-odt--enumerable-formula-p)
     ("__DvipngImage__" "Equation" "value" "Equation" org-odt--enumerable-latex-image-p)
-    ("__Listing__" "Listing" "value" "Listing" org-odt--enumerable-p)
-    ;; ("__Table__" "Table" "category-and-value")
-    ;; ("__Figure__" "Figure" "category-and-value")
-    ;; ("__DvipngImage__" "Equation" "category-and-value")
-    )
+    ("__Listing__" "Listing" "value" "Listing" org-odt--enumerable-p))
   "Map a CATEGORY-HANDLE to OD-VARIABLE and LABEL-STYLE.
-This is a list where each entry is of the form \\(CATEGORY-HANDLE
-OD-VARIABLE LABEL-STYLE CATEGORY-NAME ENUMERATOR-PREDICATE\\).
+
+This is a list where each entry is of the form:
+
+  \(CATEGORY-HANDLE OD-VARIABLE LABEL-STYLE CATEGORY-NAME ENUMERATOR-PREDICATE)
 
 CATEGORY_HANDLE identifies the captionable entity in question.
 
@@ -331,15 +330,7 @@ the entity.  These counters are declared within
 LABEL-STYLE is a key into `org-odt-label-styles' and specifies
 how a given entity should be captioned and referenced.
 
-CATEGORY-NAME is used for qualifying captions on export.  You can
-modify the CATEGORY-NAME used in the exported document by
-modifying `org-export-dictionary'.  For example, an embedded
-image in an English document is captioned as \"Figure 1: Orgmode
-Logo\", by default.  If you want the image to be captioned as
-\"Illustration 1: Orgmode Logo\" instead, install an entry in
-`org-export-dictionary' which translates \"Figure\" to
-\"Illustration\" when the language is \"en\" and encoding is
-`:utf-8'.
+CATEGORY-NAME is used for qualifying captions on export.
 
 ENUMERATOR-PREDICATE is used for assigning a sequence number to
 the entity.  See `org-odt--enumerate'.")
@@ -455,9 +446,10 @@ The exporter embeds the exported content just before
 
 If unspecified, the file named \"OrgOdtContentTemplate.xml\"
 under `org-odt-styles-dir' is used."
-  :type 'file
+  :type '(choice (const nil)
+		 (file))
   :group 'org-export-odt
-  :version "24.1")
+  :version "24.3")
 
 (defcustom org-odt-styles-file nil
   "Default styles file for use with ODT export.
@@ -506,7 +498,8 @@ a per-file basis.  For example,
 (defcustom org-odt-display-outline-level 2
   "Outline levels considered for enumerating captioned entities."
   :group 'org-export-odt
-  :version "24.2"
+  :version "24.4"
+  :package-version '(Org . "8.0")
   :type 'integer)
 
 ;;;; Document conversion
@@ -604,7 +597,7 @@ INPUT-FMT-LIST in to a single class.
 Note that this variable inherently captures how LibreOffice based
 converters work.  LibreOffice maps documents of various formats
 to classes like Text, Web, Spreadsheet, Presentation etc and
-allow document of a given class (irrespective of it's source
+allow document of a given class (irrespective of its source
 format) to be converted to any of the export formats associated
 with that class.
 
@@ -653,7 +646,8 @@ values.  See Info node `(emacs) File Variables'."
 
 ;;;; Drawers
 
-(defcustom org-odt-format-drawer-function nil
+(defcustom org-odt-format-drawer-function
+  (lambda (name contents) contents)
   "Function called to format a drawer in ODT code.
 
 The function must accept two parameters:
@@ -662,21 +656,16 @@ The function must accept two parameters:
 
 The function should return the string to be exported.
 
-For example, the variable could be set to the following function
-in order to mimic default behaviour:
-
-\(defun org-odt-format-drawer-default \(name contents\)
-  \"Format a drawer element for ODT export.\"
-  contents\)"
+The default value simply returns the value of CONTENTS."
   :group 'org-export-odt
   :version "24.4"
-  :package-version '(Org . "8.0")
+  :package-version '(Org . "8.3")
   :type 'function)
 
 
 ;;;; Headline
 
-(defcustom org-odt-format-headline-function nil
+(defcustom org-odt-format-headline-function 'ignore
   "Function to format headline text.
 
 This function will be called with 5 arguments:
@@ -695,7 +684,7 @@ The function result will be used as headline text."
 
 ;;;; Inlinetasks
 
-(defcustom org-odt-format-inlinetask-function nil
+(defcustom org-odt-format-inlinetask-function 'ignore
   "Function called to format an inlinetask in ODT code.
 
 The function must accept six parameters:
@@ -754,6 +743,8 @@ A rule consists in an association whose key is the type of link
 to consider, and value is a regexp that will be matched against
 link's path."
   :group 'org-export-odt
+  :version "24.4"
+  :package-version '(Org . "8.0")
   :type '(alist :key-type (string :tag "Type")
 		:value-type (regexp :tag "Path")))
 
@@ -765,6 +756,8 @@ A rule consists in an association whose key is the type of link
 to consider, and value is a regexp that will be matched against
 link's path."
   :group 'org-export-odt
+  :version "24.4"
+  :package-version '(Org . "8.0")
   :type '(alist :key-type (string :tag "Type")
 		:value-type (regexp :tag "Path")))
 
@@ -927,7 +920,7 @@ Specifically, locale-dependent specifiers like \"%c\", \"%x\" are
 formatted as canonical Org timestamps.  For finer control, avoid
 these %-specifiers.
 
-Textutal specifiers like \"%b\", \"%h\", \"%B\", \"%a\", \"%A\"
+Textual specifiers like \"%b\", \"%h\", \"%B\", \"%a\", \"%A\"
 etc., are displayed by the application in the default language
 and country specified in `org-odt-styles-file'.  Note that the
 default styles file uses language \"en\" and country \"GB\".  You
@@ -937,6 +930,8 @@ the application UI or through a custom styles file.
 
 See `org-odt--build-date-styles' for implementation details."
   :group 'org-export-odt
+  :version "24.4"
+  :package-version '(Org . "8.0")
   :type 'boolean)
 
 
@@ -1003,7 +998,9 @@ See `org-odt--build-date-styles' for implementation details."
 	  (if width (format " svg:width=\"%0.2fcm\"" width) "")
 	  (if height (format " svg:height=\"%0.2fcm\"" height) "")
 	  extra
-	  (format " text:anchor-type=\"%s\"" (or anchor-type "paragraph")))))
+	  (format " text:anchor-type=\"%s\"" (or anchor-type "paragraph"))
+	  (format " draw:name=\"%s\""
+		  (car (org-odt-add-automatic-style "Frame"))))))
     (format
      "\n<draw:frame draw:style-name=\"%s\"%s>\n%s\n</draw:frame>"
      style frame-attrs
@@ -1045,20 +1042,6 @@ See `org-odt--build-date-styles' for implementation details."
 	      (message command-output)
 	      (error "Extraction failed"))))
 	members))
-
-(defun org-odt--suppress-some-translators (info types)
-  ;; See comments in `org-odt-format-label' and `org-odt-toc'.
-  (org-combine-plists
-   info (list
-	 ;; Override translators.
-	 :translate-alist
-	 (nconc (mapcar (lambda (type) (cons type (lambda (data contents info)
-						    contents))) types)
-		(plist-get info :translate-alist))
-	 ;; Reset data translation cache.  FIXME.
-	 ;; :exported-data nil
-	 )))
-
 
 ;;;; Target
 
@@ -1175,20 +1158,19 @@ See `org-odt--build-date-styles' for implementation details."
   (let* ((title (org-export-translate "Table of Contents" :utf-8 info))
 	 (headlines (org-export-collect-headlines
 		     info (and (wholenump depth) depth)))
-	 (translations (nconc (mapcar
-			       (lambda (type)
-				 (cons type (lambda (data contents info)
-					      contents)))
-			       (list 'radio-target))
-			      (plist-get info :translate-alist))))
+	 (backend (org-export-create-backend
+		   :parent (org-export-backend-name
+			    (plist-get info :back-end))
+		   :transcoders (mapcar
+				 (lambda (type) (cons type (lambda (d c i) c)))
+				 (list 'radio-target)))))
     (when headlines
       (concat
        (org-odt-begin-toc title depth)
        (mapconcat
 	(lambda (headline)
 	  (let* ((entry (org-odt-format-headline--wrap
-			 headline translations info
-			 'org-odt-format-toc-headline))
+			 headline backend info 'org-odt-format-toc-headline))
 		 (level (org-export-get-relative-level headline info))
 		 (style (format "Contents_20_%d" level)))
 	    (format "\n<text:p text:style-name=\"%s\">%s</text:p>"
@@ -1459,7 +1441,7 @@ original parsed data.  INFO is a plist holding export options."
   ;; Update content.xml.
 
   (let* ( ;; `org-display-custom-times' should be accessed right
-	 ;; within the context of the Org buffer.  So obtain it's
+	 ;; within the context of the Org buffer.  So obtain its
 	 ;; value before moving on to temp-buffer context down below.
 	 (custom-time-fmts
 	  (if org-display-custom-times
@@ -1479,7 +1461,7 @@ original parsed data.  INFO is a plist holding export options."
       ;; - Dump automatic table styles.
       (loop for (style-name props) in
 	    (plist-get org-odt-automatic-styles 'Table) do
-	    (when (setq props (or (plist-get props :rel-width) 96))
+	    (when (setq props (or (plist-get props :rel-width) "96"))
 	      (insert (format org-odt-table-style-format style-name props))))
       ;; - Dump date-styles.
       (when org-odt-use-date-fields
@@ -1642,12 +1624,8 @@ channel."
 CONTENTS holds the contents of the block.  INFO is a plist
 holding contextual information."
   (let* ((name (org-element-property :drawer-name drawer))
-	 (output (if (functionp org-odt-format-drawer-function)
-		     (funcall org-odt-format-drawer-function
-			      name contents)
-		   ;; If there's no user defined function: simply
-		   ;; display contents of the drawer.
-		   contents)))
+	 (output (funcall org-odt-format-drawer-function
+			  name contents)))
     output))
 
 
@@ -1744,7 +1722,7 @@ CONTENTS is nil.  INFO is a plist holding contextual information."
        (and (eq (org-element-type prev) 'footnote-reference)
 	    (format "<text:span text:style-name=\"%s\">%s</text:span>"
 		    "OrgSuperscript" ",")))
-     ;; Trancode footnote reference.
+     ;; Transcode footnote reference.
      (let ((n (org-export-get-footnote-number footnote-reference info)))
        (cond
 	((not (org-export-footnote-first-reference-p footnote-reference info))
@@ -1754,18 +1732,22 @@ CONTENTS is nil.  INFO is a plist holding contextual information."
 	(t
 	 (let* ((raw (org-export-get-footnote-definition
 		      footnote-reference info))
-		(translations
-		 (cons (cons 'paragraph
-			     (lambda (p c i)
-			       (org-odt--format-paragraph
-				p c "Footnote" "OrgFootnoteCenter"
-				"OrgFootnoteQuotations")))
-		       (org-export-backend-translate-table 'odt)))
-		(def (let ((def (org-trim (org-export-data-with-translations
-					   raw translations info))))
-		       (if (eq (org-element-type raw) 'org-data) def
-			 (format "\n<text:p text:style-name=\"%s\">%s</text:p>"
-				 "Footnote" def)))))
+		(def
+		 (let ((def (org-trim
+			     (org-export-data-with-backend
+			      raw
+			      (org-export-create-backend
+			       :parent 'odt
+			       :transcoders
+			       '((paragraph . (lambda (p c i)
+						(org-odt--format-paragraph
+						 p c "Footnote"
+						 "OrgFootnoteCenter"
+						 "OrgFootnoteQuotations")))))
+			      info))))
+		   (if (eq (org-element-type raw) 'org-data) def
+		     (format "\n<text:p text:style-name=\"%s\">%s</text:p>"
+			     "Footnote" def)))))
 	   (funcall --format-footnote-definition n def))))))))
 
 
@@ -1798,13 +1780,12 @@ CONTENTS is nil.  INFO is a plist holding contextual information."
 			    "<text:span text:style-name=\"%s\">%s</text:span>"
 			    "OrgTag" tag)) tags " : "))))))
 
-(defun org-odt-format-headline--wrap (headline translations info
-						 &optional format-function
-						 &rest extra-keys)
-  "Transcode a HEADLINE element from Org to ODT.
-CONTENTS holds the contents of the headline.  INFO is a plist
-holding contextual information."
-  (setq translations (or translations (plist-get info :translate-alist)))
+(defun org-odt-format-headline--wrap (headline backend info
+					       &optional format-function
+					       &rest extra-keys)
+  "Transcode a HEADLINE element using BACKEND.
+INFO is a plist holding contextual information."
+  (setq backend (or backend (plist-get info :back-end)))
   (let* ((level (+ (org-export-get-relative-level headline info)))
 	 (headline-number (org-export-get-headline-number headline info))
 	 (section-number (and (org-export-numbered-headline-p headline info)
@@ -1812,20 +1793,20 @@ holding contextual information."
 					 headline-number ".")))
 	 (todo (and (plist-get info :with-todo-keywords)
 		    (let ((todo (org-element-property :todo-keyword headline)))
-		      (and todo (org-export-data-with-translations
-				 todo translations info)))))
+		      (and todo
+			   (org-export-data-with-backend todo backend info)))))
 	 (todo-type (and todo (org-element-property :todo-type headline)))
 	 (priority (and (plist-get info :with-priority)
 			(org-element-property :priority headline)))
-	 (text (org-export-data-with-translations
-		(org-element-property :title headline) translations info))
+	 (text (org-export-data-with-backend
+		(org-element-property :title headline) backend info))
 	 (tags (and (plist-get info :with-tags)
 		    (org-export-get-tags headline info)))
 	 (headline-label (concat "sec-" (mapconcat 'number-to-string
 						   headline-number "-")))
 	 (format-function (cond
 			   ((functionp format-function) format-function)
-			   ((functionp org-odt-format-headline-function)
+			   ((not (eq org-odt-format-headline-function 'ignore))
 			    (function*
 			     (lambda (todo todo-type priority text tags
 					   &allow-other-keys)
@@ -1951,13 +1932,13 @@ contextual information."
 CONTENTS holds the contents of the block.  INFO is a plist
 holding contextual information."
   (cond
-   ;; If `org-odt-format-inlinetask-function' is provided, call it
+   ;; If `org-odt-format-inlinetask-function' is not 'ignore, call it
    ;; with appropriate arguments.
-   ((functionp org-odt-format-inlinetask-function)
+   ((not (eq org-odt-format-inlinetask-function 'ignore))
     (let ((format-function
 	   (function*
 	    (lambda (todo todo-type priority text tags
-			  &key contents &allow-other-keys)
+		     &key contents &allow-other-keys)
 	      (funcall org-odt-format-inlinetask-function
 		       todo todo-type priority text tags contents)))))
       (org-odt-format-headline--wrap
@@ -2078,7 +2059,7 @@ CONTENTS is nil.  INFO is a plist holding contextual information."
 (defun org-odt-line-break (line-break contents info)
   "Transcode a LINE-BREAK object from Org to ODT.
 CONTENTS is nil.  INFO is a plist holding contextual information."
-  "<text:line-break/>\n")
+  "<text:line-break/>")
 
 
 ;;;; Link
@@ -2123,6 +2104,16 @@ CONTENTS is nil.  INFO is a plist holding contextual information."
     tag))
 
 (defun org-odt-format-label (element info op)
+  "Return a label for ELEMENT.
+
+ELEMENT is a `link', `table', `src-block' or `paragraph' type
+element.  INFO is a plist used as a communication channel.  OP is
+either `definition' or `reference', depending on the purpose of
+the generated string.
+
+Return value is a string if OP is set to `reference' or a cons
+cell like CAPTION . SHORT-CAPTION) where CAPTION and
+SHORT-CAPTION are strings."
   (assert (memq (org-element-type element) '(link table src-block paragraph)))
   (let* ((caption-from
 	  (case (org-element-type element)
@@ -2131,46 +2122,9 @@ CONTENTS is nil.  INFO is a plist holding contextual information."
 	 ;; Get label and caption.
 	 (label (org-element-property :name caption-from))
 	 (caption (org-export-get-caption caption-from))
-	 (short-caption (org-export-get-caption caption-from t))
-	 ;; Transcode captions.
 	 (caption (and caption (org-export-data caption info)))
-	 ;; Currently short caption are sneaked in as object names.
-	 ;;
-	 ;; The advantages are:
-	 ;;
-	 ;; - Table Of Contents: Currently, there is no support for
-	 ;;   building TOC for figures, listings and tables.  See
-	 ;;   `org-odt-keyword'.  User instead has to rely on
-	 ;;   external application for building such indices.  Within
-	 ;;   LibreOffice, building an "Illustration Index" or "Index
-	 ;;   of Tables" will create a table with long captions (only)
-	 ;;   and building a table with "Object names" will create a
-	 ;;   table with short captions.
-	 ;;
-	 ;; - Easy navigation: In LibreOffice, object names are
-	 ;;   offered via the navigation bar.  This way one can
-	 ;;   quickly locate and jump to object of his choice in the
-	 ;;   exported document.
-	 ;;
-	 ;; The main disadvantage is that there cannot be any markups
-	 ;; within object names i.e., one cannot embolden, italicize
-	 ;; or underline text within short caption.  So suppress
-	 ;; generation of <text:span >...</text:span> and other
-	 ;; markups by overriding the default translators.  We
-	 ;; probably shouldn't be suppressing translators for all
-	 ;; elements in `org-element-all-objects', but for now this
-	 ;; will do.
-	 (short-caption
-	  (let ((short-caption (or short-caption caption))
-		(translations (nconc (mapcar
-				      (lambda (type)
-					(cons type (lambda (data contents info)
-						     contents)))
-				      org-element-all-objects)
-				     (plist-get info :translate-alist))))
-	    (when short-caption
-	      (org-export-data-with-translations short-caption
-						 translations info)))))
+	 ;; FIXME: We don't use short-caption for now
+	 (short-caption nil))
     (when (or label caption)
       (let* ((default-category
 	       (case (org-element-type element)
@@ -2200,18 +2154,21 @@ CONTENTS is nil.  INFO is a plist holding contextual information."
 	    ;; Case 1: Handle Label definition.
 	    (definition
 	      ;; Assign an internal label, if user has not provided one
-	      (setq label (or label (format  "%s-%s" default-category seqno)))
-	      (setq label (org-export-solidify-link-text label))
+	      (setq label (org-export-solidify-link-text
+			   (or label (format  "%s-%s" default-category seqno))))
 	      (cons
 	       (concat
 		;; Sneak in a bookmark.  The bookmark is used when the
 		;; labeled element is referenced with a link that
-		;; provides it's own description.
+		;; provides its own description.
 		(format "\n<text:bookmark text:name=\"%s\"/>" label)
 		;; Label definition: Typically formatted as below:
 		;;     CATEGORY SEQ-NO: LONG CAPTION
+		;; with translation for correct punctuation.
 		(format-spec
-		 (cadr (assoc-string label-style org-odt-label-styles t))
+		 (org-export-translate
+		  (cadr (assoc-string label-style org-odt-label-styles t))
+		  :utf-8 info)
 		 `((?e . ,category)
 		   (?n . ,(format
 			   "<text:sequence text:ref-name=\"%s\" text:name=\"%s\" text:formula=\"ooow:%s+1\" style:num-format=\"1\">%s</text:sequence>"
@@ -2350,7 +2307,6 @@ used as a communication channel."
 	 (user-frame-params
 	  (list user-frame-style user-frame-attrs user-frame-anchor))
 	 ;; (embed-as (or embed-as user-frame-anchor "paragraph"))
-	 ;; extrac
 	 ;;
 	 ;; Handle `:width', `:height' and `:scale' properties.  Read
 	 ;; them as numbers since we need them for computations.
@@ -2380,7 +2336,7 @@ used as a communication channel."
 	 (title (and replaces (capitalize
 			       (symbol-name (org-element-type replaces)))))
 
-	 ;; If yes, note down it's contents.  It will go in to frame
+	 ;; If yes, note down its contents.  It will go in to frame
 	 ;; description.  This quite useful for debugging.
 	 (desc (and replaces (org-element-property :value replaces))))
     (org-odt--render-image/formula entity href width height
@@ -2418,7 +2374,7 @@ used as a communication channel."
 	 (title (and replaces (capitalize
 			       (symbol-name (org-element-type replaces)))))
 
-	 ;; If yes, note down it's contents.  It will go in to frame
+	 ;; If yes, note down its contents.  It will go in to frame
 	 ;; description.  This quite useful for debugging.
 	 (desc (and replaces (org-element-property :value replaces)))
 	 width height)
@@ -2622,12 +2578,12 @@ used as a communication channel."
 INFO is a plist holding contextual information.
 
 Return non-nil, if ELEMENT is of type paragraph satisfying
-PARAGRAPH-PREDICATE and it's sole content, save for whitespaces,
+PARAGRAPH-PREDICATE and its sole content, save for whitespaces,
 is a link that satisfies LINK-PREDICATE.
 
 Return non-nil, if ELEMENT is of type link satisfying
-LINK-PREDICATE and it's containing paragraph satisfies
-PARAGRAPH-PREDICATE inaddtion to having no other content save for
+LINK-PREDICATE and its containing paragraph satisfies
+PARAGRAPH-PREDICATE in addition to having no other content save for
 leading and trailing whitespaces.
 
 Return nil, otherwise."
@@ -2716,7 +2672,7 @@ Return nil, otherwise."
 					    (concat (number-to-string n) ".")))
 			      item-numbers "")))))
      ;; Case 2: Locate a regular and numbered headline in the
-     ;; hierarchy.  Display it's section number.
+     ;; hierarchy.  Display its section number.
      (let ((headline (loop for el in (cons destination genealogy)
 			   when (and (eq (org-element-type el) 'headline)
 				     (not (org-export-low-level-p el info))
@@ -2729,7 +2685,7 @@ Return nil, otherwise."
 		 (mapconcat 'number-to-string (org-export-get-headline-number
 					       headline info) "."))))
      ;; Case 4: Locate a regular headline in the hierarchy.  Display
-     ;; it's title.
+     ;; its title.
      (let ((headline (loop for el in (cons destination genealogy)
 			   when (and (eq (org-element-type el) 'headline)
 				     (not (org-export-low-level-p el info)))
@@ -2975,7 +2931,7 @@ contextual information."
     ;; Handle break preservation if required.
     (when (plist-get info :preserve-breaks)
       (setq output (replace-regexp-in-string
-		    "\\(\\\\\\\\\\)?[ \t]*\n" "<text:line-break/>\n" output t)))
+		    "\\(\\\\\\\\\\)?[ \t]*\n" "<text:line-break/>" output t)))
     ;; Return value.
     output))
 
@@ -3109,9 +3065,9 @@ holding contextual information."
 
 (defun org-odt-hfy-face-to-css (fn)
   "Create custom style for face FN.
-When FN is the default face, use it's foreground and background
+When FN is the default face, use its foreground and background
 properties to create \"OrgSrcBlock\" paragraph style.  Otherwise
-use it's color attribute to create a character style whose name
+use its color attribute to create a character style whose name
 is obtained from FN.  Currently all attributes of FN other than
 color are ignored.
 
@@ -3121,12 +3077,11 @@ and prefix with \"OrgSrc\".  For example,
 `font-lock-function-name-face' is associated with
 \"OrgSrcFontLockFunctionNameFace\"."
   (let* ((css-list (hfy-face-to-style fn))
-	 (style-name ((lambda (fn)
-			(concat "OrgSrc"
-				(mapconcat
-				 'capitalize (split-string
-					      (hfy-face-or-def-to-name fn) "-")
-				 ""))) fn))
+	 (style-name (concat "OrgSrc"
+                             (mapconcat
+                              'capitalize (split-string
+                                           (hfy-face-or-def-to-name fn) "-")
+                              "")))
 	 (color-val (cdr (assoc "color" css-list)))
 	 (background-color-val (cdr (assoc "background" css-list)))
 	 (style (and org-odt-create-custom-styles-for-srcblocks
@@ -3780,9 +3735,10 @@ contextual information."
 	   (setq processing-type 'mathml)
 	 (message "LaTeX to MathML converter not available.")
 	 (setq processing-type 'verbatim)))
-      (dvipng
+      ((dvipng imagemagick)
        (unless (and (org-check-external-command "latex" "" t)
-		    (org-check-external-command "dvipng" "" t))
+		    (org-check-external-command
+		     (if (eq processing-type 'dvipng) "dvipng" "convert") "" t))
 	 (message "LaTeX to PNG converter not available.")
 	 (setq processing-type 'verbatim)))
       (otherwise
@@ -3795,7 +3751,7 @@ contextual information."
     (message "Formatting LaTeX using %s" processing-type)
 
     ;; Convert `latex-fragment's and `latex-environment's.
-    (when (memq processing-type '(mathml dvipng))
+    (when (memq processing-type '(mathml dvipng imagemagick))
       (org-element-map tree '(latex-fragment latex-environment)
 	(lambda (latex-*)
 	  (incf count)
@@ -3804,13 +3760,13 @@ contextual information."
 		 (cache-dir (file-name-directory input-file))
 		 (cache-subdir (concat
 				(case processing-type
-				  (dvipng "ltxpng/")
+				  ((dvipng imagemagick) "ltxpng/")
 				  (mathml "ltxmathml/"))
 				(file-name-sans-extension
 				 (file-name-nondirectory input-file))))
 		 (display-msg
 		  (case processing-type
-		    (dvipng (format "Creating LaTeX Image %d..." count))
+		    ((dvipng imagemagick) (format "Creating LaTeX Image %d..." count))
 		    (mathml (format "Creating MathML snippet %d..." count))))
 		 ;; Get an Org-style link to PNG image or the MathML
 		 ;; file.
@@ -4262,9 +4218,12 @@ Return output file's name."
 			(require 'nxml-mode)
 			(let ((nxml-auto-insert-xml-declaration-flag nil))
 			  (find-file-noselect
-			   (concat org-odt-zip-dir "content.xml") t)))))
-		 (org-export-to-buffer
-		  'odt out-buf ,subtreep ,visible-only nil ',ext-plist))))))
+			   (concat org-odt-zip-dir "content.xml") t))))
+		     (output (org-export-as
+			      'odt ,subtreep ,visible-only nil ,ext-plist)))
+		 (with-current-buffer out-buf
+		   (erase-buffer)
+		   (insert output)))))))
       (org-odt--export-wrap
        outfile
        (let* ((org-odt-embedded-images-count 0)
@@ -4275,13 +4234,13 @@ Return output file's name."
 	      ;; styles.
 	      (hfy-user-sheet-assoc nil))
 	 ;; Initialize content.xml and kick-off the export process.
-	 (let ((out-buf (progn
+	 (let ((output (org-export-as 'odt subtreep visible-only nil ext-plist))
+	       (out-buf (progn
 			  (require 'nxml-mode)
 			  (let ((nxml-auto-insert-xml-declaration-flag nil))
 			    (find-file-noselect
 			     (concat org-odt-zip-dir "content.xml") t)))))
-	   (org-export-to-buffer
-	    'odt out-buf subtreep visible-only nil ext-plist)))))))
+	   (with-current-buffer out-buf (erase-buffer) (insert output))))))))
 
 
 ;;;; Convert between OpenDocument and other formats

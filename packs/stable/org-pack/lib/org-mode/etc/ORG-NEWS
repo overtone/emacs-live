@@ -8,6 +8,169 @@ See the end of the file for license conditions.
 
 Please send Org bug reports to emacs-orgmode@gnu.org.
 
+* Version 8.2
+
+** Incompatible changes
+
+*** Combine org-mac-message.el and org-mac-link-grabber into org-mac-link.el
+
+Please remove calls to =(require 'org-mac-message)= and =(require
+'org-mac-link-grabber)= in your =.emacs= initialization file.  All you
+need now is =(require 'org-mac-link)=.
+
+Additionally, replace any calls to =ogml-grab-link= to
+=org-mac-grab-link=.  For example, replace this line:
+
+: (define-key org-mode-map (kbd "C-c g") 'omgl-grab-link)
+
+with this:
+
+: (define-key org-mode-map (kbd "C-c g") 'org-mac-grab-link)
+
+*** HTML export: Replace =HTML_HTML5_FANCY= by =:html-html5-fancy= (...)
+
+Some of the HTML specific export options in Org <8.1 are either nil or
+t, like =#+HTML_INCLUDE_STYLE=.  We replaced these binary options with
+option keywords like :html-include-style.
+
+So you need to replace
+
+: #+HTML_INCLUDE_STYLE: t
+
+by 
+
+: #+OPTIONS: :html-include-style t
+
+Options affected by this change: =HTML5_FANCY=, =HTML_INCLUDE_SCRIPTS=
+and =HTML_INCLUDE_STYLE=.
+
+*** Add an argument to ~org-export-to-file~ and ~org-export-to-buffer~
+
+~org-export-to-file~ and ~org-export-to-file~ can run in a different
+process when provided a non-nil =ASYNC= optional argument, without
+relying on ~org-export-async-start~ macro.
+
+Since =ASYNC= is the first of optional arguments, you have to shift
+the other optional arguments accordingly.
+
+*** Export back-ends are now structures
+
+Export back-ends are now structures, and stored as such in the
+communication channel during an export process.  In other words, from
+now on, ~(plist-get info :back-end)~ will return a structure instead
+of a symbol.
+
+Arguments in hooks and in filters are still symbols, though.
+
+** Important bugfixes
+
+*** [[doc:org-insert-heading][org-insert-heading]] has been rewritten and bugs are now fixed
+*** The replacement of disputed keys is now turned of when reading a date
+
+*** Match string for sparse trees can now contain a slash in a property value
+
+    You can now have searches like SOMEPROP="aaa/bbb".  Until now,
+    this would break because the slash would be interpreted as the
+    separator starting a TOTO match string.
+** New features
+
+*** =C-c ^ x= will now sort checklist items by their checked status
+
+See [[doc:org-sort-list][org-sort-list]]: hitting =C-c ^ x= will put checked items at the end
+of the list.
+*** Various LaTeX export enhancements
+
+- Support SVG images
+- Support for .pgf files
+- LaTeX Babel blocks can now be exported as =.tikz= files
+- Allow =latexmk= as an option for [[doc:org-latex-pdf-process][org-latex-pdf-process]]
+- When using =\usepackage[AUTO]{babel}=, AUTO will automatically be
+  replaced with a value compatible with ~org-export-default-language~
+  or ~LANGUAGE~ keyword.
+- The dependency on the =latexsym= LaTeX package has been removed, we
+  now use =amssymb= symbols by default instead.
+
+*** New functions for paragraph motion
+    
+    The commands =C-down= and =C-up= now invoke special commands
+    that use knowledge from the org-elements parser to move the cursor
+    in a paragraph-like way.
+
+*** New entities in =org-entities.el=
+    
+Add support for ell, imath, jmath, varphi, varpi, aleph, gimel, beth,
+dalet, cdots, S (§), dag, ddag, colon, therefore, because, triangleq,
+leq, geq, lessgtr, lesseqgtr, ll, lll, gg, ggg, prec, preceq,
+preccurlyeq, succ, succeq, succurlyeq, setminus, nexist(s), mho,
+check, frown, diamond.  Changes loz, vert, checkmark, smile and tilde.
+
+*** Anonymous export back-ends
+
+~org-export-create-backend~ can create anonymous export back-ends,
+which can then be passed to export functions like
+~org-export-to-file~, ~org-export-to-buffer~ or ~org-export-as~.
+
+It allows for quick translation of Org syntax without the overhead of
+registering a new back-end.
+
+*** New agenda fortnight view
+
+    The agenda has not, in addition to day, week, month, and year
+    views, also a fortnight view covering 14 days.
+** New options
+
+*** New option [[doc:org-bookmark-names-plist][org-bookmark-names-plist]]
+
+This allows to specify the names of automatic bookmarks.
+*** New option [[doc:org-agenda-ignore-drawer-properties][org-agenda-ignore-drawer-properties]]
+
+This allows more flexibility when optimizing the agenda generation.
+See http://orgmode.org/worg/agenda-optimization.html for details.
+*** New option: [[doc:org-html-link-use-abs-url][org-html-link-use-abs-url]] to force using absolute URLs
+
+This is an export/publishing option, and should be used either within
+the =#+OPTIONS= line(s) or within a [[doc:org-publish-project-alist][org-publish-project-alist]].
+
+Setting this option to =t= is needed when the HTML output does not
+allow relative URLs.  For example, the =contrib/lisp/ox-rss.el=
+library produces a RSS feed, and RSS feeds need to use absolute URLs,
+so a combination of =:html-link-home "..." and :html-link-use-abs-url
+t= is required---see the configuration example in the comment section
+of =ox-rss.el=.
+
+*** New option [[doc:org-babel-ditaa-java-cmd][org-babel-ditaa-java-cmd]]
+
+This makes java executable configurable for ditaa blocks.
+
+*** New options [[doc:org-babel-latex-htlatex][org-babel-latex-htlatex]] and [[doc:org-babel-latex-htlatex-packages][org-babel-latex-htlatex-packages]]
+
+This enables SVG generation from latex code blocks.
+
+*** New option: [[doc:org-habit-show-done-always-green][org-habit-show-done-always-green]]
+
+See [[http://lists.gnu.org/archive/html/emacs-orgmode/2013-05/msg00214.html][this message]] from Max Mikhanosha.
+
+*** New option: [[doc:org-babel-inline-result-wrap][org-babel-inline-result-wrap]]
+
+If you set this to the following
+
+: (setq org-babel-inline-result-wrap "$%s$")
+
+then inline code snippets will be wrapped into the formatting string.
+
+*** New option: [[doc:org-special-ctrl-o][org-special-ctrl-o]]
+
+    This variable can be used to turn off the special behavior of
+    =C-o= in tables.
+** New contributed packages
+
+- =ox-bibtex.el= by Nicolas Goaziou :: an utility to handle BibTeX
+     export to both LaTeX and HTML exports.  It uses the [[http://www.lri.fr/~filliatr/bibtex2html/][bibtex2html]]
+     software.
+
+- =org-screenshot.el= by Max Mikhanosha :: an utility to handle
+     screenshots easily from Org, using the external tool [[http://freecode.com/projects/scrot][scrot]].
+
 * Version 8.0.1
 
 ** Installation
@@ -114,8 +277,8 @@ manual for details and check [[http://orgmode.org/worg/org-8.0.html][this Worg p
      moved some contributions into the =contrib/= directory.
 
      The rationale for deciding that these files should live in =contrib/=
-     is either because they rely on third-part softwares that are not
-     included in Emacs, or because they are not targetting a significant
+     is either because they rely on third-party software that is not
+     included in Emacs, or because they are not targeting a significant
      user-base.
 
      - org-colview-xemacs.el
@@ -232,7 +395,7 @@ Among the new/updated export options, three are of particular importance:
 
 - [[doc:org-export-allow-bind-keywords][org-export-allow-bind-keywords]] :: This option replaces the old option
      =org-export-allow-BIND= and the default value is =nil=, not =confirm=.
-     You will need to explicitely set this to =t= in your initialization
+     You will need to explicitly set this to =t= in your initialization
      file if you want to allow =#+BIND= keywords.
 
 - [[doc:org-export-with-planning][org-export-with-planning]] :: This new option controls the export of
@@ -491,7 +654,7 @@ headlines and their content (but not subheadings) into the new file.
 This is useful when you want to quickly share an agenda containing the full
 list of notes.
 
-**** New commands to drag an agenda line forward (=M-<down>=) or backard (=M-<up>=)
+**** New commands to drag an agenda line forward (=M-<down>=) or backward (=M-<up>=)
 
 It sometimes handy to move agenda lines around, just to quickly reorganize
 your tasks, or maybe before saving the agenda to a file.  Now you can use
@@ -554,7 +717,7 @@ string is important to keep the agenda alignment clean.
 
 When [[doc:org-agenda-skip-scheduled-if-deadline-is-shown][org-agenda-skip-scheduled-if-deadline-is-shown]] is set to
 =repeated-after-deadline=, the agenda will skip scheduled items if they are
-repeated beyond the current dealine.
+repeated beyond the current deadline.
 
 **** New option for [[doc:org-agenda-skip-deadline-prewarning-if-scheduled][org-agenda-skip-deadline-prewarning-if-scheduled]]
 
@@ -594,7 +757,7 @@ check against the name of the buffer.
 
 Using =#+TAGS: { Tag1 : Tag2 Tag3 }= will define =Tag1= as a /group tag/
 (note the colon after =Tag1=).  If you search for =Tag1=, it will return
-headlines containing either =Tag1=, =Tag2= or =Tag3= (or any combinaison
+headlines containing either =Tag1=, =Tag2= or =Tag3= (or any combination
 of those tags.)
 
 You can use group tags for sparse tree in an Org buffer, for creating
@@ -906,7 +1069,7 @@ See http://orgmode.org/elpa/
    | =k=             |        | [[doc::org-agenda-capture][org-agenda-capture]]          |
    | C-c ,           | ,      | [[doc::org-priority][org-priority]]                |
 
-** New package and Babel langage
+** New package and Babel language
 
 *** =org-eshell.el= by Konrad Hinsen is now in Org
 

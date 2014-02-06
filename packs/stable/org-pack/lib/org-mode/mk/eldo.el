@@ -1,8 +1,8 @@
 ;;; eldo.el --- Elisp Doc-to-Org converter
 
-;; Copyright (C) 2012, 2013  Bastien Guerry
+;; Copyright (C) 2012--2014  Bastien Guerry
 ;;
-;; Author: Bastien Guerry <bzg at gnu dot org>
+;; Author: Bastien Guerry <bzg@gnu.org>
 ;; Keywords: elisp, documentation, org
 ;; Homepage: http://orgmode.org
 ;;

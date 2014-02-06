@@ -1,6 +1,6 @@
 ;;; test-ob-R.el --- tests for ob-R.el
 
-;; Copyright (c) 2011-2013 Eric Schulte
+;; Copyright (c) 2011-2014 Eric Schulte
 ;; Authors: Eric Schulte
 
 ;; This file is not part of GNU Emacs.

@@ -4,9 +4,8 @@
 
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
 ;; Created: 20080830
-;; Version: 1.0.10
 ;; Status: beta
-;; Package-Requires: ((cl-lib "0.2") (packed "0.3.3"))
+;; Package-Requires: ((cl-lib "0.2") (packed "0.3.4"))
 ;; Homepage: http://tarsius.github.com/auto-compile
 ;; Keywords: compile, convenience, lisp
 
@@ -118,7 +117,11 @@
 (declare-function autoload-rubric "autoload")
 (declare-function autoload-find-destination "autoload")
 (declare-function autoload-file-load-name "autoload")
+(declare-function autoload-generate-file-autoloads "autoload")
 
+(defvar autoload-modified-buffers)
+
+(defvar auto-compile-update-autoloads)
 (defvar auto-compile-use-mode-line)
 
 (defgroup auto-compile nil
@@ -126,7 +129,6 @@
   :group 'convenience
   :prefix 'auto-compile
   :link '(function-link toggle-auto-compile)
-  :link '(function-link auto-compile-byte-compile)
   :link '(function-link auto-compile-mode))
 
 ;;; Auto-Compile-On-Save Mode
@@ -164,6 +166,8 @@ variant `auto-compile-on-save-mode'.  Also see the related
 (defvar auto-compile-mode-lighter ""
   "Mode lighter for Auto-Compile Mode.")
 
+;;; Options
+
 (defcustom auto-compile-verbose nil
   "Whether to print messages describing progress of byte-compiler."
   :group 'auto-compile
@@ -180,7 +184,7 @@ of variable `auto-compile-mark-failed-modified' is non-nil."
   :group 'auto-compile
   :type 'boolean)
 
-(defcustom auto-compile-mark-failed-modified t
+(defcustom auto-compile-mark-failed-modified nil
   "Whether to mark buffers which failed to compile as modified.
 
 This serves as a reminder to fix fatal errors.  While useful this
@@ -213,15 +217,11 @@ is made to compile the file as that would obviously fail also."
   :group 'auto-compile
   :type 'boolean)
 
-(defcustom auto-compile-delete-stray-dest t
-  "Whether to remove stray byte code files.
+(defcustom auto-compile-update-autoloads nil
+  "Whether to update autoloads after compiling.
 
-If this is non-nil byte code files without a corresponding source
-file are removed as they are encountered.  This happens in the
-functions `auto-compile-on-save' and `toggle-auto-compile'.  The
-main purpose of this functionality is to prevent leftover byte
-code files from shadowing a source or byte code file in a
-directory that comes later in the `load-path'."
+If no autoload file as specified by `packed-loaddefs-filename' can be
+found quietly skip this step."
   :group 'auto-compile
   :type 'boolean)
 
@@ -268,10 +268,36 @@ exist and are up-to-date."
   :group 'auto-compile
   :type 'boolean)
 
-(defcustom auto-compile-toggle-deletes-nonlib-dest nil
-  "Whether to remove non-library byte code files when toggling compilation."
+(defcustom auto-compile-delete-stray-dest t
+  "Whether to remove stray byte code files.
+
+If this is non-nil byte code files without a corresponding source
+file are removed as they are encountered.  This happens in the
+functions `auto-compile-on-save' and `toggle-auto-compile'.  The
+main purpose of this functionality is to prevent leftover byte
+code files from shadowing a source or byte code file in a
+directory that comes later in the `load-path'."
   :group 'auto-compile
   :type 'boolean)
+
+(defcustom auto-compile-toggle-deletes-nonlib-dest nil
+  "Whether to delete non-library byte code files when toggling compilation."
+  :group 'auto-compile
+  :type 'boolean)
+
+(defcustom auto-compile-source-recreate-deletes-dest nil
+  "Whether to delete leftover byte code file when creating source file.
+
+When this is non-nil and saving a source buffer causes the file
+to be created (as opposed to being overwritten) while its byte
+code file already exists (because the source already existed and
+was compiled in the past), then remove the latter (instead of
+updating it by recompiling the source).  This can e.g. happen
+when switching git branches."
+  :group 'auto-compile
+  :type 'boolean)
+
+;;;; Toggle and Perform Compilation
 
 ;;;###autoload
 (defun toggle-auto-compile (file action)
@@ -405,7 +431,7 @@ pretend the byte code file exists.")
 (defun auto-compile-byte-compile (&optional file start)
   "Perform byte compilation for Auto-Compile mode."
   (let ((default-directory default-directory)
-        dest buf success)
+        dest buf success loaddefs)
     (when (and file
                (setq buf (get-file-buffer file))
                (buffer-modified-p buf)
@@ -424,25 +450,46 @@ pretend the byte code file exists.")
           (error
            (auto-compile-handle-compile-error file buf)
            (throw 'auto-compile nil))))
+      (setq dest (byte-compile-dest-file file))
       (when (or start
-                (file-exists-p (byte-compile-dest-file file))
-                (when buf
-                  (with-current-buffer buf
-                    auto-compile-pretend-byte-compiled)))
+                (and (file-exists-p dest)
+                     (or (file-exists-p file)
+                         (not auto-compile-source-recreate-deletes-dest)
+                         (prog1 nil
+                           (auto-compile-delete-dest dest))))
+                (and buf (with-current-buffer buf
+                           auto-compile-pretend-byte-compiled)))
         (condition-case byte-compile
-            (let ((byte-compile-verbose auto-compile-verbose)
-                  ;; byte-compiling runs theses hooks; disable them.
-                  fundamental-mode-hook
-                  prog-mode-hook
-                  emacs-lisp-mode-hook)
-              (byte-compile-file file)
+            (let ((byte-compile-verbose auto-compile-verbose))
+              (setq success (packed-byte-compile-file file))
               (when buf
                 (with-current-buffer buf
-                  (kill-local-variable auto-compile-pretend-byte-compiled)))
-              (setq success t))
+                  (kill-local-variable auto-compile-pretend-byte-compiled))))
           (file-error
            (message "Byte-compiling %s failed" file)
-           (auto-compile-handle-compile-error file buf))))
+           (auto-compile-handle-compile-error file buf)
+           (setq success nil)))
+        (when (and auto-compile-update-autoloads
+                   (setq loaddefs (packed-loaddefs-file)))
+          (require 'autoload)
+          (condition-case autoload
+              (packed-with-loaddefs loaddefs
+                (let ((autoload-modified-buffers
+                       (list (find-buffer-visiting file))))
+                  (autoload-generate-file-autoloads file)))
+            (error
+             (message "Generating loaddefs for %s failed" file)
+             (setq loaddefs nil))))
+        (cl-case success
+          (no-byte-compile)
+          ((t) (message "Wrote %s.{%s,%s}%s"
+                        (file-name-sans-extension
+                         (file-name-sans-extension file))
+                        (progn (string-match "\\(\\.[^./]+\\)+$" file)
+                               (substring (match-string 0 file) 1))
+                        (file-name-extension dest)
+                        (if loaddefs " (+)" "")))
+          (t   (message "Wrote %s (byte-compiling failed)" file))))
       success)))
 
 (defun auto-compile-delete-dest (dest &optional failurep)
@@ -480,6 +527,37 @@ pretend the byte code file exists.")
 (defun auto-compile-ding ()
   (when auto-compile-ding
     (ding)))
+
+(defadvice save-buffers-kill-emacs
+  (around auto-compile-dont-mark-failed-modified disable)
+  "Set `auto-compile-mark-failed-modified' to nil when killing Emacs.
+If the regular value of this variable is non-nil the user might
+still be asked whether she wants to save modified buffers, which
+she actually did already safe.  This advice ensures she at least
+is only asked once about each such file."
+  (let ((auto-compile-mark-failed-modified nil))
+    ad-do-it))
+
+(defadvice save-buffers-kill-terminal
+  (around auto-compile-dont-mark-failed-modified disable)
+  "Set `auto-compile-mark-failed-modified' to nil when killing Emacs.
+If the regular value of this variable is non-nil the user might
+still be asked whether she wants to save modified buffers, which
+she actually did already safe.  This advice ensures she at least
+is only asked once about each such file."
+  (let ((auto-compile-mark-failed-modified nil))
+    ad-do-it))
+
+;; REDEFINE autoload-save-buffers defined in autoload.el
+;; - verify buffers are still live before killing them
+(eval-after-load 'autoload
+  '(defun autoload-save-buffers ()
+     (while autoload-modified-buffers
+       (let ((buf (pop autoload-modified-buffers)))
+         (when (buffer-live-p buf)
+           (with-current-buffer buf
+             (let ((version-control 'never))
+               (save-buffer))))))))
 
 ;;; Mode-Line
 
@@ -569,7 +647,7 @@ A library needs to be recompiled if the source file is newer than
 it's byte-compile destination.  Without this advice the outdated
 byte code file would be loaded instead.
 
-Also see the related `auto-compile-on-load-mode'."
+Also see the related `auto-compile-on-save-mode'."
   :lighter auto-compile-on-load-mode-lighter
   :group 'auto-compile
   :global t
@@ -614,7 +692,7 @@ file would get loaded."
             (when (and (file-exists-p elc)
                        (file-newer-than-file-p el elc))
               (message "Recompiling %s..." el)
-              (byte-compile-file el)
+              (packed-byte-compile-file el)
               (message "Recompiling %s...done" el))
             (when auto-compile-delete-stray-dest
               (setq el* (locate-library file))

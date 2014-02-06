@@ -33,6 +33,7 @@
 ;;; Code:
 
 (require 'expand-region-core)
+(require 'sgml-mode)
 
 (defun er/mark-html-attribute ()
   "Mark html-attribute presumes that point is at the assignment part of attr=\"value\".

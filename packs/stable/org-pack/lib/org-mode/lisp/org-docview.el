@@ -1,6 +1,6 @@
 ;;; org-docview.el --- support for links to doc-view-mode buffers
 
-;; Copyright (C) 2009-2013 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2014 Free Software Foundation, Inc.
 
 ;; Author: Jan Böcker <jan.boecker at jboecker dot de>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -44,12 +44,10 @@
 
 
 (require 'org)
+(require 'doc-view)
 
-(declare-function doc-view-goto-page "ext:doc-view" (page))
-(declare-function image-mode-window-get "ext:image-mode"
-		  (prop &optional winprops))
-
-(org-autoload "doc-view" '(doc-view-goto-page))
+(declare-function doc-view-goto-page "doc-view" (page))
+(declare-function image-mode-window-get "image-mode" (prop &optional winprops))
 
 (org-add-link-type "docview" 'org-docview-open 'org-docview-export)
 (add-hook 'org-store-link-functions 'org-docview-store-link)

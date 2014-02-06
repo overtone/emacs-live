@@ -1,6 +1,6 @@
 ;;; ob-eval.el --- org-babel functions for external code evaluation
 
-;; Copyright (C) 2009-2013 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2014 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;; Keywords: literate programming, reproducible research, comint
@@ -27,6 +27,7 @@
 ;; shell commands.
 
 ;;; Code:
+(require 'org-macs)
 (eval-when-compile (require 'cl))
 
 (defvar org-babel-error-buffer-name "*Org-Babel Error Output*")

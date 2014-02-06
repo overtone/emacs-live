@@ -1,6 +1,6 @@
 ;;; org-footnote.el --- Footnote support in Org and elsewhere
 ;;
-;; Copyright (C) 2009-2013 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2014 Free Software Foundation, Inc.
 ;;
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -166,6 +166,7 @@ The main values of this variable can be set with in-buffer options:
 #+STARTUP: nofnadjust"
   :group 'org-footnote
   :type '(choice
+	  (const :tag "No adjustment" nil)
 	  (const :tag "Renumber" renumber)
 	  (const :tag "Sort" sort)
 	  (const :tag "Renumber and Sort" t)))

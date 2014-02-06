@@ -30,6 +30,13 @@
 ;;; Code:
 
 (require 'expand-region-core)
+;referenced free variables and functions defined in mode
+(defvar texmathp-why)
+(defvar texmathp-tex-commands1)
+(defvar texmathp-onoff-regexp)
+(defvar LaTeX-mode-hook)
+(declare-function LaTeX-mark-environment "latex") 
+(declare-function texmathp "texmathp")
 
 (defun er/mark-LaTeX-inside-environment ()
   "Like `LaTeX-mark-environment' but marks the inside of the environment.
@@ -88,7 +95,9 @@ Skips past [] and {} arguments to the environment."
           er/mark-LaTeX-inside-environment
           er/mark-LaTeX-math))))
 
-(er/enable-mode-expansions 'LaTeX-mode 'er/add-latex-mode-expansions)
+(let ((latex-mode-hook LaTeX-mode-hook))
+  (er/enable-mode-expansions 'latex-mode 'er/add-latex-mode-expansions)
+  (setq LaTeX-mode-hook latex-mode-hook))
 
 (provide 'latex-mode-expansions)
 

@@ -1,6 +1,6 @@
 ;;; test-ob-lilypond.el --- tests for ob-lilypond.el
 
-;; Copyright (c) 2010-2013 Martyn Jago
+;; Copyright (c) 2010-2014 Martyn Jago
 ;; Authors: Martyn Jago
 
 ;; This file is not part of GNU Emacs.

@@ -1,6 +1,6 @@
 ;;; orgtbl-sqlinsert.el --- orgtbl to SQL insert statements.
 
-;; Copyright (C) 2008-2013  Free Software Foundation
+;; Copyright (C) 2008-2014  Free Software Foundation
 
 ;; Author: Jason Riedy <jason@acm.org>
 ;; Keywords: org, tables, sql

@@ -117,13 +117,17 @@ All of these fields can be accessed by `popup-<field>` function.
 
 ### Function: `popup-create`
 
-    popup-create point width height &key min-height around face
+    popup-create point width height &key min-height max-width around face
     selection-face scroll-bar margin-left margin-right symbol parent
     parent-offset => popup
 
 Create a popup instance at `POINT` with `WIDTH` and `HEIGHT`.
 
 `MIN-HEIGHT` is the minimal height of the popup. The default value is 0.
+
+`MAX-WIDTH` is the maximum width of the popup. The default value is
+nil (no limit). If a floating point, the value refers to the ratio of
+the window. If an integer, limit is in characters.
 
 If `AROUND` is non-nil, the popup will be displayed around the point
 but not at the point.
@@ -244,18 +248,20 @@ something about what cursor points to.
 
 ### Function: `popup-tip`
 
-    popup-tip string &key point around width height min-height
+    popup-tip string &key point around width height min-height max-width
     truncate margin margin-left margin-right scroll-bar parent
-    parent-offset nowait prompt
+    parent-offset nowait nostrip prompt
 
 Show a tooltip with message `STRING` at `POINT`. This function is
 synchronized unless `NOWAIT` specified. Almost all arguments are same as
-`popup-create` except for `TRUNCATE`, `NOWAIT`, and `PROMPT`.
+`popup-create` except for `TRUNCATE`, `NOWAIT`, `NOSTRIP` and `PROMPT`.
 
 If `TRUNCATE` is non-nil, the tooltip can be truncated.
 
 If `NOWAIT` is non-nil, this function immediately returns the tooltip
 instance without entering event loop.
+
+If `NOSTRIP` is non-nil, `STRING` properties are not stripped.
 
 `PROMPT` is a prompt string used when reading events during the event
 loop.

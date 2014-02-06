@@ -1,12 +1,15 @@
 ;;; magit-stgit.el --- StGit plug-in for Magit
 
-;; Copyright (C) 2011-2013  The Magit Project Developers.
+;; Copyright (C) 2011-2014  The Magit Project Developers
 ;;
 ;; For a full list of contributors, see the AUTHORS.md file
 ;; at the top-level directory of this distribution and at
 ;; https://raw.github.com/magit/magit/master/AUTHORS.md
 
 ;; Author: Lluís Vilanova <vilanova@ac.upc.edu>
+;; Keywords: vc tools
+;; Package: magit-stgit
+;; Package-Requires: ((cl-lib "0.3") (magit "1.3.0"))
 
 ;; Magit is free software; you can redistribute it and/or modify it
 ;; under the terms of the GNU General Public License as published by
@@ -23,263 +26,170 @@
 
 ;;; Commentary:
 
-;; This plug-in provides StGit functionality as a separate component of Magit.
+;; This package provides very basic support for StGit.
 
-;; Available actions:
-;; - visit: Shows the patch at point in the series (stg show)
-;; - apply: Goes to the patch at point in the series (stg goto)
-;; - discard: Deletes the marked/at point patch in the series (stg delete)
+;; When `magit-stgit-mode' is turned on the current patch series is
+;; displayed in the status buffer.  Additionally a few Emacs commands
+;; are defined that wrap around StGit commands.  These commands are
+;; also available as "section actions".
 
-;; Available commands:
-;; - `magit-stgit-refresh': Refresh the marked/at point patch in the series
-;;   (stg refresh)
-;; - `magit-stgit-repair': Repair the StGit metadata (stg repair)
-;; - `magit-stgit-rebase': Rebase the whole series (stg rebase)
-
-;; TODO:
-;; - Let the user select which files must be included in a refresh.
-;; - Missing actions for `magit-show-item-or-scroll-up' and
-;;   `magit-show-item-or-scroll-down'.
-;; - Marking a patch is slow and refreshes all buffers, which resets their
-;;   position (i.e., the buffer is shown from its first line).
+;; If you are looking for full fledged StGit support in Emacs, then
+;; have a look at `stgit.el' which is distributed with StGit.
 
 ;;; Code:
 
 (require 'magit)
-(eval-when-compile (require 'cl-lib))
 
-;;; Customizables:
+;;; Options
+;;;; Variables
+
+(defgroup magit-stgit nil
+  "StGit support for Magit."
+  :group 'magit-extensions)
 
 (defcustom magit-stgit-executable "stg"
   "The name of the StGit executable."
-  :group 'magit
+  :group 'magit-stgit
   :type 'string)
 
-(defface magit-stgit-applied
-  '((t :inherit magit-diff-add))
-  "Face for an applied stgit patch."
+(defcustom magit-stgit-show-patch-name t
+  "Whether to prefix patch messages with the patch name, in patch series."
+  :group 'magit-stgit
+  :type 'boolean)
+
+;;;; Faces
+
+(defgroup magit-stgit-faces nil
+  "Faces used by Magit-StGit."
+  :group 'magit-stgit
   :group 'magit-faces)
+
+(defface magit-stgit-patch
+  '((t :inherit magit-log-sha1))
+  "Face for name of a stgit patch."
+  :group 'magit-stgit-faces)
 
 (defface magit-stgit-current
-  '((t :inherit magit-item-highlight))
+  '((t :inherit magit-log-sha1))
   "Face for the current stgit patch."
-  :group 'magit-faces)
+  :group 'magit-stgit-faces)
 
-(defface magit-stgit-other
-  '((t :inherit magit-diff-del))
-  "Face for a non-applied stgit patch."
-  :group 'magit-faces)
+(defface magit-stgit-applied
+  '((t :inherit magit-cherry-equivalent))
+  "Face for an applied stgit patch."
+  :group 'magit-stgit-faces)
 
-(defface magit-stgit-marked
-  '((t :inherit magit-item-mark))
-  "Face for a marked stgit patch."
-  :group 'magit-faces)
+(defface magit-stgit-unapplied
+  '((t :inherit magit-cherry-unmatched))
+  "Face for an unapplied stgit patch."
+  :group 'magit-stgit-faces)
 
 (defface magit-stgit-empty
-  '((t :inherit magit-item-mark))
+  '((t :inherit magit-diff-del))
   "Face for an empty stgit patch."
-  :group 'magit-faces)
+  :group 'magit-stgit-faces)
 
-;;; Common code:
+(defface magit-stgit-hidden
+  '((t :inherit magit-diff-empty))
+  "Face for an hidden stgit patch."
+  :group 'magit-stgit-faces)
 
-(defvar-local magit-stgit--enabled nil
-  "Whether this buffer has StGit support.")
+;;; Variables
 
-(defvar magit-stgit-mode)
+(defvar magit-stgit-patch-buffer-name "*magit-stgit-patch*"
+  "Name of buffer used to display a stgit patch.")
 
-(defun magit-stgit--enabled ()
-  "Whether this buffer has StGit support enabled."
-  (if (assoc 'magit-stgit--enabled (buffer-local-variables))
-      magit-stgit--enabled
-    (setq magit-stgit--enabled
-          (and magit-stgit-mode
-               (not (null
-                     (member (concat (magit-get-current-branch) ".stgit")
-                             (mapcar #'(lambda (line)
-                                         (string-match "^\\*?\s*\\([^\s]*\\)"
-                                                       line)
-                                         (match-string 1 line))
-                                     (magit-git-lines "branch")))))))))
+(defvar magit-stgit-patch-history nil
+  "Input history for `magit-stgit-read-patch'.")
 
-(defun magit-stgit--enabled-reset ()
-  "Reset the StGit enabled state."
-  (kill-local-variable 'magit-stgit--enabled))
+;;; Utilities
 
-(defvar-local magit-stgit--marked-patch nil
-  "The (per-buffer) currently marked patch in an StGit series.")
+(defun magit-run-stgit (&rest args)
+  (apply #'magit-call-process magit-stgit-executable args)
+  (magit-refresh))
 
-;;; Menu:
+(defun magit-stgit-lines (&rest args)
+  (with-temp-buffer
+    (apply 'process-file magit-stgit-executable nil (list t nil) nil args)
+    (split-string (buffer-string) "\n" 'omit-nulls)))
 
-(easy-menu-define magit-stgit-extension-menu
-  nil
-  "StGit extension menu"
-  '("StGit"
-    :active (magit-stgit--enabled)
+(defun magit-stgit-read-patch (prompt &optional require-match)
+  (magit-completing-read prompt (magit-stgit-lines "series" "--noprefix")
+                         nil require-match
+                         nil 'magit-read-rev-history))
 
-    ["Refresh patch" magit-stgit-refresh
-     :help "Refresh the contents of a patch in an StGit series"]
-    ["Repair" magit-stgit-repair
-     :help "Repair StGit metadata if branch was modified with git commands"]
-    ["Rebase series" magit-stgit-rebase
-     :help "Rebase an StGit patch series"]
-    ))
+;;; Commands
 
-(easy-menu-add-item 'magit-mode-menu
-                    '("Extensions")
-                    magit-stgit-extension-menu)
+;;;###autoload
+(defun magit-stgit-refresh (&optional patch)
+  "Refresh a StGit patch."
+  (interactive
+   (list (magit-stgit-read-patch "Refresh patch (default top)")))
+  (if patch
+      (magit-run-stgit "refresh" "-p" patch)
+    (magit-run-stgit "refresh")))
 
-;;; Series section:
-
-(defun magit-stgit--wash-patch ()
-  (if (search-forward-regexp "^\\(.\\)\\(.\\) \\([^\s]*\\)\\(\s*# ?\\)\\(.*\\)"
-                             (line-end-position) t)
-      (let* ((empty-str "[empty] ")
-             (indent-str (make-string (string-bytes empty-str) ?\ ))
-             (empty (match-string 1))
-             (state (match-string 2))
-             (patch (match-string 3))
-             (descr (match-string 5)))
-        (delete-region (line-beginning-position) (line-end-position))
-        (insert
-         (cond ((string= empty "0")
-                (propertize (concat empty-str " " state " " descr)
-                            'face 'magit-stgit-empty))
-               ((string= magit-stgit--marked-patch patch)
-                (propertize (concat indent-str " " state " " descr)
-                            'face 'magit-stgit-marked))
-               ((string= state "+")
-                (concat indent-str " "
-                        (propertize state
-                                    'face 'magit-stgit-applied) " " descr))
-               ((string= state ">")
-                (propertize (concat indent-str " " state " " descr)
-                            'face 'magit-stgit-current))
-               ((string= state "-")
-                (concat indent-str " "
-                        (propertize state
-                                    'face 'magit-stgit-other) " " descr))))
-        (goto-char (line-beginning-position))
-        (magit-with-section patch 'series
-          (magit-set-section-info patch)
-          (goto-char (line-end-position)))
-        (forward-line))
-    (delete-region (line-beginning-position) (1+ (line-end-position))))
-  t)
-
-(defun magit-stgit--wash-series ()
-    (let ((magit-old-top-section nil))
-      (magit-wash-sequence #'magit-stgit--wash-patch)))
-
-(magit-define-inserter series ()
-  (when (executable-find magit-stgit-executable)
-    (magit-insert-section 'series
-                          "Series:" 'magit-stgit--wash-series
-                          magit-stgit-executable "series" "-a" "-d" "-e")))
-
-;;; Actions:
-
-;; Copy of `magit-refresh-commit-buffer' (version 1.0.0)
-(defun magit-stgit--refresh-patch-buffer (patch)
-  (magit-create-buffer-sections
-    (magit-insert-section nil nil
-                       'magit-wash-commit
-                       magit-stgit-executable
-                       "show"
-                       patch)))
-
-;; Copy of `magit-show-commit' (version 1.0.0)
-(defun magit-stgit--show-patch (patch &optional scroll)
-  (when (magit-section-p patch)
-    (setq patch (magit-section-info patch)))
-  (let ((dir default-directory)
-        (buf (get-buffer-create magit-commit-buffer-name)))
-    (cond ((and (equal magit-currently-shown-commit patch)
-                ;; if it's empty then the buffer was killed
-                (with-current-buffer buf
-                  (> (length (buffer-string)) 1)))
-           (let ((win (get-buffer-window buf)))
-             (cond ((not win)
-                    (display-buffer buf))
-                   (scroll
-                    (with-selected-window win
-                      (funcall scroll))))))
-          (t
-           (setq magit-currently-shown-commit patch)
-           (display-buffer buf)
-           (with-current-buffer buf
-             (set-buffer buf)
-             (goto-char (point-min))
-             (magit-mode-init dir 'magit-commit-mode
-                              #'magit-stgit--refresh-patch-buffer patch))))))
-
-(magit-add-action-clauses (item info "visit")
-  ((series)
-   (magit-stgit--show-patch info)
-   (pop-to-buffer magit-commit-buffer-name)))
-
-(magit-add-action-clauses (item info "apply")
-  ((series)
-   (magit-run magit-stgit-executable "goto" info)))
-
-(magit-add-action-clauses (item info "discard")
-  ((series)
-   (let ((patch (or magit-stgit--marked-patch info)))
-     (when (yes-or-no-p (format "Delete patch '%s' in series? " patch))
-       (when (string= magit-stgit--marked-patch patch)
-         (setq magit-stgit--marked-patch nil))
-       (magit-run magit-stgit-executable "delete" patch)))))
-
-(defun magit-stgit--set-marked-patch (patch)
-  (setq magit-stgit--marked-patch
-        (unless (string= magit-stgit--marked-patch patch)
-          patch)))
-
-(magit-add-action-clauses (item info "mark")
-  ((series)
-   (magit-stgit--set-marked-patch info)
-   (magit-refresh-all)))
-
-;;; Commands:
-
-(defun magit-stgit-refresh ()
-  "Refresh the contents of a patch in an StGit series.
-If there is no marked patch in the series, refreshes the current
-patch.  Otherwise, refreshes the marked patch."
-  (interactive)
-  (if magit-stgit--marked-patch
-      (magit-run magit-stgit-executable
-                 "refresh" "-p" magit-stgit--marked-patch)
-    (magit-run magit-stgit-executable "refresh")))
-
+;;;###autoload
 (defun magit-stgit-repair ()
   "Repair StGit metadata if branch was modified with git commands.
 In the case of Git commits these will be imported as new patches
 into the series."
   (interactive)
   (message "Repairing series...")
-  (magit-run magit-stgit-executable "repair")
-  (message ""))
-
-(defun magit-stgit-rebase ()
-  "Rebase an StGit patch series."
-  (interactive)
-  (when (magit-get-current-remote)
-    (when (yes-or-no-p "Update remotes? ")
-      (message "Updating remotes...")
-      (magit-run-git-async "remote" "update"))
-    (magit-run magit-stgit-executable "rebase"
-               (format "remotes/%s/%s"
-                       (magit-get-current-remote)
-                       (magit-get-current-branch)))))
+  (magit-run-stgit "repair")
+  (message "Repairing series...done"))
 
 ;;;###autoload
-(define-minor-mode magit-stgit-mode "StGit support for Magit"
-  :lighter " Stg" :require 'magit-stgit
+(defun magit-stgit-rebase ()
+  "Rebase a StGit patch series."
+  (interactive)
+  (let ((remote (magit-get-current-remote))
+        (branch (magit-get-current-branch)))
+    (if (not (and remote branch))
+        (user-error "Branch has no upstream")
+      (when (y-or-n-p "Update remote first? ")
+        (message "Updating remote...")
+        (magit-run-git-async "remote" "update" remote)
+        (message "Updating remote...done"))
+      (magit-run-stgit "rebase" (format "remotes/%s/%s" remote branch)))))
+
+;;;###autoload
+(defun magit-stgit-discard (patch)
+  "Discard a StGit patch."
+  (interactive (list (magit-stgit-read-patch "Discard patch" t)))
+  (magit-run-stgit "delete" patch))
+
+;;;###autoload
+(defun magit-stgit-show (patch)
+  "Show diff of a StGit patch."
+  (interactive (list (magit-stgit-read-patch "Show patch" t)))
+  (magit-mode-setup magit-stgit-patch-buffer-name
+                    #'pop-to-buffer
+                    #'magit-commit-mode
+                    #'magit-stgit-refresh-patch-buffer
+                    patch))
+
+(defun magit-stgit-refresh-patch-buffer (patch)
+  (magit-cmd-insert-section (stgit-patch)
+      #'magit-wash-commit
+    magit-stgit-executable "show" patch))
+
+;;; Mode
+
+(defvar magit-stgit-mode-lighter " Stg")
+
+;;;###autoload
+(define-minor-mode magit-stgit-mode
+  "StGit support for Magit"
+  :lighter magit-stgit-mode-lighter
+  :require 'magit-stgit
   (or (derived-mode-p 'magit-mode)
-      (error "This mode only makes sense with magit"))
+      (user-error "This mode only makes sense with magit"))
   (if magit-stgit-mode
-      (add-hook  'magit-after-insert-stashes-hook 'magit-insert-series nil t)
-    (remove-hook 'magit-after-insert-stashes-hook 'magit-insert-series t))
+      (magit-add-section-hook 'magit-status-sections-hook
+                              'magit-insert-stgit-series
+                              'magit-insert-stashes t t)
+    (remove-hook 'magit-status-sections-hook 'magit-insert-stgit-series t))
   (when (called-interactively-p 'any)
     (magit-refresh)))
 
@@ -288,5 +198,64 @@ into the series."
   "Unconditionally turn on `magit-stgit-mode'."
   (magit-stgit-mode 1))
 
+(magit-add-action-clauses (item info "visit")
+  ((stgit-patch)
+   (magit-stgit-show info)))
+
+(magit-add-action-clauses (item info "apply")
+  ((stgit-patch)
+   (magit-run-stgit "goto" info)))
+
+(magit-add-action-clauses (item info "discard")
+  ((stgit-patch)
+   (when (yes-or-no-p (format "Discard patch `%s'? " info))
+     (magit-stgit-discard info))))
+
+(easy-menu-define magit-stgit-extension-menu nil
+  "StGit extension menu"
+  '("StGit" :visible magit-stgit-mode
+    ["Refresh patch" magit-stgit-refresh
+     :help "Refresh the contents of a patch in an StGit series"]
+    ["Repair" magit-stgit-repair
+     :help "Repair StGit metadata if branch was modified with git commands"]
+    ["Rebase series" magit-stgit-rebase
+     :help "Rebase an StGit patch series"]))
+
+(easy-menu-add-item 'magit-mode-menu '("Extensions")
+                    magit-stgit-extension-menu)
+
+;;; Series Section
+
+(defconst magit-stgit-patch-re
+  "^\\(.\\)\\([-+>!]\\) \\([^ ]+\\) +# \\(.*\\)$")
+
+(defun magit-insert-stgit-series ()
+  (when magit-stgit-mode
+    (magit-cmd-insert-section (series "Patch series:")
+        (apply-partially 'magit-wash-sequence 'magit-stgit-wash-patch)
+      magit-stgit-executable "series" "--all" "--empty" "--description")))
+
+(defun magit-stgit-wash-patch ()
+  (looking-at magit-stgit-patch-re)
+  (magit-bind-match-strings (empty state patch msg)
+    (delete-region (point) (point-at-eol))
+    (magit-with-section (section stgit-patch patch)
+      (setf (magit-section-info section) patch)
+      (insert (propertize state 'face
+                          (cond ((equal state ">") 'magit-stgit-current)
+                                ((equal state "+") 'magit-stgit-applied)
+                                ((equal state "-") 'magit-stgit-unapplied)
+                                ((equal state "!") 'magit-stgit-hidden)
+                                (t (user-error "Unknown stgit patch state: %s"
+                                               state))))
+              (propertize empty 'face 'magit-stgit-empty) " ")
+      (when magit-stgit-show-patch-name
+        (insert (propertize patch 'face 'magit-stgit-patch) " "))
+      (insert msg)
+      (forward-line))))
+
 (provide 'magit-stgit)
+;; Local Variables:
+;; indent-tabs-mode: nil
+;; End:
 ;;; magit-stgit.el ends here

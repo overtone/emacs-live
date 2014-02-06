@@ -4,7 +4,7 @@
 
 ;; Author: Yann Hodique <yann.hodique@gmail.com>
 ;; Keywords:
-;; Version: 0.2.3
+;; Version: 0.2.4
 ;; Package-Requires: ((eieio "1.3"))
 
 ;; This file is free software; you can redistribute it and/or modify
@@ -67,7 +67,8 @@
 (defconst pcache-default-save-delay 300)
 
 (defclass pcache-repository (eieio-persistent)
-  ((version :initarg :version :initform 0.1)
+  ((version :initarg :version :initform nil)
+   (version-constant :allocation :class :initform "0.2")
    (entries :initarg :entries :initform (make-hash-table))
    (entry-cls :initarg :entry-cls :initform pcache-entry)
    (timestamp :initarg :timestamp :initform (float-time (current-time)))
@@ -81,10 +82,15 @@
     (or e
         (and (not (boundp 'pcache-avoid-recursion))
              (file-exists-p path)
-             (let* ((pcache-avoid-recursion t)
-                    (obj (eieio-persistent-read path)))
-               (puthash newname obj *pcache-repositories*)
-               obj))
+             (condition-case nil
+                 (let* ((pcache-avoid-recursion t)
+                        (obj (eieio-persistent-read path 'pcache-repository t)))
+                   (and (or (equal (oref obj :version)
+                                   (oref-default (object-class obj) version-constant))
+                            (error "wrong version"))
+                        (puthash newname obj *pcache-repositories*)
+                        obj))
+               (error nil)))
         (let ((obj (call-next-method))
               (dir (file-name-directory path)))
           (unless (file-exists-p dir)
@@ -165,6 +171,8 @@
         (time (float-time (current-time))))
     (when (or force (> time (+ timestamp delay)))
       (oset cache :timestamp time)
+      ;; make sure version is saved to file
+      (oset cache :version (oref-default (object-class cache) version-constant))
       (eieio-persistent-save cache))))
 
 (defmethod pcache-map ((cache pcache-repository) func)

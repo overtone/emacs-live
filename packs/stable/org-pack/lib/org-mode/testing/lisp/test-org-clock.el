@@ -1,6 +1,6 @@
 ;;; test-org-clock.el --- Tests for org-clock.el
 
-;; Copyright (C) 2012  Nicolas Goaziou
+;; Copyright (C) 2012, 2014  Nicolas Goaziou
 
 ;; Author: Nicolas Goaziou <n.goaziou at gmail dot com>
 

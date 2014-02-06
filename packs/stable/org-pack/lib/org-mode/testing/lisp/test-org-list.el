@@ -1,6 +1,6 @@
 ;;; test-org-list.el --- Tests for org-list.el
 
-;; Copyright (C) 2012, 2013  Nicolas Goaziou
+;; Copyright (C) 2012, 2013, 2014  Nicolas Goaziou
 
 ;; Author: Nicolas Goaziou <n.goaziou at gmail dot com>
 
@@ -712,6 +712,42 @@
        (org-insert-item)
        (forward-line -1)
        (looking-at "$")))))
+
+(ert-deftest test-org-list/repair ()
+  "Test `org-list-repair' specifications."
+  ;; Repair indentation.
+  (should
+   (equal "- item\n  - child"
+	  (org-test-with-temp-text "- item\n - child"
+	    (let ((org-list-indent-offset 0)) (org-list-repair))
+	    (buffer-string))))
+  ;; Repair bullets and numbering.
+  (should
+   (equal "- a\n- b"
+	  (org-test-with-temp-text "- a\n+ b"
+	    (let ((org-list-indent-offset 0))
+	      (org-list-repair))
+	    (buffer-string))))
+  (should
+   (equal "1. a\n2. b"
+	  (org-test-with-temp-text "1. a\n1. b"
+	    (let ((org-list-indent-offset 0)
+		  (org-plain-list-ordered-item-terminator t))
+	      (org-list-repair))
+	    (buffer-string))))
+  ;; Repair check-boxes.
+  (should
+   (equal "- [X] item\n  - [X] child"
+	  (org-test-with-temp-text "- [ ] item\n  - [X] child"
+	    (let ((org-list-indent-offset 0))
+	      (org-list-repair))
+	    (buffer-string))))
+  ;; Special case: do not move contents of an item within its child.
+  (should
+   (equal "- item\n  - child\n  within item"
+	  (org-test-with-temp-text "- item\n    - child\n    within item"
+	    (let ((org-list-indent-offset 0)) (org-list-repair))
+	    (buffer-string)))))
 
 
 

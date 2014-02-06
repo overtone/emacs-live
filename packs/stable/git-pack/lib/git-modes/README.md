@@ -15,7 +15,7 @@ Features
   `.gitconfig` files.
 - `gitignore-mode` – A `conf-mode`-derived major mode for editing `.gitignore`
   files.
-- `gitattributes-mode` – A major mode for editing .gitattributes files.
+- `gitattributes-mode` – A major mode for editing `.gitattributes` files.
 
 The first two modes integrate into [Magit][2].
 
@@ -45,9 +45,6 @@ Usage
 
 Just configure `emacsclient` or `emacs` as editor for Git. `git-commit-mode`
 will automatically be enabled for Git message buffers.
-
-`git-commit-mode` integrates into with [Magit][2] by redefining
-`magit-log-edit-mode` to support all `git-commit-mode` features.
 
 ### `git-rebase-mode`
 

@@ -1,6 +1,6 @@
 ;;; org-table.el --- The table editor for Org-mode
 
-;; Copyright (C) 2004-2013 Free Software Foundation, Inc.
+;; Copyright (C) 2004-2014 Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -94,6 +94,22 @@ this variable requires a restart of Emacs to become effective."
 | | |
 "))
   "Templates for radio tables in different major modes.
+Each template must define lines that will be treated as a comment and that
+must contain the \"BEGIN RECEIVE ORGTBL %n\" and \"END RECEIVE ORGTBL\"
+lines where \"%n\" will be replaced with the name of the table during
+insertion of the template.  The transformed table will later be inserted
+between these lines.
+
+The template should also contain a minimal table in a multiline comment.
+If multiline comments are not possible in the buffer language,
+you can pack it into a string that will not be used when the code
+is compiled or executed.  Above the table will you need a line with
+the fixed string \"#+ORGTBL: SEND\", followed by instruction on how to
+convert the table into a data structure useful in the
+language of the buffer.  Check the manual for the section on
+\"Translator functions\", and more generally check out
+http://orgmode.org/manual/Tables-in-arbitrary-syntax.html#Tables-in-arbitrary-syntax
+
 All occurrences of %n in a template will be replaced with the name of the
 table, obtained by prompting the user."
   :group 'org-table
@@ -419,68 +435,38 @@ available parameters."
 			 (org-split-string (match-string 1 line)
 					   "[ \t]*|[ \t]*")))))))
 
-(defvar org-table-colgroup-info nil)	; Dynamically scoped.
+(defvar org-table-clean-did-remove-column nil) ; dynamically scoped
 (defun org-table-clean-before-export (lines &optional maybe-quoted)
   "Check if the table has a marking column.
 If yes remove the column and the special lines."
-  (setq org-table-colgroup-info nil)
-  (if (memq nil
-	    (mapcar
-	     (lambda (x) (or (string-match "^[ \t]*|-" x)
-			     (string-match
-			      (if maybe-quoted
-				  "^[ \t]*| *\\\\?\\([\#!$*_^ /]\\) *|"
-				"^[ \t]*| *\\([\#!$*_^ /]\\) *|")
-			      x)))
-	     lines))
-      ;; No special marking column
-      (progn
-	(setq org-table-clean-did-remove-column nil)
-	(delq nil
-	      (mapcar
-	       (lambda (x)
-		 (cond
-		  ((org-table-colgroup-line-p x)
-		   ;; This line contains colgroup info, extract it
-		   ;; and then discard the line
-		   (setq org-table-colgroup-info
-			 (mapcar (lambda (x)
-				   (cond ((member x '("<" "&lt;")) :start)
-					 ((member x '(">" "&gt;")) :end)
-					 ((member x '("<>" "&lt;&gt;")) :startend)))
-				 (org-split-string x "[ \t]*|[ \t]*")))
-		   nil)
-		  ((org-table-cookie-line-p x)
-		   ;; This line contains formatting cookies, discard it
-		   nil)
-		  (t x)))
-	       lines)))
-    ;; there is a special marking column
-    (setq org-table-clean-did-remove-column t)
+  (let ((special (if maybe-quoted
+		     "^[ \t]*| *\\\\?[\#!$*_^/ ] *|"
+		   "^[ \t]*| *[\#!$*_^/ ] *|"))
+	(ignore  (if maybe-quoted
+		     "^[ \t]*| *\\\\?[!$_^/] *|"
+		   "^[ \t]*| *[!$_^/] *|")))
+    (setq org-table-clean-did-remove-column
+	  (not (memq nil
+		     (mapcar
+		      (lambda (line)
+			(or (string-match org-table-hline-regexp line)
+			    (string-match special                line)))
+		      lines))))
     (delq nil
 	  (mapcar
-	   (lambda (x)
+	   (lambda (line)
 	     (cond
-	      ((org-table-colgroup-line-p x)
-	       ;; This line contains colgroup info, extract it
-	       ;; and then discard the line
-	       (setq org-table-colgroup-info
-		     (mapcar (lambda (x)
-			       (cond ((member x '("<" "&lt;")) :start)
-				     ((member x '(">" "&gt;")) :end)
-				     ((member x '("<>" "&lt;&gt;")) :startend)))
-			     (cdr (org-split-string x "[ \t]*|[ \t]*"))))
+	      ((or (org-table-colgroup-line-p line)  ;; colgroup info
+		   (org-table-cookie-line-p line)    ;; formatting cookies
+		   (and org-table-clean-did-remove-column
+			(string-match ignore line))) ;; non-exportable data
 	       nil)
-	      ((org-table-cookie-line-p x)
-	       ;; This line contains formatting cookies, discard it
-	       nil)
-	      ((string-match "^[ \t]*| *\\([!_^/$]\\|\\\\\\$\\) *|" x)
-	       ;; ignore this line
-	       nil)
-	      ((or (string-match "^\\([ \t]*\\)|-+\\+" x)
-		   (string-match "^\\([ \t]*\\)|[^|]*|" x))
+	      ((and org-table-clean-did-remove-column
+		    (or (string-match "^\\([ \t]*\\)|-+\\+" line)
+			(string-match "^\\([ \t]*\\)|[^|]*|" line)))
 	       ;; remove the first column
-	       (replace-match "\\1|" t nil x))))
+	       (replace-match "\\1|" t nil line))
+	      (t line)))
 	   lines))))
 
 (defconst org-table-translate-regexp
@@ -567,7 +553,7 @@ nil      When nil, the command tries to be smart and figure out the
          - when each line contains a TAB, assume TAB-separated material
          - when each line contains a comma, assume CSV material
          - else, assume one or more SPACE characters as separator."
-  (interactive "rP")
+  (interactive "r\nP")
   (let* ((beg (min beg0 end0))
 	 (end (max beg0 end0))
 	 re)
@@ -929,6 +915,7 @@ When nil, simply write \"#ERROR\" in corrupted fields.")
     (setq org-table-may-need-update nil)
     ))
 
+;;;###autoload
 (defun org-table-begin (&optional table-type)
   "Find the beginning of the table and return its position.
 With argument TABLE-TYPE, go to the beginning of a table.el-type table."
@@ -942,6 +929,7 @@ With argument TABLE-TYPE, go to the beginning of a table.el-type table."
       (beginning-of-line 2)
       (point))))
 
+;;;###autoload
 (defun org-table-end (&optional table-type)
   "Find the end of the table and return its position.
 With argument TABLE-TYPE, go to the end of a table.el-type table."
@@ -1213,6 +1201,7 @@ Return t when the line exists, nil if it does not exist."
 		(< (setq cnt (1+ cnt)) N)))
     (= cnt N)))
 
+;;;###autoload
 (defun org-table-blank-field ()
   "Blank the current table field or active region."
   (interactive)
@@ -2285,7 +2274,7 @@ KEY is \"@\" or \"$\".  REPLACE is an alist of numbers to replace.
 For all numbers larger than LIMIT, shift them by DELTA."
   (save-excursion
     (goto-char (org-table-end))
-    (when (let ((case-fold-search t)) (looking-at "[ \t]*#\\+tblfm:"))
+    (while (let ((case-fold-search t)) (looking-at "[ \t]*#\\+tblfm:"))
       (let ((msg "The formulas in #+TBLFM have been updated")
 	    (re (concat key "\\([0-9]+\\)"))
 	    (re2
@@ -2299,8 +2288,9 @@ For all numbers larger than LIMIT, shift them by DELTA."
 	  (while (re-search-forward re2 (point-at-eol) t)
 	    (unless (save-match-data (org-in-regexp "remote([^)]+?)"))
 	      (if (equal (char-before (match-beginning 0)) ?.)
-		  (user-error "Change makes TBLFM term %s invalid, use undo to recover"
-			 (match-string 0))
+		  (user-error
+		   "Change makes TBLFM term %s invalid, use undo to recover"
+		   (match-string 0))
 		(replace-match "")))))
 	(while (re-search-forward re (point-at-eol) t)
 	  (unless (save-match-data (org-in-regexp "remote([^)]+?)"))
@@ -2311,7 +2301,8 @@ For all numbers larger than LIMIT, shift them by DELTA."
 	      (message msg))
 	     ((and limit (> n limit))
 	      (replace-match (concat key (int-to-string (+ n delta))) t t)
-	      (message msg)))))))))
+	      (message msg))))))
+      (forward-line))))
 
 (defun org-table-get-specials ()
   "Get the column names and local parameters for this table."
@@ -2750,7 +2741,7 @@ $xyz->  %s
 @r$c->  %s
 $1->    %s\n" orig formula form0 form))
 	    (if (listp ev)
-		(princ (format "       %s^\nError:  %s"
+		(princ (format "        %s^\nError:  %s"
 			       (make-string (car ev) ?\-) (nth 1 ev)))
 	      (princ (format "Result: %s\nFormat: %s\nFinal:  %s"
 			     ev (or fmt "NONE")
@@ -4135,7 +4126,7 @@ to execute outside of tables."
 	 '(arg)
 	 (concat "In tables, run `" (symbol-name fun) "'.\n"
 		 "Outside of tables, run the binding of `"
-		 (mapconcat (lambda (x) (format "%s" x)) keys "' or `")
+		 (mapconcat #'key-description keys "' or `")
 		 "'.")
 	 '(interactive "p")
 	 (list 'if
@@ -4407,30 +4398,6 @@ overwritten, and the table is not marked as requiring realignment."
 (defvar orgtbl-exp-regexp "^\\([-+]?[0-9][0-9.]*\\)[eE]\\([-+]?[0-9]+\\)$"
   "Regular expression matching exponentials as produced by calc.")
 
-(defun orgtbl-export (table target)
-  (let ((func (intern (concat "orgtbl-to-" (symbol-name target))))
-	(lines (org-split-string table "[ \t]*\n[ \t]*"))
-	org-table-last-alignment org-table-last-column-widths
-	maxcol column)
-    (if (not (fboundp func))
-	(user-error "Cannot export orgtbl table to %s" target))
-    (setq lines (org-table-clean-before-export lines))
-    (setq table
-	  (mapcar
-	   (lambda (x)
-	     (if (string-match org-table-hline-regexp x)
-		 'hline
-	       (org-split-string (org-trim x) "\\s-*|\\s-*")))
-	   lines))
-    (setq maxcol (apply 'max (mapcar (lambda (x) (if (listp x) (length x) 0))
-				     table)))
-    (loop for i from (1- maxcol) downto 0 do
-	  (setq column (mapcar (lambda (x) (if (listp x) (nth i x) nil)) table))
-	  (setq column (delq nil column))
-	  (push (apply 'max (mapcar 'string-width column)) org-table-last-column-widths)
-	  (push (> (/ (apply '+ (mapcar (lambda (x) (if (string-match org-table-number-regexp x) 1 0)) column)) maxcol) org-table-number-fraction) org-table-last-alignment))
-    (funcall func table nil)))
-
 (defun orgtbl-gather-send-defs ()
   "Gather a plist of :name, :transform, :params for each destination before
 a radio table."
@@ -4453,14 +4420,14 @@ a radio table."
   (save-excursion
     (goto-char (point-min))
     (unless (re-search-forward
-	     (concat "BEGIN RECEIVE ORGTBL +" name "\\([ \t]\\|$\\)") nil t)
+	     (concat "BEGIN +RECEIVE +ORGTBL +" name "\\([ \t]\\|$\\)") nil t)
       (user-error "Don't know where to insert translated table"))
     (goto-char (match-beginning 0))
     (beginning-of-line 2)
     (save-excursion
       (let ((beg (point)))
 	(unless (re-search-forward
-		 (concat "END RECEIVE ORGTBL +" name) nil t)
+		 (concat "END +RECEIVE +ORGTBL +" name) nil t)
 	  (user-error "Cannot find end of insertion region"))
 	(beginning-of-line 1)
 	(delete-region beg (point))))

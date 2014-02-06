@@ -33,17 +33,18 @@
 (ert-deftest git-gutter:root-directory ()
   "helper function `git-gutter:root-directory'"
   (let ((file (concat default-directory "test-git-gutter.el")))
-    (let ((expected (expand-file-name default-directory))
-          (got (git-gutter:root-directory file)))
-      (should (string= expected got)))
+    (when (file-directory-p ".git") ;; https://github.com/syohex/emacs-git-gutter/issues/36
+      (let ((expected (expand-file-name default-directory))
+            (got (git-gutter:root-directory file)))
+        (should (string= expected got)))
+
+      ;; Files in .git/ directory are not version-controled
+      (let ((default-directory (concat default-directory ".git/")))
+        (should-not (git-gutter:root-directory file))))
 
     ;; temporary directory maybe be version-controled
     (let ((default-directory temporary-file-directory))
-      (should (null (git-gutter:root-directory file))))
-
-    ;; Files in .git/ directory are not version-controled
-    (let ((default-directory (concat default-directory ".git/")))
-      (should (null (git-gutter:root-directory file))))))
+      (should-not (git-gutter:root-directory file)))))
 
 (ert-deftest git-gutter:sign-width ()
   "helper function `git-gutter:sign-width'"
@@ -59,14 +60,14 @@
                                    (deleted . git-gutter:deleted))
         do
         (should (eq (git-gutter:select-face type) expected)))
-  (should (not (git-gutter:select-face 'not-found))))
+  (should-not (git-gutter:select-face 'not-found)))
 
 (ert-deftest git-gutter:select-sign ()
   "helper function `git-gutter:select-sign'"
   (loop for (type . expected) in '((added . "+") (modified . "=") (deleted . "-"))
         do
         (should (string= (git-gutter:select-sign type) expected)))
-  (should (not (git-gutter:select-sign 'not-found))))
+  (should-not (git-gutter:select-sign 'not-found)))
 
 (ert-deftest git-gutter:propertized-sign ()
   "helper function `git-gutter:propertized-sign'"
@@ -97,9 +98,10 @@
 
   ;; In git repository, but here is '.git'
   (let ((file (concat default-directory "test-git-gutter.el")))
-    (let ((buf (find-file-noselect ".git/config")))
-      (with-current-buffer buf
-        (should (null (git-gutter:in-git-repository-p file)))))
+    (when (file-directory-p ".git") ;; #36
+      (let ((buf (find-file-noselect ".git/config")))
+        (with-current-buffer buf
+          (should-not (git-gutter:in-git-repository-p file)))))
 
     (let ((default-directory (file-name-directory (locate-library "git-gutter"))))
       (should (git-gutter:in-git-repository-p file)))))
@@ -107,10 +109,10 @@
 (ert-deftest git-gutter ()
   "Should return nil if buffer does not related with file or file is not existed"
   (with-current-buffer (get-buffer-create "*not-related-file*")
-    (should (null (git-gutter))))
+    (should-not (git-gutter)))
   (let ((buf (find-file-noselect "not-found")))
     (with-current-buffer buf
-      (should (null (git-gutter))))))
+      (should-not (git-gutter)))))
 
 (ert-deftest git-gutter:collect-deleted-line ()
   "Should return lines which start with '-'"
@@ -181,15 +183,16 @@ bar
 
   (let ((default-directory nil))
     (git-gutter-mode 1)
-    (should (not git-gutter-mode)))
+    (should-not git-gutter-mode))
 
   (let ((default-directory "foo"))
     (git-gutter-mode 1)
-    (should (not git-gutter-mode)))
+    (should-not git-gutter-mode))
 
-  (with-current-buffer (find-file-noselect ".git/config")
-    (git-gutter-mode 1)
-    (should (not git-gutter-mode))))
+  (when (file-directory-p ".git") ;; #36
+    (with-current-buffer (find-file-noselect ".git/config")
+      (git-gutter-mode 1)
+      (should-not git-gutter-mode))))
 
 (ert-deftest global-git-gutter-mode-success ()
   "Case global-git-gutter-mode enabled"
@@ -204,12 +207,12 @@ bar
 
   (with-temp-buffer
     (global-git-gutter-mode t)
-    (should (not git-gutter-mode)))
+    (should-not git-gutter-mode))
 
   (let ((git-gutter:disabled-modes '(emacs-lisp-mode)))
     (with-current-buffer (find-file-noselect "test-git-gutter.el")
       (global-git-gutter-mode t)
-      (should (not git-gutter-mode))))
+      (should-not git-gutter-mode)))
 
   (kill-buffer "test-git-gutter.el"))
 

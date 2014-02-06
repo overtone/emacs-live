@@ -1,6 +1,6 @@
 ;;; org-favtable.el --- Lookup table of favorite references and links
 
-;; Copyright (C) 2011-2013 Free Software Foundation, Inc.
+;; Copyright (C) 2011-2014 Free Software Foundation, Inc.
 
 ;; Author: Marc-Oliver Ihm <org-favtable@ferntreffer.de>
 ;; Keywords: hypermedia, matching

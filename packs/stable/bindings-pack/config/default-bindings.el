@@ -23,7 +23,6 @@
 
 ;; winner undo and redo
 (global-set-key (kbd "C-c b") 'winner-undo)
-(define-key nrepl-interaction-mode-map (kbd "C-c b") 'winner-undo)
 (global-set-key (kbd "C-c f") 'winner-redo)
 
 ;; Git Gutter
@@ -48,7 +47,7 @@
 (global-set-key (kbd "C-c m n") 'eval-print-last-sexp)
 (global-set-key (kbd "C-c m r") 'eval-region)
 
-(global-set-key (kbd "C-c n e b") 'nrepl-eval-buffer)
+(global-set-key (kbd "C-c n e b") 'cider-eval-buffer)
 
 
 ;;funky characters
@@ -89,7 +88,11 @@
 (global-set-key (kbd "C-c w /") (lambda () (interactive) (enlarge-window -1)))
 (global-set-key (kbd "C-c w '") (lambda () (interactive) (enlarge-window 1)))
 
-;;paredit
+;; clojure
+
+(define-key clojure-mode-map (kbd "C-c l l") 'align-cljlet)
+(define-key clojure-mode-map (kbd "C-M-z")   'align-cljlet)
+
 (define-key paredit-mode-map (kbd "C-c l k") 'paredit-splice-sexp-killing-forward)
 (define-key paredit-mode-map (kbd "C-c l w") 'paredit-splice-sexp-killing-backward)
 (define-key paredit-mode-map (kbd "C-c l l") 'align-cljlet)
@@ -233,8 +236,8 @@
 
 ;; Show documentation/information with M-RET
 (define-key lisp-mode-shared-map (kbd "M-RET") 'live-lisp-describe-thing-at-point)
-(define-key nrepl-mode-map (kbd "M-RET") 'nrepl-doc)
-(define-key nrepl-interaction-mode-map (kbd "M-RET") 'nrepl-doc)
+(define-key cider-repl-mode-map (kbd "M-RET") 'cider-doc)
+(define-key cider-mode-map (kbd "M-RET") 'cider-doc)
 
 (global-set-key (kbd "C-x o") 'win-switch-dispatch)
 

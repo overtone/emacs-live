@@ -1,6 +1,6 @@
 ;;; ob-comint.el --- org-babel functions for interaction with comint buffers
 
-;; Copyright (C) 2009-2013 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2014 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;; Keywords: literate programming, reproducible research, comint
@@ -117,7 +117,7 @@ or user `keyboard-quit' during execution of body."
 		   string-buffer))
 	     (setq raw (substring string-buffer (match-end 0))))
 	 (split-string string-buffer comint-prompt-regexp)))))
-(def-edebug-spec org-babel-comint-with-output (form body))
+(def-edebug-spec org-babel-comint-with-output (sexp body))
 
 (defun org-babel-comint-input-command (buffer cmd)
   "Pass CMD to BUFFER.

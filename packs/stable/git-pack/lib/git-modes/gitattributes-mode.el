@@ -1,9 +1,9 @@
-;;; gitattributes-mode --- Major mode for editing .gitattributes files -*- lexical-binding: t -*-
+;;; gitattributes-mode.el --- Major mode for editing .gitattributes files -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2013 Rüdiger Sonderfeld
 
 ;; Author: Rüdiger Sonderfeld <ruediger@c-plusplus.de>
-;; Created: 26 Aug 2013
+;; Maintainer: Jonas Bernoulli <jonas@bernoul.li>
 ;; Version: 0.14.0
 ;; Homepage: https://github.com/magit/git-modes
 ;; Keywords: convenience vc git
@@ -25,19 +25,17 @@
 
 ;;; Commentary:
 
-;; A major mode for editing gitattributes(5) files.  `eldoc-mode' is supported
-;; for known attributes.
-
-;;; Format:
-
-;; pattern attr1 attr2 ... attrN
-
-;; Pattern format is described in gitignore(5).
+;; A major mode for editing .gitattributes files.  See
+;; the gitattributes(5) manpage for more information.
+;; `eldoc-mode' is supported for known attributes.
 
 ;;; Code:
 
+(require 'easymenu)
+(require 'thingatpt)
+
 (defgroup gitattributes-mode nil
-  "Major mode for editing .gitattributes files"
+  "Edit .gitattributes files."
   :link '(url-link "https://github.com/magit/git-modes")
   :prefix "gitattributes-mode-"
   :group 'tools)
@@ -59,7 +57,7 @@ Alternatively add `turn-on-eldoc-mode' to the mode hook."
 (defun gitattributes-mode-help ()
   "Open the gitattributes(5) manpage using `gitattributes-mode-man-function'."
   (interactive)
-  (funcall gitattributes-mode-man-function "gitattributes(5)"))
+  (funcall gitattributes-mode-man-function "gitattributes"))
 
 (defconst gitattributes-mode-attributes
   '(("text"
@@ -113,13 +111,11 @@ ALLOWED-STATE should be a list or single symbol or string of allowed values.
 t means the attribute can be Set or Unset.  `string' means the symbol value
 can be any string and `number' means the value should be a number.")
 
-(require 'thingatpt)
-
 (defun gitattributes-mode-eldoc (&optional no-state)
   "Support for `eldoc-mode'.
 If NO-STATE is non-nil then do not print state."
   (let (entry)
-    (when (and (thing-at-point-looking-at "\\s-+\\(-\\|!\\)?\\([[:word:]]+\\)\\(=\\)?")
+    (when (and (thing-at-point-looking-at "\\s-+\\(-\\|!\\)?\\(\\(?:\\sw-?\\)+\\)\\(=\\)?")
                (setq entry (assoc-string (match-string 2)
                                          gitattributes-mode-attributes)))
       (concat (unless no-state
@@ -140,15 +136,31 @@ If NO-STATE is non-nil then do not print state."
     table)
   "Syntax table for `gitattributes-mode'.")
 
+(defun gitattributes-mode--highlight-1st-field (regexp)
+  "Highlight REGEXP in the first field only."
+  `(lambda (limit)
+     (let ((old-limit limit))
+       (save-excursion
+         (beginning-of-line)
+         (when (re-search-forward "[[:space:]]" limit 'noerror)
+           (setq limit (point))))
+       (unless (< limit (point))
+         (if (re-search-forward ,regexp limit 'noerror)
+             t
+           (forward-line)
+           (when (< (point) old-limit)
+             (gitattributes-mode--highlight-1st-field old-limit)))))))
+
 (defvar gitattributes-mode-font-lock-keywords
-  '(("\\(?:\\(?:fals\\|tru\\)e\\)" . 'font-lock-keyword-face)
+  `(("^\\s-*#.*" . 'font-lock-comment-face)
     ("^\\[attr]" . 'font-lock-function-name-face)
-    ("\\s-+\\(-\\|!\\)[[:word:]]+" 1 'font-lock-negation-char-face)
-    ("\\s-+\\(?:-\\|!\\)?\\(\\sw\\(?:\\sw\\|\\s_\\)*\\)=?" 1 'font-lock-variable-name-face)
+    ("\\s-+\\(-\\|!\\)[[:word:]]+" (1 'font-lock-negation-char-face))
+    ("\\s-+\\(?:-\\|!\\)?\\(\\sw\\(?:\\sw\\|\\s_\\)*\\)=?"
+     (1 'font-lock-variable-name-face))
     ;; Pattern highlight similar to `gitignore-mode-font-lock-keywords'
-    ; ("^[^[:space:]]*\\(/\\)" 1 'font-lock-constant-face) ;; TODO fix
-    ("^[^[:space:]]*\\([*?]\\)" 1 'font-lock-keyword-face)
-    ("^[^[:space:]]*\\(\\[.+?]\\)" 1 'font-lock-keyword-face))
+    (,(gitattributes-mode--highlight-1st-field "/") . 'font-lock-constant-face)
+    (,(gitattributes-mode--highlight-1st-field "[*?]") . 'font-lock-keyword-face)
+    (,(gitattributes-mode--highlight-1st-field "\\[.+?]") . 'font-lock-keyword-face))
   "Keywords for highlight in `gitattributes-mode'.")
 
 (defun gitattributes-mode-forward-field (&optional arg)
@@ -158,20 +170,18 @@ If ARG is omitted or nil, move point forward one field."
   (if (< arg 0)
       (gitattributes-mode-backward-field (- arg))
     (dotimes (_ (or arg 1))
-      (re-search-forward "\\s-" nil 'move))))
+      (re-search-forward "\\s-[!-]?\\<" nil 'move))))
 
 (defun gitattributes-mode-backward-field (&optional arg)
-  "Move point ARG fields forward.
-If ARG is omitted or nil, move point forward one field."
+  "Move point ARG fields backward.
+If ARG is omitted or nil, move point backward one field."
   (interactive "p")
   (if (< arg 0)
       (gitattributes-mode-forward-field (- arg))
     (dotimes (_ (or arg 1))
-      (re-search-backward "\\s-" nil 'move))))
+      (re-search-backward "\\s-[!-]?\\<" nil 'move))))
 
-(defvar gitattributes-mode-map
-  (let ((map (make-sparse-keymap)))
-    map)
+(defvar gitattributes-mode-map (make-sparse-keymap)
   "Keymap for `gitattributes-mode'.")
 
 (easy-menu-define gitattributes-mode-menu
@@ -199,7 +209,8 @@ If ARG is omitted or nil, move point forward one field."
   (setq font-lock-defaults '(gitattributes-mode-font-lock-keywords))
   (setq-local eldoc-documentation-function #'gitattributes-mode-eldoc)
   (setq-local forward-sexp-function #'gitattributes-mode-forward-field)
-  (when gitattributes-mode-enable-eldoc
+  (when (and gitattributes-mode-enable-eldoc
+             (require 'eldoc nil 'noerror))
     (eldoc-mode 1)))
 
 ;;;###autoload

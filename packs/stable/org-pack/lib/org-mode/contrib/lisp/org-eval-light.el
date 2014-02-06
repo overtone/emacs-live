@@ -1,6 +1,6 @@
 ;;; org-eval-light.el --- Display result of evaluating code in various languages (light)
 
-;; Copyright (C) 2008-2013 Free Software Foundation, Inc.
+;; Copyright (C) 2008-2014 Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <carsten at orgmode dot org>,
 ;;         Eric Schulte <schulte dot eric at gmail dot com>

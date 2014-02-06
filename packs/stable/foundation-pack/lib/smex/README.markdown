@@ -8,6 +8,9 @@ commands. And to all the other commands, too.
 
 ![Smex](https://sites.google.com/site/cumulatm/home/SmexScreenshotImage.png)
 
+## [Changelog](#changelog-1)
+Jump to [Changelog](#changelog-1).
+
 ## Get started
 
 * Get Smex
@@ -83,10 +86,17 @@ Smex keeps track of.
 ### Prompt
 Set `smex-prompt-string` for a custom prompt.
 
-### Ignore menu bar bindings
-Enable `smex-key-advice-ignore-menu-bar` to ignore clues to menu bar bindings.
-
 ## Changelog
+
+### 3.0
+  * Use `execute-extended-command` for running commands.
+    This breaks support for Emacs versions older than 23 and
+    obviates the user option `smex-key-advice-ignore-menu-bar`.
+    (The default Emacs behaviour is to not show menu bar bindings.)
+
+    As a result of this change, the variable `suggest-key-bindings`
+    is now honored when executing commands.
+  * Save command history in `extended-command-history`, like M-x.
 
 ### 2.1
   * Improved tab completion in the Smex minibuffer

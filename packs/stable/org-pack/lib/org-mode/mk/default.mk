@@ -39,7 +39,7 @@ BTEST_POST  =
               # -L <path-to>/ert      # needed for Emacs23, Emacs24 has ert built in
               # -L <path-to>/ess      # needed for running R tests
               # -L <path-to>/htmlize  # need at least version 1.34 for source code formatting
-BTEST_OB_LANGUAGES = awk C fortran maxima lilypond octave python sh
+BTEST_OB_LANGUAGES = awk C fortran maxima lilypond octave python sh perl
               # R                     # requires ESS to be installed and configured
 # extra packages to require for testing
 BTEST_EXTRA =

@@ -1,6 +1,6 @@
 ;;; org-macs.el --- Top-level definitions for Org-mode
 
-;; Copyright (C) 2004-2013 Free Software Foundation, Inc.
+;; Copyright (C) 2004-2014 Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -33,7 +33,9 @@
 
 (eval-and-compile
   (unless (fboundp 'declare-function)
-    (defmacro declare-function (fn file &optional arglist fileonly)))
+    (defmacro declare-function (fn file &optional arglist fileonly)
+      `(autoload ',fn ,file)))
+
   (if (>= emacs-major-version 23)
       (defsubst org-char-to-string(c)
 	"Defsubst to decode UTF-8 character values in emacs 23 and beyond."
@@ -280,14 +282,6 @@ we turn off invisibility temporarily.  Use this in a `let' form."
   (and (match-beginning n)
        (<= (match-beginning n) pos)
        (>= (match-end n) pos)))
-
-(defun org-autoload (file functions)
-  "Establish autoload for all FUNCTIONS in FILE, if not bound already."
-  (let ((d (format "Documentation will be available after `%s.el' is loaded."
-		   file))
-	f)
-    (while (setq f (pop functions))
-      (or (fboundp f) (autoload f file d t)))))
 
 (defun org-match-line (re)
   "Looking-at at the beginning of the current line."

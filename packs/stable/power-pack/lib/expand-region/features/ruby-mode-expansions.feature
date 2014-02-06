@@ -247,6 +247,26 @@ Feature: ruby-mode expansions
 
     """
 
+  Scenario: Mark ruby expand heredoc
+    Given I turn on ruby-mode
+    And there is no region selected
+    When I insert:
+    """
+    def foo
+      blah(<<-end_block)
+        CONTENT
+      end_block
+    end
+    """
+    And I place the cursor before "CONTENT"
+    And I press "C-@"
+    And I press "C-@"
+    Then the region should be:
+    """
+        CONTENT
+
+    """
+
   Scenario: Mark ruby expand to whole buffer
     Given I turn on ruby-mode
     And there is no region selected

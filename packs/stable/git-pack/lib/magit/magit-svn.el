@@ -1,12 +1,15 @@
 ;;; magit-svn.el --- git-svn plug-in for Magit
 
-;; Copyright (C) 2010-2013  The Magit Project Developers.
+;; Copyright (C) 2010-2014  The Magit Project Developers
 ;;
 ;; For a full list of contributors, see the AUTHORS.md file
 ;; at the top-level directory of this distribution and at
 ;; https://raw.github.com/magit/magit/master/AUTHORS.md
 
 ;; Author: Phil Jackson <phil@shellarchive.co.uk>
+;; Keywords: vc tools
+;; Package: magit-svn
+;; Package-Requires: ((cl-lib "0.3") (magit "1.3.0"))
 
 ;; Magit is free software; you can redistribute it and/or modify it
 ;; under the terms of the GNU General Public License as published by
@@ -36,14 +39,21 @@
 
 (declare-function find-lisp-find-files-internal 'find-lisp)
 
+;;; Options
+
+(defgroup magit-svn nil
+  "Git-Svn support for Magit."
+  :group 'magit-extensions)
+
 (defcustom magit-svn-externals-dir ".git_externals"
   "Directory from repository root that stores cloned SVN externals."
-  :group 'magit
+  :group 'magit-svn
   :type 'string)
 
-;; git svn commands
+;;; Commands
 
-(magit-define-command svn-find-rev (rev &optional branch)
+;;;###autoload
+(defun magit-svn-find-rev (rev &optional branch)
   "Find commit for svn REVISION in BRANCH."
   (interactive
    (list (read-string "SVN revision: ")
@@ -56,38 +66,43 @@
                        ,@(when branch (list branch))))))
     (if sha
         (magit-show-commit
-         (magit-with-section sha 'commit
-           (magit-set-section-info sha)
+         (magit-with-section (section commit sha)
+           (setf (magit-section-info section) sha)
            sha))
-      (error "Revision %s could not be mapped to a commit" rev))))
+      (user-error "Revision %s could not be mapped to a commit" rev))))
 
-(magit-define-command svn-create-branch (name)
+;;;###autoload
+(defun magit-svn-create-branch (name)
   "Create svn branch NAME."
   (interactive "sBranch name: ")
-  (apply 'magit-run-git "svn" "branch"
-         (append magit-custom-options (list name))))
+  (magit-run-git "svn" "branch" magit-custom-options name))
 
-(magit-define-command svn-create-tag (name)
+;;;###autoload
+(defun magit-svn-create-tag (name)
   "Create svn tag NAME."
   (interactive "sTag name: ")
-  (apply 'magit-run-git "svn" "tag"
-         (append magit-custom-options (list name))))
+  (magit-run-git "svn" "tag" magit-custom-options name))
 
-(magit-define-command svn-rebase ()
+;;;###autoload
+(defun magit-svn-rebase ()
   "Run git-svn rebase."
   (interactive)
-  (apply 'magit-run-git-async "svn" "rebase" magit-custom-options))
+  (magit-run-git-async "svn" "rebase" magit-custom-options))
 
-(magit-define-command svn-dcommit ()
+;;;###autoload
+(defun magit-svn-dcommit ()
   "Run git-svn dcommit."
   (interactive)
-  (apply 'magit-run-git-async "svn" "dcommit" magit-custom-options))
+  (magit-run-git-async "svn" "dcommit" magit-custom-options))
 
-(magit-define-command svn-remote-update ()
+;;;###autoload
+(defun magit-svn-remote-update ()
   "Run git-svn fetch."
   (interactive)
   (when (magit-svn-enabled)
     (magit-run-git-async "svn" "fetch")))
+
+;;; Utilities
 
 (defun magit-svn-enabled ()
   (not (null (magit-svn-get-ref-info t))))
@@ -155,9 +170,8 @@ If USE-CACHE is non-nil then return the value of
                  ;; the way that git-svn does it.
                  (cons 'local-ref
                        (with-temp-buffer
-                         (insert (or (magit-git-string "log" "--first-parent"
-                                                       "--grep" "git-svn" "-1")
-                                     ""))
+                         (magit-git-insert "log" "-1" "--first-parent"
+                                           "--grep" "git-svn")
                          (goto-char (point-min))
                          (cond ((re-search-forward
                                  "git-svn-id: \\(.+/.+?\\)@\\([0-9]+\\)" nil t)
@@ -176,31 +190,31 @@ If USE-CACHE is non nil, use the cached information."
   (let ((info (magit-svn-get-ref-info use-cache)))
     (cdr (assoc 'local-ref info))))
 
-(magit-define-inserter svn-unpulled (&optional use-cache)
+(defun magit-insert-svn-unpulled ()
   (when (magit-svn-enabled)
-    (apply #'magit-git-section
-           'svn-unpulled "Unpulled commits (SVN):" 'magit-wash-log "log"
-           (append magit-git-log-options
-                   (list
-                    (format "HEAD..%s" (magit-svn-get-ref use-cache)))))))
+    (magit-git-insert-section (svn-unpulled "Unpulled commits (SVN):")
+        (apply-partially 'magit-wash-log 'unique)
+      "log" "--format=format:* %h %s" (magit-diff-abbrev-arg)
+      (format "HEAD..%s" (magit-svn-get-ref t)))))
 
-(magit-define-inserter svn-unpushed (&optional use-cache)
+(defun magit-insert-svn-unpushed ()
   (when (magit-svn-enabled)
-    (apply #'magit-git-section
-           'svn-unpushed "Unpushed commits (SVN):" 'magit-wash-log "log"
-           (append magit-git-log-options
-                   (list
-                    (format "%s..HEAD" (magit-svn-get-ref use-cache)))))))
+    (magit-git-insert-section (svn-unpushed "Unpushed commits (SVN):")
+        (apply-partially 'magit-wash-log 'unique)
+      "log" "--format=format:* %h %s" (magit-diff-abbrev-arg)
+      (format "%s..HEAD" (magit-svn-get-ref t)))))
 
 (magit-define-section-jumper svn-unpushed  "Unpushed commits (SVN)")
 
-(defun magit-svn-remote-string ()
+(defun magit-insert-svn-remote-line ()
   (let ((svn-info (magit-svn-get-ref-info)))
     (when svn-info
-      (concat (cdr (assoc 'url svn-info))
-              " @ "
-              (cdr (assoc 'revision svn-info))))))
+      (magit-insert-line-section (line)
+        (concat "Remote: "
+                (cdr (assoc 'url svn-info)) " @ "
+                (cdr (assoc 'revision svn-info)))))))
 
+;;;###autoload
 (defun magit-svn-fetch-externals()
   "Loops through all external repos found by `magit-svn-external-directories'
    and runs git svn fetch, and git svn rebase on each of them."
@@ -221,6 +235,8 @@ If USE-CACHE is non nil, use the cached information."
                                  '(lambda(file dir)
                                     (string-equal file ".git"))
                                  'find-lisp-default-directory-predicate))
+
+;;; Keymaps
 
 (easy-menu-define magit-svn-extension-menu
   nil
@@ -258,25 +274,30 @@ If USE-CACHE is non nil, use the cached information."
     (define-key map (kbd "N") 'magit-key-mode-popup-svn)
     map))
 
+;;; Mode
+
 ;;;###autoload
 (define-minor-mode magit-svn-mode "SVN support for Magit"
   :lighter " SVN" :require 'magit-svn :keymap 'magit-svn-mode-map
   (or (derived-mode-p 'magit-mode)
-      (error "This mode only makes sense with magit"))
-  (let ((unpulled-hook (lambda () (magit-insert-svn-unpulled t)))
-        (unpushed-hook (lambda () (magit-insert-svn-unpushed t)))
-        (remote-hook 'magit-svn-remote-string))
-    (cond
-     (magit-svn-mode
-      (add-hook 'magit-after-insert-unpulled-commits-hook unpulled-hook nil t)
-      (add-hook 'magit-after-insert-unpushed-commits-hook unpushed-hook nil t)
-      (add-hook 'magit-remote-string-hook remote-hook nil t))
-     (t
-      (remove-hook 'magit-after-insert-unpulled-commits-hook unpulled-hook t)
-      (remove-hook 'magit-after-insert-unpushed-commits-hook unpushed-hook t)
-      (remove-hook 'magit-remote-string-hook remote-hook t)))
-    (when (called-interactively-p 'any)
-      (magit-refresh))))
+      (user-error "This mode only makes sense with magit"))
+  (cond
+   (magit-svn-mode
+    (magit-add-section-hook 'magit-status-sections-hook
+                            'magit-insert-svn-unpulled
+                            'magit-insert-unpulled-commits t t)
+    (magit-add-section-hook 'magit-status-sections-hook
+                            'magit-insert-svn-unpushed
+                            'magit-insert-unpushed-commits t t)
+    (magit-add-section-hook 'magit-status-insert-sections-hook
+                            'magit-insert-svn-remote-line
+                            'magit-insert-status-remote-line t t))
+   (t
+    (remove-hook 'magit-status-sections-hook 'magit-insert-svn-unpulled t)
+    (remove-hook 'magit-status-sections-hook 'magit-insert-svn-unpushed t)
+    (remove-hook 'magit-status-sections-hook 'magit-insert-svn-remote-line t)))
+  (when (called-interactively-p 'any)
+    (magit-refresh)))
 
 ;;;###autoload
 (defun turn-on-magit-svn ()
@@ -284,4 +305,7 @@ If USE-CACHE is non nil, use the cached information."
   (magit-svn-mode 1))
 
 (provide 'magit-svn)
+;; Local Variables:
+;; indent-tabs-mode: nil
+;; End:
 ;;; magit-svn.el ends here

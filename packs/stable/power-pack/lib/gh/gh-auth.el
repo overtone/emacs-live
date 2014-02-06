@@ -41,6 +41,13 @@
 
 (defvar gh-auth-alist nil)
 
+(defun gh-auth-remember (profile key value)
+  (let ((cell (assoc profile gh-auth-alist)))
+    (when (not cell)
+      (setq cell (cons profile nil))
+      (setq gh-auth-alist (append gh-auth-alist (list cell))))
+    (setcdr cell (plist-put (cdr cell) key value))))
+
 (defun gh-auth-get-username ()
   (let* ((profile (gh-profile-current-profile))
          (user (or (plist-get (cdr (assoc profile gh-auth-alist)) :username)
@@ -49,7 +56,7 @@
     (when (not user)
       (setq user (read-string "GitHub username: "))
       (gh-set-config "user" user))
-    (plist-put (cdr (assoc profile gh-auth-alist)) :username user)
+    (gh-auth-remember profile :username user)
     user))
 
 (defun gh-auth-get-password (&optional remember)
@@ -59,10 +66,9 @@
                    (gh-config "password"))))
     (when (not pass)
       (setq pass (read-passwd "GitHub password: "))
-      (when remember
-        (gh-set-config "password" pass)))
+      (gh-set-config "password" pass))
     (when remember
-      (plist-put (cdr (assoc profile gh-auth-alist)) :password pass))
+      (gh-auth-remember profile :password pass))
     pass))
 
 (declare-function 'gh-oauth-auth-new "gh-oauth")
@@ -79,8 +85,8 @@
                                             '(user repo gist)) :data)
                              :token))))
         (setq token (or tok (read-string "GitHub OAuth token: ")))
-        (plist-put (cdr (assoc profile gh-auth-alist)) :token token)
         (gh-set-config "oauth-token" token)))
+    (gh-auth-remember profile :token token)
     token))
 
 ;;;###autoload

@@ -19,7 +19,7 @@ byte-compile: check-dependency
 test: check-dependency
 	${EMACS} -batch -Q -l tests/run-test.el
 
-install:
+install: byte-compile
 	${EMACS} -Q -L . -batch -l etc/install ${DIR}
 
 README.html: README.md
@@ -54,3 +54,6 @@ package.zip: package
 travis-ci:
 	${EMACS} --version
 	${EMACS} -batch -Q -l tests/run-test.el
+
+tests/cl-lib.el:
+	wget "http://elpa.gnu.org/packages/cl-lib-0.3.el" -O $@

@@ -5,7 +5,7 @@
 ;; Author: Colin Walters <walters@verbum.org>
 ;; Maintainer: browse-kill-ring <browse-kill-ring@tonotdo.com>
 ;; Created: 7 Apr 2001
-;; Version: 1.4
+;; Version: 1.5a
 ;; URL: https://github.com/browse-kill-ring/browse-kill-ring
 ;; Keywords: convenience
 
@@ -47,6 +47,24 @@
 ;; again.
 
 ;;; Change Log:
+
+;; Changes from 1.5 to 1.5a:
+
+;; * 2013-Nov-17: skyer9 <skyer9 at gmail dot com>
+;;   Works with `delete-selection-mode'.
+;;
+;;   Modify `save-and-restore' option when exit.
+;;   If Emacs version is 24+, browse-kill-ring works with `query-replace' properly.
+;;
+;;   Works with kill-ring-yank-pointer.
+;;   When kill is yanked by browse-kill-ring,
+;;   browse-kill-ring remembers cursor position.
+;;
+;;   Add `browse-kill-ring-display-leftmost-duplicate' variable.
+;;   When `browse-kill-ring-display-duplicates' is nil,
+;;   leftmost(last) duplicate will be displayed.
+;;
+;;   Some bug fix.
 
 ;; Changes from 1.4 to 1.5:
 
@@ -391,6 +409,12 @@ Setting this variable to nil means no limit."
   :type 'boolean
   :group 'browse-kill-ring)
 
+(defcustom browse-kill-ring-display-leftmost-duplicate t
+  "When `browse-kill-ring-display-duplicates' nil,
+if non-nil, then display leftmost(last) duplicate items in `kill-ring'."
+  :type 'boolean
+  :group 'browse-kill-ring)
+
 (defadvice kill-new (around browse-kill-ring-no-kill-new-duplicates)
   "An advice for not adding duplicate elements to `kill-ring'.
 Even after being \"activated\", this advice will only modify the
@@ -671,31 +695,33 @@ of the *Kill Ring*."
 (defun browse-kill-ring-delete ()
   "Remove the item at point from the `kill-ring'."
   (interactive)
-  (let ((over (car (overlays-at (point)))))
-    (unless (overlayp over)
-      (error "No kill ring item here"))
-    (unwind-protect
-        (progn
-          (setq buffer-read-only nil)
-          (let ((target (overlay-get over 'browse-kill-ring-target)))
-            (delete-region (overlay-start over)
-                           (1+ (overlay-end over)))
-            (setq kill-ring (delete target kill-ring)))
-          (when (get-text-property (point) 'browse-kill-ring-extra)
-            (let ((prev (previous-single-property-change (point)
-                                                         'browse-kill-ring-extra))
-                  (next (next-single-property-change (point)
-                                                     'browse-kill-ring-extra)))
-              ;; This is some voodoo.
-              (when prev
-                (incf prev))
-              (when next
-                (incf next))
-              (delete-region (or prev (point-min))
-                             (or next (point-max))))))
-      (setq buffer-read-only t)))
+  (forward-line 0)
+  (unwind-protect
+    (let* ((over (browse-kill-ring-target-overlay-at (point)))
+           (target (overlay-get over 'browse-kill-ring-target)))
+      (setq buffer-read-only nil)
+      (delete-region (overlay-start over) (1+ (overlay-end over)))
+      (setq kill-ring (delete target kill-ring))
+      (when (get-text-property (point) 'browse-kill-ring-extra)
+        (let ((prev (previous-single-property-change (point) 'browse-kill-ring-extra))
+              (next (next-single-property-change (point) 'browse-kill-ring-extra)))
+          (when prev (incf prev))
+          (when next (incf next))
+          (delete-region (or prev (point-min)) (or next (point-max))))))
+    (setq buffer-read-only t))
   (browse-kill-ring-resize-window)
   (browse-kill-ring-forward 0))
+
+;; code from browse-kill-ring+.el
+(defun browse-kill-ring-target-overlay-at (position)
+  "Return overlay at POSITION that has property `browse-kill-ring-target'.
+If no such overlay, raise an error."
+  (let ((ovs  (overlays-at (point))))
+    (catch 'browse-kill-ring-target-overlay-at
+      (dolist (ov  ovs)
+        (when (overlay-get ov 'browse-kill-ring-target)
+          (throw 'browse-kill-ring-target-overlay-at ov)))
+      (error "No selection-ring item here"))))
 
 ;; Helper function for browse-kill-ring-current-string, takes a list of
 ;; overlays and returns the string from the first overlay that has the
@@ -714,10 +740,12 @@ of the *Kill Ring*."
 
 (defun browse-kill-ring-do-insert (buf pt)
   (let ((str (browse-kill-ring-current-string buf pt)))
+    (setq kill-ring-yank-pointer (browse-kill-ring-current-kill-ring-yank-pointer buf pt))
     (with-current-buffer browse-kill-ring-original-buffer
       (when browse-kill-ring-this-buffer-replace-yanked-text
         (delete-region (mark) (point)))
-
+      (when (and delete-selection-mode (not buffer-read-only) transient-mark-mode mark-active)
+        (delete-active-region))
       (browse-kill-ring-insert-and-highlight str))))
 
 (defun browse-kill-ring-forward (&optional arg)
@@ -820,12 +848,11 @@ entry."
     (delete-overlay browse-kill-ring-preview-overlay))
   (case browse-kill-ring-quit-action
     (save-and-restore
-     ;; FIXME: after everyone is on emacs >24, maybe we can just use
-     ;; quit-window and not have to mess around with
-     ;; window-configurations directly.
-     (let (buf (current-buffer))
-       (set-window-configuration browse-kill-ring-original-window-config)
-       (kill-buffer buf)))
+      (if (< emacs-major-version 24)
+        (let (buf (current-buffer))
+             (set-window-configuration browse-kill-ring-original-window-config)
+           (kill-buffer buf))
+       (quit-window)))
     (kill-and-delete-window
      (kill-buffer (current-buffer))
      (unless (= (count-windows) 1)
@@ -863,6 +890,7 @@ You most likely do not want to call `browse-kill-ring-mode' directly; use
   (define-key browse-kill-ring-mode-map (kbd "h") 'describe-mode)
   (define-key browse-kill-ring-mode-map (kbd "y") 'browse-kill-ring-insert)
   (define-key browse-kill-ring-mode-map (kbd "u") 'browse-kill-ring-insert-move-and-quit)
+  (define-key browse-kill-ring-mode-map (kbd "M-<return>") 'browse-kill-ring-insert-move-and-quit)
   (define-key browse-kill-ring-mode-map (kbd "i") 'browse-kill-ring-insert)
   (define-key browse-kill-ring-mode-map (kbd "o") 'browse-kill-ring-insert-and-move)
   (define-key browse-kill-ring-mode-map (kbd "x") 'browse-kill-ring-insert-and-delete)
@@ -1060,25 +1088,70 @@ directly; use `browse-kill-ring' instead.
     (overlay-put browse-kill-ring-preview-overlay
                  'before-string replacement)))
 
+(defun browse-kill-ring-current-index (buf pt)
+  "Return current index."
+  (let ((overlay-start-point (overlay-start (car (overlays-at pt))))
+        (current-index 0)
+        (stop-search nil)
+        current-overlay-start-point)
+    (save-excursion
+      (goto-char (point-min))
+      (while (not stop-search)
+        (setq current-overlay-start-point (overlay-start (car (overlays-at (point)))))
+        (if (eq overlay-start-point current-overlay-start-point)
+            (setq stop-search t))
+        (if (not stop-search)
+          (progn
+            (browse-kill-ring-forward 1)
+            (setq current-index (1+ current-index))))))
+    current-index))
+
+(defun browse-kill-ring-current-kill-ring-yank-pointer (buf pt)
+  "Return current kill-ring-yank-pointer."
+  (let ((result-yank-pointer kill-ring)
+        (current-string (browse-kill-ring-current-string buf pt))
+        (found nil)
+        (i 0))
+    (if browse-kill-ring-display-duplicates
+      (setq result-yank-pointer (nthcdr (browse-kill-ring-current-index buf pt) kill-ring))
+      (if browse-kill-ring-display-leftmost-duplicate
+        ;; search leftmost duplicate
+        (while (< i (length kill-ring))
+          (if (and (not found) (equal (substring-no-properties current-string) (substring-no-properties (elt kill-ring i))))
+            (progn
+              (setq result-yank-pointer (nthcdr i kill-ring))
+              (setq found t)))
+          (setq i (1+ i)))
+        ;; search rightmost duplicate
+        (setq i (1- (length kill-ring)))
+        (while (<= 0 i)
+          (if (and (not found) (equal (substring-no-properties current-string) (substring-no-properties (elt kill-ring i))))
+            (progn
+              (setq result-yank-pointer (nthcdr i kill-ring))
+              (setq found t)))
+          (setq i (1- i)))))
+    result-yank-pointer))
+
 (defun browse-kill-ring-setup (kill-buf orig-buf window &optional regexp window-config)
   (setq browse-kill-ring-this-buffer-replace-yanked-text
         (and
          browse-kill-ring-replace-yank
          (eq last-command 'yank)))
-  (let* ((will-replace
-         (or browse-kill-ring-this-buffer-replace-yanked-text
-             (region-active-p)))
-         (start (if will-replace
-                    (min (point) (mark))
-                  (point)))
-         (end (if will-replace
-                  (max (point) (mark))
-                (point))))
-    (when browse-kill-ring-show-preview
-      (when browse-kill-ring-preview-overlay
-        (delete-overlay browse-kill-ring-preview-overlay))
-      (setq browse-kill-ring-preview-overlay
-            (make-overlay start end orig-buf))))
+  (with-current-buffer orig-buf
+    (let* ((will-replace
+           (or browse-kill-ring-this-buffer-replace-yanked-text
+               (region-active-p)))
+           (start (if will-replace
+                      (min (point) (mark))
+                    (point)))
+           (end (if will-replace
+                    (max (point) (mark))
+                  (point))))
+      (when browse-kill-ring-show-preview
+        (when browse-kill-ring-preview-overlay
+          (delete-overlay browse-kill-ring-preview-overlay))
+        (setq browse-kill-ring-preview-overlay
+              (make-overlay start end orig-buf)))))
   (overlay-put browse-kill-ring-preview-overlay
                'invisible t)
   (with-current-buffer kill-buf
@@ -1107,11 +1180,13 @@ directly; use `browse-kill-ring' instead.
                           #'copy-sequence)
                         kill-ring)))
             (when (not browse-kill-ring-display-duplicates)
-              ;; I'm not going to rewrite `delete-duplicates'.  If
-              ;; someone really wants to rewrite it here, send me a
-              ;; patch.
+              ;; display leftmost or rightmost duplicate.
+              ;; if `browse-kill-ring-display-leftmost-duplicate' is t,
+              ;; display leftmost(last) duplicate.
               (require 'cl)
-              (setq items (delete-duplicates items :test #'equal)))
+              (delete-duplicates items
+                                 :test #'equal
+                                 :from-end browse-kill-ring-display-leftmost-duplicate))
             (when (stringp regexp)
               (setq items (delq nil
                                 (mapcar
@@ -1164,10 +1239,28 @@ directly; use `browse-kill-ring' instead.
       (message "Already viewing the kill ring")
     (let* ((orig-win (selected-window))
            (orig-buf (window-buffer orig-win))
-           (buf (get-buffer-create "*Kill Ring*")))
+           (buf (get-buffer-create "*Kill Ring*"))
+           (kill-ring-yank-pointer-string (substring-no-properties (car kill-ring-yank-pointer)))
+           (stop-search nil)
+           (search-found nil)
+           current-target-string)
       (browse-kill-ring-setup buf orig-buf orig-win)
       (pop-to-buffer buf)
-      (browse-kill-ring-resize-window))))
+      (browse-kill-ring-resize-window)
+      (if (not (eq kill-ring kill-ring-yank-pointer))
+        (progn
+          (while (not stop-search)
+            (setq current-target-string (browse-kill-ring-current-string (current-buffer) (point)))
+            (if (not current-target-string)
+              (setq stop-search t)
+              (if (equal current-target-string kill-ring-yank-pointer-string)
+                (progn
+                  (setq search-found t)
+                  (setq stop-search t))))
+            (if (not stop-search)
+              (browse-kill-ring-forward 1)))
+          (if (not search-found)
+            (goto-char (point-min))))))))
 
 (provide 'browse-kill-ring)
 

@@ -1,8 +1,6 @@
 (require 'ert)
 
 (require 'popup)
-;; for "every" function
-(require 'cl)
 
 (when (< (frame-width) (length "long long long long line"))
   (set-frame-size (selected-frame) 80 35))
@@ -34,7 +32,7 @@ batch mode."
       (let ((strings (split-string str "\n")))
         (when (search-forward (car strings) nil t)
           (goto-char (match-beginning 0))
-          (every
+          (cl-every
            'identity
            (mapcar
             (lambda (elem)
@@ -43,9 +41,9 @@ batch mode."
             (cdr strings))))))))
 
 (defun popup-test-helper-buffer-contents ()
-  (loop with start = (point-min)
+  (cl-loop with start = (point-min)
         with contents
-        for overlay in (sort* (overlays-in (point-min) (point-max))
+        for overlay in (cl-sort (overlays-in (point-min) (point-max))
                               '< :key 'overlay-start)
         for overlay-start = (overlay-start overlay)
         for overlay-end = (overlay-end overlay)
@@ -561,7 +559,7 @@ Baz"))
 (ert-deftest popup-test-scroll-down ()
   (popup-test-with-common-setup
     (setq popup
-          (popup-cascade-menu (loop for x to 100 collect (format "Foo%d" x))
+          (popup-cascade-menu (cl-loop for x to 100 collect (format "Foo%d" x))
                               :nowait t :height 10 :margin t :scroll-bar t))
     (should (popup-test-helper-rectangle-match "\
 Foo0
@@ -583,7 +581,7 @@ Foo2"))
 (ert-deftest popup-test-scroll-up ()
   (popup-test-with-common-setup
     (setq popup
-          (popup-cascade-menu (loop for x to 100 collect (format "Foo%d" x))
+          (popup-cascade-menu (cl-loop for x to 100 collect (format "Foo%d" x))
                               :nowait t :height 10 :margin t :scroll-bar t))
     (should (popup-test-helper-rectangle-match "\
 Foo0

@@ -39,7 +39,7 @@
 @end macro
 @copying
 
-Copyright @copyright{} 2010--2013 Free Software Foundation
+Copyright @copyright{} 2010--2014 Free Software Foundation
 
 @quotation
 Permission is granted to copy, distribute and/or modify this document
@@ -209,8 +209,7 @@ Exporting
 * ASCII/Latin-1/UTF-8 export::	Exporting to flat files with encoding
 * HTML export::			Exporting to HTML
 * @LaTeX{} and PDF export::	Exporting to @LaTeX{}, and processing to PDF
-* DocBook export::		Exporting to DocBook
-* iCalendar export::
+* iCalendar export::            Exporting to iCalendar
 
 Miscellaneous
 
@@ -2195,10 +2194,10 @@ consisting of only dashes, and at least 5 of them.
 @subheading Comment lines
 
 Lines starting with zero or more whitespace characters followed by @samp{#}
-are treated as comments and will never be exported.  Also entire subtrees
-starting with the word @samp{COMMENT} will never be exported.  Finally,
-regions surrounded by @samp{#+BEGIN_COMMENT} ... @samp{#+END_COMMENT} will
-not be exported.
+and a whitespace are treated as comments and will never be exported.  Also
+entire subtrees starting with the word @samp{COMMENT} will never be exported.
+Finally, regions surrounded by @samp{#+BEGIN_COMMENT}
+... @samp{#+END_COMMENT} will not be exported.
 
 @table @kbd
 @item C-c ;
@@ -2329,8 +2328,7 @@ that planning information can be incorporated into desktop calendars.
 * ASCII/Latin-1/UTF-8 export::	Exporting to flat files with encoding
 * HTML export::			Exporting to HTML
 * @LaTeX{} and PDF export::	Exporting to @LaTeX{}, and processing to PDF
-* DocBook export::		Exporting to DocBook
-* iCalendar export::
+* iCalendar export::            Exporting to iCalendar
 @end menu
 
 @node Export options, The export dispatcher, Exporting, Exporting
@@ -2349,25 +2347,21 @@ Insert template with export options, see example below.
 @smallexample
 #+TITLE:       the title to be shown (default is the buffer name)
 #+AUTHOR:      the author (default taken from @code{user-full-name})
-#+DATE:        a date, fixed, of a format string for @code{format-time-string}
+#+DATE:        a date, fixed, or an Org timestamp
 #+EMAIL:       his/her email address (default from @code{user-mail-address})
 #+DESCRIPTION: the page description, e.g.@: for the XHTML meta tag
 #+KEYWORDS:    the page keywords, e.g.@: for the XHTML meta tag
 #+LANGUAGE:    language for HTML, e.g.@: @samp{en} (@code{org-export-default-language})
-#+OPTIONS:     H:2 num:t toc:t \n:nil @@:t ::t |:t ^:t f:t TeX:t ...
-#+LINK_UP:     the ``up'' link of an exported page
-#+LINK_HOME:   the ``home'' link of an exported page
-#+LATEX_HEADER: extra line(s) for the @LaTeX{} header, like \usepackage@{xyz@}
+#+OPTIONS:     H:2 num:t toc:t \n:nil ::t |:t ^:t f:t tex:t ...
 @end smallexample
 
 @node The export dispatcher, ASCII/Latin-1/UTF-8 export, Export options, Exporting
 @section The export dispatcher
 
-All export commands can be reached using the export dispatcher, which is a
-prefix key that prompts for an additional key specifying the command.
-Normally the entire file is exported, but if there is an active region that
-contains one outline tree, the first heading is used as document title and
-the subtrees are exported.
+All export commands can be reached using the export dispatcher, which is
+a prefix key that prompts for an additional key specifying the command.
+Normally the entire file is exported, but if a region is active, it will be
+exported instead.
 
 @table @kbd
 @item C-c C-e
@@ -2382,11 +2376,11 @@ file, containing only plain ASCII.  Latin-1 and UTF-8 export augment the file
 with special characters and symbols available in these encodings.
 
 @table @kbd
-@item C-c C-e a
-Export as ASCII file.
-@item C-c C-e n @ @ @r{and} @ @ C-c C-e N
+@item C-c C-e t a @ @ @r{and} @ @ C-c C-e t A
+Export as ASCII file or temporary buffer.
+@item C-c C-e t n @ @ @r{and} @ @ C-c C-e t N
 Like the above commands, but use Latin-1 encoding.
-@item C-c C-e u @ @ @r{and} @ @ C-c C-e U
+@item C-c C-e t u @ @ @r{and} @ @ C-c C-e t U
 Like the above commands, but use UTF-8 encoding.
 @end table
 
@@ -2394,9 +2388,9 @@ Like the above commands, but use UTF-8 encoding.
 @section HTML export
 
 @table @kbd
-@item C-c C-e h
+@item C-c C-e h h
 Export as HTML file @file{myfile.html}.
-@item C-c C-e b
+@item C-c C-e h o
 Export as HTML file and immediately open it with a browser.
 @end table
 
@@ -2413,49 +2407,37 @@ All lines between these markers are exported literally
 #+END_HTML
 @end smallexample
 
-@node @LaTeX{} and PDF export, DocBook export, HTML export, Exporting
+@node @LaTeX{} and PDF export, iCalendar export, HTML export, Exporting
 @section @LaTeX{} and PDF export
 
 @table @kbd
-@item C-c C-e l
+@item C-c C-e l l
 Export as @LaTeX{} file @file{myfile.tex}.
-@item C-c C-e p
+@item C-c C-e l p
 Export as @LaTeX{} and then process to PDF.
-@item C-c C-e d
+@item C-c C-e l o
 Export as @LaTeX{} and then process to PDF, then open the resulting PDF file.
 @end table
 
 By default, the @LaTeX{} output uses the class @code{article}.  You can
-change this by adding an option like @code{#+LaTeX_CLASS: myclass} in your
+change this by adding an option like @code{#+LATEX_CLASS: myclass} in your
 file.  The class must be listed in @code{org-latex-classes}.
 
 Embedded @LaTeX{} as described in @ref{Embedded @LaTeX{}}, will be correctly
 inserted into the @LaTeX{} file.  Similarly to the HTML exporter, you can use
-@code{#+LaTeX:} and @code{#+BEGIN_LaTeX ... #+END_LaTeX} construct to add
+@code{#+LATEX:} and @code{#+BEGIN_LATEX ... #+END_LATEX} construct to add
 verbatim @LaTeX{} code.
 
-@node DocBook export, iCalendar export, @LaTeX{} and PDF export, Exporting
-@section DocBook export
-
-@table @kbd
-@item C-c C-e D
-Export as DocBook file.
-@end table
-
-Similarly to the HTML exporter, you can use @code{#+DOCBOOK:} and
-@code{#+BEGIN_DOCBOOK ... #+END_DOCBOOK} construct to add verbatim @LaTeX{}
-code.
-
-@node iCalendar export,  , DocBook export, Exporting
+@node iCalendar export,  , @LaTeX{} and PDF export, Exporting
 @section iCalendar export
 
 @table @kbd
-@item C-c C-e i
+@item C-c C-e c f
 Create iCalendar entries for the current file in a @file{.ics} file.
-@item C-c C-e c
+@item C-c C-e c c
 Create a single large iCalendar file from all files in
 @code{org-agenda-files} and write it to the file given by
-@code{org-combined-agenda-icalendar-file}.
+@code{org-icalendar-combined-agenda-file}.
 @end table
 
 @seealso{
@@ -2491,13 +2473,13 @@ Here is an example:
 @end smalllisp
 
 @table @kbd
-@item C-c C-e C
+@item C-c C-e P x
 Prompt for a specific project and publish all files that belong to it.
-@item C-c C-e P
+@item C-c C-e P p
 Publish the project containing the current file.
-@item C-c C-e F
+@item C-c C-e P f
 Publish only the current file.
-@item C-c C-e E
+@item C-c C-e P a
 Publish every project.
 @end table
 

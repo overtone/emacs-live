@@ -1,6 +1,6 @@
 ;;; ob-haskell.el --- org-babel functions for haskell evaluation
 
-;; Copyright (C) 2009-2013 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2014 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;; Keywords: literate programming, reproducible research
@@ -52,7 +52,8 @@
 (defvar org-babel-tangle-lang-exts)
 (add-to-list 'org-babel-tangle-lang-exts '("haskell" . "hs"))
 
-(defvar org-babel-default-header-args:haskell '())
+(defvar org-babel-default-header-args:haskell
+  '((:padlines . "no")))
 
 (defvar org-babel-haskell-lhs2tex-command "lhs2tex")
 
@@ -78,12 +79,12 @@
                    (cdr (member org-babel-haskell-eoe
                                 (reverse (mapcar #'org-babel-trim raw)))))))
     (org-babel-reassemble-table
-     ((lambda (result)
-	(org-babel-result-cond (cdr (assoc :result-params params))
-	  result (org-babel-haskell-table-or-string result)))
-      (case result-type
-	('output (mapconcat #'identity (reverse (cdr results)) "\n"))
-	('value (car results))))
+     (let ((result
+            (case result-type
+              (output (mapconcat #'identity (reverse (cdr results)) "\n"))
+              (value (car results)))))
+       (org-babel-result-cond (cdr (assoc :result-params params))
+	 result (org-babel-haskell-table-or-string result)))
      (org-babel-pick-name (cdr (assoc :colname-names params))
 			  (cdr (assoc :colname-names params)))
      (org-babel-pick-name (cdr (assoc :rowname-names params))
@@ -147,9 +148,10 @@ specifying a variable of the same value."
     (format "%S" var)))
 
 (defvar org-src-preserve-indentation)
+(defvar org-export-copy-to-kill-ring)
 (declare-function org-export-to-file "ox"
 		  (backend file
-			   &optional subtreep visible-only body-only ext-plist))
+			   &optional async subtreep visible-only body-only ext-plist))
 (defun org-babel-haskell-export-to-lhs (&optional arg)
   "Export to a .lhs file with all haskell code blocks escaped.
 When called with a prefix argument the resulting

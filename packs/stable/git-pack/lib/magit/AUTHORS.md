@@ -1,26 +1,27 @@
 Authors
 =======
 
-Names Sorted Alphabetically:
+Also see https://github.com/magit/magit/graphs/contributors.
+Names below are sorted alphabetically.
 
 Author
 ------
 
 - Marius Vollmer <marius.vollmer@gmail.com>
 
-Maintainers
------------
+Maintainer
+----------
 
 - Jonas Bernoulli <jonas@bernoul.li>
-- Nicolas Dudebout <nicolas.dudebout@gatech.edu>
-- Rémi Vanicat <vanicat@debian.org>
-- Yann Hodique <yann.hodique@gmail.com>
 
 Retired Maintainers
 -------------------
 
+- Nicolas Dudebout <nicolas.dudebout@gatech.edu>
 - Peter J. Weisberg <pj@irregularexpressions.net>
 - Phil Jackson <phil@shellarchive.co.uk>
+- Rémi Vanicat <vanicat@debian.org>
+- Yann Hodique <yann.hodique@gmail.com>
 
 Contributors
 ------------
@@ -47,6 +48,7 @@ Contributors
 - Chris Bernard <cebernard@gmail.com>
 - Chris Done <chrisdone@gmail.com>
 - Chris Moore <dooglus@gmail.com>
+- Chris Ring <chris@ringthis.com>
 - Christian Dietrich <christian.dietrich@informatik.uni-erlangen.de>
 - Christian Kluge <ckfrakturfreak@web.de>
 - Christopher Monsanto <chris@monsan.to>
@@ -59,15 +61,19 @@ Contributors
 - Daniel Hackney <dan@haxney.org>
 - Dan LaManna <dan.lamanna@gmail.com>
 - David Abrahams <dave@boostpro.com>
+- David Hull <david.hull@openx.com>
 - David Wallin <david.wallin@gmail.com>
 - Divye Kapoor <divye@google.com>
 - Dominique Quatravaux <domq@google.com>
 - Eli Barzilay <eli@barzilay.org>
 - Eric Davis <ed@npri.org>
+- Eric Schulte <schulte.eric@gmail.com>
 - Evgkeni Sampelnikof <esabof@gmail.com>
 - Felix Geller <fgeller@gmail.com>
+- Feng Li <fengli@blackmagicdesign.com>
 - George Kadianakis <desnacked@gmail.com>
 - Graham Clark <grclark@gmail.com>
+- Greg A. Woods <woods@planix.com>
 - Greg Sexton <gregsexton@gmail.com>
 - Hannu Koivisto <azure@iki.fi>
 - Hans-Peter Deifel <hpdeifel@gmx.de>
@@ -88,20 +94,24 @@ Contributors
 - Lluís Vilanova <vilanova@ac.upc.edu>
 - Luís Borges de Oliveira <lbo@siscog.pt>
 - Luke Amdor <luke.amdor@gmail.com>
+- Marcel Wolf <mwolf@ml1.net>
 - Marc Herbert <marc.herbert@gmail.com>
 - Marcin Bachry <hegel666@gmail.com>
 - Marco Craveiro <marco.craveiro@gmail.com>
 - Marius Vollmer <marius.vollmer@gmail.com>
 - Mark Hepburn <Mark.Hepburn@csiro.au>
+- Matus Goljer <dota.keys@gmail.com>
 - Miles Bader <miles@gnu.org>
 - Mitchel Humpherys <mitch.special@gmail.com>
 - Moritz Bunkus <moritz@bunkus.org>
 - Nathan Weizenbaum <nex342@gmail.com>
+- Nguyễn Tuấn Anh <ubolonton@gmail.com>
 - Nic Ferier <nic@ferrier.me.uk>
 - Nick Alcock <nick.alcock@oracle.com>
 - Nick Alexander <nalexander@mozilla.com>
 - Nick Dimiduk <ndimiduk@gmail.com>
 - Nicolas Dudebout <nicolas.dudebout@gatech.edu>
+- Nicolas Richard <theonewiththeevillook@yahoo.fr>
 - Noam Postavsky <npostavs@users.sourceforge.net>
 - Ole Arndt <oliver.arndt@cegedim.com>
 - Óscar Fuentes <ofv@wanadoo.es>
@@ -109,10 +119,12 @@ Contributors
 - Pavel Holejsovsky <pavel.holejsovsky@upek.com>
 - Pekka Pessi <nospam@pessi.fi>
 - Peter J. Weisberg <pj@irregularexpressions.net>
+- Philippe Vaucher <philippe@stvs.ch>
 - Philipp Haselwarter <philipp@haselwarter.org>
 - Philip Weaver <philip.weaver@gmail.com>
 - Phil Jackson <phil@shellarchive.co.uk>
 - Pieter Praet <pieter@praet.org>
+- Prathamesh Sonpatki <csonpatki@gmail.com>
 - rabio <rabiodev@o2.pl>
 - Raimon Grau <raimonster@gmail.com>
 - Ramkumar Ramachandra <artagnon@gmail.com>
@@ -124,6 +136,7 @@ Contributors
 - Roger Crew <crew@cs.stanford.edu>
 - Romain Francoise <romain@orebokech.com>
 - Ron Parker <rparker@a123systems.com>
+- Roy Crihfield <rscrihf@gmail.com>
 - Rüdiger Sonderfeld <ruediger@c-plusplus.de>
 - Ryan C. Thompson <rct@thompsonclan.org>
 - Samuel Bronson <naesten@gmail.com>
@@ -141,9 +154,11 @@ Contributors
 - Steve Purcell <steve@sanityinc.com>
 - Suhail Shergill <suhailshergill@gmail.com>
 - Takafumi Arakaki <aka.tkf@gmail.com>
+- Teruki Shigitani <teruki.shigitani@gmail.com>
 - Thierry Volpiatto <thierry.volpiatto@gmail.com>
 - Thomas Jost <thomas.jost@gmail.com>
 - Tibor Simko <tibor.simko@cern.ch>
 - Timo Juhani Lindfors <timo.lindfors@iki.fi>
+- Ting-Yu Lin <aethanyc@gmail.com>
 - Tom Feist <shabble@metavore.org>
 - Yann Hodique <yann.hodique@gmail.com>

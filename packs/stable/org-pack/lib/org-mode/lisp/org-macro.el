@@ -1,9 +1,11 @@
 ;;; org-macro.el --- Macro Replacement Code for Org Mode
 
-;; Copyright (C) 2013 Free Software Foundation, Inc.
+;; Copyright (C) 2013-2014 Free Software Foundation, Inc.
 
 ;; Author: Nicolas Goaziou <n.goaziou@gmail.com>
 ;; Keywords: outlines, hypermedia, calendar, wp
+
+;; This file is part of GNU Emacs.
 
 ;; GNU Emacs is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -37,12 +39,14 @@
 ;; {{{email}}} and {{{title}}} macros.
 
 ;;; Code:
+(require 'org-macs)
 
 (declare-function org-element-at-point "org-element" (&optional keep-trail))
 (declare-function org-element-context "org-element" (&optional element))
 (declare-function org-element-property "org-element" (property element))
 (declare-function org-element-type "org-element" (element))
 (declare-function org-remove-double-quotes "org" (s))
+(declare-function org-mode "org" ())
 (declare-function org-file-contents "org" (file &optional noerror))
 (declare-function org-with-wide-buffer "org-macs" (&rest body))
 

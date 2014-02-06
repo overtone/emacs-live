@@ -111,7 +111,7 @@
 (defun er/mark-js-object-property-value ()
   "Mark the current object property value, ie. from : to , or }"
   (interactive)
-  (unless (er--inside-pairs-p)
+  (unless (er--point-inside-pairs-p)
     (error "Point is not inside an object"))
   (search-backward ":")
   (forward-char)
@@ -140,7 +140,8 @@ If point is inside the value, that will be marked first anyway."
     (backward-char)
     (set-mark (point))
     (search-forward ":")
-    (while (not (looking-at "[},]"))
+    (while (or (not (looking-at "[},]"))
+               (er--point-inside-string-p))
       (if (looking-at "\\s(")
           (forward-list)
         (forward-char)))

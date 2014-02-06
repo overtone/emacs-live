@@ -46,6 +46,8 @@
 ;;; Code:
 
 (require 'expand-region-core)
+(require 'er-basic-expansions)
+(require 'cc-cmds)
 
 (defun er/c-mark-statement ()
   "Mark the current C statement.

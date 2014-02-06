@@ -1,12 +1,14 @@
 ;;; magit-wip.el --- git-wip plug-in for Magit
 
-;; Copyright (C) 2012-2013  The Magit Project Developers.
+;; Copyright (C) 2012-2014  The Magit Project Developers
 ;;
 ;; For a full list of contributors, see the AUTHORS.md file
 ;; at the top-level directory of this distribution and at
 ;; https://raw.github.com/magit/magit/master/AUTHORS.md
 
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
+;; Keywords: vc tools
+;; Package: magit
 
 ;; Magit is free software; you can redistribute it and/or modify it
 ;; under the terms of the GNU General Public License as published by
@@ -28,16 +30,11 @@
 ;; This requires the third-party git command "git wip" which is available
 ;; from https://github.com/bartman/git-wip.
 
-;; The global mode `magit-wip-mode' provides highlighting of wip refs in
-;; Magit buffers while the local mode `magit-wip-save-mode' commits to
-;; such a ref when saving a file-visiting buffer.
-
 ;; To enable `magit-wip-save-mode' enable `global-magit-wip-save-mode'
 ;; and use the Magit extension mechanism to select the repositories in
 ;; which you want to use a work-in-progress ref.  Usually you also want
 ;; to enable `magit-wip-mode'.
 ;;
-;;   (magit-wip-mode 1)
 ;;   (global-magit-wip-save-mode 1)
 ;;
 ;;   $ git config --add magit.extension wip-save           # or
@@ -52,38 +49,15 @@
 (require 'magit)
 (require 'format-spec)
 
-;;; Magit Wip Mode.
+(defun magit-wip-mode (&rest ignore)
+  (message "magit-wip-mode is obsolete and doesn't do anything"))
+(make-obsolete 'magit-wip-mode "This mode is a noop now" "2.0.0")
 
-(defface magit-log-head-label-wip
-  '((((class color) (background light))
-     :box t
-     :background "Grey95"
-     :foreground "LightSkyBlue3")
-    (((class color) (background dark))
-     :box t
-     :background "Grey07"
-     :foreground "LightSkyBlue4"))
-  "Face for git-wip labels shown in log buffer."
-  :group 'magit-faces)
+;;; Options
 
-(defun magit-log-get-wip-color (suffix)
-  (list (concat "(WIP) " suffix)
-        'magit-log-head-label-wip))
-
-(defconst magit-wip-refs-namespace
-  '("wip" magit-log-get-wip-color))
-
-;;;###autoload
-(define-minor-mode magit-wip-mode
-  "In Magit log buffers; give wip refs a special appearance."
-  :group 'magit
-  :global t
-  (if magit-wip-mode
-      (add-to-list 'magit-refs-namespaces magit-wip-refs-namespace 'append)
-    (setq magit-refs-namespaces
-          (delete magit-wip-refs-namespace magit-refs-namespaces))))
-
-;;; Magit Wip Save Mode.
+(defgroup magit-wip nil
+  "Git-Wip support for Magit."
+  :group 'magit-extensions)
 
 (defcustom magit-wip-commit-message "WIP %r"
   "Commit message for git-wip commits.
@@ -93,7 +67,7 @@ The following `format'-like specs are supported:
 %g the root of the git repository
 %r the name of the file being saved,
    relative to the repository root."
-  :group 'magit
+  :group 'magit-wip
   :type 'string)
 
 (defcustom magit-wip-echo-area-message "Wrote %f (wip)"
@@ -104,10 +78,12 @@ The following `format'-like specs are supported:
 %g the root of the git repository
 %r the name of the file being saved,
    relative to the repository root."
-  :group 'magit
+  :group 'magit-wip
   :type '(choice (const :tag "No message" nil) string))
 
 (defvar magit-wip-save-mode-lighter " Wip")
+
+;;; Mode
 
 ;;;###autoload
 (define-minor-mode magit-wip-save-mode
@@ -132,12 +108,11 @@ work-in-progress ref."
 Turn on magit-wip-save-mode if the buffer is a file in a git
 repository where wip-save is enabled in git config.
 
-You can activate it with git config magit.extension wip-save.
-"
+You can activate it with git config magit.extension wip-save."
   (when (and (buffer-file-name)
              (magit-get-top-dir)
              (member "wip-save" (magit-get-all "magit.extension")))
-    (if (= (magit-git-exit-code "wip" "-h") 0)
+    (if (magit-git-success "wip" "-h")
         (magit-wip-save-mode 1)
       (message "Git command 'git wip' cannot be found"))))
 
@@ -162,4 +137,7 @@ You can activate it with git config magit.extension wip-save.
         (message (format-spec magit-wip-echo-area-message spec))))))
 
 (provide 'magit-wip)
+;; Local Variables:
+;; indent-tabs-mode: nil
+;; End:
 ;;; magit-wip.el ends here

@@ -57,6 +57,9 @@
 (require 'ido)
 (require 'flx)
 
+(eval-when-compile
+  (defvar ido-cur-item))
+
 (defcustom flx-ido-threshhold 6000
   "flx will not kick in until collection is filtered below this size with \"flex\"."
   :group 'ido)

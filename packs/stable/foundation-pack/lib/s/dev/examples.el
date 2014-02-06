@@ -173,6 +173,11 @@
     (s-blank? nil) => t
     (s-blank? " ") => nil)
 
+  (defexamples s-present?
+    (s-present? "") => nil
+    (s-present? nil) => nil
+    (s-present? " ") => t)
+
   (defexamples s-ends-with?
     (s-ends-with? ".md" "readme.md") => t
     (s-ends-with? ".MD" "readme.md") => nil
@@ -267,6 +272,11 @@
     (s-reverse "ab xyz") => "zyx ba"
     (s-reverse "") => "")
 
+  (defexamples s-presence
+    (s-presence nil) => nil
+    (s-presence "") => nil
+    (s-presence "foo") => "foo")
+
   (defexamples s-format
      ;; One with an alist works
     (s-format
@@ -331,7 +341,12 @@
     (let ((foo "Hello\\nWorld"))
       (s-lex-format "${foo}"))
     => "Hello\\nWorld"
-    ))
+    )
+
+  (defexamples s-count-matches
+    (s-count-matches "a" "aba") => 2
+    (s-count-matches "a" "aba" 0 2) => 1
+    (s-count-matches "\\w\\{2\\}[0-9]+" "ab1bab2frobinator") => 2))
 
 (def-example-group "Pertaining to words"
   (defexamples s-split-words
@@ -380,3 +395,4 @@
     (s-word-initials "under_scored_words") => "usw"
     (s-word-initials "camelCasedWords") => "cCW"
     (s-word-initials "dashed-words") => "dw"))
+

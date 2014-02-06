@@ -328,10 +328,10 @@ for the gist."
             (insert (oref f :content))
             (let ((fname (oref f :filename)))
               ;; set major mode
-              (setq buffer-file-name fname)
               (if (fboundp mode)
                   (funcall mode)
-                (normal-mode))
+                (let ((buffer-file-name fname))
+                  (normal-mode)))
               ;; set minor mode
               (gist-mode 1)
               (setq gist-id id
@@ -374,7 +374,7 @@ for the gist."
   (let* ((buffer (get-buffer buffer))
          (id (tabulated-list-get-id))
          (gist (gist-list-db-get-gist id))
-         (fname (or (buffer-file-name buffer) (buffer-name buffer))))
+         (fname (file-name-nondirectory (or (buffer-file-name buffer) (buffer-name buffer)))))
     (let* ((g (clone gist :files
                      (list
                       (gh-gist-gist-file "file"

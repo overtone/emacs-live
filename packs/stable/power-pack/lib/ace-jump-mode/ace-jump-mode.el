@@ -284,6 +284,10 @@ jump internal use.  If you want to change it, use
 `ace-jump-mode-enable-mark-sync' or
 `ace-jump-mode-disable-mark-sync'.")
 
+(defvar ace-jump-search-filter nil
+  "This should be nil or a point-dependant predicate
+that `ace-jump-search-candidate' will use as an additional filter.")
+
 (defgroup ace-jump nil
   "ace jump group"
   :group 'convenience)
@@ -371,7 +375,10 @@ The returned value is a list of `aj-position' record."
                              until (or
                                     (> (point) end-point)
                                     (eobp))
-                             if (or ace-jump-allow-invisible (not (invisible-p (match-beginning 0))))
+                             if (and (or ace-jump-allow-invisible (not (invisible-p (match-beginning 0))))
+                                  (or (null ace-jump-search-filter)
+                                      (ignore-errors
+                                        (funcall ace-jump-search-filter))))
                              collect (make-aj-position :offset (match-beginning 0)
                                                        :visual-area va)
                              ;; when we use "^" to search line mode,
@@ -516,7 +523,9 @@ node and call LEAF-FUNC on each leaf node"
                                   ((string-equal subs "\n")
                                    "\n")
                                   (t
-                                   "")))))))))
+                                   ;; there are wide-width characters
+                                   ;; so, we need paddings
+                                   (make-string (1- (string-width subs)) ? ))))))))))
     (loop for k in keys
           for n in (cdr tree)
           do (progn

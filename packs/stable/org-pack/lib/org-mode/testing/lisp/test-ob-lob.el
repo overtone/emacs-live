@@ -1,6 +1,6 @@
 ;;; test-ob-lob.el --- test for ob-lob.el
 
-;; Copyright (c) 2010-2013 Eric Schulte
+;; Copyright (c) 2010-2014 Eric Schulte
 ;; Authors: Eric Schulte
 
 ;; This file is not part of GNU Emacs.
@@ -86,6 +86,7 @@
 	(let ((org-current-export-file buf))
 	  (org-babel-exp-process-buffer))
 	(message (buffer-string))
+	(goto-char (point-min))
 	(should (re-search-forward "^: 0" nil t))
 	(should (re-search-forward "call =2= stuck" nil t))
 	(should (re-search-forward

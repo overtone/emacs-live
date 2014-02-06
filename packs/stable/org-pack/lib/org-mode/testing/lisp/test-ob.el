@@ -1,6 +1,6 @@
 ;;; test-ob.el --- tests for ob.el
 
-;; Copyright (c) 2010-2013 Eric Schulte
+;; Copyright (c) 2010-2014 Eric Schulte
 ;; Authors: Eric Schulte, Martyn Jago
 
 ;; This file is not part of GNU Emacs.
@@ -1106,6 +1106,80 @@ Paragraph"
     (widen)
     (should (should (re-search-forward "^: 3" nil t)))))
 
+(ert-deftest test-ob/specific-colnames ()
+  "Test passing specific column names."
+  (should
+   (equal "#+name: input-table
+| id | var1 |
+|----+------|
+|  1 | bar  |
+|  2 | baz  |
+
+#+begin_src sh :var data=input-table :exports results :colnames '(Rev Author)
+echo \"$data\"
+#+end_src
+
+#+RESULTS:
+| Rev | Author |
+|-----+--------|
+|   1 | bar    |
+|   2 | baz    |
+
+"
+	  (org-test-with-temp-text
+	      "#+name: input-table
+| id | var1 |
+|----+------|
+|  1 | bar  |
+|  2 | baz  |
+
+#+begin_src sh :var data=input-table :exports results :colnames '(Rev Author)
+echo \"$data\"
+#+end_src
+"
+	    ;; we should find a code block
+	    (should (re-search-forward org-babel-src-block-regexp nil t))
+	    (goto-char (match-beginning 0))
+	    ;; now that we've located the code block, it may be evaluated
+	    (org-babel-execute-src-block)
+	    (buffer-string)))))
+
+(ert-deftest test-ob/location-of-header-arg-eval ()
+  "Test location of header argument evaluation."
+  (org-test-with-temp-text "
+#+name: top-block
+#+begin_src emacs-lisp :var pt=(point)
+  pt
+#+end_src
+
+#+name: bottom-block
+#+begin_src emacs-lisp :var pt=top-block()
+  pt
+#+end_src
+"
+    ;; the value of the second block should be greater than the first
+    (should
+     (< (progn (re-search-forward org-babel-src-block-regexp nil t)
+	       (goto-char (match-beginning 0))
+	       (prog1 (save-match-data (org-babel-execute-src-block))
+		 (goto-char (match-end 0))))
+	(progn (re-search-forward org-babel-src-block-regexp nil t)
+	       (goto-char (match-beginning 0))
+	       (org-babel-execute-src-block))))))
+
+(ert-deftest test-ob/preserve-results-indentation ()
+  "Preserve indentation when executing a src block."
+  (should
+   (equal '(2 2)
+	  (org-test-with-temp-text
+	      "  #+begin_src emacs-lisp\n  (+ 1 1)\n  #+end_src"
+	    (org-babel-execute-src-block)
+	    (buffer-string)
+	    (let ((case-fold-search t)) (search-forward "#+results:"))
+	    ;; Check if both #+RESULTS: keyword and actual results are
+	    ;; indented by 2 columns.
+	    (list (org-get-indentation)
+		  (progn (forward-line) (org-get-indentation)))))))
 
 (provide 'test-ob)
 

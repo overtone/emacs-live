@@ -1,6 +1,6 @@
 ;;; org-choose.el --- decision management for org-mode
 
-;; Copyright (C) 2009-2013 Tom Breton (Tehom)
+;; Copyright (C) 2009-2014 Tom Breton (Tehom)
 
 ;; This file is not part of GNU Emacs.
 
