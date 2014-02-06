@@ -36,7 +36,7 @@
 
 ;; Specify the print length to be 100 to stop infinite sequences killing
 ;; things. This might be dangerous for some people relying on
-;; *pring-length* being larger. Consider a work around
+;; *print-length* being larger. Consider a work around
 (defun live-nrepl-set-print-length ()
   (nrepl-send-string-sync "(set! *print-length* 100)" "clojure.core"))
 
