@@ -2,13 +2,16 @@
 
 ## 1.0-BETA-24 (To be released)
 * Update many, many dependencies (As usual)
+* Move from nrepl.el to new cider library
 * Add Magnar Sveen's clj-refactor bound to C-c C-m See: https://github.com/magnars/clj-refactor.el
 * Rename live pack directory to stable to clarify the distinction with the dev packs
 * Specify hard dependency on Emacs 24.3
 * Add support for Haskell
 * Add support for Extempore
 * Add support for floobits
-* Improve w
+* Add word count mode (M-x wc-mode)
+* Improve format of boot messages
+* Remove cl-lib.el as it's included in Emacs 24.3 by default.
 
 
 ## 1.0-BETA-23 (Tues 3rd Sept 2013)
