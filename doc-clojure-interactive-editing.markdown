@@ -8,8 +8,6 @@ layout: doc
 
 # Interactive editing
 
-You can also send commands to the Clojure REPL from an editor buffer. The main command to do this is `C-M-x` which will send the outermost form to the REPL.
+You can also send commands to the Clojure REPL from an editor buffer. The main command to do this is `C-M-x` which will send the outermost form to the REPL. `C-x C-e` will evaluate the previous form. You'll see what's evaluated as it will be briefly highlighted in a different colour (typically pink in the default colour scheme).
 
-You can also send the full contents of the buffer by using `C-c C-z`.
-
-See the [nREPL documentation](https://github.com/kingtim/nrepl.el#keys) for a full list of keybindings.
+See the [cider documentation](https://github.com/clojure-emacs/cider/#keyboard-shortcuts) for a full list of keybindings.
