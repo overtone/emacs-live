@@ -3,6 +3,25 @@
 ;; This is where everything starts. Do you remember this place?
 ;; It remembers you...
 
+(setq live-ascii-art-logo ";;
+;;     MM\"\"\"\"\"\"\"\"`M
+;;     MM  mmmmmmmM
+;;     M`      MMMM 88d8b.d8b. .d8888b. .d8888b. .d8888b.
+;;     MM  MMMMMMMM 88''88'`88 88'  `88 88'  `\"\" Y8ooooo.
+;;     MM  MMMMMMMM 88  88  88 88.  .88 88.  ...       88
+;;     MM        .M dP  dP  dP `88888P8 '88888P' '88888P'
+;;     MMMMMMMMMMMM
+;;
+;;         M\"\"MMMMMMMM M\"\"M M\"\"MMMMM\"\"M MM\"\"\"\"\"\"\"\"`M
+;;         M  MMMMMMMM M  M M  MMMMM  M MM  mmmmmmmM
+;;         M  MMMMMMMM M  M M  MMMMP  M M`      MMMM
+;;         M  MMMMMMMM M  M M  MMMM' .M MM  MMMMMMMM
+;;         M  MMMMMMMM M  M M  MMP' .MM MM  MMMMMMMM
+;;         M         M M  M M     .dMMM MM        .M
+;;         MMMMMMMMMMM MMMM MMMMMMMMMMM MMMMMMMMMMMM ")
+
+(message (concat "\n\n" live-ascii-art-logo "\n\n"))
+
 (add-to-list 'command-switch-alist
              (cons "--live-safe-mode"
                    (lambda (switch)
@@ -164,7 +183,7 @@
       (load-file pack-file)))
 
 ;; Load all packs - Power Extreme!
-(mapcar (lambda (pack-dir)
+(mapc (lambda (pack-dir)
           (live-load-pack pack-dir))
         (live-pack-dirs))
 
@@ -183,22 +202,7 @@
   (nth (random (length live-welcome-messages)) live-welcome-messages))
 
 (when live-supported-emacsp
-  (setq initial-scratch-message (concat ";;
-;;     MM\"\"\"\"\"\"\"\"`M
-;;     MM  mmmmmmmM
-;;     M`      MMMM 88d8b.d8b. .d8888b. .d8888b. .d8888b.
-;;     MM  MMMMMMMM 88''88'`88 88'  `88 88'  `\"\" Y8ooooo.
-;;     MM  MMMMMMMM 88  88  88 88.  .88 88.  ...       88
-;;     MM        .M dP  dP  dP `88888P8 '88888P' '88888P'
-;;     MMMMMMMMMMMM
-;;
-;;         M\"\"MMMMMMMM M\"\"M M\"\"MMMMM\"\"M MM\"\"\"\"\"\"\"\"`M
-;;         M  MMMMMMMM M  M M  MMMMM  M MM  mmmmmmmM
-;;         M  MMMMMMMM M  M M  MMMMP  M M`      MMMM
-;;         M  MMMMMMMM M  M M  MMMM' .M MM  MMMMMMMM
-;;         M  MMMMMMMM M  M M  MMP' .MM MM  MMMMMMMM
-;;         M         M M  M M     .dMMM MM        .M
-;;         MMMMMMMMMMM MMMM MMMMMMMMMMM MMMMMMMMMMMM  Version " live-version
+  (setq initial-scratch-message (concat live-ascii-art-logo " Version " live-version
                                                                 (if live-safe-modep
                                                                     "
 ;;                                                     --*SAFE MODE*--"
@@ -219,3 +223,5 @@
     (setq custom-file (concat live-custom-dir "custom-configuration.el")))
 (when (file-exists-p custom-file)
   (load custom-file))
+
+(message "\n\n Pack loading completed. Your Emacs is Live...\n\n")
