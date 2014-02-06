@@ -1,6 +1,6 @@
 # Emacs Live Changelog
 
-## 1.0-BETA-24 (To be released)
+## 1.0-BETA-24 (Thurs 6th Feb 2014)
 * Update many, many dependencies (As usual)
 * Move from nrepl.el to new cider library
 * Add Magnar Sveen's clj-refactor bound to C-c C-m See: https://github.com/magnars/clj-refactor.el
