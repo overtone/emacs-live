@@ -1,0 +1,11 @@
+language: emacs-lisp
+before_install:
+  - sudo sh test/provision-vm.sh
+install:
+  - cask install
+env:
+  - EMACS=emacs23
+  - EMACS=emacs24
+  - EMACS=emacs-snapshot
+script:
+  - make test

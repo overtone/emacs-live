@@ -68,30 +68,36 @@
   (setq live-current-pack-name nil)
   (setq live-current-pack-description nil))
 
-(defun live-check-pack-info ()
+(defun live-print-pack-info ()
   "Checks that that all the correct pack-info has been set by the
   current pack's pack-info.el"
-  (when (not live-current-pack-version)
-    (message (concat "Error - no pack version found for pack in path: " live-current-pack-dir)))
+  (if (not live-current-pack-name)
+      (message (concat "Error - no pack name found for pack. Please add to pack's info.el"))
+    (message (concat "==> Pack name: " live-current-pack-name)))
+
+  (if (not live-current-pack-version)
+      (message (concat "Error - no pack version found for pack. Please add to packs's info.el"))
+    (message (concat "==> Pack Version: " live-current-pack-version)))
   ;;(version-to-list live-current-pack-version)
-  (when (not live-current-pack-name)
-    (message (concat "Error - no pack name found for pack in path: " live-current-pack-dir)))
-  (when (not live-current-pack-description)
-    (message (concat "Error - no pack description found for pack in path: " live-current-pack-dir))))
+
+  (if (not live-current-pack-description)
+      (message (concat "Error - no pack description found for pack. Please add to pack's info.el"))
+    (message (concat "==> Pack Description: " live-current-pack-description))))
 
 (defun live-load-pack (pack-dir)
   "Load a live pack. This is a dir that contains at least the
   files pack-info.el and init.el. Adds the packs's lib dir
   to the load-path"
-  (let* ((pack-info (concat pack-dir "info.el"))
+  (message (concat "\n\n==> Loading Emacs Live Pack: " pack-dir ))
+  (let* ((pack-dir  (file-name-as-directory pack-dir))
+         (pack-info (concat pack-dir "info.el"))
          (pack-init (concat pack-dir "init.el")))
     (setq live-current-pack-dir pack-dir)
-    (message (concat "Live pack lib dir: " (live-pack-lib-dir)))
     (live-clear-pack-info)
     (if (file-exists-p pack-info)
         (load-file pack-info)
-      (message (concat "Could not find info.el file for pack with location: " pack-dir)))
-    (live-check-pack-info)
+      (message (concat "Error - could not find info.el file for pack with location: " pack-dir)))
+    (live-print-pack-info)
     (add-to-list 'load-path (live-pack-lib-dir))
     (if (file-exists-p pack-init)
         (load-file pack-init))

@@ -1,0 +1,79 @@
+
+
+* Wordcount Mode
+  
+  This is a minor mode to provide a 'wc' function for Emacs buffers as
+  well as a modeline addition with live word, line and character counts.
+
+  Additionally, a user can set specific goals for adding or deleting
+  words.  These goals were partly inspired by [[http://750words.com][750words.com]] where the
+  goal of the site is to encourage writing by setting a goal of 750
+  words at a time.  I wanted the same functionality in Emacs.
+
+* Installation
+
+  Obtain the package from Github
+  
+: git clone git://github.com/bnbeckwith/wc-mode.git
+
+  Then, add to your Emacs setup.
+
+: ;; Add the path to the repo
+: (add-to-list 'load-path "/path/to/wc-mode/")
+: (require 'wc-mode)
+: ;; Suggested setting
+: (global-set-key "\C-cw" 'wc-mode)
+
+  The code above sets up the minor mode and then assigns a global key
+  to toggle the mode on and off.
+
+* Customization
+
+  There are a few settings that may be customized to provide better
+  functionality for you.
+
+** Modline string
+
+   The default string displayed in the mode line can be changed to
+   suit your needs. It can be defined through the variable
+   customizaton interface.
+
+   The setting itself is simply a string with a few special characters
+   to represent the available statistics. These character strings are
+   listed in the follow table.
+
+   | Format String | Meaning                      |
+   |---------------+------------------------------|
+   | %C            | Original character count     |
+   | %W            | Original word count          |
+   | %L            | Original line count          |
+   | %c            | Change (delta) in characters |
+   | %w            | Change (delta) in words      |
+   | %l            | change (delta) in lines      |
+   | %gc           | Character change goal        |
+   | %gw           | Word change goal             |
+   | %gl           | Line change goal             |
+   | %tc           | Total number of characters   |
+   | %tw           | Total number of words        |
+   | %tl           | Total number of lines        |
+
+
+** Counting functions
+
+   The default character, word and line counting functions may not
+   produce the desired results.  They can be overridden on a
+   per-buffer basis by supplying new functions to the appropiate
+   variables.
+
+   These functions must take RSTART and REND arguments representing
+   the start and end points of the region on which to perform the
+   count.
+
+   For example, if you had a CSV file and wanted each entry to count
+   as a word, you would override the default behavior as follows.
+
+: ;; Override the counting of words to count commas (fields)
+: (setq wc-count-words-function
+:    (function (lambda (rstart rend)
+:      (how-many "[^,\\n]+" rstart rend))))
+   

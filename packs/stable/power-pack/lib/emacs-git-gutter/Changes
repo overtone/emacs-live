@@ -1,0 +1,193 @@
+Revision history for git-gutter.el
+
+Revision 0.53 2014/01/16 syohex
+   - Enable view-mode in popup buffer
+
+Revision 0.52 2013/10/02 syohex
+   - Support staging hunk
+
+Revision 0.51 2013/10/01 syohex
+   - Suppress byte-compile warnings
+
+Revision 0.50 2013/09/30 syohex
+   - Fix git-gutter:revert-hunk at first line
+
+Revision 0.49 2013/09/19 syohex
+   - Fix ediff-mode issue(Thanks hanabokuro)
+
+Revision 0.48 2013/06/13 syohex
+   - Fix typo group name
+
+Revision 0.47 2013/06/13 syohex
+   - Fix for byte compiling warning
+   - Shell Quote file name in command.
+
+Revision 0.46 2013/05/25 syohex
+   - Fix for Mingw Emacs + Cygwin git environment(Thanks "Cornelius Mika")
+
+Revision 0.45 2013/05/25 syohex
+   - Refactoring codes(Thanks "Cornelius Mika")
+
+Revision 0.44 2013/04/27 syohex
+   - Fix for deleted hunk at line 1
+
+Revision 0.43 2013/04/23 syohex
+   - Support indirect buffer(Reported by @ZaneA)
+
+Revision 0.42 2013/04/16 syohex
+   - Fix problem of narrow-to-region(Reported by @ZaneA)
+
+Revision 0.41 2013/04/15 syohex
+   - Fix tramp problem lower than Emacs 23.3(Reported by @hirose31)
+     (Thanks thierryvolpiatto for good advice)
+
+Revision 0.40 2013/04/14 syohex
+   - Improve for window-configuration-change-hook.
+     (Update function is called too many times at this hook point)
+
+Revision 0.39 2013/03/28 syohex
+   - Implement disabled some modes
+
+Revision 0.38 2013/03/27 syohex
+   - Added customization for log level verbosity(by thomasf)
+
+Revision 0.37 2013/03/27 syohex
+   - Fix bug
+     git-gutter:popup-hunk does not work at deleted hunk.
+
+Revision 0.36 2013/03/20 syohex
+   - Implement separator charactor(by sdelafond)
+     It is useful in no-window Emacs
+   - Fix for byte-compiling
+
+Revision 0.35 2013/03/18 syohex
+   [INCOMPATIBLE CHANGE]
+   - Remove git-gutter:always-show-gutter and introduce git-gutter:hide-gutter
+   - Always show gutter if global-git-gutter is enable.
+   - Show message at git-gutter:{next,previous}-hunk if there are no changes.
+
+Revision 0.34 2013/03/17 syohex
+   - Remove unneed hook
+   - Clean up codes
+   - Users can customize update points.
+
+Revision 0.33 2013/03/16 syohex
+   - Fix toggle flag bug
+   - leaf functions are redefined as inline function
+
+Revision 0.32 2013/03/14 syohex
+   - Rename git-gutter:popup-diff to git-gutter:popup-hunk
+     User can use old function name as alias
+
+Revision 0.31 2013/03/11 syohex
+   - Fix git-gutter:always-show-gutter bug
+   - Update unit tests
+
+Revision 0.30 2013/03/11 syohex
+   - Quote the filename for files which include spaces. (Thanks paradoxxxzero)
+
+Revision 0.29 2013/03/11 syohex
+   - Fix for byte-compile
+
+Revision 0.28 2013/03/11 syohex
+   - Fix minor-mode definition(Thanks sabof)
+   - Fix typo in documentation(Thanks f-frhs)
+   - Fix git-gutter:toggle issue that doest not toggle git-gutter-mode
+     (Thanks f-frhs)
+
+Revision 0.27 2013/03/08 syohex
+   - Cleanup code
+
+Revision 0.26 2013/03/07 syohex
+   - Add hook git-gutter-mode-on-hook and git-gutter-off-hook
+
+Revision 0.25 2013/03/07 syohex
+   - [EXPERIMENTAL] Support tramp
+   - fix git-gutter:toggle problem
+   - implement git-gutter:revert-hunk
+   - change name next-diff, previous-diff => next-hunk, previous-hunk
+     Add aliases for compatibility
+
+Revision 0.24 2013/03/03 syohex
+   - Fix bug that works with linum-mode for git-gutter-fringe
+
+Revision 0.23 2013/03/03 syohex
+   - Fix for cleanup
+
+Revision 0.22 2013/03/02 syohex
+   - Improve deleting overlays
+   - Fix viewing deleted hunk
+   - Modernize code
+
+Revision 0.21 2013/03/02 syohex
+   - Remove 'error' calls
+   - Don't switch popup diff buffer
+
+Revision 0.20 2013/02/28 syohex
+   - [EXPERIMENTAL] Implement 'git-gutter:popup-diff'
+
+Revision 0.19 2013/02/27 syohex
+   - add autoload cookies
+   - improve case expression
+
+Revision 0.18 2013/02/24 syohex
+   - Implement for viewing unchanged line
+   - Implement flag of 'always show gutter'
+
+Revision 0.17 2013/02/23 syohex
+   - Implement 'git-gutter:next-diff' and 'git-gutter:previous-diff'
+
+Revision 0.16 2013/02/16 syohex
+   - Fixed 'git commit -v' problem
+
+Revision 0.15 2013/02/15 syohex
+   - Improve git-gutter:in-git-repository-p and error message
+   - Add test of 'git-gutter'
+
+Revision 0.14 2013/02/14 syohex
+   - Disable git-gutter when file is not existed.
+
+Revision 0.13 2013/02/14 syohex
+   - Fixed problem when switching buffer
+
+Revision 0.12 2013/02/14 syohex
+   - Don't change window-margin if file has no changes.
+
+Revision 0.11 2013/02/13 syohex
+   - Fix buffer local variable
+   - Add hook point(change-major-mode-hook)
+   - Change git-gutter:lighter to customize variable.
+
+Revision 0.10 2013/02/13 syohex
+   - Disable using external 'diff'.
+     (Thanks emperorcezar)
+
+Revision 0.09 2013/02/11 syohex
+   - Fix problem that default-directory does not exist
+     (Thanks doitian)
+
+Revision 0.08 2013/02/09 syohex
+   - Disable git-gutter if buffer does not have relation to file
+     (Thanks sabof)
+
+Revision 0.07 2013/02/09 syohex
+   - Clear gutter when disable git-gutter-mode
+     (Thanks sabof)
+
+Revision 0.06 2013/02/09 syohex
+   - Add parameter of 'git diff' option(git-gutter:diff-option)
+
+Revision 0.05 2013/02/08 syohex
+   - Fix localized hook function
+
+Revision 0.04 2013/02/08 syohex
+   - Suppor minor-mode and global-minor-mode
+
+Revision 0.03 2013/01/24 syohex
+   - Change data struction of diffinfo
+
+Revision 0.02 2013/01/24 syohex
+   - Fix clear all overlays problem
+
+Revision 0.01 2013/01/23 syohex
+   - Initial version

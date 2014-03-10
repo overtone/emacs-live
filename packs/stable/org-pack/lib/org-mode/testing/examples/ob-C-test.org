@@ -1,0 +1,70 @@
+#+Title: a collection of examples for ob-C tests
+#+OPTIONS: ^:nil
+* Simple tests
+  :PROPERTIES:
+  :ID:       fa6db330-e960-4ea2-ac67-94bb845b8577
+  :END:
+#+source: simple
+#+begin_src cpp :includes "<iostream>" :results silent
+  std::cout << 42;
+  return 0;
+#+end_src
+
+#+source: integer_var
+#+begin_src cpp :var q=12 :includes "<iostream>" :results silent
+  std::cout << q;
+  return 0;
+#+end_src
+
+#+source: two_var
+#+begin_src cpp :var q=12 :var p=10 :includes "<iostream>" :results silent
+  std::cout << p+q;
+  return 0;
+#+end_src
+
+#+source: string_var
+#+begin_src cpp :var q="word" :includes '(<iostream> <cstring>) :results silent
+  std::cout << q << ' ' << std::strlen(q);
+  return 0;
+#+end_src
+
+#+source: define
+#+begin_src cpp :defines N 42  :includes "<iostream>" :results silent
+  std::cout << N;
+  return 0;
+#+end_src
+
+* Array
+  :PROPERTIES:
+  :ID:       2df1ab83-3fa3-462a-a1f3-3aef6044a874
+  :END:
+#+source: array
+#+begin_src cpp :includes "<iostream>" :results vector :results silent
+  for (int i=1; i<3; i++) {
+    std::cout << i << '\n';
+  }
+  return 0;
+#+end_src
+* Matrix
+  :PROPERTIES:
+  :ID:       cc65d6b3-8e8e-4f9c-94cd-f5a00cdeceb5
+  :END:
+#+name: C-matrix
+| 1 | 2 |
+| 3 | 4 |
+
+#+source: list_var
+#+begin_src cpp :var a='("abc" "def") :includes "<iostream>" :results silent
+  std::cout << a[0] << a[1] << sizeof(a)/sizeof(*a) << '\n';
+#+end_src
+
+#+source: vector_var
+#+begin_src cpp :var a='[1 2] :includes "<iostream>" :results silent
+  std::cout << a[0] << a[1] << sizeof(a)/sizeof(*a) << '\n';
+#+end_src
+
+#+source: list_list_var
+#+begin_src cpp :var q=C-matrix :includes "<iostream>" :results silent
+  std::cout << q[0][0] << ' ' << q[1][0] << '\n'
+            << q[0][1] << ' ' << q[1][1] << '\n'; // transpose
+#+end_src

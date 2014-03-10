@@ -37,7 +37,7 @@
 # Emacs Live
 
 An opinionated set of defaults for getting started with a specific focus
-on live coding with [Overtone](http://github.com/overtone/overtone) and
+on live coding with [Overtone](http://overtone.github.io) and
 [Quil](http://github.com/quil/quil). However, it's not just a one trick
 pony. It also happens to be:
 
@@ -90,7 +90,7 @@ If you wish to hack with Clojure projects such as
 and you're ready to roll.
 
 Simply start a repl in a Clojure project with `lein2 repl` and connect
-to it from Emacs with `M-x nrepl` (supplying the correct port) for full
+to it from Emacs with `M-x cider` (supplying the correct port) for full
 Emacs REPL/autocompletion joy.
 
 ### Screenshots
@@ -145,7 +145,7 @@ accepted for appropriate improvements to Gandalf.
 A set of goodies to get you hacking Clojure like a pro.
 
 * Clojure Mode (with fancy (λ [a] (+ a 5)) and ƒ(+ % 5) prettifications)
-* nREPL.el (for communicating with nREPL servers)
+* cider (for communicating with nREPL servers)
 * Auto completion (configured to work with nREPL for inline auto
   completion of documentation)
 * Tailor-made colour theme
@@ -161,6 +161,9 @@ A number of extra language modes for your joy. Languages include:
 * Yaml
 * Ruby
 * SuperCollider
+* JavaScript
+* Extempore
+* GLSL Shaders
 
 #### Power
 
@@ -170,6 +173,7 @@ fingertips. Highlights include:
 * The amazing undo-tree (live-code with confidence!)
 * Textmate-like snippets
 * Refheap mode for pasting snippets to refheap.com
+* Github Gist support
 * Quick jump mode for accessing previous locations
 * Ace jump mode for jumping directly to any symbol on the screen with 2
   or three keystrokes.
@@ -178,18 +182,21 @@ fingertips. Highlights include:
 
 By default, Emacs live will load the packs in the following order:
 
-1. `live/foundation-pack`
-2. `live/colour-pack`
-3. `live/clojure-pack`
-4. `live/lang-pack`
-5. `live/power-pack`
-
+1. `foundation-pack`
+2. `colour-pack`
+3. `lang-pack`
+4. `power-pack`
+5. `git-pack`
+6. `org-pack`
+7. `clojure-pack`
+8. `bindings-pack`
+ 
 However, you may create a `~/.emacs-live.el` file to override this
 behaviour. Simply set the var live-packs to a list of symbols
 representing the packs you'd like to load up (the order will be
 honoured). For example to only load the foundation and colour packs:
 
-    (live-use-packs '(live/foundation-pack live/colour-pack))
+    (live-use-packs '(stable/foundation-pack stable/colour-pack))
 
 If just you wish to load your own packs after the default packs then
 simply use `live-add-packs`:
