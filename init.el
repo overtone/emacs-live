@@ -188,18 +188,47 @@
         (live-pack-dirs))
 
 (setq live-welcome-messages
-      (if (live-user-first-name-p)
-          (list (concat "Hello " (live-user-first-name) ", somewhere in the world the sun is shining for you right now.")
-                (concat "Hello " (live-user-first-name) ", it's lovely to see you again. I do hope that you're well.")
-                (concat (live-user-first-name) ", turn your head towards the sun and the shadows will fall behind you.")
-                )
-        (list  "Hello, somewhere in the world the sun is shining for you right now."
-               "Hello, it's lovely to see you again. I do hope that you're well."
-               "Turn your head towards the sun and the shadows will fall behind you.")))
+      (list  "Hello, somewhere in the world the sun is shining for you right now."
+             "Hello, it's lovely to see you again. I do hope that you're well."
+             "Turn your head towards the sun and the shadows will fall behind you."))
 
+(defun live-read-lines (filePath)
+  ;; From Pascal J Bourguignon, TheFlyingDutchman, Xah Lee, 2010-09-02.
+  "Return a list of lines of a file at FILEPATH."
+  (with-temp-buffer
+    (insert-file-contents filePath)
+    (split-string (buffer-string) "\n" t)))
+
+;; The user can provide a "welcome messages" file which is just a flat
+;; text file.  Its pathname is indicated by the value of the symbol
+;; `live-welcome-messages-file`, which can be set by the user
+;; beforehand; otherwise, its default pathname is
+;; `~/.emacs-live-welcome-messages.txt`.
+(setq live-welcome-messages-file
+      (if (boundp 'live-welcome-messages-file)
+          (file-name-as-directory live-welcome-messages-file)
+        (concat (file-name-as-directory "~") ".emacs-live-welcome-messages.txt")))
+
+;; When a user-provided "welcome messages" file is actionable (i.e. the
+;; file's pathname is indicated by the value of `live-welcome-messages`,
+;; the file exists, is readable and non-empty), then every line in the
+;; file will become an element of the list `live-welcome-messages`,
+;; overriding the default value of `live-welcome-messages` given above.
+(if (and (file-readable-p live-welcome-messages-file)
+         (not (= 0 (nth 7 (file-attributes live-welcome-messages-file)))))
+    (setq live-welcome-messages (live-read-lines live-welcome-messages-file)))
 
 (defun live-welcome-message ()
-  (nth (random (length live-welcome-messages)) live-welcome-messages))
+  (let ((raw-message (nth (random (length live-welcome-messages)) live-welcome-messages)))
+    (if (live-user-first-name-p)
+        (let ((hello-prefix-flag (string-prefix-p "Hello, " raw-message)))
+          (concat (if hello-prefix-flag "Hello " "")
+                  (live-user-first-name)
+                  ", "
+                  (if hello-prefix-flag
+                      (substring raw-message 7)
+                    (concat (downcase (string (aref raw-message 0))) (substring raw-message 1)))))
+      raw-message)))
 
 (when live-supported-emacsp
   (setq initial-scratch-message (concat live-ascii-art-logo " Version " live-version
