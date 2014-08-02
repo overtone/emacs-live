@@ -12,4 +12,4 @@
   :draw draw
   :size [${3:500 300}]
   :renderer :${4:opengl}
-  $5:target :perm-frame)$0
+  $5:features [:keep-on-top])$0
