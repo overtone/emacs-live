@@ -65,9 +65,9 @@
 [submodule "packs/dev/clojure-pack/vendor/submodules/clojure-mode"]
         path = packs/dev/clojure-pack/vendor/submodules/clojure-mode
         url = git://github.com/clojure-emacs/clojure-mode.git
-[submodule "packs/dev/clojure-pack/vendor/submodules/ac-nrepl"]
-        path = packs/dev/clojure-pack/vendor/submodules/ac-nrepl
-        url = git://github.com/purcell/ac-nrepl.git
+[submodule "packs/dev/clojure-pack/vendor/submodules/ac-cider"]
+	path = packs/dev/clojure-pack/vendor/submodules/ac-cider
+	url = https://github.com/clojure-emacs/ac-cider.git
 [submodule "packs/dev/git-pack/vendor/submodules/magit"]
         path = packs/dev/git-pack/vendor/submodules/magit
         url = git://github.com/magit/magit.git
