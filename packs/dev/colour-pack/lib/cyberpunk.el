@@ -80,7 +80,7 @@
      (magit-branch ((t (:foreground "gold"))))
 
      (eval-sexp-fu-flash ((t (:background "grey15" :foreground "DeepPink3"))))
-     (nrepl-error-highlight-face ((t (:background "color-52"))))
+
      (ac-completion-face ((t (:foreground "darkgray" :underline t))))
      (ac-candidate-face ((t (:background "gray60" :foreground "black"))))
      (ac-selection-face ((t (:background "deep pink" :foreground "black"))))
@@ -210,10 +210,14 @@
      (sp-wrap-tag-overlay-face ((t (:background "grey20"))))
 
      (apropos-symbol ((t (:foreground "deep pink"))))
-     (apropos-function-button ((t (:foreground "#4c83ffn"))))
+     (apropos-function-button ((t (:foreground "#4c83ff"))))
      (apropos-misc-button ((t (:foreground "yellow3"))))
      (apropos-variable-button ((t (:foreground "dark green"))))
 
+
+     (cider-error-highlight-face ((t (:background "color-52"))))
+     (cider-repl-err-output-face ((t (:foreground "deeppink"))))
+     (cider-stacktrace-filter-shown-face ((t (:foreground "#4c83ff"))))
      ))
   )
 
