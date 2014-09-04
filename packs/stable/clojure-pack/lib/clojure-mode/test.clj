@@ -1,24 +1,7 @@
-(ns clojure-mode.test
-  (:use [clojure.test]))
-
-(deftest test-str
-  (is (= "o hai" (str "o" "hai"))))
-
-(deftest test-errs
-  (is (({} :hi)))
-  (is (str "This one doesn't actually error."))
-  (is (= 0 (/ 9 0))))
-
-(deftest test-bad-math
-  (is (= 0 (* 8 2)))
-  (is (= 5 (+ 2 2))))
-
-(deftest test-something-that-actually-works
-  (is (= 1 1)))
-
-;; For debugging
-;; (map #(cons (str (:name (meta %))) (:status (meta %))) (vals (ns-interns *ns*)))
-;; (insert (pp the-result))
+;;; font locking
+(ns clojure-mode.demo
+  (:require [clojure.something]
+            [something.s]))
 
 (comment ;; for indentation
   (with-hi heya
@@ -33,6 +16,34 @@
   (clo/defguppy gurgle
     minnow))
 
+;; character literals
+[\a \newline \u0032 \/ \+ \,, \;]
+
+;; cljx
+(defn x-to-string
+  [x]
+  (let [buf #+clj (StringBuilder.) #+cljs (gstring/StringBuffer.)]
+    (.append buf "x is: ")
+    (.append buf (str x))))
+
+;; metadata doesn't break docstrings
+(defn max
+  "Returns the greatest of the nums."
+  {:added "1.0"
+   :inline-arities >1?
+   :inline (nary-inline 'max)}
+  ([x] x)
+  ([x y] (. clojure.lang.Numbers (max x y)))
+  ([x y & more]
+     (reduce1 max (max x y) more)))
+
+(defn ^String reverse
+  "Returns s with its characters reversed."
+  {:added "1.2"}
+  [^CharSequence s]
+  (.toString (.reverse (StringBuilder. s))))
+
+;; useful for testing docstring filling
 (defn say-hello
   "This is a long doc string to test clojure-fill-docstring. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus sed nunc luctus leo ultricies semper. Nullam id tempor mi. Cras adipiscing scelerisque purus, at semper magna tincidunt ut. Sed eget dolor vitae enim feugiat porttitor. Etiam vulputate pulvinar lacinia. Nam vitae nisl sit amet libero pulvinar pretium nec a dui. Ut luctus elit eu nulla posuere nec feugiat ipsum vehicula. Quisque eu pulvinar neque. Fusce fermentum adipiscing mauris, sit amet accumsan ante dignissim ac. Pellentesque molestie mollis condimentum.
 

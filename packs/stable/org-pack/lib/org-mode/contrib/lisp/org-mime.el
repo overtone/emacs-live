@@ -163,10 +163,13 @@ and images in a multipart/related part."
     ('semi (concat
             "--" "<<alternative>>-{\n"
             "--" "[[text/plain]]\n" plain
-	    (when images (concat "--" "<<alternative>>-{\n"))
-            "--" "[[text/html]]\n"  html
-	    images
-	    (when images (concat "--" "}-<<alternative>>\n"))
+	    (if (and images (> (length images) 0))
+		(concat "--" "<<related>>-{\n"
+			"--" "[[text/html]]\n"  html
+			images
+			"--" "}-<<related>>\n")
+	      (concat "--" "[[text/html]]\n"  html
+		      images))
             "--" "}-<<alternative>>\n"))
     ('vm "?")))
 
@@ -269,8 +272,10 @@ export that region, otherwise export the entire body."
 (defun org-mime-send-buffer (&optional fmt)
   (run-hooks 'org-mime-send-buffer-hook)
   (let* ((region-p (org-region-active-p))
-	 (subject (org-export-grab-title-from-buffer))
-         (file (buffer-file-name (current-buffer)))
+	 (file (buffer-file-name (current-buffer)))
+	 (subject (if (not file) (buffer-name (buffer-base-buffer))
+		   (file-name-sans-extension
+		    (file-name-nondirectory file))))
          (body-start (or (and region-p (region-beginning))
                          (save-excursion (goto-char (point-min)))))
          (body-end (or (and region-p (region-end)) (point-max)))

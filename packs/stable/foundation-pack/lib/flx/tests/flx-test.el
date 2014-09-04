@@ -41,14 +41,18 @@
   (should (= 1 1)))
 
 (ert-deftest flx-get-hash-for-string ()
-  (let ((h (flx-get-hash-for-string "aab" 'flx-get-heatmap-str))
-        (count 0))
+  (let ((h (flx-get-hash-for-string "aab" 'flx-get-heatmap-str)))
     (should (equal '(0 1) (gethash ?a h) ))
     (should (equal '(2) (gethash ?b h)))
-    (maphash (lambda (k v)
-               (incf count))
-             h)
-    (should (= 3 count))))
+    (should (= 3 (hash-table-count h)))))
+
+(ert-deftest flx-get-hash-mixed-case ()
+  (let ((h (flx-get-hash-for-string "aAb" 'flx-get-heatmap-str)))
+    (should (equal '(0 1) (gethash ?a h) ))
+    (should (equal '(1) (gethash ?A h) ))
+    (should (equal '(2) (gethash ?b h)))
+    ;; upper case appears twice
+    (should (= 4 (hash-table-count h)))))
 
 (ert-deftest flx-boundary-p ()
   (should (flx-boundary-p ?/ ?a))
@@ -140,8 +144,8 @@
 
 
 (ert-deftest flx-score-capital ()
-  "QUERY should be downcased."
-  (should (flx-score "abc" "A" (flx-make-filename-cache))))
+  "QUERY should not be downcased."
+  (should-not (flx-score "abc" "A" (flx-make-filename-cache))))
 
 (ert-deftest flx-score-string ()
   "score as string"
@@ -348,6 +352,15 @@ substring can overpower abbreviation."
          (higher (flx-score "defuns/" query (flx-make-filename-cache)))
          (lower (flx-score "sane-defaults.el" query (flx-make-filename-cache))))
     (should (> (car higher) (car lower)))))
+
+(ert-deftest flx-case-fold ()
+  "Lower case can match lower or upper case, but upper case can only match upper case."
+  (let* ((query "def")
+         (lower-folds (flx-score "Defuns/" query (flx-make-filename-cache))))
+    (should lower-folds))
+  (let* ((query "Def")
+         (upper-no-folds (flx-score "defuns/" query (flx-make-filename-cache))))
+    (should (not upper-no-folds))))
 
 
 

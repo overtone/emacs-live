@@ -100,6 +100,11 @@
   :type 'boolean
   :group 'auto-complete)
 
+(defcustom ac-flycheck-poll-completion-end-interval 0.5
+  "Polling interval to restart automatically flycheck's checking after completion is end."
+  :type 'float
+  :group 'auto-complete)
+
 (defcustom ac-use-fuzzy (and (locate-library "fuzzy") t)
   "Non-nil means use fuzzy matching."
   :type 'boolean
@@ -192,13 +197,14 @@
     java-mode malabar-mode clojure-mode clojurescript-mode  scala-mode
     scheme-mode
     ocaml-mode tuareg-mode coq-mode haskell-mode agda-mode agda2-mode
-    perl-mode cperl-mode python-mode ruby-mode lua-mode
-    ecmascript-mode javascript-mode js-mode js2-mode php-mode css-mode
+    perl-mode cperl-mode python-mode ruby-mode lua-mode tcl-mode
+    ecmascript-mode javascript-mode js-mode js2-mode php-mode css-mode less-css-mode
     makefile-mode sh-mode fortran-mode f90-mode ada-mode
     xml-mode sgml-mode
     ts-mode
     sclang-mode
-    verilog-mode)
+    verilog-mode
+    qml-mode)
   "Major modes `auto-complete-mode' can run on."
   :type '(repeat symbol)
   :group 'auto-complete)
@@ -321,7 +327,7 @@ a prefix doen't contain any upper case letters."
   :group 'auto-complete)
 
 (defface ac-candidate-mouse-face
-  '((t (:inherit popup-mouse-face)))
+  '((t (:inherit popup-menu-mouse-face)))
   "Mouse face for candidate."
   :group 'auto-complete)
 
@@ -704,6 +710,10 @@ If there is no common part, this will be nil.")
   (let ((point (re-search-backward "[\"<>' \t\r\n]" nil t)))
     (if point (1+ point))))
 
+(defsubst ac-windows-remote-file-p (file)
+  (and (memq system-type '(ms-dos windows-nt cygwin))
+       (string-match-p "\\`\\(?://\\|\\\\\\\\\\)" file)))
+
 (defun ac-prefix-valid-file ()
   "Existed (or to be existed) file prefix."
   (let* ((line-beg (line-beginning-position))
@@ -716,7 +726,8 @@ If there is no common part, this will be nil.")
                       (and (setq file (and (string-match "^[^/]*/" file)
                                            (match-string 0 file)))
                            (file-directory-p file))))
-        start)))
+        (unless (ac-windows-remote-file-p file)
+          start))))
 
 (defun ac-prefix-c-dot ()
   "C-like languages dot(.) prefix."
@@ -949,7 +960,7 @@ You can not use it in source definition like (prefix . `NAME')."
 
 (defsubst ac-selected-candidate ()
   (if ac-menu
-      (popup-item-value-or-self (popup-selected-item ac-menu))))
+      (popup-selected-item ac-menu)))
 
 (defun ac-prefix (requires ignore-list)
   (loop with current = (point)
@@ -1030,27 +1041,9 @@ You can not use it in source definition like (prefix . `NAME')."
                                candidates))
       (when do-cache
         (push (cons source candidates) ac-candidates-cache)))
-    (setq candidates
-          (let ((match (assoc-default 'match source)))
-            (if match
-                ;; Match function is specified by source.
-                ;; Let it handle popup item directly.
-                (funcall match ac-prefix candidates)
-              ;; Use default `ac-match-function'.  Compare against
-              ;; popup value property (if defined), rather than popup
-              ;; item directly.
-              (let ((values (mapcar
-                             ;; Escape original popup item in a property.
-                             (lambda (c)
-                               (propertize (popup-x-to-string
-                                            (popup-item-value-or-self c))
-                                           'popup-item c))
-                             candidates)))
-                (mapcar
-                 ;; Then get back the original popup item from the
-                 ;; matched candidates.
-                 (lambda (c) (get-text-property 0 'popup-item c))
-                 (funcall ac-match-function ac-prefix values))))))
+    (setq candidates (funcall (or (assoc-default 'match source)
+                                  ac-match-function)
+                              ac-prefix candidates))
     ;; Remove extra items regarding to ac-limit
     (if (and (integerp ac-limit) (> ac-limit 1) (> (length candidates) ac-limit))
         (setcdr (nthcdr (1- ac-limit) candidates) nil))
@@ -1075,14 +1068,7 @@ You can not use it in source definition like (prefix . `NAME')."
         for source in ac-current-sources
         append (ac-candidates-1 source) into candidates
         finally return
-        (let ((complete
-               (lambda (cs)
-                 (try-completion ac-prefix
-                                 (mapcar
-                                  (lambda (x)
-                                    (popup-x-to-string
-                                     (popup-item-value-or-self x)))
-                                  cs)))))
+        (progn
           (delete-dups candidates)
           (if (and ac-use-comphist ac-comphist)
               (if ac-show-menu
@@ -1092,17 +1078,17 @@ You can not use it in source definition like (prefix . `NAME')."
                          (cons (if (> n 0) (nthcdr (1- n) result)))
                          (cdr (cdr cons)))
                     (if cons (setcdr cons nil))
-                    (setq ac-common-part (funcall complete result))
-                    (setq ac-whole-common-part (funcall complete candidates))
+                    (setq ac-common-part (try-completion ac-prefix result))
+                    (setq ac-whole-common-part (try-completion ac-prefix candidates))
                     (if cons (setcdr cons cdr))
-                    (setq candidates result))
+                    result)
                 (setq candidates (ac-comphist-sort ac-comphist candidates prefix-len))
-                (setq ac-common-part
-                      (if candidates (popup-x-to-string (popup-item-value-or-self (car candidates)))))
-                (setq ac-whole-common-part (funcall complete candidates)))
-            (setq ac-common-part (funcall complete candidates))
-            (setq ac-whole-common-part ac-common-part))
-          candidates)))
+                (setq ac-common-part (if candidates (popup-x-to-string (car candidates))))
+                (setq ac-whole-common-part (try-completion ac-prefix candidates))
+                candidates)
+            (setq ac-common-part (try-completion ac-prefix candidates))
+            (setq ac-whole-common-part ac-common-part)
+            candidates))))
 
 (defun ac-update-candidates (cursor scroll-top)
   "Update candidates of menu to `ac-candidates' and redraw it."
@@ -1700,7 +1686,8 @@ that have been made before in this function.  When `buffer-undo-list' is
                                           (ac-trigger-command-p this-command)
                                           (and ac-completing
                                                (memq this-command ac-trigger-commands-on-completing)))
-                                      (not (ac-cursor-on-diable-face-p))))
+                                      (not (ac-cursor-on-diable-face-p))
+                                      (or ac-triggered t)))
               (ac-compatible-package-command-p this-command))
           (progn
             (if (or (not (symbolp this-command))
@@ -1723,6 +1710,30 @@ that have been made before in this function.  When `buffer-undo-list' is
           (ac-inline-update)))
     (error (ac-error var))))
 
+(defvar ac-flycheck-poll-completion-end-timer nil
+  "Timer to poll end of completion.")
+
+(defun ac-syntax-checker-workaround ()
+  (if ac-stop-flymake-on-completing
+      (progn
+        (make-local-variable 'ac-flycheck-poll-completion-end-timer)
+        (when (require 'flymake nil t)
+          (defadvice flymake-on-timer-event (around ac-flymake-stop-advice activate)
+            (unless ac-completing
+              ad-do-it)))
+        (when (require 'flycheck nil t)
+          (defadvice flycheck-handle-idle-change (around ac-flycheck-stop-advice activate)
+            (if ac-completing
+                (setq ac-flycheck-poll-completion-end-timer
+                      (run-at-time ac-flycheck-poll-completion-end-interval
+                                   nil
+                                   #'flycheck-handle-idle-change))
+              ad-do-it))))
+    (when (featurep 'flymake)
+      (ad-disable-advice 'flymake-on-timer-event 'around 'ac-flymake-stop-advice))
+    (when (featurep 'flycheck)
+      (ad-disable-advice 'flycheck-handle-idle-change 'around 'ac-flycheck-stop-advice))))
+
 (defun ac-setup ()
   (if ac-trigger-key
       (ac-set-trigger-key ac-trigger-key))
@@ -1730,11 +1741,7 @@ that have been made before in this function.  When `buffer-undo-list' is
       (ac-comphist-init))
   (unless ac-clear-variables-every-minute-timer
     (setq ac-clear-variables-every-minute-timer (run-with-timer 60 60 'ac-clear-variables-every-minute)))
-  (if ac-stop-flymake-on-completing
-      (defadvice flymake-on-timer-event (around ac-flymake-stop-advice activate)
-        (unless ac-completing
-          ad-do-it))
-    (ad-disable-advice 'flymake-on-timer-event 'around 'ac-flymake-stop-advice)))
+  (ac-syntax-checker-workaround))
 
 ;;;###autoload
 (define-minor-mode auto-complete-mode

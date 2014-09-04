@@ -2,7 +2,7 @@
 ;; Copyright 2012-2014 Anthony Grimes
 ;; Author: Anthony Grimes
 ;; URL: https://github.com/Raynes/refheap.el
-;; Version: 0.0.6
+;; Version: 0.0.7
 ;; Package-Requires: ((json "1.2"))
 
 (require 'json)
@@ -52,7 +52,7 @@
                                   (haskell-mode . "Haskell")
                                   (tuareg-mode . "OCaml")
                                   (scheme-mode . "Scheme")
-                                  (emacs-lisp-mode . "Scheme")
+                                  (emacs-lisp-mode . "Emacs Lisp")
                                   (r-mode . "R")
                                   (applescript-mode "AppleScript")
                                   (sh-mode . "Bash")
@@ -73,6 +73,11 @@
                                   (sass-mode . "SASS")
                                   (xml-mode . "XML")))
 
+(defcustom refheap-base-url "https://www.refheap.com"
+  "Your RefHeap URL."
+  :type 'string
+  :group 'refheap)
+
 (defcustom refheap-user nil
   "Your RefHeap username."
   :type 'string
@@ -86,9 +91,9 @@
 (defun read-refheap-url (status)
   "Get the url from the refheap server response."
   (search-forward "\n\n")
-  (let ((location (cdr (assoc 'url 
-                       (json-read-from-string 
-                        (buffer-substring (point) 
+  (let ((location (cdr (assoc 'url
+                       (json-read-from-string
+                        (buffer-substring (point)
                                           (point-max)))))))
     (message "Paste created: %s" location)
     (kill-new location)
@@ -103,10 +108,10 @@
          (concat "private=" (if private "true" "false") "&"
                  "language=" (url-hexify-string mode) "&"
                  "contents=" (url-hexify-string text)
-                 (when (and refheap-user refheap-token) 
+                 (when (and refheap-user refheap-token)
                    (concat "&username=" refheap-user "&"
                            "token=" (url-hexify-string refheap-token))))))
-    (url-retrieve "https://www.refheap.com/api/paste" 'read-refheap-url)))
+    (url-retrieve (format "%s/api/paste" refheap-base-url) 'read-refheap-url)))
 
 ;;;###autoload
 (defun refheap-paste-region (begin end &optional private)
@@ -133,6 +138,15 @@
   "Paste the current buffer to a private refheap entry."
   (interactive)
   (refheap-paste-buffer t))
+
+;;;###autoload
+(defun refheap-paste-region-or-buffer (&optional private)
+  "Paste the current region (or buffer, if no region is active) to refheap.
+With prefix arg, paste privately."
+  (interactive "P")
+  (if (use-region-p)
+      (refheap-paste-region (region-beginning) (region-end) private)
+    (refheap-paste-buffer private)))
 
 (provide 'refheap)
 ;;; refheap.el ends here

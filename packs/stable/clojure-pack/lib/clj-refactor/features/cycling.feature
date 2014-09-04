@@ -166,3 +166,43 @@ Feature: Code Cycling
     """
     "alice"
     """
+
+Scenario: Cycling if to if-not, in inner if
+   When I insert:
+   """
+   (if this
+     (if that
+       (then AAA)
+       (else BBB))
+     (otherwise CCC))
+   """
+   And I place the cursor after "BBB)"
+   And I press "C-! ci"
+   Then I should see:
+   """
+   (if this
+     (if-not that
+       (else BBB)
+       (then AAA))
+     (otherwise CCC))
+   """
+
+Scenario: Cycling if-not to if, in outer if-not
+   When I insert:
+   """
+   (if-not this
+     (if that
+       (then AAA)
+       (else BBB))
+     (otherwise CCC))
+   """
+   And I place the cursor after "BBB))"
+   And I press "C-! ci"
+   Then I should see:
+   """
+   (if this
+     (otherwise CCC)
+     (if that
+       (then AAA)
+       (else BBB)))
+   """

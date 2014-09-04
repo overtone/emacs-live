@@ -1,5 +1,75 @@
 Revision history for git-gutter.el
 
+Revision 0.73 2014/08/27
+   - Add margin width validation
+
+Revision 0.72 2014/08/04
+   - Improve for backend configuration
+
+Revision 0.71 2014/07/26
+   - Implement git-gutter:set-start-revision
+     We can see diff information from arbitrary revision
+
+Revision 0.70 2014/07/22
+   - Improve updating gutter information after kill-buffer command
+
+Revision 0.69 2014/07/10
+   - Suppress warning if git or hg are not installed.
+     (Reported by tom-tan)
+
+Revision 0.68 2014/07/10
+   - Support mercurial(Experimental)
+
+Revision 0.67 2014/07/09
+   - Don't call linum setup if git-gutter-fringe is used.
+
+Revision 0.66 2014/07/08
+   - Fix for linum-mode
+
+Revision 0.65 2014/07/05
+   - Fix for vc-revert
+   - Fix for new helm
+
+Revision 0.64 2014/07/02 syohex
+   - Fix typo function-name and add vc-revert to updating commands
+     Thanks thierryvolpiatto
+   - Improve view
+     reduce 'save-excursion' as possible
+
+Revision 0.63 2014/06/29 syohex
+   - Set up linum if global-linum-mode is enabled when git-gutter.el is loaded
+
+Revision 0.62 2014/06/23 syohex
+   - Support working with linum-mode(Experimental)
+
+Revision 0.61 2014/06/09 syohex
+   - Add verify process buffer is alive
+     Thanks thomasf
+
+Revision 0.60 2014/06/01 syohex
+   - Support asynchronous updating diff information
+   - Reduce needless updating diff information as possible
+   - Improve for readability
+   - Deprecate git-gutter:xxx-diff commands
+     Use git-gutter:xxx-hunk commands instead
+   - Improve popup command
+   - Drop Emacs 23 support
+   - Fix MacOSX display issue
+
+Revision 0.57 2014/04/19 syohex
+   - Fix case use set read-only-mode to diff-mode-hook
+
+Revision 0.56 2014/04/16 syohex
+   - Switch to cl-lib
+   - Fix some bugs
+
+Revision 0.55 2014/03/23 syohex
+   - Query before staging hunk
+
+Revision 0.54 2014/02/26 syohex
+   - Fix invalid remove-hook
+     Thanks m2ym!!
+
 Revision 0.53 2014/01/16 syohex
    - Enable view-mode in popup buffer
 

@@ -4,6 +4,8 @@ EMACS-OPTIONS=
 
 ELS  = flx.el
 ELS += flx-ido.el
+TEST_ELCS = $(wildcard tests/*.elc)
+
 ELCS = $(ELS:.el=.elc)
 
 .PHONY: test test-nw travis-ci show-version before-test clean
@@ -11,7 +13,7 @@ ELCS = $(ELS:.el=.elc)
 all: $(ELCS)
 
 clean:
-	$(RM) $(ELCS)
+	$(RM) $(ELCS) $(TEST_ELCS)
 
 show-version: show-version
 	echo "*** Emacs version ***"

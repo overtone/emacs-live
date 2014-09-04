@@ -20,7 +20,7 @@ clean:
 	@rm -f $(ELCS)
 
 %.elc: %.el
-	@$(EMACS) $(EFLAGS) -Q -batch -f batch-byte-compile $<
+	@$(BATCHC) $<
 
 .PHONY: test
 test:

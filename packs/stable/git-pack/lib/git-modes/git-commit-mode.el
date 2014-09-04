@@ -2,11 +2,12 @@
 
 ;; Copyright (c) 2010-2012  Florian Ragwitz
 ;; Copyright (c) 2012-2013  Sebastian Wiesner
+;; Copyright (C) 2010-2014  The Magit Project Developers
 
-;; Authors: Sebastian Wiesner <lunaryorn@gmail.com>
+;; Authors: Jonas Bernoulli <jonas@bernoul.li>
+;;	Sebastian Wiesner <lunaryorn@gmail.com>
 ;;	Florian Ragwitz <rafl@debian.org>
 ;; Maintainer: Jonas Bernoulli <jonas@bernoul.li>
-;; Version: 0.14.0
 ;; Homepage: https://github.com/magit/git-modes
 ;; Keywords: convenience vc git
 
@@ -299,12 +300,18 @@ The commit message is saved to the kill ring."
   (remove-hook 'kill-buffer-hook 'server-kill-buffer t)
   (remove-hook 'kill-buffer-query-functions 'git-commit-kill-buffer-noop t)
   (git-commit-restore-previous-winconf
-    (let ((clients (git-commit-buffer-clients)))
+    (let ((buffer  (current-buffer))
+          (clients (git-commit-buffer-clients)))
       (if clients
-          (dolist (client clients)
-            (server-send-string client "-error Commit aborted by user")
-            (delete-process client))
+          (progn
+            (dolist (client clients)
+              (ignore-errors
+                (server-send-string client "-error Commit aborted by user"))
+              (delete-process client))
+            (when (buffer-live-p buffer)
+              (kill-buffer buffer)))
         (kill-buffer))))
+  (accept-process-output nil 0.1)
   (message (concat "Commit aborted."
                    (when (memq 'git-commit-save-message
                                git-commit-kill-buffer-hook)
@@ -326,13 +333,19 @@ The commit message is saved to the kill ring."
     (when (and (string-match "^\\s-*\\sw" message)
                (or (ring-empty-p log-edit-comment-ring)
                    (not (ring-member log-edit-comment-ring message))))
+      ;; if index is nil, we end up cycling back to message we just saved!
+      (unless log-edit-comment-ring-index
+        (setq log-edit-comment-ring-index 0))
       (ring-insert log-edit-comment-ring message))))
 
 (defun git-commit-prev-message (arg)
   "Cycle backward through message history, after saving current message.
 With a numeric prefix ARG, go back ARG comments."
   (interactive "*p")
-  (git-commit-save-message)
+  (when (and (git-commit-save-message) (> arg 0))
+    (setq log-edit-comment-ring-index
+          (log-edit-new-comment-index
+           arg (ring-length log-edit-comment-ring))))
   (save-restriction
     (narrow-to-region (point-min) (git-commit-find-pseudo-header-position))
     (log-edit-previous-comment arg)))
@@ -525,7 +538,7 @@ Known comment headings are provided by `git-commit-comment-headings'."
   (append
    `(("^\\s<.*$" . 'font-lock-comment-face)
      ("^\\s<\\s-On branch \\(.*\\)$" (1 'git-commit-branch-face t))
-     ("^\\s<\t\\(?:\\([^:]+\\):\\s-+\\)?\\(.*\\)$"
+     ("^\\s<\t\\(?:\\([^:\n]+\\):\\s-+\\)?\\(.*\\)$"
       (1 'git-commit-comment-action-face t t)
       (2 'git-commit-comment-file-face t))
      (,(concat "^\\("
@@ -606,6 +619,8 @@ basic structure of and errors in git commit messages."
                      (line-beginning-position)
                      (line-end-position)))
     (open-line 1))
+  ;; That's what happens when every little detail is commented
+  (make-local-variable 'log-edit-comment-ring-index)
   ;; Make sure `git-commit-abort' cannot be by-passed
   (add-hook 'kill-buffer-query-functions
             'git-commit-kill-buffer-noop nil t)

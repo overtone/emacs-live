@@ -28,11 +28,12 @@ Feature: Add to namespace
     When I press "C-! au"
     And I type "clj-time.core"
     And I press "TAB"
-    And I press "TAB"
+    And I press ":all"
     And I press "C-! au"
     And I type "clojure.strings"
     And I press "TAB"
-    And I type "[join]"
+    And I press "TAB"
+    And I type "join"
     Then I should see:
     """
     (ns cljr.core

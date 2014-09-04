@@ -33,6 +33,11 @@
 
 (require 'expand-region-core)
 
+(if (not (fboundp 'python-syntax-context))
+    (defalias 'python-syntax-context 'python-info-ppss-context))
+(if (not (fboundp 'python-indent-offset))
+    (defalias 'python-indent-offset 'python-indent))
+
 (defvar er--python-string-delimiter
   "'\""
   "Characters that delimit a Python string.")
@@ -54,13 +59,13 @@
 If the optional MARK-INSIDE is not nil, only mark the region
 between the string delimiters, otherwise the region includes the
 delimiters as well."
-  (let ((beginning-of-string (python-info-ppss-context 'string (syntax-ppss))))
+  (let ((beginning-of-string (python-syntax-context 'string (syntax-ppss))))
     (when beginning-of-string
       (goto-char beginning-of-string)
       ;; Move inside the string, so we can use ppss to find the end of
       ;; the string.
       (skip-chars-forward er--python-string-delimiter)
-      (while (python-info-ppss-context 'string (syntax-ppss))
+      (while (python-syntax-context 'string (syntax-ppss))
         (forward-char 1))
       (when mark-inside (skip-chars-backward er--python-string-delimiter))
       (set-mark (point))
@@ -103,7 +108,7 @@ than NEXT-INDENT-LEVEL."
           ;; Check whether point is at the start of a Python block.
           (if (looking-at er--python-block-start-regex)
               ;; Block start means that the next level is deeper.
-              (+ (current-indentation) python-indent)
+              (+ (current-indentation) python-indent-offset)
             ;; Assuming we're inside the block that we want to mark
             (current-indentation)))))
     ;; Move point to next Python block start at the correct indent-level

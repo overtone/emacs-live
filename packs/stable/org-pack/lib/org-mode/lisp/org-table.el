@@ -436,15 +436,11 @@ available parameters."
 					   "[ \t]*|[ \t]*")))))))
 
 (defvar org-table-clean-did-remove-column nil) ; dynamically scoped
-(defun org-table-clean-before-export (lines &optional maybe-quoted)
+(defun org-table-clean-before-export (lines)
   "Check if the table has a marking column.
 If yes remove the column and the special lines."
-  (let ((special (if maybe-quoted
-		     "^[ \t]*| *\\\\?[\#!$*_^/ ] *|"
-		   "^[ \t]*| *[\#!$*_^/ ] *|"))
-	(ignore  (if maybe-quoted
-		     "^[ \t]*| *\\\\?[!$_^/] *|"
-		   "^[ \t]*| *[!$_^/] *|")))
+  (let ((special "^[ \t]*| *[#!$*_^/] *|")
+	(ignore "^[ \t]*| *[!$_^/] *|"))
     (setq org-table-clean-did-remove-column
 	  (not (memq nil
 		     (mapcar
@@ -1241,6 +1237,7 @@ is always the old value."
 (defun org-table-field-info (arg)
   "Show info about the current field, and highlight any reference at point."
   (interactive "P")
+  (unless (org-at-table-p) (user-error "Not at a table"))
   (org-table-get-specials)
   (save-excursion
     (let* ((pos (point))
@@ -2711,7 +2708,8 @@ not overwrite the stored one."
 	  (or (fboundp 'calc-eval)
 	      (user-error "Calc does not seem to be installed, and is needed to evaluate the formula"))
 	  ;; Use <...> time-stamps so that Calc can handle them
-	  (setq form (replace-regexp-in-string org-ts-regexp3 "<\\1>" form))
+	  (while (string-match (concat "\\[" org-ts-regexp1 "\\]") form)
+	    (setq form (replace-match "<\\1>" nil nil form)))
 	  ;; I18n-ize local time-stamps by setting (system-time-locale "C")
 	  (when (string-match org-ts-regexp2 form)
 	    (let* ((ts (match-string 0 form))
@@ -3861,9 +3859,10 @@ With prefix ARG, apply the new formulas to the table."
 	(push org-table-current-begin-pos org-show-positions)
 	(let ((min (apply 'min org-show-positions))
 	      (max (apply 'max org-show-positions)))
-	  (goto-char min) (recenter 0)
+	  (set-window-start (selected-window) min)
 	  (goto-char max)
-	  (or (pos-visible-in-window-p max) (recenter -1))))
+	  (or (pos-visible-in-window-p max)
+	      (set-window-start (selected-window) max))))
       (select-window win))))
 
 (defun org-table-force-dataline ()

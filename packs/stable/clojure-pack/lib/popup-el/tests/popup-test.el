@@ -618,6 +618,23 @@ Qux" :nowait t)
    ;; Qux"))
    ))
 
+(ert-deftest popup-test-initial-index ()
+  (popup-test-with-common-setup
+    (setq popup (popup-menu* '("Foo" "Bar" "Baz") :initial-index 0 :nowait t))
+    (should (popup-test-helper-popup-selected-item "Foo")))
+
+  (popup-test-with-common-setup
+    (setq popup (popup-menu* '("Foo" "Bar" "Baz") :initial-index 2 :nowait t))
+    (should (popup-test-helper-popup-selected-item "Baz")))
+
+  (popup-test-with-common-setup
+    (setq popup (popup-menu* '("Foo" "Bar" "Baz") :initial-index -1 :nowait t))
+    (should (popup-test-helper-popup-selected-item "Foo")))
+
+  (popup-test-with-common-setup
+    (setq popup (popup-menu* '("Foo" "Bar" "Baz") :initial-index 100 :nowait t))
+    (should (popup-test-helper-popup-selected-item "Baz"))))
+
 (defun popup-test-helper-input (key)
   (push key unread-command-events))
 

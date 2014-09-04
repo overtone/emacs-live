@@ -116,6 +116,9 @@
 (require 'which-func)
 (require 'nrepl-client)
 (require 'cider-interaction)
+(require 'tramp)
+
+(message "Warning: clojure-test-mode is deprecated and is no longer maintained. Use CIDER 0.7+ instead of it.")
 
 ;; Faces
 
@@ -176,6 +179,13 @@
                      (clojure-test-make-handler (or handler #'identity))
                      (or (cider-current-ns) "user")
                      (nrepl-current-tooling-session)))
+
+(defun clojure-test--server-filename (name)
+  "Return the nREPL server relative filename for NAME."
+  (if (tramp-tramp-file-p name)
+      (with-parsed-tramp-file-name name nil
+        localname)
+    name))
 
 (defun clojure-test-load-reporting ()
   "Redefine the test-is report function to store results in metadata."
@@ -371,7 +381,9 @@ Clojure src file for the given test namespace.")
                                   (load-file \"%s\")
                                   (clojure.test.mode/clojure-test-mode-test-one-in-ns '%s '%s)
                                   (cons (:name (meta (var %s))) (:status (meta (var %s)))))"
-                               (buffer-file-name) (clojure-find-ns)
+                               (clojure-test--server-filename
+                                (buffer-file-name))
+                               (clojure-find-ns)
                                test-name test-name test-name)
                        (lambda (buffer result-str)
                          (with-current-buffer buffer
@@ -453,7 +465,7 @@ Clojure src file for the given test namespace.")
 
 (defun clojure-test-load-current-buffer ()
   (let ((command (format "(clojure.core/load-file \"%s\")\n(in-ns '%s)"
-                         (buffer-file-name)
+                         (clojure-test--server-filename (buffer-file-name))
                          (clojure-find-ns))))
     (nrepl-send-string-sync command)))
 
@@ -494,6 +506,46 @@ Clojure src file for the given test namespace.")
 
 (make-obsolete 'clojure-test-jump-to-implementation
                "use projectile or toggle.el instead." "3.0.0")
+
+;; Test navigation:
+(defun clojure-in-tests-p ()
+  "Check whether the current file is a test file.
+
+Two checks are made - whether the namespace of the file has the
+word test in it and whether the file lives under the test/ directory."
+  (or (string-match-p "test\." (clojure-find-ns))
+      (string-match-p "/test" (buffer-file-name))))
+
+(defun clojure-underscores-for-hyphens (namespace)
+  "Replace all hyphens in NAMESPACE with underscores."
+  (replace-regexp-in-string "-" "_" namespace))
+
+(defun clojure-test-for (namespace)
+  "Return the path of the test file for the given NAMESPACE."
+  (let* ((namespace (clojure-underscores-for-hyphens namespace))
+         (segments (split-string namespace "\\.")))
+    (format "%stest/%s_test.clj"
+            (file-name-as-directory
+             (locate-dominating-file buffer-file-name "src/"))
+            (mapconcat 'identity segments "/"))))
+
+(defvar clojure-test-for-fn 'clojure-test-for
+  "The function that will return the full path of the Clojure test file for the given namespace.")
+
+(defun clojure-jump-to-test ()
+  "Jump from implementation file to test."
+  (interactive)
+  (find-file (funcall clojure-test-for-fn (clojure-find-ns))))
+
+(make-obsolete 'clojure-jump-to-test
+               "use projectile or toggle.el instead." "2.1.1")
+
+(defun clojure-jump-between-tests-and-code ()
+  "Jump between implementation and related test file."
+  (interactive)
+  (if (clojure-in-tests-p)
+      (clojure-test-jump-to-implementation)
+    (clojure-jump-to-test)))
 
 (defvar clojure-test-mode-map
   (let ((map (make-sparse-keymap)))

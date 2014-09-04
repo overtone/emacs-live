@@ -43,6 +43,15 @@
 
 (defvar er--python-string-delimiter "'\"")
 
+(defalias 'py-goto-beyond-clause 'py-end-of-clause-bol)
+
+(declare-function py-in-string-p "python-mode")
+(declare-function py-beginning-of-block "python-mode")
+(declare-function py-end-of-block "python-mode")
+(declare-function py-mark-block-or-clause "python-mode")
+(declare-function py-end-of-clause-bol "python-mode")
+(defvar py-indent-offset)
+
 (defun er/mark-outside-python-string ()
   "Marks region outside a (possibly multi-line) Python string"
   (interactive)
@@ -104,10 +113,10 @@ line and selecting the surrounding block."
         (while (> (current-column) start-col)
           (forward-line -1) (back-to-indentation)))
       (set-mark (point))
-      (py-goto-beyond-clause) (forward-line) (back-to-indentation)
+      (py-end-of-clause-bol) (forward-line) (back-to-indentation)
       (while (and (looking-at secondary-re)
                   (>= (current-column) start-col))
-        (py-goto-beyond-clause) (forward-line) (back-to-indentation))
+        (py-end-of-clause-bol) (forward-line) (back-to-indentation))
       (forward-line -1) (end-of-line)
       (exchange-point-and-mark))))
 

@@ -149,8 +149,7 @@ empty. Available keywords are following:
 :   If the value is non-nil, the popup window will be stuck when it is
     shown.
 
-`:last`
-
+`:tail`
 :   If the value is non-nil, the popup window will show the last
     contents.
 

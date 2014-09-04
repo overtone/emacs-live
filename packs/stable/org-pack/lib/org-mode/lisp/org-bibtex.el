@@ -203,7 +203,7 @@
     (:pages        . "One or more page numbers or range of numbers, such as 42-111 or 7,41,73-97 or 43+ (the ‘+’ in this last example indicates pages following that don’t form simple range). BibTEX requires double dashes for page ranges (--).")
     (:publisher    . "The publisher’s name.")
     (:school       . "The name of the school where a thesis was written.")
-    (:series       . "The name of a series or set of books.  When citing an entire book, the the title field gives its title and an optional series field gives the name of a series or multi-volume set in which the book is published.")
+    (:series       . "The name of a series or set of books.  When citing an entire book, the title field gives its title and an optional series field gives the name of a series or multi-volume set in which the book is published.")
     (:title        . "The work’s title, typed as explained in the LaTeX book.")
     (:type         . "The type of a technical report for example, 'Research Note'.")
     (:volume       . "The volume of a journal or multi-volume book.")
@@ -279,7 +279,7 @@ not be exported."
 
 (defcustom org-bibtex-no-export-tags nil
   "List of tag(s) that should not be converted to keywords.
-This variable is relevant only if `org-bibtex-export-tags-as-keywords' is t."
+This variable is relevant only if `org-bibtex-tags-are-keywords' is t."
   :group 'org-bibtex
   :version "24.1"
   :type '(repeat :tag "Tag" (string)))
@@ -371,7 +371,9 @@ This variable is relevant only if `org-bibtex-export-tags-as-keywords' is t."
 	    (bibtex-beginning-of-entry)
 	    (if (re-search-forward "keywords.*=.*{\\(.*\\)}" nil t)
 		(progn (goto-char (match-end 1)) (insert ", "))
-	      (bibtex-make-field "keywords" t t))
+	      (search-forward ",\n" nil t)
+	      (insert "  keywords={},\n")
+	      (search-backward "}," nil t))
 	    (insert (mapconcat #'identity tags ", ")))
 	  (buffer-string))))))
 
@@ -534,7 +536,7 @@ With optional argument OPTIONAL, also prompt for optional fields."
 ;;; Bibtex <-> Org-mode headline translation functions
 (defun org-bibtex (&optional filename)
   "Export each headline in the current file to a bibtex entry.
-Headlines are exported using `org-bibtex-export-headline'."
+Headlines are exported using `org-bibtex-headline'."
   (interactive
    (list (read-file-name
 	  "Bibtex file: " nil nil nil
@@ -613,7 +615,8 @@ This uses `bibtex-parse-entry'."
 	(strip-delim
 	 (lambda (str)	     ; strip enclosing "..." and {...}
 	   (dolist (pair '((34 . 34) (123 . 125) (123 . 125)))
-	     (when (and (= (aref str 0) (car pair))
+	     (when (and (> (length str) 1)
+			(= (aref str 0) (car pair))
 			(= (aref str (1- (length str))) (cdr pair)))
 	       (setf str (substring str 1 (1- (length str)))))) str)))
     (push (mapcar

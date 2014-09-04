@@ -1,4 +1,5 @@
 import os
+import errno
 import json
 import re
 import hashlib
@@ -15,14 +16,22 @@ except ImportError:
 try:
     from .. import editor
     from . import shared as G
+    from .exc_fmt import str_e
     from . import msg
     from .lib import DMP
     assert G and DMP
 except ImportError:
     import editor
     import msg
+    from exc_fmt import str_e
     import shared as G
     from lib import DMP
+
+
+class JOIN_ACTION(object):
+    PROMPT = 1
+    UPLOAD = 2
+    DOWNLOAD = 3
 
 
 class FlooPatch(object):
@@ -32,12 +41,20 @@ class FlooPatch(object):
         self.previous = buf['buf']
         if buf['encoding'] == 'base64':
             self.md5_before = hashlib.md5(self.previous).hexdigest()
+            self.md5_after = hashlib.md5(self.current).hexdigest()
         else:
             try:
                 self.md5_before = hashlib.md5(self.previous.encode('utf-8')).hexdigest()
-            except Exception:
+            except Exception as e:
                 # Horrible fallback if for some reason encoding doesn't agree with actual object
                 self.md5_before = hashlib.md5(self.previous).hexdigest()
+                msg.log('Error calculating md5_before for ', str(self), ': ', str_e(e))
+            try:
+                self.md5_after = hashlib.md5(self.current.encode('utf-8')).hexdigest()
+            except Exception as e:
+                # Horrible fallback if for some reason encoding doesn't agree with actual object
+                self.md5_after = hashlib.md5(self.current).hexdigest()
+                msg.log('Error calculating md5_after for ', str(self), ': ', str_e(e))
 
     def __str__(self):
         return '%s - %s' % (self.buf['id'], self.buf['path'])
@@ -53,14 +70,9 @@ class FlooPatch(object):
         for patch in patches:
             patch_str += str(patch)
 
-        if self.buf['encoding'] == 'base64':
-            md5_after = hashlib.md5(self.current).hexdigest()
-        else:
-            md5_after = hashlib.md5(self.current.encode('utf-8')).hexdigest()
-
         return {
             'id': self.buf['id'],
-            'md5_after': md5_after,
+            'md5_after': self.md5_after,
             'md5_before': self.md5_before,
             'path': self.buf['path'],
             'patch': patch_str,
@@ -68,21 +80,8 @@ class FlooPatch(object):
         }
 
 
-class Waterfall(object):
-    def __init__(self):
-        self.chain = []
-
-    def add(self, f, *args, **kwargs):
-        self.chain.append(lambda: f(*args, **kwargs))
-
-    def call(self):
-        res = [f() for f in self.chain]
-        self.chain = []
-        return res
-
-
 def reload_settings():
-    floorc_settings = load_floorc()
+    floorc_settings = load_floorc_json()
     for name, val in floorc_settings.items():
         setattr(G, name, val)
     if G.SHARE_DIR:
@@ -90,32 +89,50 @@ def reload_settings():
     G.BASE_DIR = os.path.realpath(os.path.expanduser(G.BASE_DIR))
     G.COLAB_DIR = os.path.join(G.BASE_DIR, 'share')
     G.COLAB_DIR = os.path.realpath(G.COLAB_DIR)
+    if G.DEBUG:
+        msg.LOG_LEVEL = msg.LOG_LEVELS['DEBUG']
+    else:
+        msg.LOG_LEVEL = msg.LOG_LEVELS['MSG']
     mkdir(G.COLAB_DIR)
+    return floorc_settings
 
 
-def load_floorc():
-    """try to read settings out of the .floorc file"""
+def load_floorc_json():
     s = {}
     try:
-        fd = open(G.FLOORC_PATH, 'r')
+        with open(G.FLOORC_JSON_PATH, 'r') as fd:
+            floorc_json = fd.read()
     except IOError as e:
-        if e.errno == 2:
+        if e.errno == errno.ENOENT:
             return s
         raise
 
-    default_settings = fd.read().split('\n')
-    fd.close()
+    try:
+        default_settings = json.loads(floorc_json)
+    except ValueError:
+        return s
 
-    for setting in default_settings:
-        # TODO: this is horrible
-        if len(setting) == 0 or setting[0] == '#':
-            continue
-        try:
-            name, value = setting.split(' ', 1)
-        except IndexError:
-            continue
-        s[name.upper()] = value
+    for k, v in default_settings.items():
+        s[k.upper()] = v
     return s
+
+
+def save_floorc_json(s):
+    floorc_json = {}
+    for k, v in s.items():
+        floorc_json[k.lower()] = v
+    msg.log('Writing ', floorc_json)
+    with open(G.FLOORC_JSON_PATH, 'w') as fd:
+        fd.write(json.dumps(floorc_json, indent=4, sort_keys=True))
+
+
+def can_auth(host=None):
+    if host is None:
+        host = len(G.AUTH) and list(G.AUTH.keys())[0] or G.DEFAULT_HOST
+    auth = G.AUTH.get(host)
+    if not auth:
+        return False
+    return bool((auth.get('username') or auth.get('api_key')) and auth.get('secret'))
 
 
 cancelled_timeouts = set()
@@ -123,18 +140,38 @@ timeout_ids = set()
 
 
 def set_timeout(func, timeout, *args, **kwargs):
+    return _set_timeout(func, timeout, False, *args, **kwargs)
+
+
+def set_interval(func, timeout, *args, **kwargs):
+    return _set_timeout(func, timeout, True, *args, **kwargs)
+
+
+def _set_timeout(func, timeout, repeat, *args, **kwargs):
     timeout_id = set_timeout._top_timeout_id
     if timeout_id > 100000:
         set_timeout._top_timeout_id = 0
     else:
         set_timeout._top_timeout_id += 1
 
+    try:
+        from . import api
+    except ImportError:
+        import api
+
+    @api.send_errors
     def timeout_func():
         timeout_ids.discard(timeout_id)
         if timeout_id in cancelled_timeouts:
             cancelled_timeouts.remove(timeout_id)
             return
+
         func(*args, **kwargs)
+
+        if repeat:
+            editor.set_timeout(timeout_func, timeout)
+            timeout_ids.add(timeout_id)
+
     editor.set_timeout(timeout_func, timeout)
     timeout_ids.add(timeout_id)
     return timeout_id
@@ -151,17 +188,23 @@ def parse_url(workspace_url):
     secure = G.SECURE
     owner = None
     workspace_name = None
+    result = re.match('^([-\@\+\.\w]+)/([-\.\w]+)$', workspace_url)
+    if result:
+        workspace_url = 'https://' + G.DEFAULT_HOST + '/' + workspace_url
     parsed_url = urlparse(workspace_url)
     port = parsed_url.port
-    if parsed_url.scheme == 'http':
+    if G.DEBUG and parsed_url.scheme == 'http':
+        # Only obey http if we're debugging
         if not port:
             port = 3148
         secure = False
-    else:
-        if not port:
-            port = G.DEFAULT_PORT
+
+    if not port:
+        port = G.DEFAULT_PORT
+
     result = re.match('^/([-\@\+\.\w]+)/([-\.\w]+)/?$', parsed_url.path)
     if not result:
+        # Old style URL
         result = re.match('^/r/([-\@\+\.\w]+)/([-\.\w]+)/?$', parsed_url.path)
 
     if result:
@@ -191,8 +234,12 @@ def to_workspace_url(r):
     if port != '':
         port = ':%s' % port
     host = r.get('host', G.DEFAULT_HOST)
-    workspace_url = '%s://%s%s/%s/%s/' % (proto, host, port, r['owner'], r['workspace'])
+    workspace_url = '%s://%s%s/%s/%s' % (proto, host, port, r['owner'], r['workspace'])
     return workspace_url
+
+
+def normalize_url(workspace_url):
+    return to_workspace_url(parse_url(workspace_url))
 
 
 def get_full_path(p):
@@ -201,7 +248,7 @@ def get_full_path(p):
 
 
 def unfuck_path(p):
-    return os.path.normcase(os.path.normpath(p))
+    return os.path.normpath(p)
 
 
 def to_rel_path(p):
@@ -215,7 +262,7 @@ def to_scheme(secure):
 
 
 def is_shared(p):
-    if not G.JOINED_WORKSPACE:
+    if not G.AGENT or not G.AGENT.joined_workspace:
         return False
     p = unfuck_path(p)
     try:
@@ -241,20 +288,34 @@ def update_floo_file(path, data):
         floo_fd.write(json.dumps(floo_json, indent=4, sort_keys=True))
 
 
+def read_floo_file(path):
+    floo_file = os.path.join(path, '.floo')
+
+    info = {}
+    try:
+        floo_info = open(floo_file, 'rb').read().decode('utf-8')
+        info = json.loads(floo_info)
+    except (IOError, OSError):
+        pass
+    except Exception as e:
+        msg.warn('Couldn\'t read .floo file: ', floo_file, ': ', str_e(e))
+    return info
+
+
 def get_persistent_data(per_path=None):
     per_data = {'recent_workspaces': [], 'workspaces': {}}
     per_path = per_path or os.path.join(G.BASE_DIR, 'persistent.json')
     try:
         per = open(per_path, 'rb')
     except (IOError, OSError):
-        msg.debug('Failed to open %s. Recent workspace list will be empty.' % per_path)
+        msg.debug('Failed to open ', per_path, '. Recent workspace list will be empty.')
         return per_data
     try:
         data = per.read().decode('utf-8')
         persistent_data = json.loads(data)
     except Exception as e:
-        msg.debug('Failed to parse %s. Recent workspace list will be empty.' % per_path)
-        msg.debug(str(e))
+        msg.debug('Failed to parse ', per_path, '. Recent workspace list will be empty.')
+        msg.debug(str_e(e))
         msg.debug(data)
         return per_data
     if 'recent_workspaces' not in persistent_data:
@@ -266,10 +327,33 @@ def get_persistent_data(per_path=None):
 
 def update_persistent_data(data):
     seen = set()
-    data['recent_workspaces'] = [x for x in data['recent_workspaces'] if x['url'] not in seen and not seen.add(x['url'])]
+    recent_workspaces = []
+    for x in data['recent_workspaces']:
+        try:
+            if x['url'] in seen:
+                continue
+            seen.add(x['url'])
+            recent_workspaces.append(x)
+        except Exception as e:
+            msg.debug(str_e(e))
+
+    data['recent_workspaces'] = recent_workspaces
     per_path = os.path.join(G.BASE_DIR, 'persistent.json')
     with open(per_path, 'wb') as per:
         per.write(json.dumps(data, indent=2).encode('utf-8'))
+
+
+# Cleans up URLs in persistent.json
+def normalize_persistent_data():
+    persistent_data = get_persistent_data()
+    for rw in persistent_data['recent_workspaces']:
+        rw['url'] = normalize_url(rw['url'])
+
+    for owner, workspaces in persistent_data['workspaces'].items():
+        for name, workspace in workspaces.items():
+            workspace['url'] = normalize_url(workspace['url'])
+            workspace['path'] = unfuck_path(workspace['path'])
+    update_persistent_data(persistent_data)
 
 
 def add_workspace_to_persistent_json(owner, name, url, path):
@@ -281,12 +365,30 @@ def add_workspace_to_persistent_json(owner, name, url, path):
     update_persistent_data(d)
 
 
-def get_workspace_by_path(path):
+def update_recent_workspaces(workspace_url):
+    d = get_persistent_data()
+    recent_workspaces = d.get('recent_workspaces', [])
+    recent_workspaces.insert(0, {'url': workspace_url})
+    recent_workspaces = recent_workspaces[:100]
+    seen = set()
+    new = []
+    for r in recent_workspaces:
+        string = json.dumps(r)
+        if string not in seen:
+            new.append(r)
+            seen.add(string)
+    d['recent_workspaces'] = new
+    update_persistent_data(d)
+
+
+def get_workspace_by_path(path, _filter):
+    path = unfuck_path(path)
     for owner, workspaces in get_persistent_data()['workspaces'].items():
         for name, workspace in workspaces.items():
-            if workspace['path'] == path:
-                workspace_url = workspace['url']
-                return workspace_url
+            if unfuck_path(workspace['path']) == path:
+                r = _filter(workspace['url'])
+                if r:
+                    return r
 
 
 def rm(path):
@@ -302,42 +404,77 @@ def mkdir(path):
     try:
         os.makedirs(path)
     except OSError as e:
-        if e.errno != 17:
-            editor.error_message('Cannot create directory {0}.\n{1}'.format(path, e))
+        if e.errno != errno.EEXIST:
+            editor.error_message('Cannot create directory {0}.\n{1}'.format(path, str_e(e)))
             raise
+
+
+def get_line_endings(path):
+    try:
+        with open(path, 'rb') as fd:
+            line = fd.readline()
+    except Exception:
+        return
+    if not line:
+        return
+    chunk = line[-2:]
+    if chunk == "\r\n":
+        return "\r\n"
+    if chunk[-1:] == "\n":
+        return "\n"
 
 
 def save_buf(buf):
     path = get_full_path(buf['path'])
     mkdir(os.path.split(path)[0])
-    with open(path, 'wb') as fd:
-        if buf['encoding'] == 'utf8':
-            fd.write(buf['buf'].encode('utf-8'))
-        else:
-            fd.write(buf['buf'])
+    if buf['encoding'] == 'utf8':
+        newline = get_line_endings(path) or editor.get_line_endings(path)
+    try:
+        with open(path, 'wb') as fd:
+            if buf['encoding'] == 'utf8':
+                out = buf['buf']
+                if newline != '\n':
+                    out = out.split('\n')
+                    out = newline.join(out)
+                fd.write(out.encode('utf-8'))
+            else:
+                fd.write(buf['buf'])
+    except Exception as e:
+        msg.error('Error saving buf: ', str_e(e))
 
 
 def _unwind_generator(gen_expr, cb=None, res=None):
     try:
         while True:
-            arg0 = res
+            maybe_func = res
             args = []
+            # if the first arg is callable, we need to call it (and assume the last argument is a callback)
             if type(res) == tuple:
-                arg0 = res[0]
-                args = list(res[1:])
-            if not callable(arg0):
+                maybe_func = len(res) and res[0]
+
+            if not callable(maybe_func):
                 # send only accepts one argument... this is slightly dangerous if
                 # we ever just return a tuple of one elemetn
+                # TODO: catch no generator
                 if type(res) == tuple and len(res) == 1:
                     res = gen_expr.send(res[0])
                 else:
                     res = gen_expr.send(res)
-            else:
-                def f(*args):
-                    return _unwind_generator(gen_expr, cb, args)
-                args.append(f)
-                return arg0(*args)
-        # TODO: probably shouldn't catch StopIteration to return since that can occur by accident...
+                continue
+
+            def f(*args):
+                return _unwind_generator(gen_expr, cb, args)
+
+            try:
+                args = list(res)[1:]
+            except:
+                # assume not iterable
+                args = []
+
+            args.append(f)
+            return maybe_func(*args)
+
+    # TODO: probably shouldn't catch StopIteration to return since that can occur by accident...
     except StopIteration:
         pass
     except __StopUnwindingException as e:

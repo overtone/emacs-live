@@ -1,7 +1,7 @@
-;;; cider-selector.el --- Buffer selection command inspired by SLIME's selector
+;;; cider-selector.el --- Buffer selection command inspired by SLIME's selector -*- lexical-binding: t -*-
 
-;; Copyright © 2012-2013 Tim King, Phil Hagelberg
-;; Copyright © 2013 Bozhidar Batsov, Hugo Duncan, Steve Purcell
+;; Copyright © 2012-2014 Tim King, Phil Hagelberg
+;; Copyright © 2013-2014 Bozhidar Batsov, Hugo Duncan, Steve Purcell
 ;;
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Phil Hagelberg <technomancy@gmail.com>
@@ -142,9 +142,13 @@ is chosen.  The returned buffer is selected with
   (nrepl-connection-browser)
   nrepl--connection-browser-buffer-name)
 
-(def-cider-selector-method ?v
-  "*nrepl-events* buffer."
-  nrepl-event-buffer-name)
+(def-cider-selector-method ?m
+  "*nrepl-messages* buffer."
+  nrepl-message-buffer-name)
+
+(def-cider-selector-method ?x
+  "*cider-error* buffer."
+  cider-error-buffer)
 
 (def-cider-selector-method ?s
  "Cycle to the next CIDER connection's REPL."
@@ -152,4 +156,5 @@ is chosen.  The returned buffer is selected with
  (cider-find-or-create-repl-buffer))
 
 (provide 'cider-selector)
+
 ;;; cider-selector.el ends here

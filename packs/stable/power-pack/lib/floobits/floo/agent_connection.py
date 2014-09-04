@@ -7,19 +7,89 @@ from floo.common import msg, utils, shared as G
 
 class AgentConnection(floo_handler.FlooHandler):
 
-    def __init__(self, owner, workspace, emacs_handler, get_bufs=True):
-        super(AgentConnection, self).__init__(owner, workspace, get_bufs)
+    def __init__(self, owner, workspace, emacs_handler, auth, join_action):
+        super(AgentConnection, self).__init__(owner, workspace, auth, join_action)
         self.emacs_handler = emacs_handler
+
+    def get_view_text_by_path(self, rel_path):
+        return self.emacs_handler.get_view_text_by_path(rel_path)
+
+    def stop(self):
+        super(AgentConnection, self).stop()
+        self.emacs_handler.stop()
 
     def get_view(self, buf_id):
         return self.emacs_handler.get_view(buf_id)
 
     def ok_cancel_dialog(self, prompt, cb):
-        return self.emacs_handler.get_input(prompt, "", cb=lambda data: cb(data['response']), y_or_n=True)
+        return self.emacs_handler.ui.user_y_or_n(self.emacs_handler, prompt, '', cb)
 
     def to_emacs(self, name, data):
         data['name'] = name
         self.emacs_handler.send(data)
+
+    def stomp_prompt(self, changed_bufs, missing_bufs, new_files, ignored, cb):
+
+        def pluralize(arg):
+            return arg != 1 and 's' or ''
+
+        overwrite_local = ''
+        overwrite_remote = ''
+        missing = [buf['path'] for buf in missing_bufs]
+        changed = [buf['path'] for buf in changed_bufs]
+
+        to_upload = set(new_files + changed).difference(set(ignored))
+        to_remove = missing + ignored
+        to_fetch = changed + missing
+        to_upload_len = len(to_upload)
+        to_remove_len = len(to_remove)
+        remote_len = to_remove_len + to_upload_len
+        to_fetch_len = len(to_fetch)
+
+        msg.log('To fetch: ', ', '.join(to_fetch))
+        msg.log('To upload: ', ', '.join(to_upload))
+        msg.log('To remove: ', ', '.join(to_remove))
+
+        if not to_fetch:
+            overwrite_local = 'Fetch nothing'
+        elif to_fetch_len < 5:
+            overwrite_local = 'Fetch %s' % ', '.join(to_fetch)
+        else:
+            overwrite_local = 'Fetch %s file%s' % (to_fetch_len, pluralize(to_fetch_len))
+
+        if to_upload_len < 5:
+            to_upload_str = 'upload %s' % ', '.join(to_upload)
+        else:
+            to_upload_str = 'upload %s' % to_upload_len
+
+        if to_remove_len < 5:
+            to_remove_str = 'remove %s' % ', '.join(to_remove)
+        else:
+            to_remove_str = 'remove %s' % to_remove_len
+
+        if to_upload:
+            overwrite_remote += to_upload_str
+            if to_remove:
+                overwrite_remote += ' and '
+        if to_remove:
+            overwrite_remote += to_remove_str
+
+        if remote_len >= 5 and overwrite_remote:
+            overwrite_remote += ' files'
+
+        overwrite_remote = overwrite_remote.capitalize()
+
+        action = 'Overwrite'
+        # TODO: change action based on numbers of stuff
+        choices = [
+            '%s %s remote file%s (%s).' % (action, remote_len, pluralize(remote_len), overwrite_remote),
+            '%s %s local file%s (%s).' % (action, to_fetch_len, pluralize(to_fetch_len), overwrite_local),
+            'Cancel',
+        ]
+
+        prompt = 'Your copy of %s/%s is out of sync. Do you want to:' % (self.owner, self.workspace)
+
+        self.emacs_handler.ui.user_select(self.emacs_handler, prompt, choices, None, lambda c, i: cb(i))
 
     @utils.inlined_callbacks
     def prompt_join_hangout(self, hangout_url):
@@ -32,12 +102,14 @@ class AgentConnection(floo_handler.FlooHandler):
             msg.error("Couldn't open a browser: %s" % (str(e)))
 
     def _on_room_info(self, data):
+        def send_room_info():
+            self.to_emacs('room_info', {
+                'perms': data['perms'],
+                'project_path': G.PROJECT_PATH,
+                'workspace_name': data['room_name']
+            })
+        self.once('room_info', send_room_info)
         super(AgentConnection, self)._on_room_info(data)
-        self.to_emacs('room_info', {
-            'perms': data['perms'],
-            'project_path': G.PROJECT_PATH,
-            'workspace_name': data['room_name'],
-        })
 
     def _on_create_buf(self, data):
         if data['encoding'] == 'base64':

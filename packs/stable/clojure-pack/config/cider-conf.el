@@ -20,8 +20,8 @@
              (cider-turn-on-eldoc-mode)
              (paredit-mode 1)))
 
-(setq cider-popup-stacktraces nil)
-(setq cider-popup-stacktraces-in-repl nil)
+(setq cider-popup-stacktraces t)
+(setq cider-popup-stacktraces-in-repl t)
 (add-to-list 'same-window-buffer-names "*cider*")
 
 ;;Auto Complete

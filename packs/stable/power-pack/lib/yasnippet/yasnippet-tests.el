@@ -204,60 +204,56 @@
       (ert-simulate-command `(yas-mock-insert "bbb"))
       (should (string= (yas--buffer-contents) "if condition\naaa\nelse\nbbb\nend")))))
 
-(ert-deftest example-for-issue-404 ()
-  (with-temp-buffer
-    (c++-mode)
-    (yas-minor-mode 1)
-    (insert "#include <foo>\n")
-    (let ((snippet "main"))
-      (let ((yas-good-grace nil)) (yas-expand-snippet snippet))
-      (should (string= (yas--buffer-contents) "#include <foo>\nmain")))))
+(defmacro yas--with-font-locked-temp-buffer (&rest body)
+  "Like `with-temp-buffer', but ensure `font-lock-mode'."
+  (declare (indent 0) (debug t))
+  (let ((temp-buffer (make-symbol "temp-buffer")))
+    ;; NOTE: buffer name must not start with a space, otherwise
+    ;; `font-lock-mode' doesn't turn on.
+    `(let ((,temp-buffer (generate-new-buffer "*yas-temp*")))
+       (with-current-buffer ,temp-buffer
+         ;; pretend we're interactive so `font-lock-mode' turns on
+         (let ((noninteractive nil)
+               ;; turn on font locking after major mode change
+               (change-major-mode-after-body-hook #'font-lock-mode))
+           (unwind-protect
+               (progn (require 'font-lock)
+                      ;; turn on font locking before major mode change
+                      (font-lock-mode +1)
+                      ,@body)
+             (and (buffer-name ,temp-buffer)
+                  (kill-buffer ,temp-buffer))))))))
 
-(ert-deftest example-for-issue-404-c-mode ()
-  (with-temp-buffer
+(ert-deftest example-for-issue-474 ()
+  (yas--with-font-locked-temp-buffer
     (c-mode)
     (yas-minor-mode 1)
     (insert "#include <foo>\n")
-    (let ((snippet "main"))
-      (let ((yas-good-grace nil)) (yas-expand-snippet snippet))
-      (should (string= (yas--buffer-contents) "#include <foo>\nmain")))))
+    (let ((yas-good-grace nil)) (yas-expand-snippet "`\"TODO: \"`"))
+    (should (string= (yas--buffer-contents) "#include <foo>\nTODO: "))))
 
-(ert-deftest example-for-issue-404-external-emacs ()
-  :tags '(:external)
-  (let ((fixture-el-file (make-temp-file "yas-404-fixture" nil ".el")))
-    (with-temp-buffer
-      (insert (pp-to-string
-               `(condition-case _
-                    (progn
-                      (require 'yasnippet-tests)
-                      (yas-with-snippet-dirs
-                        '((".emacs.d/snippets"
-                           ("c-mode"
-                            ("main" . "int main ()"))))
-                        (yas-global-mode)
-                        (switch-to-buffer "foo.c")
-                        (c-mode)
-                        (insert "#include <iostream>\nmain")
-                        (setq yas-good-grace nil)
-                        (yas-expand)
-                        (should (string= (buffer-string)
-                                         "#include <iostream>\nint main ()"))
-                        (kill-emacs 0)))
-                  (error (kill-emacs -1)))))
-      (write-file fixture-el-file))
-    (should (= 0
-               (call-process (concat invocation-directory invocation-name)
-                             nil nil nil
-                             "-Q"  "--batch"
-                             "-L" "." "-l" fixture-el-file)))))
+(ert-deftest example-for-issue-404 ()
+  (yas--with-font-locked-temp-buffer
+    (c++-mode)
+    (yas-minor-mode 1)
+    (insert "#include <foo>\n")
+    (let ((yas-good-grace nil)) (yas-expand-snippet "main"))
+    (should (string= (yas--buffer-contents) "#include <foo>\nmain"))))
+
+(ert-deftest example-for-issue-404-c-mode ()
+  (yas--with-font-locked-temp-buffer
+    (c-mode)
+    (yas-minor-mode 1)
+    (insert "#include <foo>\n")
+    (let ((yas-good-grace nil)) (yas-expand-snippet "main"))
+    (should (string= (yas--buffer-contents) "#include <foo>\nmain"))))
 
 (ert-deftest middle-of-buffer-snippet-insertion ()
   (with-temp-buffer
     (yas-minor-mode 1)
     (insert "beginning")
     (save-excursion (insert "end"))
-    (let ((snippet "-middle-"))
-      (yas-expand-snippet snippet))
+    (yas-expand-snippet "-middle-")
     (should (string= (yas--buffer-contents) "beginning-middle-end"))))
 
 (ert-deftest another-example-for-issue-271 ()
@@ -317,6 +313,47 @@ TODO: correct this bug!"
     (should (string= (yas--buffer-contents)
                      "brother from another mother") ;; no newline should be here!
             )))
+
+;; See issue #497. To understand this test, follow the example of the
+;; `yas-key-syntaxes' docstring.
+;; 
+(ert-deftest complicated-yas-key-syntaxes ()
+  (with-temp-buffer
+    (yas-saving-variables
+     (yas-with-snippet-dirs
+       '((".emacs.d/snippets"
+          ("emacs-lisp-mode"
+           ("foo-barbaz" . "# condition: yas--foobarbaz\n# --\nOKfoo-barbazOK")
+           ("barbaz" . "# condition: yas--barbaz\n# --\nOKbarbazOK")
+           ("baz" . "OKbazOK")
+           ("'quote" . "OKquoteOK"))))
+       (yas-reload-all)
+       (emacs-lisp-mode)
+       (yas-minor-mode-on)
+       (let ((yas-key-syntaxes '("w" "w_")))
+         (let ((yas--barbaz t))
+           (yas-should-expand '(("foo-barbaz" . "foo-OKbarbazOK")
+                                ("barbaz" . "OKbarbazOK"))))
+         (let ((yas--foobarbaz t))
+           (yas-should-expand '(("foo-barbaz" . "OKfoo-barbazOK"))))
+         (let ((yas-key-syntaxes
+                (cons #'(lambda (_start-point)
+                          (unless (looking-back "-")
+                            (backward-char)
+                            'again))
+                      yas-key-syntaxes))
+               (yas--foobarbaz t))
+           (yas-should-expand '(("foo-barbaz" . "foo-barOKbazOK")))))
+       (let ((yas-key-syntaxes '(yas-try-key-from-whitespace)))
+         (yas-should-expand '(("xxx\n'quote" . "xxx\nOKquoteOK")
+                              ("xxx 'quote" . "xxx OKquoteOK"))))
+       (let ((yas-key-syntaxes '(yas-shortest-key-until-whitespace))
+             (yas--foobarbaz t) (yas--barbaz t))
+         (yas-should-expand '(("foo-barbaz" . "foo-barOKbazOK")))
+         (setq yas-key-syntaxes '(yas-longest-key-from-whitespace))
+         (yas-should-expand '(("foo-barbaz" . "OKfoo-barbazOK")
+                              ("foo " . "foo "))))))))
+
 
 ;;; Loading
 ;;;
@@ -429,6 +466,41 @@ TODO: correct this bug!"
          (should (null (cl-set-exclusive-or expected observed)))
          (should (= (length expected)
                     (length observed))))))))
+
+(ert-deftest issue-492-and-494 ()
+  (defalias 'yas--phony-c-mode 'c-mode)
+  (define-derived-mode yas--test-mode yas--phony-c-mode "Just a test mode")
+  (yas-with-snippet-dirs '((".emacs.d/snippets"
+                            ("yas--test-mode")))
+                         (yas-reload-all)
+                         (with-temp-buffer
+                           (let* ((major-mode 'yas--test-mode)
+                                  (expected `(c-mode
+                                              ,@(if (fboundp 'prog-mode)
+                                                    '(prog-mode))
+                                              yas--phony-c-mode
+                                              yas--test-mode))
+                                  (observed (yas--modes-to-activate)))
+                             (should (null (cl-set-exclusive-or expected observed)))
+                             (should (= (length expected)
+                                        (length observed)))))))
+
+(ert-deftest issue-504-tricky-jit ()
+  (define-derived-mode yas--test-mode c-mode "Just a test mode")
+  (define-derived-mode yas--another-test-mode c-mode "Another test mode")
+  (yas-with-snippet-dirs
+   '((".emacs.d/snippets"
+      ("yas--another-test-mode"
+       (".yas-parents" . "yas--test-mode"))
+      ("yas--test-mode")))
+   (let ((b (with-current-buffer (generate-new-buffer "*yas-test*")
+              (yas--another-test-mode)
+              (current-buffer))))
+     (unwind-protect
+         (progn
+           (yas-reload-all)
+           (should (= 0 (hash-table-count yas--scheduled-jit-loads))))
+       (kill-buffer b)))))
 
 (defun yas--basic-jit-loading-1 ()
   (with-temp-buffer
@@ -600,7 +672,11 @@ TODO: be meaner"
           (yas-reload-all)
           (should (not (eq (key-binding (yas--read-keybinding "TAB")) 'yas-expand)))
           (should (eq (key-binding (yas--read-keybinding "SPC")) 'yas-expand))))
-    (setcdr yas-minor-mode-map (cdr (yas--init-minor-keymap)))))
+    ;; FIXME: actually should restore to whatever saved values where there.
+    ;; 
+    (define-key yas-minor-mode-map [tab] 'yas-expand)
+    (define-key yas-minor-mode-map (kbd "TAB") 'yas-expand)
+    (define-key yas-minor-mode-map (kbd "SPC") nil)))
 
 (ert-deftest test-yas-in-org ()
   (with-temp-buffer
@@ -638,21 +714,28 @@ add the snippets associated with the given mode."
 (defun yas-should-expand (keys-and-expansions)
   (dolist (key-and-expansion keys-and-expansions)
     (yas-exit-all-snippets)
-    (erase-buffer)
+    (narrow-to-region (point) (point))
     (insert (car key-and-expansion))
     (let ((yas-fallback-behavior nil))
       (ert-simulate-command '(yas-expand)))
-    (should (string= (yas--buffer-contents) (cdr key-and-expansion))))
+    (unless (string= (yas--buffer-contents) (cdr key-and-expansion))
+      (ert-fail (format "\"%s\" should have expanded to \"%s\" but got \"%s\""
+                        (car key-and-expansion)
+                        (cdr key-and-expansion)
+                        (yas--buffer-contents)))))
   (yas-exit-all-snippets))
 
 (defun yas-should-not-expand (keys)
   (dolist (key keys)
     (yas-exit-all-snippets)
-    (erase-buffer)
+    (narrow-to-region (point) (point))
     (insert key)
     (let ((yas-fallback-behavior nil))
       (ert-simulate-command '(yas-expand)))
-    (should (string= (yas--buffer-contents) key))))
+    (unless (string= (yas--buffer-contents) key)
+      (ert-fail (format "\"%s\" should have stayed put, but instead expanded to \"%s\""
+                        key
+                        (yas--buffer-contents))))))
 
 (defun yas-mock-insert (string)
   (interactive)

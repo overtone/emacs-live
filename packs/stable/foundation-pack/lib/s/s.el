@@ -27,6 +27,8 @@
 
 ;;; Code:
 
+(require 'ucs-normalize)
+
 (defun s-trim-left (s)
   "Remove whitespace at the beginning of S."
   (if (string-match "\\`[ \t\n\r]+" s)
@@ -49,10 +51,36 @@
 
 (defun s-split (separator s &optional omit-nulls)
   "Split S into substrings bounded by matches for regexp SEPARATOR.
-If OMIT-NULLS is t, zero-length substrings are omitted.
+If OMIT-NULLS is non-nil, zero-length substrings are omitted.
 
 This is a simple wrapper around the built-in `split-string'."
   (split-string s separator omit-nulls))
+
+(defun s-split-up-to (separator s n &optional omit-nulls)
+  "Split S up to N times into substrings bounded by matches for regexp SEPARATOR.
+
+If OMIT-NULLS is non-nil, zero-length substrings are omitted.
+
+See also `s-split'."
+  (save-match-data
+    (let ((op 0)
+          (r nil))
+      (with-temp-buffer
+        (insert s)
+        (setq op (goto-char (point-min)))
+        (while (and (re-search-forward separator nil t)
+                    (< 0 n))
+          (let ((sub (buffer-substring-no-properties op (match-beginning 0))))
+            (unless (and omit-nulls
+                         (equal sub ""))
+              (push sub r)))
+          (setq op (goto-char (match-end 0)))
+          (setq n (1- n)))
+        (if (/= (point) (point-max))
+            (push (buffer-substring-no-properties op (point-max)) r)
+          (unless omit-nulls
+            (push "" r))))
+      (nreverse r))))
 
 (defun s-lines (s)
   "Splits S into a list of strings on newline characters."
@@ -340,6 +368,7 @@ This is a simple wrapper around the built-in `capitalize'."
 in the first form, making a list of it if it is not a list
 already. If there are more forms, inserts the first form as the
 last item in second form, etc."
+  (declare (debug (form &rest [&or (function &rest form) fboundp])))
   (if (null more)
       (if (listp form)
           `(,(car form) ,@(cdr form) ,s)
@@ -356,9 +385,19 @@ attention to case differences."
   (let ((case-fold-search ignore-case))
     (string-match-p (regexp-quote needle) s)))
 
-(defun s-reverse (s) ;; from org-babel-reverse-string
+(defun s-reverse (s)
   "Return the reverse of S."
-  (apply 'string (nreverse (string-to-list s))))
+  (if (multibyte-string-p s)
+      (let ((input (string-to-list s))
+            (output ()))
+        (while input
+          ;; Handle entire grapheme cluster as a single unit
+          (let ((grapheme (list (pop input))))
+            (while (memql (car input) ucs-normalize-combining-chars)
+              (push (pop input) grapheme))
+            (setq output (nconc (nreverse grapheme) output))))
+        (concat output))
+    (concat (nreverse (string-to-list s)))))
 
 (defun s-match-strings-all (regex string)
   "Return a list of matches for REGEX in STRING.
@@ -540,6 +579,7 @@ any variable:
 The values of the variables are interpolated with \"%s\" unless
 the variable `s-lex-value-as-lisp' is `t' and then they are
 interpolated with \"%S\"."
+  (declare (debug (form)))
   (s-lex-fmt|expand format-str))
 
 (defun s-count-matches (regexp s &optional start end)

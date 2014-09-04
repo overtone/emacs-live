@@ -290,6 +290,10 @@ it and type @kbd{u}.  If point is in a diff header when you type
 @kbd{s} or @kbd{u}, all hunks belonging to that diff are moved at the
 same time.
 
+Currently it is only possible to stage from the status buffer.
+Staging and unstaging from diff buffers that show unstaged and staged
+changes is not possible yet.
+
 If the region is active when you type @kbd{s} or @kbd{u}, only the
 changes in the region are staged or unstaged.  (This works line by
 line: if the beginning of a line is in the region it is included in
@@ -328,10 +332,6 @@ configure Magit to do something more useful by customizing the
 @code{magit-commit-all-when-nothing-staged} variable.  One choice is
 to instruct the subsequent @kbd{C-c C-c} to commit all changes.
 Another choice is stage everything at the time of hitting @kbd{c c}.
-
-You can type @kbd{C-c C-a} in the buffer with the change description
-to toggle a flag that determines whether the next commit will
-@emph{amend} the current commit in HEAD.
 
 Typing @kbd{M-n} or @kbd{M-p} will cycle through the
 @code{log-edit-comment-ring}, which will have your previous log
@@ -846,13 +846,13 @@ Magit shows them in a section called @emph{Unpulled changes}.  Typing
 
 @table @kbd
 @item o u
-Update the submodules, with a prefix argument it will initializing.
+Update the submodules, with a prefix argument it will also initialize them.
 
 @item o i
 Initialize the submodules.
 
 @item o b
-Update and initialize the submodules in one go.
+Update and initialize the submodules in one go (same as C-u o u).
 
 @item o s
 Synchronizes submodules' remote URL configuration setting to the value

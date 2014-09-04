@@ -485,6 +485,14 @@
           (call-interactively 'execute-extended-command))
       (quit t)))))
 
+(ert-deftest popwin-with-selected-window-and-wait ()
+  (popwin-test:common
+    (popwin:popup-buffer buf2)
+    (should (eq popwin:popup-buffer buf2))
+    (with-selected-window (get-buffer-window buf1)
+      (read-event nil nil (+ popwin:close-popup-window-timer-interval 0.5)))
+    (should (popwin:popup-window-live-p))))
+
 ;; test-case M-x occur and M-x next-error
 ;; test-case M-x dired and o
 ;; test-case fixed size popwin

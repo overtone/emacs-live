@@ -39,7 +39,8 @@ try:
 except ImportError:
     import urllib as parse
     unquote = lambda x: parse.unquote(x.encode('utf-8')).decode('utf-8')
-    str_instances = (str, basestring)
+    import __builtin__
+    str_instances = (str, __builtin__.basestring)
 
 
 class diff_match_patch:
@@ -886,7 +887,7 @@ class diff_match_patch:
                 # <ins>A</ins><del>B</del>X<del>C</del>
 
                 if lastequality and ((pre_ins and pre_del and post_ins and post_del) or
-                                    ((len(lastequality) < self.Diff_EditCost / 2) and
+                                     ((len(lastequality) < self.Diff_EditCost / 2) and
                                      (pre_ins + pre_del + post_ins + post_del) == 3)):
                     # Duplicate record.
                     diffs.insert(equalities[-1], (self.DIFF_DELETE, lastequality))
@@ -1251,8 +1252,8 @@ class diff_match_patch:
             Best match index or -1.
         """
         # Python doesn't have a maxint limit, so ignore this check.
-        #if self.Match_MaxBits != 0 and len(pattern) > self.Match_MaxBits:
-        #  raise ValueError("Pattern too long for this application.")
+        # if self.Match_MaxBits != 0 and len(pattern) > self.Match_MaxBits:
+        #     raise ValueError("Pattern too long for this application.")
 
         # Initialise the alphabet.
         s = self.match_alphabet(pattern)
@@ -1378,9 +1379,9 @@ class diff_match_patch:
         # Look for the first and last matches of pattern in text.  If two different
         # matches are found, increase the pattern length.
         while (text.find(pattern) != text.rfind(pattern) and
-              (self.Match_MaxBits == 0 or
-                len(pattern) < self.Match_MaxBits - self.Patch_Margin -
-                self.Patch_Margin)):
+                (self.Match_MaxBits == 0 or
+                 len(pattern) < self.Match_MaxBits - self.Patch_Margin -
+                 self.Patch_Margin)):
             padding += self.Patch_Margin
             pattern = text[max(0, patch.start2 - padding):(patch.start2 + patch.length1 + padding)]
         # Add one chunk for good luck.

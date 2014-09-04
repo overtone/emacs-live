@@ -11,8 +11,8 @@ INSTSUB       = $(SUBDIRS:%=install-%)
 ORG_MAKE_DOC ?= info html pdf
 
 ifneq ($(wildcard .git),)
-  GITVERSION ?= $(shell git describe --abbrev=6 HEAD)
-  ORGVERSION ?= $(subst release_,,$(shell git describe --abbrev=0 HEAD))
+  GITVERSION ?= $(shell git describe --match release\* --abbrev=6 HEAD)
+  ORGVERSION ?= $(subst release_,,$(shell git describe --match release\* --abbrev=0 HEAD))
   GITSTATUS  ?= $(shell git status -uno --porcelain)
 else
  -include mk/version.mk

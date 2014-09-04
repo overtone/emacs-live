@@ -56,8 +56,6 @@ This will typically be either 'python or 'python-mode."
   :package-version '(Org . "8.0")
   :type 'symbol)
 
-(defvar org-src-preserve-indentation)
-
 (defcustom org-babel-python-hline-to "None"
   "Replace hlines in incoming tables with this when translating to python."
   :group 'org-babel
@@ -137,7 +135,7 @@ specifying a variable of the same value."
 	org-babel-python-hline-to
       (format
        (if (and (stringp var) (string-match "[\n\r]" var)) "\"\"%S\"\"" "%S")
-       (substring-no-properties var)))))
+       (if (stringp var) (substring-no-properties var) var)))))
 
 (defun org-babel-python-table-or-string (results)
   "Convert RESULTS into an appropriate elisp value.

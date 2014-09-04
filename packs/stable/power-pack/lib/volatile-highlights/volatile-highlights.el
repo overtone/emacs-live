@@ -1,12 +1,12 @@
 ;;; volatile-highlights.el --- Minor mode for visual feedback on some operations.
 
-;; Copyright (C) 2001, 2010-2012 K-talo Miyazaki, all rights reserved.
+;; Copyright (C) 2001, 2010-2014 K-talo Miyazaki, all rights reserved.
 
 ;; Author: K-talo Miyazaki <Keitaro dot Miyazaki at gmail dot com>
 ;; Created: 03 October 2001. (as utility functions in my `.emacs' file.)
 ;;          14 March   2010. (re-written as library `volatile-highlights.el')
 ;; Keywords: emulations convenience wp
-;; Revision: $Id: eb82cdc2b19c5de0acbd7a9c20bc7da6ea1dccf2 $
+;; Revision: $Id: cc2db782832821a23f8e04a54f87df9caa506ba0 $
 ;; URL: http://www.emacswiki.org/emacs/download/volatile-highlights.el
 ;; GitHub: http://github.com/k-talo/volatile-highlights.el
 ;; Version: 1.10
@@ -31,12 +31,12 @@
 ;;
 ;; Overview
 ;; ========
-;; This library provides minor mode `volatile-highlight-mode', which
+;; This library provides minor mode `volatile-highlights-mode', which
 ;; brings visual feedback to some operations by highlighting portions
 ;; relating to the operations.
 ;;
 ;; All of highlights made by this library will be removed
-;; when any new command is executed.
+;; when any new operation is executed.
 ;;
 ;;
 ;; INSTALLING
@@ -51,7 +51,9 @@
 ;;
 ;; USING
 ;; =====
-;; To toggle volatile highlighting, type `M-x volatile-highlights-mode RET'.
+;; To toggle volatile highlighting, type `M-x volatile-highlights-mode <RET>'.
+;;
+;; While this minor mode is on, a string `VHL' will be displayed on the modeline.
 ;;
 ;; Currently, operations listed below will be highlighted While the minor mode
 ;; `volatile-highlights-mode' is on:
@@ -98,7 +100,7 @@
 
 ;;; Change Log:
 
-;; v1.10
+;; v1.10  Thu Mar 21 22:37:27 2013 JST
 ;;   - Use inherit in face definition when detected.
 ;;   - Suppress compiler warnings regarding to emacs/xemacs private
 ;;     functions by file local variable.

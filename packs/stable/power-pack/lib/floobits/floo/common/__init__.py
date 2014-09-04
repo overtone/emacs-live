@@ -1,6 +1,7 @@
 
 __all__ = ['api',
            'cert',
+           'exc_fmt',
            'ignore',
            'migrations',
            'shared',
@@ -9,5 +10,4 @@ __all__ = ['api',
            'utils',
            'uploader',
            'conn',
-           'reactor',
-           'file_descriptor']
+           'reactor']

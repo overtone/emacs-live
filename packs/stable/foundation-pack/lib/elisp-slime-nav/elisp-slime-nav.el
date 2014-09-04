@@ -62,12 +62,12 @@
   "Return the symbol at point as a string.
 If `current-prefix-arg' is not nil, the user is prompted for the symbol."
   (let* ((sym-at-point (symbol-at-point))
-           (at-point (and sym-at-point (symbol-name sym-at-point))))
-      (if (or current-prefix-arg (null at-point))
-          (completing-read "Symbol: "
-                           (elisp-slime-nav--all-navigable-symbol-names)
-                           nil t at-point)
-        at-point)))
+         (at-point (and sym-at-point (symbol-name sym-at-point))))
+    (if (or current-prefix-arg (null at-point))
+        (completing-read "Symbol: "
+                         (elisp-slime-nav--all-navigable-symbol-names)
+                         nil t at-point)
+      at-point)))
 
 ;;;###autoload
 (defun elisp-slime-nav-find-elisp-thing-at-point (sym-name)

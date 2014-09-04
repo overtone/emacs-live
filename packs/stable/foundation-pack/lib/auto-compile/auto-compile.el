@@ -1,16 +1,12 @@
 ;;; auto-compile.el --- automatically compile Emacs Lisp libraries
 
-;; Copyright (C) 2008-2013  Jonas Bernoulli
+;; Copyright (C) 2008-2014  Jonas Bernoulli
 
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
 ;; Created: 20080830
-;; Status: beta
 ;; Package-Requires: ((cl-lib "0.2") (packed "0.3.4"))
 ;; Homepage: http://tarsius.github.com/auto-compile
 ;; Keywords: compile, convenience, lisp
-
-;; This is a beta release.  Version numbers are inspired by how
-;; Emacs is versioned - 1.1.0 will be the first stable version.
 
 ;; This file is not part of GNU Emacs.
 
@@ -33,80 +29,72 @@
 ;; Emacs Lisp source files.  Together these modes guarantee that Emacs
 ;; never loads outdated byte code files.
 
-;; `auto-compile-on-save-mode' recompiles source files when they are
+;; `auto-compile-on-save-mode' re-compiles source files when they are
 ;; being saved and `auto-compile-on-load-mode' does so before they are
-;; being loaded.  Both modes only _recompile_ a source file when the
-;; respective byte code file exists and is outdated.  Otherwise (when
-;; the byte code file doesn't exist or is up-to-date) these modes do
-;; _not_ compile the source file.
-
-;; To permanently or temporarily toggle automatic compilation of some
-;; source file use the command `toggle-auto-compile'.  Since the modes
-;; only ever _update_ byte code files, toggling automatic compilation
-;; is done simply by either creating the byte code file or removing
-;; it.  `toggle-auto-compile' can also toggle automatic compilation of
-;; multiple files at once; see it's doc-string for more information.
+;; being loaded (by advising `load' and `require').  Both modes only
+;; ever _re-compile_ a source file when the respective byte code file
+;; already exists but is outdated.  Otherwise they do _not_ compile
+;; the source file.
 
 ;; Even when using `auto-compile-on-save-mode' it can happen that some
-;; source file is newer than the respective byte code file.  This can
-;; for example happen when performing version control operations and
-;; is a problem because Emacs always loads the byte code file even
-;; when the respective source file has been modified since the former
-;; was created.
+;; source file is newer than the respective byte code file, which is a
+;; problem because by default Emacs load the byte code file even when
+;; the respective source file has been modified more recently.
 
-;; To prevent outdated byte code files from being loaded
-;; `auto-compile-on-load-mode' advises `require' and `load' to first
-;; recompile a source file if it is newer than the respective byte
-;; code file.
+;; Starting with Emacs version 24.4, setting `load-prefer-newer' to t
+;; prevents outdated byte code files from being loaded.  However this
+;; does not cause re-compilation of the source file, to actually do
+;; that `auto-compile-on-load-mode' is still required.
 
-;; Enabling `auto-compile-on-load-mode' as early as possible reduces
-;; the risk of loading an outdated byte code file.  It is best if you
-;; enable both modes together at the beginning of your init file, even
-;; before loading your package manager and having it initialize the
-;; `load-path'.
+;; Setup
+;; -----
 
-;;     ;; -*- no-byte-compile: t -*-
+;; To reduce the risk of loading outdated byte code files, enable
+;; `auto-compile-on-load-mode' as early as possible, preferably even
+;; before the package manager.  If your Emacs supports it, then also
+;; set `load-prefer-newer' to t even before requiring `auto-compile'.
+;; Then also enable `auto-compile-on-save-mode'.
+
+;;     ;;; init.el --- user init file  -*- no-byte-compile: t -*-
+;;     (add-to-list 'load-path "/path/to/packed")
 ;;     (add-to-list 'load-path "/path/to/auto-compile")
+;;     (setq load-prefer-newer t)
 ;;     (require 'auto-compile)
 ;;     (auto-compile-on-load-mode 1)
 ;;     (auto-compile-on-save-mode 1)
 
-;; Automatically compilation of Emacs Lisp source files is useful for
-;; at least the following reasons:
+;; Usage
+;; -----
 
-;; ◆ Emacs prefers the byte code file over the source file even if the
-;;   former is outdated.  If you have to do the compilation manually
-;;   you will at least occasionally forget to do so and end up with an
-;;   old version of your code being loaded.
+;; Take note of the compile warnings and fix them.
 
-;; ◆ There are many otherwise fine libraries to be found on the
-;;   Internet which when compiled will confront the user with a wall
-;;   of compile warnings and an occasional error.  If authors are
-;;   informed about these (often trivial) problems after each save
-;;   they will likely fix them quite quickly.  That or they have a
-;;   high noise tolerance.
+;; To permanently or temporarily toggle automatic compilation of some
+;; source file use the command `toggle-auto-compile'.  Since the modes
+;; only ever _update_ byte code files, toggling automatic compilation
+;; is done simply by either creating the byte code file or by removing
+;; it.  `toggle-auto-compile' can also toggle automatic compilation of
+;; multiple files at once; see its doc-string for more information.
 
-;; ◆ It's often easier and less annoying to fix errors and warnings as
-;;   they are introduced than to do a "let's compile today's work and
-;;   see how it goes".
+;; Customization
+;; -------------
 
-;; This package is designed to stay out of your way as much as it can
-;; while still motivating you to get things fixed.  That might be
-;; annoying initially but less so once existing problems have been
-;; fixed.  By default Auto-Compile won't let you quit Emacs on the
-;; first attempt without fixing fatal errors in visited source files
-;; first.  To disable this set `auto-compile-mark-failed-modified' to
-;; nil.
+;; Constantly having the *Compile-Log* buffer pop up when a file is
+;; being saved can quickly become annoying.  Obviously the first thing
+;; you should do to about that is to actually fix outstanding issues.
 
-;; Also note that just because no warnings and/or errors are reported
-;; when a source file is compiled by the modes defined here this does
-;; not necessarily mean that users of your libraries won't see any.  A
-;; likely cause for this would be that you forgot to require a feature
-;; which is loaded on your system but not necessarily on the users'
-;; systems.  So you should still manually compile your packages before
-;; release:
-;;
-;;     emacs -batch -Q -L . -L ../dependency/ -f batch-byte-compile *.el
+;; Once you have done that you might also want to keep that buffer
+;; from being automatically displayed and instead only show the number
+;; of compile warnings for the current file in the mode-line.
+
+;;     (setq auto-compile-display-buffer nil)
+;;     (setq auto-compile-mode-line-counter t)
+
+;; To display the buffer use `M-x auto-compile-display-log' or click
+;; on the counter in the mode-line.
+
+;; Using `auto-compile-inhibit-compile-hook' it is possible to inhibit
+;; automatic compilation under certain circumstances; e.g. when HEAD
+;; is detached inside a Git repository (useful during rebase sessions).
 
 ;;; Code:
 
@@ -168,11 +156,6 @@ variant `auto-compile-on-save-mode'.  Also see the related
 
 ;;; Options
 
-(defcustom auto-compile-verbose nil
-  "Whether to print messages describing progress of byte-compiler."
-  :group 'auto-compile
-  :type 'boolean)
-
 (defcustom auto-compile-visit-failed t
   "Whether to visit source files which failed to compile.
 
@@ -222,6 +205,39 @@ is made to compile the file as that would obviously fail also."
 
 If no autoload file as specified by `packed-loaddefs-filename' can be
 found quietly skip this step."
+  :group 'auto-compile
+  :type 'boolean)
+
+(defcustom auto-compile-inhibit-compile-hook nil
+  "Hook used to inhibit automatic compilation.
+
+This hook is run before automatic compilation takes place, if
+any of the hook functions returns non-nil, then do not compile."
+  :group 'auto-compile
+  :options '(auto-compile-inhibit-compile-detached-git-head)
+  :type 'hook)
+
+(defcustom auto-compile-verbose nil
+  "Whether to print messages describing progress of byte-compiler.
+
+This overrides `byte-compile-verbose' and unlike that does not
+defaults to t; and thus avoids unnecessary echo area messages."
+  :group 'auto-compile
+  :type 'boolean)
+
+(defcustom auto-compile-display-buffer t
+  "Whether to automatically display the *Compile-Log* buffer.
+
+When there are errors then the buffer is always displayed,
+when there are no warnings or errors it is never displayed."
+  :group 'auto-compile
+  :type 'boolean)
+
+(defcustom auto-compile-mode-line-counter nil
+  "Whether to display the number of warnings in the mode line.
+
+This assumes that `auto-compile-use-mode-line' (which see) is
+non-nil."
   :group 'auto-compile
   :type 'boolean)
 
@@ -297,7 +313,7 @@ when switching git branches."
   :group 'auto-compile
   :type 'boolean)
 
-;;;; Toggle and Perform Compilation
+;;; Toggle and Perform Compilation
 
 ;;;###autoload
 (defun toggle-auto-compile (file action)
@@ -408,7 +424,7 @@ multiple files is toggled as follows:
 
 (defalias 'auto-compile-toggle 'toggle-auto-compile)
 
-(defun auto-compile-toggle-mark-failed-modified (&optional arg)
+(defun auto-compile-toggle-mark-failed-modified ()
   "Toggle whether buffers which failed to compile are marked as modified."
   (interactive)
   (message (concat (if (setq auto-compile-mark-failed-modified
@@ -428,10 +444,22 @@ when being called again. Command `toggle-auto-compile' will also
 pretend the byte code file exists.")
 (make-variable-buffer-local 'auto-compile-pretend-byte-compiled)
 
-(defun auto-compile-byte-compile (&optional file start)
+(defvar auto-compile-file-buffer nil)
+(defvar-local auto-compile-warnings 0)
+
+(defadvice byte-compile-log-warning
+  (before auto-compile-count-warnings activate)
+  ;; (STRING &optional FILL LEVEL)
+  (when auto-compile-file-buffer
+    (with-current-buffer auto-compile-file-buffer
+      (cl-incf auto-compile-warnings))))
+
+(cl-defun auto-compile-byte-compile (&optional file start)
   "Perform byte compilation for Auto-Compile mode."
+  (when (run-hook-with-args-until-success 'auto-compile-inhibit-compile-hook)
+    (cl-return-from auto-compile-byte-compile))
   (let ((default-directory default-directory)
-        dest buf success loaddefs)
+        dest buf auto-compile-file-buffer success loaddefs)
     (when (and file
                (setq buf (get-file-buffer file))
                (buffer-modified-p buf)
@@ -441,6 +469,9 @@ pretend the byte code file exists.")
       (setq file (buffer-file-name)
             buf  (get-file-buffer file)))
     (setq default-directory (file-name-directory file))
+    (setq auto-compile-file-buffer buf)
+    (with-current-buffer buf
+      (setq auto-compile-warnings 0))
     (catch 'auto-compile
       (when (and auto-compile-check-parens buf)
         (condition-case check-parens
@@ -448,6 +479,7 @@ pretend the byte code file exists.")
               (widen)
               (check-parens))
           (error
+           (message (error-message-string check-parens))
            (auto-compile-handle-compile-error file buf)
            (throw 'auto-compile nil))))
       (setq dest (byte-compile-dest-file file))
@@ -460,7 +492,9 @@ pretend the byte code file exists.")
                 (and buf (with-current-buffer buf
                            auto-compile-pretend-byte-compiled)))
         (condition-case byte-compile
-            (let ((byte-compile-verbose auto-compile-verbose))
+            (let ((byte-compile-verbose auto-compile-verbose)
+                  (warning-minimum-level
+                   (if auto-compile-display-buffer :warning :error)))
               (setq success (packed-byte-compile-file file))
               (when buf
                 (with-current-buffer buf
@@ -559,6 +593,13 @@ is only asked once about each such file."
              (let ((version-control 'never))
                (save-buffer))))))))
 
+(defun auto-compile-inhibit-compile-detached-git-head ()
+  "Inhibit compiling in Git repositories when `HEAD' is detached.
+This is especially useful during rebase sessions."
+  (with-temp-buffer
+    (call-process "git" nil t nil "symbolic-ref" "HEAD")
+    (equal (buffer-string) "fatal: ref HEAD is not a symbolic ref\n")))
+
 ;;; Mode-Line
 
 (defvar mode-line-auto-compile
@@ -569,6 +610,17 @@ is only asked once about each such file."
         dst)
     (when (and src (setq dst (byte-compile-dest-file src)))
       (list
+       (when (and auto-compile-mode-line-counter
+                  (> auto-compile-warnings 0))
+         (propertize
+          (format "%s" auto-compile-warnings)
+          'help-echo (format "%s compile warnings\nmouse-1 display compile log"
+                             auto-compile-warnings)
+          'face 'error
+          'mouse-face 'mode-line-highlight
+          'local-map (purecopy (make-mode-line-mouse-map
+                                'mouse-1
+                                #'auto-compile-display-log))))
        (cond
         ((file-writable-p dst)
          (propertize
@@ -617,6 +669,14 @@ is only asked once about each such file."
 
 (put 'mode-line-auto-compile 'risky-local-variable t)
 (make-variable-buffer-local 'mode-line-auto-compile)
+
+(defun auto-compile-display-log ()
+  "Display the *Compile-Log* buffer."
+  (interactive)
+  (let ((buffer (get-buffer byte-compile-log-buffer)))
+    (if  buffer
+        (pop-to-buffer buffer)
+      (user-error "Buffer %s doesn't exist" byte-compile-log-buffer))))
 
 (defun mode-line-toggle-auto-compile (event)
   "Toggle automatic compilation from the mode-line."

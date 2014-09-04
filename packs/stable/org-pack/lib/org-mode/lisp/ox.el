@@ -795,7 +795,8 @@ HTML code while every other back-end will ignore it."
   :type 'coding-system)
 
 (defcustom org-export-copy-to-kill-ring 'if-interactive
-  "Should we push exported content to the kill ring?"
+  "Non-nil means pushing export output to the kill ring.
+This variable is ignored during asynchronous export."
   :group 'org-export-general
   :version "24.3"
   :type '(choice
@@ -1316,6 +1317,10 @@ The back-end could then be called with, for example:
 ;;   - category :: tree
 ;;   - type :: list of elements and objects
 ;;
+;; + `:input-buffer' :: Name of input buffer.
+;;   - category :: option
+;;   - type :: string
+;;
 ;; + `:input-file' :: Full path to input file, if any.
 ;;   - category :: option
 ;;   - type :: string or nil
@@ -1764,17 +1769,19 @@ Assume buffer is in Org mode.  Narrowing, if any, is ignored."
 	  (when (stringp value)
 	    (setq plist
 		  (plist-put plist property
-			     (org-element-parse-secondary-string
-			      value (org-element-restriction 'keyword))))))))))
+			     (or (org-element-parse-secondary-string
+				  value (org-element-restriction 'keyword))
+				 ;; When TITLE keyword sets an empty
+				 ;; string, make sure it doesn't
+				 ;; appear as nil in the plist.
+				 (and (eq property :title) ""))))))))))
 
 (defun org-export--get-buffer-attributes ()
   "Return properties related to buffer attributes, as a plist."
   ;; Store full path of input file name, or nil.  For internal use.
   (let ((visited-file (buffer-file-name (buffer-base-buffer))))
     (list :input-file visited-file
-	  :title (if (not visited-file) (buffer-name (buffer-base-buffer))
-		   (file-name-sans-extension
-		    (file-name-nondirectory visited-file))))))
+	  :input-buffer (buffer-name (buffer-base-buffer)))))
 
 (defun org-export--get-global-options (&optional backend)
   "Return global export options as a plist.
@@ -1787,23 +1794,22 @@ process."
 	(all (append (and backend (org-export-get-all-options backend))
 		     org-export-options-alist)))
     (dolist (cell all plist)
-      (let ((prop (car cell))
-	    (default-value (nth 3 cell)))
-	(unless (or (not default-value) (plist-member plist prop))
+      (let ((prop (car cell)))
+	(unless (plist-member plist prop)
 	  (setq plist
 		(plist-put
 		 plist
 		 prop
-		 ;; Eval default value provided.  If keyword is
+		 ;; Evaluate default value provided.  If keyword is
 		 ;; a member of `org-element-document-properties',
 		 ;; parse it as a secondary string before storing it.
 		 (let ((value (eval (nth 3 cell))))
-		   (if (not (stringp value)) value
-		     (let ((keyword (nth 1 cell)))
-		       (if (member keyword org-element-document-properties)
-			   (org-element-parse-secondary-string
-			    value (org-element-restriction 'keyword))
-			 value)))))))))))
+		   (if (and (stringp value)
+			    (member (nth 1 cell)
+				    org-element-document-properties))
+		       (org-element-parse-secondary-string
+			value (org-element-restriction 'keyword))
+		     value)))))))))
 
 (defun org-export--list-bound-variables ()
   "Return variables bound from BIND keywords in current buffer.
@@ -1842,6 +1848,13 @@ an alist where associations are (VARIABLE-NAME VALUE)."
       ;; Return value in appropriate order of appearance.
       (nreverse (funcall collect-bind nil nil)))))
 
+;; defsubst org-export-get-parent must be defined before first use,
+;; was originally defined in the topology section
+
+(defsubst org-export-get-parent (blob)
+  "Return BLOB parent or nil.
+BLOB is the element or object considered."
+  (org-element-property :parent blob))
 
 ;;;; Tree Properties
 ;;
@@ -2145,9 +2158,8 @@ INFO is a plist containing export directives."
 DATA is a parse tree, an element or an object or a secondary
 string.  INFO is a plist holding export options.
 
-Return transcoded string."
-  (let ((memo (gethash data (plist-get info :exported-data) 'no-memo)))
-    (if (not (eq memo 'no-memo)) memo
+Return a string."
+  (or (gethash data (plist-get info :exported-data))
       (let* ((type (org-element-type data))
 	     (results
 	      (cond
@@ -2173,9 +2185,9 @@ Return transcoded string."
 	       ;; Secondary string.
 	       ((not type)
 		(mapconcat (lambda (obj) (org-export-data obj info)) data ""))
-	       ;; Element/Object without contents or, as a special case,
-	       ;; headline with archive tag and archived trees restricted
-	       ;; to title only.
+	       ;; Element/Object without contents or, as a special
+	       ;; case, headline with archive tag and archived trees
+	       ;; restricted to title only.
 	       ((or (not (org-element-contents data))
 		    (and (eq type 'headline)
 			 (eq (plist-get info :with-archived-trees) 'headline)
@@ -2200,16 +2212,16 @@ Return transcoded string."
 			     (lambda (element) (org-export-data element info))
 			     (org-element-contents
 			      (if (or greaterp objectp) data
-				;; Elements directly containing objects
-				;; must have their indentation normalized
-				;; first.
+				;; Elements directly containing
+				;; objects must have their indentation
+				;; normalized first.
 				(org-element-normalize-contents
 				 data
-				 ;; When normalizing contents of the first
-				 ;; paragraph in an item or a footnote
-				 ;; definition, ignore first line's
-				 ;; indentation: there is none and it
-				 ;; might be misleading.
+				 ;; When normalizing contents of the
+				 ;; first paragraph in an item or
+				 ;; a footnote definition, ignore
+				 ;; first line's indentation: there is
+				 ;; none and it might be misleading.
 				 (when (eq type 'paragraph)
 				   (let ((parent (org-export-get-parent data)))
 				     (and
@@ -2226,10 +2238,10 @@ Return transcoded string."
 	(puthash
 	 data
 	 (cond
-	  ((not results) nil)
+	  ((not results) "")
 	  ((memq type '(org-data plain-text nil)) results)
-	  ;; Append the same white space between elements or objects as in
-	  ;; the original buffer, and call appropriate filters.
+	  ;; Append the same white space between elements or objects
+	  ;; as in the original buffer, and call appropriate filters.
 	  (t
 	   (let ((results
 		  (org-export-filter-apply-functions
@@ -2239,10 +2251,10 @@ Return transcoded string."
 		     (if (memq type org-element-all-elements)
 			 (concat (org-element-normalize-string results)
 				 (make-string post-blank ?\n))
-		       (concat results (make-string post-blank ? ))))
+		       (concat results (make-string post-blank ?\s))))
 		   info)))
 	     results)))
-	 (plist-get info :exported-data))))))
+	 (plist-get info :exported-data)))))
 
 (defun org-export-data-with-backend (data backend info)
   "Convert DATA into BACKEND format.
@@ -3010,6 +3022,14 @@ Return code as a string."
 	       (org-export-install-filters
 		(org-combine-plists
 		 info (org-export-get-environment backend subtreep ext-plist))))
+	 ;; Special case: provide original file name or buffer name as
+	 ;; default value for :title property.
+	 (unless (plist-get info :title)
+	   (plist-put
+	    info :title
+	    (let ((file (plist-get info :input-file)))
+	      (if file (file-name-sans-extension (file-name-nondirectory file))
+		(plist-get info :input-buffer)))))
 	 ;; Expand export-specific set of macros: {{{author}}},
 	 ;; {{{date}}}, {{{email}}} and {{{title}}}.  It must be done
 	 ;; once regular macros have been expanded, since document
@@ -4114,8 +4134,29 @@ objects of the same type."
 	    ((funcall predicate el info) (incf counter) nil)))
 	 info 'first-match)))))
 
+;;;; For Special Blocks
+;;
+;; `org-export-raw-special-block-p' check if current special block is
+;; an "export block", i.e., a block whose contents should be inserted
+;; as-is in the output.  This should generally be the first check to
+;; do when handling special blocks in the export back-end.
 
-;;;; For Src-Blocks
+(defun org-export-raw-special-block-p (element info &optional no-inheritance)
+  "Non-nil if ELEMENT is an export block relatively to current back-end.
+An export block is a special block whose contents should be
+included as-is in the final output.  Such blocks are defined
+through :export-block property in `org-export-define-backend',
+which see."
+  (and (eq (org-element-type element) 'special-block)
+       (let ((type (org-element-property :type element))
+	     (b (plist-get info :back-end)))
+	 (if no-inheritance (member type (org-export-backend-blocks b))
+	   (while (and b (not (member type (org-export-backend-blocks b))))
+	     (setq b (org-export-get-backend (org-export-backend-parent b))))
+	   b))))
+
+
+;;;; For Src Blocks
 ;;
 ;; `org-export-get-loc' counts number of code lines accumulated in
 ;; src-block or example-block elements with a "+n" switch until
@@ -5105,11 +5146,7 @@ Return the new string."
 ;; `org-export-get-genealogy' returns the full genealogy of a given
 ;; element or object, from closest parent to full parse tree.
 
-(defsubst org-export-get-parent (blob)
-  "Return BLOB parent or nil.
-BLOB is the element or object considered."
-  (org-element-property :parent blob))
-
+;; defsubst org-export-get-parent must be defined before first use
 (defun org-export-get-genealogy (blob)
   "Return full genealogy relative to a given element or object.
 

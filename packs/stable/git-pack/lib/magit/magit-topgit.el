@@ -90,6 +90,13 @@
   (when (zerop (or (string-match magit-topgit-branch-prefix branch) -1))
     (magit-run-topgit-async "create" branch parent)))
 
+(defun magit-topgit-checkout (topic)
+  (magit-checkout topic))
+
+(defun magit-topgit-discard (topic)
+  (when (yes-or-no-p "Discard topic? ")
+    (magit-run-topgit-async "delete" "-f" topic)))
+
 (defun magit-topgit-pull ()
   (when (magit-topgit-in-topic-p)
     (magit-run-topgit-async "update")))
@@ -138,7 +145,7 @@
           (delete-char 8)
           (insert "\t")
           (goto-char (line-beginning-position))
-          (magit-with-section (section topic topic)
+          (magit-with-section (section topgit-topic topic)
             (setf (magit-section-info section) topic)
             (let ((beg (1+ (line-beginning-position)))
                   (end (line-end-position)))
@@ -155,25 +162,9 @@
 (defun magit-topgit-wash-topics ()
   (magit-wash-sequence #'magit-topgit-wash-topic))
 
-(defun magit-topgit-section (section title washer &rest args)
-  (when (executable-find magit-topgit-executable)
-    (let ((magit-git-executable magit-topgit-executable)
-          (magit-git-standard-options nil))
-      (apply #'magit-git-section section title washer args))))
-
 (defun magit-insert-topgit-topics ()
-  (magit-topgit-section 'topgit-topics
-                        "Topics:" 'magit-topgit-wash-topics
-                        "summary"))
-
-(magit-add-action-clauses (item info "discard")
-  ((topic)
-   (when (yes-or-no-p "Discard topic? ")
-     (magit-run-topgit-async "delete" "-f" info))))
-
-(magit-add-action-clauses (item info "visit")
-  ((topic)
-   (magit-checkout info)))
+  (magit-cmd-insert-section ('topgit-topics "Topics:")
+      'magit-topgit-wash-topics magit-topgit-executable "summary"))
 
 ;;;###autoload
 (define-minor-mode magit-topgit-mode "Topgit support for Magit"
@@ -187,21 +178,31 @@
                             'magit-insert-stashes t t)
     (add-hook 'magit-create-branch-hook 'magit-topgit-create-branch nil t)
     (add-hook 'magit-remote-update-hook 'magit-topgit-remote-update nil t)
-    (add-hook 'magit-pull-hook 'magit-topgit-pull nil t)
-    (add-hook 'magit-push-hook 'magit-topgit-push nil t))
+    (add-hook 'magit-pull-hook    'magit-topgit-pull nil t)
+    (add-hook 'magit-push-hook    'magit-topgit-push nil t)
+    (add-hook 'magit-visit-hook   'magit-topgit-checkout nil t)
+    (add-hook 'magit-discard-hook 'magit-topgit-discard nil t))
    (t
     (remove-hook 'magit-status-sections-hook 'magit-insert-topgit-topics t)
-    (remove-hook 'magit-create-branch-hook 'magit-topgit-create-branch t)
-    (remove-hook 'magit-remote-update-hook 'magit-topgit-remote-update t)
-    (remove-hook 'magit-pull-hook 'magit-topgit-pull t)
-    (remove-hook 'magit-push-hook 'magit-topgit-push t)))
+    (remove-hook 'magit-create-branch-hook   'magit-topgit-create-branch t)
+    (remove-hook 'magit-remote-update-hook   'magit-topgit-remote-update t)
+    (remove-hook 'magit-pull-hook    'magit-topgit-pull t)
+    (remove-hook 'magit-push-hook    'magit-topgit-push t)
+    (remove-hook 'magit-visit-hook   'magit-topgit-checkout t)
+    (remove-hook 'magit-discard-hook 'magit-topgit-discard t)))
   (when (called-interactively-p 'any)
     (magit-refresh)))
+
+(put 'magit-topgit-checkout 'magit-section-action-context 'topgit-topic)
+(put 'magit-topgit-discard   'magit-section-action-context 'topgit-topic)
 
 ;;;###autoload
 (defun turn-on-magit-topgit ()
   "Unconditionally turn on `magit-topgit-mode'."
   (magit-topgit-mode 1))
+
+;;;###autoload
+(custom-add-option 'magit-mode-hook #'magit-topgit-mode)
 
 (provide 'magit-topgit)
 ;; Local Variables:

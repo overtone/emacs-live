@@ -205,31 +205,33 @@ mode holding TEXT.  If the string \"<point>\" appears in TEXT
 then remove it and place the point there before running BODY,
 otherwise place the point at the beginning of the inserted text."
   (declare (indent 1))
-  (let ((inside-text (if (stringp text) text (eval text))))
-    `(with-temp-buffer
+  `(let ((inside-text (if (stringp ,text) ,text (eval ,text))))
+     (with-temp-buffer
        (org-mode)
-       ,(let ((point (string-match (regexp-quote "<point>") inside-text)))
-	  (if point
-	      `(progn (insert `(replace-match "" nil nil inside-text))
-		      (goto-char ,(match-beginning 0)))
-	    `(progn (insert ,inside-text)
-		    (goto-char (point-min)))))
+       (let ((point (string-match "<point>" inside-text)))
+	 (if point
+	     (progn
+	       (insert (replace-match "" nil nil inside-text))
+	       (goto-char (1+ (match-beginning 0))))
+	   (insert inside-text)
+	   (goto-char (point-min))))
        ,@body)))
 (def-edebug-spec org-test-with-temp-text (form body))
 
 (defmacro org-test-with-temp-text-in-file (text &rest body)
   "Run body in a temporary file buffer with Org-mode as the active mode."
   (declare (indent 1))
-  (let ((file (make-temp-file "org-test"))
-	(inside-text (if (stringp text) text (eval text)))
-	(results (gensym)))
-    `(let ((kill-buffer-query-functions nil) ,results)
-       (with-temp-file ,file (insert ,inside-text))
-       (find-file ,file)
+  (let ((results (gensym)))
+    `(let ((file (make-temp-file "org-test"))
+	   (kill-buffer-query-functions nil)
+	   (inside-text (if (stringp ,text) ,text (eval ,text)))
+	   ,results)
+       (with-temp-file file (insert inside-text))
+       (find-file file)
        (org-mode)
        (setq ,results (progn ,@body))
        (save-buffer) (kill-buffer (current-buffer))
-       (delete-file ,file)
+       (delete-file file)
        ,results)))
 (def-edebug-spec org-test-with-temp-text-in-file (form body))
 

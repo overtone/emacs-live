@@ -31,62 +31,95 @@
 ;;; Code:
 
 (defvar haskell-sort-imports-regexp
-  (concat "^\\(import[ ]+\\)"
+  (concat "^import[ ]+"
           "\\(qualified \\)?"
           "[ ]*\\(\"[^\"]*\" \\)?"
           "[ ]*\\([A-Za-z0-9_.']*.*\\)"))
 
 ;;;###autoload
 (defun haskell-sort-imports ()
-  "Sort the import list at the point."
   (interactive)
-  (when (haskell-sort-imports-line-match)
-    (let ((current-line (buffer-substring-no-properties
-                         (line-beginning-position)
-                         (line-end-position)))
-          (col (current-column)))
-      (if (use-region-p)
-          (haskell-sort-imports-sort-imports-at (region-beginning)
-                                                (region-end)
-                                                t
-                                                current-line
-                                                col)
-        (haskell-sort-imports-sort-imports-at
-         (save-excursion (haskell-sort-imports-goto-modules-start/end
-                          'previous-line)
-                         (point))
-         (save-excursion (haskell-sort-imports-goto-modules-start/end
-                          'next-line)
-                         (point))
-         nil
-         current-line
-         col)))))
+  "Sort the import list at point. It sorts the current group
+i.e. an import list separated by blank lines on either side.
 
-(defun haskell-sort-imports-sort-imports-at (begin end region current-line col)
+If the region is active, it will restrict the imports to sort
+within that region."
+  (when (haskell-sort-imports-at-import)
+    (let* ((points (haskell-sort-imports-decl-points))
+           (current-string (buffer-substring-no-properties (car points)
+                                                           (cdr points)))
+           (current-offset (- (point) (car points))))
+      (if (region-active-p)
+          (progn (goto-char (region-beginning))
+                 (haskell-sort-imports-goto-import-start))
+        (haskell-sort-imports-goto-group-start))
+      (let ((start (point))
+            (imports (haskell-sort-imports-collect-imports)))
+        (delete-region start (point))
+        (mapc (lambda (import)
+                (insert import "\n"))
+              (sort imports (lambda (a b)
+                              (string< (haskell-sort-imports-normalize a)
+                                       (haskell-sort-imports-normalize b)))))
+        (goto-char start)
+        (when (search-forward current-string nil t 1)
+          (forward-char (- (length current-string)))
+          (forward-char current-offset))))))
+
+(defun haskell-sort-imports-normalize (i)
+  "Normalize an import, if possible, so that it can be sorted."
+  (if (string-match haskell-sort-imports-regexp
+                    i)
+      (match-string 3 i)
+    i))
+
+(defun haskell-sort-imports-collect-imports ()
+  (let ((imports (list)))
+    (while (looking-at "import")
+      (let* ((points (haskell-sort-imports-decl-points))
+             (string (buffer-substring-no-properties (car points)
+                                                     (cdr points))))
+        (goto-char (min (1+ (cdr points))
+                        (point-max)))
+        (setq imports (cons string imports))))
+    imports))
+
+(defun haskell-sort-imports-goto-group-start ()
+  "Go to the start of the import group."
+  (or (and (search-backward "\n\n" nil t 1)
+           (goto-char (+ 2 (line-end-position))))
+      (when (search-backward-regexp "^module " nil t 1)
+        (goto-char (1+ (line-end-position))))
+      (goto-char (point-min))))
+
+(defun haskell-sort-imports-at-import ()
+  "Are we at an import?"
   (save-excursion
-    (sort-regexp-fields nil
-                        haskell-sort-imports-regexp
-                        "\\4"
-                        begin end))
-  (when (not region)
-    (let ((line (save-excursion (goto-char end)
-                                (search-backward current-line))))
-      (goto-char (+ line col)))))
+    (haskell-sort-imports-goto-import-start)
+    (looking-at "import")))
 
-(defun haskell-sort-imports-line-match ()
-  "Try to match the current line as a regexp."
-  (let ((line (buffer-substring-no-properties (line-beginning-position)
-                                              (line-end-position))))
-    (if (string-match "^import " line)
-        line
-      nil)))
+(defun haskell-sort-imports-goto-import-start ()
+  "Go to the start of the import."
+  (goto-char (car (haskell-sort-imports-decl-points))))
 
-(defun haskell-sort-imports-goto-modules-start/end (direction)
-  "Skip a bunch of consequtive import lines up/down."
-  (while (not (or (equal (point)
-                         (point-max))
-                  (not (haskell-sort-imports-line-match))))
-    (funcall direction)))
+(defun haskell-sort-imports-decl-points ()
+  "Get the points of the declaration."
+  (save-excursion
+    (let ((start (or (progn (goto-char (line-end-position))
+                            (search-backward-regexp "^[^ \n]" nil t 1)
+                            (unless (or (looking-at "^-}$")
+                                        (looking-at "^{-$"))
+                              (point)))
+                     0))
+          (end (progn (goto-char (1+ (point)))
+                      (or (when (search-forward-regexp "[\n]+[^ \n]" nil t 1)
+                            (forward-char -1)
+                            (search-backward-regexp "[^\n ]" nil t)
+                            (line-end-position))
+                          (when (search-forward-regexp "\n" nil t 1)
+                            (1- (point)))
+                          (point-max)))))
+      (cons start end))))
 
 (provide 'haskell-sort-imports)
 

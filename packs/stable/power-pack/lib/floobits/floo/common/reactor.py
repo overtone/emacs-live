@@ -2,14 +2,16 @@ import socket
 import select
 
 try:
-    from . import msg
+    from . import api, msg
     from .. import editor
+    from ..common.exc_fmt import str_e, pp_e
     from ..common.handlers import tcp_server
     assert msg and tcp_server
 except (ImportError, ValueError):
+    from floo.common.exc_fmt import str_e, pp_e
     from floo.common.handlers import tcp_server
+    from floo.common import api, msg
     from floo import editor
-    import msg
 
 reactor = None
 
@@ -29,9 +31,29 @@ class _Reactor(object):
     def listen(self, factory, host='127.0.0.1', port=0):
         listener_factory = tcp_server.TCPServerHandler(factory, self)
         proto = listener_factory.build_protocol(host, port)
+        factory.listener_factory = listener_factory
         self._protos.append(proto)
         self._handlers.append(listener_factory)
         return proto.sockname()
+
+    def stop_handler(self, handler):
+        try:
+            handler.proto.stop()
+        except Exception as e:
+            msg.warn('Error stopping connection: ', str_e(e))
+        try:
+            self._handlers.remove(handler)
+        except Exception:
+            pass
+        try:
+            self._protos.remove(handler.proto)
+        except Exception:
+            pass
+        if hasattr(handler, 'listener_factory'):
+            return handler.listener_factory.stop()
+        if not self._handlers and not self._protos:
+            msg.log('All handlers stopped. Stopping reactor.')
+            self.stop()
 
     def stop(self):
         for _conn in self._protos:
@@ -39,7 +61,7 @@ class _Reactor(object):
 
         self._protos = []
         self._handlers = []
-        msg.log('Disconnected.')
+        msg.log('Reactor shut down.')
         editor.status_message('Disconnected.')
 
     def is_ready(self):
@@ -58,6 +80,7 @@ class _Reactor(object):
                 pass
         fd.reconnect()
 
+    @api.send_errors
     def tick(self, timeout=0):
         for factory in self._handlers:
             factory.tick()
@@ -65,11 +88,11 @@ class _Reactor(object):
         editor.call_timeouts()
 
     def block(self):
-        while True:
+        while self._protos or self._handlers:
             self.tick(.05)
 
     def select(self, timeout=0):
-        if not self._handlers:
+        if not self._protos:
             return
 
         readable = []
@@ -82,7 +105,7 @@ class _Reactor(object):
             if not fileno:
                 continue
             fd.fd_set(readable, writeable, errorable)
-            fd_map[fd.fileno()] = fd
+            fd_map[fileno] = fd
 
         if not readable and not writeable:
             return
@@ -91,10 +114,13 @@ class _Reactor(object):
             _in, _out, _except = select.select(readable, writeable, errorable, timeout)
         except (select.error, socket.error, Exception) as e:
             # TODO: with multiple FDs, must call select with just one until we find the error :(
-            if len(readable) == 1:
-                readable[0].reconnect()
-                return msg.error('Error in select(): %s' % str(e))
-            raise Exception("can't handle more than one fd exception in reactor")
+            for fileno in readable:
+                try:
+                    select.select([fileno], [], [], 0)
+                except (select.error, socket.error, Exception) as e:
+                    fd_map[fileno].reconnect()
+                    msg.error('Error in select(): ', fileno, str_e(e))
+            return
 
         for fileno in _except:
             fd = fd_map[fileno]
@@ -105,7 +131,8 @@ class _Reactor(object):
             try:
                 fd.write()
             except Exception as e:
-                msg.error('Couldn\'t write to socket: %s' % str(e))
+                msg.error('Couldn\'t write to socket: ', str_e(e))
+                msg.debug('Couldn\'t write to socket: ', pp_e(e))
                 return self._reconnect(fd, _in)
 
         for fileno in _in:
@@ -113,7 +140,8 @@ class _Reactor(object):
             try:
                 fd.read()
             except Exception as e:
-                msg.error('Couldn\'t read from socket: %s' % str(e))
+                msg.error('Couldn\'t read from socket: ', str_e(e))
+                msg.debug('Couldn\'t read from socket: ', pp_e(e))
                 fd.reconnect()
 
 reactor = _Reactor()

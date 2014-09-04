@@ -51,6 +51,7 @@ Or you can just dump `s.el` in your load path somewhere.
 * [s-match-strings-all](#s-match-strings-all-regex-string) `(regex string)`
 * [s-slice-at](#s-slice-at-regexp-s) `(regexp s)`
 * [s-split](#s-split-separator-s-optional-omit-nulls) `(separator s &optional omit-nulls)`
+* [s-split-up-to](#s-split-up-to-separator-s-n-optional-omit-nulls) `(separator s n &optional omit-nulls)`
 * [s-join](#s-join-separator-strings) `(separator strings)`
 
 ### Predicates
@@ -359,7 +360,7 @@ Slices `s` up at every index matching `regexp`.
 ### s-split `(separator s &optional omit-nulls)`
 
 Split `s` into substrings bounded by matches for regexp `separator`.
-If `omit-nulls` is t, zero-length substrings are omitted.
+If `omit-nulls` is non-nil, zero-length substrings are omitted.
 
 This is a simple wrapper around the built-in `split-string`.
 
@@ -367,6 +368,20 @@ This is a simple wrapper around the built-in `split-string`.
 (s-split "|" "a|bc|12|3") ;; => '("a" "bc" "12" "3")
 (s-split ":" "a,c,d") ;; => '("a,c,d")
 (s-split "\n" "z\nefg\n") ;; => '("z" "efg" "")
+```
+
+### s-split-up-to `(separator s n &optional omit-nulls)`
+
+Split `s` up to `n` times into substrings bounded by matches for regexp `separator`.
+
+If `omit-nulls` is non-nil, zero-length substrings are omitted.
+
+See also `s-split`.
+
+```cl
+(s-split-up-to "\\s-*-\\s-*" "Author - Track-number-one" 1) ;; => '("Author" "Track-number-one")
+(s-split-up-to "\\s-*-\\s-*" "Author - Track-number-one" 2) ;; => '("Author" "Track" "number-one")
+(s-split-up-to "|" "foo||bar|baz|qux" 3 t) ;; => '("foo" "bar" "baz|qux")
 ```
 
 ### s-join `(separator strings)`
@@ -795,6 +810,10 @@ calculate the Levenshtein distance between two strings.
 
 ## Changelist
 
+### From 1.8.0 to 1.9.0
+
+- Add `s-count-matches` (Lars Andersen)
+
 ### From 1.7.0 to 1.8.0
 
 - Add `s-present?` and `s-present?` (Johan Andersson)
@@ -850,6 +869,7 @@ calculate the Levenshtein distance between two strings.
 * [Rüdiger Sonderfeld](https://github.com/ruediger) contributed `s-less?`, `s-split` and several bugfixes.
 * [Geoff Gole](https://github.com/gsg) contributed `s-all-match-strings`
 * [Sylvain Rousseau](https://github.com/thisirs) contributed `s-word-initials`
+* [Lars Andersen](https://github.com/expez) contributed `s-count-matches`
 
 Thanks!
 

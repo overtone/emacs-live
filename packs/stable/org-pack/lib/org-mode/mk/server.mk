@@ -35,7 +35,7 @@ ORGFULL   = README COPYING lisp/ \
 		Makefile request-assign-future.txt \
 		mk/default.mk mk/targets.mk mk/version.mk \
 		mk/org-fixup.el \
-		etc/ contrib/ doc/
+		etc/ contrib/ doc/ testing/
 ORGFULL  := $(ORGFULL:%/=%/*)
 ORGELPA   = README_ELPA COPYING lisp/ \
 		doc/dir doc/org doc/orgcard.pdf \

@@ -12,7 +12,7 @@ Feature: Sort ns form
     (ns ^{:doc "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do
             eiusmod tempor incididunt ut labore (et dolore magna aliqua)."}
       furtive.runtime.session.bucket
-      (:use clojure.test 
+      (:use clojure.test
             clojure.test
             clojure.string)
       (:require [foo.bar :refer :all]
@@ -70,4 +70,73 @@ Feature: Sort ns form
 
       (defn foo [x]
         (:user-agent x))
+    """
+
+  Scenario: Sort ns with length comparator
+    When I insert:
+    """
+    (ns ^{:doc "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do
+            eiusmod tempor incididunt ut labore (et dolore magna aliqua)."}
+      furtive.runtime.session.bucket
+      (:use clojure.test
+            clojure.test
+            clojure.string)
+      (:require [foo.bar :refer :all]
+                [clj-time.core :as clj-time])
+      (:import (java.security MessageDigest)
+               java.util.Calendar
+               [org.joda.time DateTime]
+               (java.nio.charset Charset)))
+    """
+    And I set sort comparator to string length
+    And I place the cursor before "Calendar"
+    And I press "C-! sn"
+    Then I should see:
+    """
+    (ns ^{:doc "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do
+            eiusmod tempor incididunt ut labore (et dolore magna aliqua)."}
+      furtive.runtime.session.bucket
+      (:use clojure.string
+            clojure.test)
+      (:require [clj-time.core :as clj-time]
+                [foo.bar :refer :all])
+      (:import (java.security MessageDigest)
+               (java.nio.charset Charset)
+               [org.joda.time DateTime]
+               java.util.Calendar))
+    """
+
+  Scenario: Sort ns with semantic comparator
+    When I insert:
+    """
+    (ns foo.bar.baz.goo
+      (:require [clj-time.bla :as bla]
+                [foo.bar.baz.bam :refer :all]
+                [foo.bar.async :refer :all]
+                [foo [bar.goo :refer :all] [baz :refer :all]]
+                [async.funkage.core :as afc]
+                [clj-time.core :as clj-time]
+                [foo.async :refer :all])
+      (:import (java.security MessageDigest)
+               java.util.Calendar
+               [org.joda.time DateTime]
+               (java.nio.charset Charset)))
+    """
+    And I set sort comparator to semantic
+    And I place the cursor before "Calendar"
+    And I press "C-! sn"
+    Then I should see:
+    """
+    (ns foo.bar.baz.goo
+      (:require [foo.bar.baz.bam :refer :all]
+                [foo.bar.async :refer :all]
+                [foo.async :refer :all]
+                [foo [bar.goo :refer :all] [baz :refer :all]]
+                [async.funkage.core :as afc]
+                [clj-time.bla :as bla]
+                [clj-time.core :as clj-time])
+      (:import (java.nio.charset Charset)
+               (java.security MessageDigest)
+               java.util.Calendar
+               [org.joda.time DateTime]))
     """

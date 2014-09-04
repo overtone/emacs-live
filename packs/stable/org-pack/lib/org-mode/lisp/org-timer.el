@@ -156,12 +156,14 @@ With prefix arg STOP, stop it entirely."
     (org-timer-set-mode-line 'pause)
     (message "Timer paused at %s" (org-timer-value-string)))))
 
+(defvar org-timer-current-timer nil)
 (defun org-timer-stop ()
   "Stop the relative timer."
   (interactive)
   (run-hooks 'org-timer-stop-hook)
   (setq org-timer-start-time nil
-	org-timer-pause-time nil)
+	org-timer-pause-time nil
+	org-timer-current-timer nil)
   (org-timer-set-mode-line 'off)
   (message "Timer stopped"))
 
@@ -184,7 +186,10 @@ it in the buffer."
     (insert (org-timer-value-string))))
 
 (defun org-timer-value-string ()
-  (format org-timer-format (org-timer-secs-to-hms (floor (org-timer-seconds)))))
+  "Set the timer string."
+  (format org-timer-format
+	  (org-timer-secs-to-hms
+	   (abs (floor (org-timer-seconds))))))
 
 (defvar org-timer-timer-is-countdown nil)
 (defun org-timer-seconds ()
@@ -344,7 +349,6 @@ VALUE can be `on', `off', or `pause'."
 	  (concat " <" (substring (org-timer-value-string) 0 -1) ">"))
     (force-mode-line-update)))
 
-(defvar org-timer-current-timer nil)
 (defun org-timer-cancel-timer ()
   "Cancel the current timer."
   (interactive)

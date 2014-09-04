@@ -13,6 +13,7 @@ Feature: Stop referring
       (:require [my.lib :refer [a b]]))
 
     (+ (a 1) (b 2))
+    (+ (A 1) (B 2))
     """
     And I place the cursor before "my.lib"
     And I press "C-! sr"
@@ -22,6 +23,7 @@ Feature: Stop referring
       (:require [my.lib]))
 
     (+ (my.lib/a 1) (my.lib/b 2))
+    (+ (A 1) (B 2))
     """
 
   Scenario: With :as
@@ -31,6 +33,7 @@ Feature: Stop referring
       (:require [my.lib :as lib :refer [a b]]))
 
     (+ (a 1) (b 2))
+    (+ (A 1) (B 2))
     """
     And I place the cursor before "my.lib"
     And I press "C-! sr"
@@ -40,4 +43,5 @@ Feature: Stop referring
       (:require [my.lib :as lib]))
 
     (+ (lib/a 1) (lib/b 2))
+    (+ (A 1) (B 2))
     """

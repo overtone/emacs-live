@@ -1,8 +1,13 @@
 ;;; packed-git.el --- Utilities for Emacs packages living in Git repositories
 
-;; Copyright (C) 2012-2013  Jonas Bernoulli
+;; Copyright (C) 2012-2014  Jonas Bernoulli
 
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
+;; Homepage: http://tarsius.github.com/packed
+;; Keywords: compile, convenience, lisp, package, library
+
+;; Package: packed-git
+;; Package-Requires: ((cl-lib "0.5") (magit "2.1.0"))
 
 ;; This file is not part of GNU Emacs.
 
@@ -33,52 +38,20 @@
 (require 'magit)
 (require 'packed)
 
-(defmacro packed-with-blob (commit file &rest body)
-  (declare (indent 2))
-  (let ((f (make-symbol "file")))
-    `(let ((,f ,file))
-       (with-temp-buffer
-         (with-silent-modifications
-           ;; (magit-git-insert
-           ;;  (list "cat-file" "-p" (concat ,commit ":" ,f)))
-           ;; work around https://github.com/magit/magit/issues/544
-           (apply #'process-file
-                  magit-git-executable
-                  nil (list t nil) nil
-                  (list "cat-file" "-p" (concat ,commit ":" ,f))))
-         (setq buffer-file-name ,f)
-         (packed-set-coding-system ,f)
-         (set-buffer-modified-p nil)
-         (goto-char (point-min))
-         ,@body))))
-
-(defun packed-set-coding-system (file)
-  (save-excursion
-    (goto-char (point-min))
-    (let ((buffer-undo-list t)
-	  (coding
-	   (or coding-system-for-read
-	       (and set-auto-coding-function
-		    (save-excursion
-		      (funcall set-auto-coding-function
-			       file (- (point-max) (point-min)))))
-	       ;; for dos-w32.el; see archive-set-buffer-as-visiting-file
-	       (let ((file-name-handler-alist
-		      '(("" . archive-file-name-handler))))
-		 (car (find-operation-coding-system
-		       'insert-file-contents
-		       (cons file (current-buffer)) t))))))
-      (unless (or coding-system-for-read
-                  enable-multibyte-characters)
-        (setq coding
-              (coding-system-change-text-conversion coding 'raw-text)))
-      (unless (memq coding '(nil no-conversion))
-        (decode-coding-region (point-min) (point-max) coding)
-	(setq last-coding-system-used coding))
-      (set-buffer-modified-p nil)
-      (kill-local-variable 'buffer-file-coding-system)
-      (after-insert-file-set-coding (- (point-max) (point-min)))
-      coding)))
+(eval-and-compile
+  ;; Only exists on magit's next branch.
+  (unless (fboundp 'magit-with-blob)
+    (defmacro magit-with-blob (commit file &rest body)
+      (declare (indent 2)
+               (debug (form form body)))
+      `(with-temp-buffer
+         (let ((buffer-file-name ,file))
+           (save-excursion
+             (magit-git-insert "cat-file" "-p"
+                               (concat ,commit ":" buffer-file-name)))
+           (decode-coding-inserted-region
+            (point-min) (point-max) buffer-file-name t nil nil t)
+           ,@body)))))
 
 (defun packed-git-library-p (repository commit file &optional package)
   "Return non-nil if FILE is an Emacs source library and part of PACKAGE.
@@ -91,7 +64,7 @@ exist in that commit.
 See function `packed-library-p' for more information."
   (and (packed-library-name-p file package)
        (let ((default-directory (or repository default-directory)))
-         (packed-with-blob commit file
+         (magit-with-blob commit file
            (packed-library-feature file)))))
 
 (defun packed-git-libraries (repository commit &optional package)

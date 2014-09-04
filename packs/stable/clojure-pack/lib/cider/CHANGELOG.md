@@ -4,14 +4,113 @@
 
 ### New features
 
-* [#460](https://github.com/clojure-emacs/cider/issues/316) Support for
+* New `cider-auto-jump-to-error` control variable for auto jumping to error
+  location.
+* [#537](https://github.com/clojure-emacs/cider/pull/537): New support for
+Java symbol lookup from cider-nrepl's info middleware.
+* [#570](https://github.com/clojure-emacs/cider/pull/570): Enable toggling
+of the 'all' filter on stacktraces.
+* [#588](https://github.com/clojure-emacs/cider/pull/588): New `doc-mode`
+for presenting fontified documentation, including Javadoc.
+* New interactive command `cider-toggle-trace`.
+* `cider-select` can now switch to the `*cider-error*` buffer (bound to `x`).
+* [#613](https://github.com/clojure-emacs/cider/issues/613): New `clojure.test`
+integration.
+* [#22](https://github.com/clojure-emacs/cider/issues/22): New command
+`cider-jump-to-resource` (bound to <kbd>C-c M-.</kbd>).
+* [#664](https://github.com/clojure-emacs/cider/pull/664): New apropos support:
+search function/var names (bound to <kbd>C-c C-d a</kbd>) or documentation
+(bound to <kbd>C-c C-d A</kbd>).
+* You can view Grimoire's entry for a particular Clojure (built-in) symbol in
+Emacs with `cider-grimoire` (<kbd>C-c C-d g</kbd>) or your default browser with
+`cider-grimoire-web` (<kbd>C-c C-d h</kbd>).
+* `cider-mode` now displays the namespace of the current buffer in the mode-line
+  (as SLIME does).
+
+### Changes
+
+* [#597](https://github.com/clojure-emacs/cider/issues/597): Don't process nREPL
+  messages unless the whole message has been received.
+* [#603](https://github.com/clojure-emacs/cider/pull/603): New variable
+`cider-show-error-buffer` to control the behavior of the error buffer. Obsoletes
+`cider-popup-on-error`, `cider-popup-stacktraces` and
+`cider-repl-popup-stacktraces`.
+* `cider-nrepl` is now required. Without it pretty much nothing will work.
+* Removed redundant command `cider-src`.
+* Renamed `nrepl-log-events` variable to `nrepl-log-messages`.
+* Renamed `nrepl-log-events` command to `nrepl-log-messages`.
+* Remove redundant `cider-src` command.
+* [#582](https://github.com/clojure-emacs/cider/pull/582): Enable efficient
+loading of jar/zip resources.
+* [#589](https://github.com/clojure-emacs/cider/pull/589): Don't prefer local
+paths over tramp by default.
+* [#554](https://github.com/clojure-emacs/cider/issues/554): `cider-auto-select-error-buffer` is set to `t` by default.
+* [#610](https://github.com/clojure-emacs/cider/pull/610): Present error and
+stacktrace info for all exception causes.
+* Removed `cider-repl-print-length` config option and
+`cider-repl-toggle-print-length-limiting` command.
+* Remapped `cider-doc` to <kbd>C-c C-d d</kbd>.
+* Remapped `cider-javadoc` to <kbd>C-c C-d j</kbd>
+* cider's scratch is now more consistent with an Emacs Lisp scratch buffer.
+
+### Bugs fixed
+
+* [#577](https://github.com/clojure-emacs/cider/pull/577): Fix bencode decoding
+of negative integers.
+* [#607](https://github.com/clojure-emacs/cider/pull/607): Respect
+  `*print-length*` in `cider-pprint-eval-defun-at-point` and
+  `cider-pprint-eval-last-sexp`.
+
+## 0.6.0 / 2014-04-24
+
+### New features
+
+* New interactive command `cider-change-buffers-designation`.
+* Cider command uses `cider-known-endpoints`.
+* [#490](https://github.com/clojure-emacs/cider/pull/490): Dedicated
+  support for `company-mode` in `cider-complete-at-point`.
+* [#489](https://github.com/clojure-emacs/cider/issues/489): Enable
+  cider-jack-in on tramp source buffers.
+* [#460](https://github.com/clojure-emacs/cider/issues/460): Support for
 cider-nrepl's complete middleware for CLJ/CLJS autocomplete.
-* [#469](https://github.com/clojure-emacs/cider/issues/469) Add option
+* [#465](https://github.com/clojure-emacs/cider/issues/465): Support for
+cider-nrepl's info middleware for jump-to-definition.
+* [#469](https://github.com/clojure-emacs/cider/issues/469): Add option
 `cider-prompt-save-file-on-load`.
 * New interactive command `cider-insert-defun-in-repl`.
 * New interactive command `cider-insert-ns-form-in-repl`.
-* [#468](https://github.com/clojure-emacs/cider/issues/468) Fix
+* New inspector inspired by SLIME's inspector
+* STDERR ouput is now font-locked with `cider-repl-err-output-face` to make it
+visually distinctive from `cider-repl-output-face` (used for STDOUT output).
+* New interactive command `cider-scratch`.
+* [#521](https://github.com/clojure-emacs/cider/pull/521): New interactive
+stacktrace filtering/navigation using cider-nrepl's stacktrace middleware.
+
+### Changes
+
+* [#513](https://github.com/clojure-emacs/cider/issues/513):
+  Remove hardcoded use of IDO mode and use `completing-read`.
+* Required Emacs version is now 24.1.
+* [#486](https://github.com/clojure-emacs/cider/issues/486): Improve
+  support for tramp, so tramp paths do not get used in compiled debug
+  information.  `cider-jump` still uses tramp filenames to find
+  definitions if used in a buffer associated with a tramp file.
+* Renamed `cider` command to `cider-connect`.
+
+### Bugs fixed
+
+* [#515](https://github.com/clojure-emacs/cider/issues/515): Fix
+inconsistent prompt used for load symbol functions.
+* [#501](https://github.com/clojure-emacs/cider/issues/501): Fix
+nil appearing in nrepl-server buffer name when no project directory.
+* [#493](https://github.com/clojure-emacs/cider/issues/493) Fix rotate connection to handle no
+nREPL connection.
+* [#468](https://github.com/clojure-emacs/cider/issues/468): Fix
 pretty-printing of evaluation results so that `*1` is set properly.
+* [#439](https://github.com/clojure-emacs/cider/issues/439): Fix
+race condition bug in `cider-restart`.
+* [#441](https://github.com/clojure-emacs/cider/issues/441): Fix timing bug in `cider-jack-in`.
+* [#482](https://github.com/clojure-emacs/cider/issues/482): Fix jump-to-def for cljx dependency jars.
 
 ## 0.5.0 / 2014-01-24
 
@@ -34,9 +133,9 @@ the option `cider-repl-use-clojure-font-lock`.
 
 ### Bugs fixed
 
-* [#316](https://github.com/clojure-emacs/cider/issues/316) Honor the `:init-ns` namespace on startup.
-* [#436](https://github.com/clojure-emacs/cider/issues/436) Fix an infinite loop when evaluating ns forms.
-* [#435](https://github.com/clojure-emacs/cider/issues/435) Fix trampling of `cider-switch-to-repl-buffer` by `cider-switch-to-relevant-repl-buffer`.
+* [#316](https://github.com/clojure-emacs/cider/issues/316): Honor the `:init-ns` namespace on startup.
+* [#436](https://github.com/clojure-emacs/cider/issues/436): Fix an infinite loop when evaluating ns forms.
+* [#435](https://github.com/clojure-emacs/cider/issues/435): Fix trampling of `cider-switch-to-repl-buffer` by `cider-switch-to-relevant-repl-buffer`.
 
 ## 0.4.0 / 2013-12-03
 
@@ -60,8 +159,8 @@ of the evaluated code to the REPL buffer, so you can easily play with the output
 
 ### Bugs fixed
 
-* [#315](https://github.com/clojure-emacs/cider/issues/393) Removed spurious newlines in output.
-* [#237](https://github.com/clojure-emacs/cider/issues/237) Don't swallow output from futures.
+* [#315](https://github.com/clojure-emacs/cider/issues/393): Removed spurious newlines in output.
+* [#237](https://github.com/clojure-emacs/cider/issues/237): Don't swallow output from futures.
 * Create non-existing namespaces, when evaluating code in Clojure buffers.
 
 ## 0.3.1 / 2013-10-29
@@ -153,6 +252,7 @@ buffers like `*nrepl-server*` and `*nrepl-connection*`.
 * Add macroexpand key bindings to `nrepl-mode-map`.
 * Don't suppress namespaces in macroexpansion.
 * Add explicit require of expected namespaces in the repl buffer.
+
 * Add command `nrepl-pprint-eval-last-expression`.
 * Add an event buffer for debugging.
 * Allow connections without repl buffers.

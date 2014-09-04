@@ -73,7 +73,7 @@
                          (function :tag "Formatter"))))
   :group 'gist)
 
-(defvar gist-view-gist nil
+(defcustom gist-view-gist nil
   "If non-nil, automatically use `browse-url' to view gists after
 they're posted.")
 
@@ -416,13 +416,22 @@ for the gist."
              (resp (gh-gist-delete api id)))
         (gist-list-reload)))))
 
+(defun gist-current-url ()
+  "Helper function to fetch current gist url"
+  (let* ((id (tabulated-list-get-id))
+         (gist (gist-list-db-get-gist id)))
+    (oref gist :html-url)))
+
 (defun gist-print-current-url ()
   "Display the currently selected gist's url in the echo area and
 put it into `kill-ring'."
   (interactive)
-  (let* ((id (tabulated-list-get-id))
-         (gist (gist-list-db-get-gist id)))
-    (kill-new (message (oref gist :html-url)))))
+  (kill-new (message (gist-current-url))))
+
+(defun gist-browse-current-url ()
+  "Browse current gist on github"
+  (interactive)
+  (browse-url (gist-current-url)))
 
 (defvar gist-list-menu-mode-map
   (let ((map (make-sparse-keymap)))
@@ -434,6 +443,7 @@ put it into `kill-ring'."
     (define-key map "+" 'gist-add-buffer)
     (define-key map "-" 'gist-remove-file)
     (define-key map "y" 'gist-print-current-url)
+    (define-key map "b" 'gist-browse-current-url)
     map))
 
 (define-derived-mode gist-list-mode tabulated-list-mode "Gist Menu"

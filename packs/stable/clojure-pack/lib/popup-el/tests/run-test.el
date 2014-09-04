@@ -1,7 +1,7 @@
 ;; Usage:
 ;;
-;;   emacs -Q -l tests/run-test.el           # interactive mode
-;;   emacs -batch -Q -l tests/run-test.el    # batch mode
+;;   cask exec emacs -Q -l tests/run-test.el           # interactive mode
+;;   cask exec emacs -batch -Q -l tests/run-test.el    # batch mode
 
 
 ;; Utils
@@ -21,16 +21,6 @@
 (mapc (lambda (p) (add-to-list 'load-path p))
       (list popup-test-dir
             popup-root-dir))
-
-
-;; Use ERT from github when this Emacs does not have it
-(unless (locate-library "ert")
-  (add-to-list
-   'load-path
-   (popup-test-join-path popup-root-dir "lib" "ert" "lisp" "emacs-lisp"))
-  (require 'ert-batch)
-  (require 'ert-ui))
-
 
 ;; Load tests
 (load "popup-test")

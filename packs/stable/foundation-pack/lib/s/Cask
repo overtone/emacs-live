@@ -1,0 +1,1 @@
+(package-file "s.el")

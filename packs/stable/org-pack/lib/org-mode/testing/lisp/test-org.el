@@ -390,14 +390,6 @@
      (org-meta-return)
      (beginning-of-line)
      (looking-at "- $")))
-  ;; In a drawer and paragraph insert an empty line, in this case above.
-  (should
-   (let ((org-drawers '("MYDRAWER")))
-     (org-test-with-temp-text ":MYDRAWER:\na\n:END:"
-       (forward-line)
-       (org-meta-return)
-       (forward-line -1)
-       (looking-at "$"))))
   ;; In a drawer and item insert an item, in this case above.
   (should
    (let ((org-drawers '("MYDRAWER")))
@@ -407,6 +399,37 @@
        (beginning-of-line)
        (looking-at "- $")))))
 
+(ert-deftest test-org/insert-heading ()
+  "Test `org-insert-heading' specifications."
+  ;; FIXME: Test coverage is incomplete yet.
+  ;;
+  ;; In an empty buffer, insert a new headline.
+  (should
+   (equal "* "
+	  (org-test-with-temp-text ""
+	    (org-insert-heading)
+	    (buffer-string))))
+  ;; At the beginning of a line, turn it into a headline
+  (should
+   (equal "* P"
+	  (org-test-with-temp-text "<point>P"
+	    (org-insert-heading)
+	    (buffer-string))))
+  ;; In the middle of a line, split the line if allowed, otherwise,
+  ;; insert the headline at its end.
+  (should
+   (equal "Para\n* graph"
+	  (org-test-with-temp-text "Para<point>graph"
+	    (let ((org-M-RET-may-split-line '((default . t))))
+	      (org-insert-heading))
+	    (buffer-string))))
+  (should
+   (equal "Paragraph\n* "
+	  (org-test-with-temp-text "Para<point>graph"
+	    (let ((org-M-RET-may-split-line '((default . nil))))
+	      (org-insert-heading))
+	    (buffer-string)))))
+
 (ert-deftest test-org/insert-todo-heading-respect-content ()
   "Test `org-insert-todo-heading-respect-content' specifications."
   ;; Create a TODO heading.
@@ -414,15 +437,12 @@
    (org-test-with-temp-text "* H1\n Body"
      (org-insert-todo-heading-respect-content)
      (nth 2 (org-heading-components))))
-  ;; Add headline after body of current subtree.
+  ;; Add headline at the end of the first subtree
   (should
-   (org-test-with-temp-text "* H1\nBody"
+   (org-test-with-temp-text "* H1\nH1Body\n** H2\nH2Body"
+     (search-forward "H1Body")
      (org-insert-todo-heading-respect-content)
-     (eobp)))
-  (should
-   (org-test-with-temp-text "* H1\n** H2\nBody"
-     (org-insert-todo-heading-respect-content)
-     (eobp)))
+     (and (eobp) (org-at-heading-p))))
   ;; In a list, do not create a new item.
   (should
    (org-test-with-temp-text "* H\n- an item\n- another one"

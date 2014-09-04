@@ -40,6 +40,9 @@
 (defconst epl-test-directory (f-parent (f-this-file))
   "The directory of the test suite.")
 
+(defconst epl-sandbox-directory (f-expand "sandbox" epl-test-directory)
+  "The sandbox directory of the test suite.")
+
 
 ;;;; Resource handling
 (defconst epl-test-resource-directory (f-join epl-test-directory "resources")
@@ -48,6 +51,17 @@
 (defun epl-test-resource-file-name (resource)
   "Get the file name of a RESOURCE."
   (f-join epl-test-resource-directory resource))
+
+(defmacro epl-test/with-sandbox (&rest body)
+  "Run BODY in a sandbox environment.
+
+In the sandbox, packages that are installed, are installed in the
+directory `epl-sandbox-directory'.  The sandbox directory never
+exist when entering the sandbox environment."
+  `(let ((package-user-dir epl-sandbox-directory))
+     (when (f-dir? epl-sandbox-directory)
+       (f-delete epl-sandbox-directory 'force))
+     ,@body))
 
 
 ;;;; Package structures
@@ -141,6 +155,15 @@ package.el tends to have such unfortunate side effects."
   (should-error
    (epl-package-from-file
     (epl-test-resource-file-name "invalid-package-pkg.el"))))
+
+(ert-deftest epl-package-delete/should-not-be-installed ()
+  (epl-test/with-sandbox
+   (let ((smartie-package (epl-test-resource-file-name "smartie-package.el")))
+     (epl-install-file smartie-package)
+     (let ((package (epl-find-installed-package 'smartie-package)))
+       (should (epl-package-installed-p package))
+       (epl-package-delete package)
+       (should-not (epl-package-installed-p package))))))
 
 (provide 'epl-test)
 

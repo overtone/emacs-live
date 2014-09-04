@@ -23,6 +23,15 @@ You can contract the region again with a negative prefix, if you expand too far.
 
 You can [watch an intro to expand-region at Emacs Rocks](http://emacsrocks.com/e09.html).
 
+## Installation
+
+I highly recommend installing expand-region through elpa.
+
+It's available on [marmalade](http://marmalade-repo.org/) and
+[melpa](http://melpa.milkbox.net/):
+
+    M-x package-install expand-region
+
 ## Language support
 
 Expand region works fairly well with most languages, due to the general
@@ -126,6 +135,7 @@ sure to add a set of basic tests around the functionality you're changing.
 * [Rotem Yaari](https://github.com/vmalloc) also contributed an adapter for the region expansion in web-mode.
 * [Kang-min Liu](https://github.com/gugod) contributed Perl expansions.
 * [Alexis Gallagher](https://github.com/algal) contributs Standard ML expansions.
+* [Matt Price](https://github.com/titaniumbones) improved on org-mode expansions.
 
 Thanks!
 

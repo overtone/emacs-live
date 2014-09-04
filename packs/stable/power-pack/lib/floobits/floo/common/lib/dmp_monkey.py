@@ -36,8 +36,8 @@ def patch_apply(self, patches, text):
         text1 = self.diff_text1(patch.diffs)
         end_loc = -1
         if len(text1) > self.Match_MaxBits:
-        # patch_splitMax will only provide an oversized pattern in the case of
-        # a monster delete.
+            # patch_splitMax will only provide an oversized pattern in the case of
+            # a monster delete.
             start_loc = self.match_main(text, text1[:self.Match_MaxBits],
                                         expected_loc)
             if start_loc != -1:

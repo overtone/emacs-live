@@ -6,7 +6,7 @@
 ;; Maintainer: Le Wang
 ;; Description: fuzzy matching with good sorting
 ;; Created: Wed Apr 17 01:01:41 2013 (+0800)
-;; Version: 0.1
+;; Version: 0.5
 ;; Package-Requires: ((cl-lib "0.3"))
 ;; URL: https://github.com/lewang/flx
 
@@ -56,20 +56,6 @@
   "Face used by flx for highlighting flx match characters."
   :group 'flx)
 
-
-(defun flx-get-hash-for-string (str heatmap-func)
-  "Return hash-table for string where keys are characters value
-  is a sorted list of indexes for character occurrences."
-  (let* ((res (make-hash-table :test 'eq :size 32))
-         (str-len (length str))
-         char)
-    (cl-loop for index from (1- str-len) downto 0
-          do (progn
-               (setq char (downcase (aref str index)))
-               (push index (gethash char res))))
-    (puthash 'heatmap (funcall heatmap-func str) res)
-    res))
-
 ;;; Do we need more word separators than ST?
 (defsubst flx-word-p (char)
   "Check if CHAR is a word character."
@@ -106,6 +92,25 @@ from BEG (inclusive) to end (not inclusive).
     (cl-incf (aref vec beg) inc)
     (cl-incf beg))
   vec)
+
+(defun flx-get-hash-for-string (str heatmap-func)
+  "Return hash-table for string where keys are characters value
+  is a sorted list of indexes for character occurrences."
+  (let* ((res (make-hash-table :test 'eq :size 32))
+         (str-len (length str))
+         down-char)
+    (cl-loop for index from (1- str-len) downto 0
+             for char = (aref str index)
+          do (progn
+               ;; simulate `case-fold-search'
+               (if (flx-capital-p char)
+                   (progn
+                     (push index (gethash char res))
+                     (setq down-char (downcase char)))
+                 (setq down-char char))
+               (push index (gethash down-char res))))
+    (puthash 'heatmap (funcall heatmap-func str) res)
+    res))
 
 ;; So we store one fixnum per character.  Is this too memory inefficient?
 (defun flx-get-heatmap-str (str &optional group-separator)
@@ -271,7 +276,6 @@ e.g. (\"aab\" \"ab\") returns
 
 (defun flx-score (str query &optional cache)
   "return best score matching QUERY against STR"
-  (setq query (downcase query))
   (unless (or (zerop (length query))
               (zerop (length str)))
     (let* ((info-hash (flx-process-cache str cache))
@@ -334,12 +338,17 @@ SCORE of nil means to clear the properties."
 
 
 
-(defvar flx-file-cache (flx-make-filename-cache)
+(defvar flx-file-cache nil
   "Cached heatmap info about strings.")
 
-(defvar flx-strings-cache (flx-make-string-cache)
+;;; reset value on every file load.
+(setq flx-file-cache (flx-make-filename-cache))
+
+(defvar flx-strings-cache nil
   "Cached heatmap info about filenames.")
 
+;;; reset value on every file load.
+(setq flx-strings-cache (flx-make-string-cache))
 
 
 (provide 'flx)

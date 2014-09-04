@@ -160,10 +160,10 @@ untouched."
     (setq window (selected-window)))
   (unless (popup-window-full-width-p window)
     (let ((t-p-w-w (buffer-local-value 'truncate-partial-width-windows
-				       (window-buffer window))))
+                                       (window-buffer window))))
       (if (integerp t-p-w-w)
-	  (< (window-width window) t-p-w-w)
-	t-p-w-w))))
+          (< (window-width window) t-p-w-w)
+        t-p-w-w))))
 
 (defun popup-current-physical-column ()
   "Return the current physical column."
@@ -596,7 +596,7 @@ KEYMAP is a keymap that will be put on the popup contents."
         (let (overlay begin w (dangle t) (prefix "") (postfix ""))
           (when around
             (popup-vertical-motion column direction))
-	  (setq around t
+          (setq around t
                 current-column (popup-current-physical-column))
 
           (when (> current-column column)
@@ -627,8 +627,8 @@ KEYMAP is a keymap that will be put on the popup contents."
           (overlay-put overlay 'postfix postfix)
           (overlay-put overlay 'width width)
           (aset overlays
-		(if (> direction 0) i (- height i 1))
-		overlay)))
+                (if (> direction 0) i (- height i 1))
+                overlay)))
       (cl-loop for p from (- 10000 (* depth 1000))
                for overlay in (nreverse (append overlays nil))
                do (overlay-put overlay 'priority p))
@@ -887,6 +887,8 @@ Pages up through POPUP."
   (let ((map (make-sparse-keymap)))
     ;(define-key map "\r"        'popup-isearch-done)
     (define-key map "\C-g"      'popup-isearch-cancel)
+    (define-key map "\C-b"      'popup-isearch-close)
+    (define-key map [left]      'popup-isearch-close)
     (define-key map "\C-h"      'popup-isearch-delete)
     (define-key map (kbd "DEL") 'popup-isearch-delete)
     map))
@@ -980,6 +982,11 @@ HELP-DELAY is a delay of displaying helps."
                ((eq binding 'popup-isearch-cancel)
                 (popup-isearch-update popup "" callback)
                 (cl-return t))
+               ((eq binding 'popup-isearch-close)
+                (popup-isearch-update popup "" callback)
+                (setq unread-command-events
+                      (append (listify-key-sequence key) unread-command-events))
+                (cl-return nil))
                ((eq binding 'popup-isearch-delete)
                 (if (> (length pattern) 0)
                     (setq pattern (substring pattern 0 (1- (length pattern))))))
@@ -1219,7 +1226,11 @@ PROMPT is a prompt string when reading events during event loop."
                                                :scroll-bar (popup-scroll-bar menu)
                                                :parent menu
                                                :parent-offset index
-                                               :help-delay help-delay))
+                                               :help-delay help-delay
+                                               :isearch isearch
+                                               :isearch-cursor-color isearch-cursor-color
+                                               :isearch-keymap isearch-keymap
+                                               :isearch-callback isearch-callback))
                   (and it (cl-return it)))
             (if (eq binding 'popup-select)
                 (cl-return (popup-item-value-or-self item))))))
@@ -1306,6 +1317,7 @@ PROMPT is a prompt string when reading events during event loop."
                        (isearch-cursor-color popup-isearch-cursor-color)
                        (isearch-keymap popup-isearch-keymap)
                        isearch-callback
+                       initial-index
                        &aux menu event)
   "Show a popup menu of LIST at POINT. This function returns a
 value of the selected item. Almost arguments are same as
@@ -1339,7 +1351,10 @@ during event loop. The default value is `popup-isearch-keymap'.
 
 ISEARCH-CALLBACK is a function taking one argument.  `popup-menu'
 calls ISEARCH-CALLBACK, if specified, after isearch finished or
-isearch canceled. The arguments is whole filtered list of items."
+isearch canceled. The arguments is whole filtered list of items.
+
+If `INITIAL-INDEX' is non-nil, this is an initial index value for
+`popup-select'. Only positive integer is valid."
   (and (eq margin t) (setq margin 1))
   (or margin-left (setq margin-left margin))
   (or margin-right (setq margin-right margin))
@@ -1367,6 +1382,9 @@ isearch canceled. The arguments is whole filtered list of items."
         (if cursor
             (popup-jump menu cursor)
           (popup-draw menu))
+        (when initial-index
+          (popup-select menu
+                        (min (- (length list) 1) initial-index)))
         (if nowait
             menu
           (popup-menu-event-loop menu keymap fallback

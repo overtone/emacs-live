@@ -6,6 +6,9 @@
 (ert-deftest test-nrepl-decode-integer ()
   (should (equal '(3) (nrepl-decode "i3e"))))
 
+(ert-deftest test-nrepl-decode-negative-integer ()
+  (should (equal '(-3) (nrepl-decode "i-3e"))))
+
 (ert-deftest test-nrepl-bdecode-list ()
   (should (equal '(("spam" "eggs"))
                  (nrepl-decode "l4:spam4:eggse"))))
@@ -90,3 +93,9 @@
                     ("status" "done")))
                  (nrepl-decode
                   "d2:id2:422:ns4:user7:session36:3f586403-ed47-4e4d-b8db-70522054f9715:value5:\"←\"ed2:id2:427:session36:3f586403-ed47-4e4d-b8db-70522054f9716:statusl4:doneee"))))
+
+(ert-deftest test-nrepl-decode-nils ()
+  (should (equal '(("" nil (dict ("" . nil))))
+                 (nrepl-decode "l0:led0:leee")))
+  (should (equal '(("" nil (dict ("" . 6))))
+                 (nrepl-decode "l0:led0:i6eee"))))

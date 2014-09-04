@@ -87,6 +87,9 @@ the test."
 (js2-deftest-parse empty-array-literal
   "c = [];")
 
+(js2-deftest-parse array-with-missing-elements
+  "var a = [1, 2, ,];")
+
 (js2-deftest-parse comma-after-regexp
   "d = /eee/, 42;")
 
@@ -96,8 +99,11 @@ the test."
 (js2-deftest-parse function-statement
   "function foo() {\n}")
 
+(js2-deftest-parse function-statement-inside-block
+  "if (true) {\n  function foo() {\n  }\n}")
+
 (js2-deftest-parse function-expression-statements-are-verboten
-  "function() {}" :syntax-error "function")
+  "function() {}" :syntax-error "(")
 
 (js2-deftest-parse member-expr-as-function-name
   "function a.b.c[2](x, y) {\n}"
@@ -105,6 +111,15 @@ the test."
 
 (js2-deftest-parse named-function-expression
   "a = function b() {};")
+
+(js2-deftest-parse parenthesized-expression
+  "(1 + 2);")
+
+(js2-deftest-parse for-with-in-operator-in-parens
+  "for (var y = (0 in []) in {}) {\n}")
+
+(js2-deftest-parse for-with-in-operator-in-cond
+  "for (var y = 1 ? 0 in [] : false in {}) {\n}")
 
 ;;; Callers of `js2-valid-prop-name-token'
 
@@ -129,8 +144,11 @@ the test."
 
 ;;; 'of' contextual keyword
 
-(js2-deftest-parse parse-array-comp-loop-with-of
+(js2-deftest-parse parse-legacy-array-comp-loop-with-of
   "[a for (a of [])];")
+
+(js2-deftest-parse parse-array-comp-loop
+  "[for (a of []) a];")
 
 (js2-deftest-parse parse-for-of
   "for (var a of []) {\n}")
@@ -199,10 +217,10 @@ the test."
   "(a, b = 1, ...c) => {  c;\n};")
 
 (js2-deftest-parse parenless-arrow-function-prohibits-rest
-  "...b => {b + 1;};" :syntax-error "b" :errors-count 2)
+  "...b => {b + 1;};" :syntax-error "=>" :errors-count 2)
 
 (js2-deftest-parse parenless-arrow-function-prohibits-destructuring
-  "[a, b] => {a + b;};" :syntax-error "]" :errors-count 5)
+  "[a, b] => {a + b;};" :syntax-error "=>" :errors-count 5)
 
 ;;; Automatic semicolon insertion
 
@@ -241,6 +259,52 @@ the test."
   "function foo() {\n  yield 1;\n return 2;\n}" :syntax-error "return 2")
 
 (js2-deftest-parse harmony-generator "function* bar() {\n  yield 2;\n  return 3;\n}")
+
+(js2-deftest-parse harmony-generator-yield-star "(function*(a) {  yield* a;\n});")
+
+;;; Comprehensions
+
+(js2-deftest-parse parse-legacy-array-comp-loop-with-filter
+  "[a for (a in b) if (a == 2)];")
+
+(js2-deftest-parse parse-array-comp-loop-with-filters
+  "[for (a in b) if (a == 2) if (b != 10) a];")
+
+(js2-deftest-parse parse-generator-comp-loop-with-filters
+  "(for (x of y) if (x != 4) x);")
+
+(js2-deftest-parse parse-array-comp-with-yield-is-ok
+  "(function() {  return [for (x of []) yield x];\n});")
+
+(js2-deftest-parse parse-generator-comp-with-yield-is-not-ok
+  "(function() {  return (for (x of []) yield x);\n});"
+  :syntax-error "yield")
+
+(js2-deftest-parse parse-generator-comp-with-yield-inside-function-is-ok
+  "(for (x of []) function*() {  yield x;\n});")
+
+;;; Numbers
+
+(js2-deftest-parse decimal-starting-with-zero "081;" :reference "81;")
+
+(js2-deftest-parse huge-hex "0x0123456789abcdefABCDEF;" :reference "-1;")
+
+(js2-deftest-parse octal-without-o "071;" :reference "57;")
+
+(js2-deftest-parse hex-number-okay "0x123;" :reference "291;")
+
+(js2-deftest-parse hex-number-broken "0xz23;"
+  :syntax-error "0xz" :errors-count 2)
+
+(js2-deftest-parse binary-number-okay "0b101;" :reference "5;")
+
+(js2-deftest-parse binary-number-broken "0b210;"
+  :syntax-error "0b2" :errors-count 2)
+
+(js2-deftest-parse octal-number-okay "0o765;" :reference "501;")
+
+(js2-deftest-parse octal-number-broken "0o812;"
+  :syntax-error "0o8" :errors-count 2)
 
 ;;; Scopes
 

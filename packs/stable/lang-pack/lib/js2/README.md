@@ -24,7 +24,27 @@ check out the branch
 Bugs
 ====
 
-If you find problems, please report them at <http://github.com/mooz/js2-mode/issues>.
+* See broken syntax highlighting and timer errors? Recently upgraded
+Emacs from version 24.2 or earlier?
+
+* Try
+[reinstalling or byte-recompiling](https://github.com/mooz/js2-mode/issues/72)
+the package.
+
+Please report problems at <http://github.com/mooz/js2-mode/issues>.
+
+Contributing
+======
+
+`js2-mode` is subject to the same
+[copyright assignment](http://www.gnu.org/prep/maintain/html_node/Copyright-Papers.html)
+policy as Emacs itself, `org-mode`, `CEDET` and other packages in
+[GNU ELPA](http://elpa.gnu.org/packages/).
+
+Any
+[legally significant](http://www.gnu.org/prep/maintain/html_node/Legally-Significant.html#Legally-Significant)
+contributions can only be accepted after the author has completed their
+paperwork. Please ask for the request form, and we'll send it to you.
 
 See Also
 ======

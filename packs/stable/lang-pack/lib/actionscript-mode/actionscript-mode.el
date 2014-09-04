@@ -95,11 +95,6 @@
 	(define-key actionscript-mode-map "\C-c\C-c" 'comment-region)
 	(define-key actionscript-mode-map "\C-c\C-u" 'uncomment-region))
 
-(defcustom actionscript-mode-hook nil
-  "*Hook called by `actionscript-mode'."
-  :type 'hook
-  :group 'actionscript)
-
 ;; Preprocessor directives (for cpp, not Actionscript).
 (defconst preprocessor-kwds
 	'("#include" "#define" "#else" "#endif" "#ifdef" "#ifndef"))
@@ -230,6 +225,12 @@
 (defcustom actionscript-mode-hook nil
   "*Hook called by `actionscript-mode'."
   :type 'hook
+  :group 'actionscript)
+
+(defcustom actionscript-indent-level 4
+  "Number of spaces for each indentation step in `actionscript-mode'."
+  :type 'integer
+  :safe 'integerp
   :group 'actionscript)
 
 (defcustom actionscript-font-lock-level 2
@@ -486,7 +487,7 @@ whitespace. Keep point at same relative point in the line."
           0
         (progn
           (as3-maybe-skip-leading-close-delim)
-          (+ (current-indentation) (* standard-indent (as3-count-scope-depth (point) pos))))))))
+          (+ (current-indentation) (* actionscript-indent-level (as3-count-scope-depth (point) pos))))))))
 
 (defun as3-maybe-skip-leading-close-delim ()
   (beginning-of-line)

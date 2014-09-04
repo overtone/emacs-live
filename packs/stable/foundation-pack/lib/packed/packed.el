@@ -1,13 +1,13 @@
 ;;; packed.el --- package manager agnostic Emacs Lisp package utilities
 
-;; Copyright (C) 2012-2013  Jonas Bernoulli
+;; Copyright (C) 2012-2014  Jonas Bernoulli
 
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
-;; Created: 20120624
-;; Version: 0.3.4
-;; Status: beta
 ;; Homepage: http://tarsius.github.com/packed
 ;; Keywords: compile, convenience, lisp, package, library
+
+;; Package: packed
+;; Package-Requires: ((cl-lib "0.5"))
 
 ;; This file is not part of GNU Emacs.
 
@@ -49,8 +49,7 @@
 (declare-function info-initialize "info")
 (defvar Info-directory-list)
 
-
-;;; Options.
+;;; Options
 
 (defgroup packed nil
   "Emacs package utilities."
@@ -62,8 +61,7 @@
   :group 'packed
   :type 'file)
 
-
-;;; Libraries.
+;;; Libraries
 
 (defun packed-el-suffixes (&optional nosuffix must-suffix)
   "Return a list of the valid suffixes of Emacs Lisp source libraries.
@@ -161,13 +159,13 @@ and the file name is displayed in the echo area."
 
 (defun packed-ignore-directory-p (directory package)
   "Return t if DIRECTORY should be ignored when searching for libraries.
-DIRECTORY and all libraries it and it's subdirectories contain
+DIRECTORY and all libraries it and its subdirectories contain
 should be ignored if it contains a file named \".nosearch\", is
-a hidden directory, or it's filename matches
+a hidden directory, or its filename matches
 `packed-ignore-directory-regexp'.
 
 If PACKAGE also matches that regular expression then don't ignore
-the directory based on it's filename.
+the directory based on its filename.
 
 Normally DIRECTORY should be an absolute path; if it is not then
 this function does not check for \".nosearch\"s existence.  This
@@ -206,7 +204,7 @@ including bundled libraries return nil.
 
 An Emacs lisp file is considered a library if it isn't a hidden
 file and provides the correct feature, that is a feature that
-matches it's filename (and possibly parts of the path leading to
+matches its filename (and possibly parts of the path leading to
 it).
 
 For some libraries this function actually returns nil because
@@ -377,8 +375,7 @@ non-nil return nil."
   "Return the filename (aka basename) of FILE."
   (file-name-nondirectory (directory-file-name file)))
 
-
-;;; Load Path.
+;;; Load Path
 
 (defun packed-add-to-load-path (directory &optional package)
   "Add DIRECTORY and subdirectories to `load-path' if they contain libraries."
@@ -386,7 +383,7 @@ non-nil return nil."
         (packed-load-path directory package)))
 
 (defun packed-remove-from-load-path (directory)
-  "Remove DIRECTORY and it's subdirectories from `load-path'.
+  "Remove DIRECTORY and its subdirectories from `load-path'.
 Elements of `load-path' which no longer exist are not removed."
   (setq directory (directory-file-name (expand-file-name directory)))
   (setq load-path (delete directory load-path))
@@ -410,8 +407,7 @@ Elements of `load-path' which no longer exist are not removed."
                (setq lp (nconc (packed-load-path f package) lp))))))
     lp))
 
-
-;;; Byte Compile.
+;;; Byte Compile
 
 (defmacro packed-without-mode-hooks (&rest body)
   (declare (indent 0))
@@ -459,8 +455,7 @@ Elements of `load-path' which no longer exist are not removed."
                            (if (= dir-count 1) "y" "ies"))
                  "")))))
 
-
-;;; Autoloads.
+;;; Autoloads
 
 (defun packed-loaddefs-file (&optional directory)
   (let ((dir (locate-dominating-file (or directory default-directory)
@@ -505,8 +500,7 @@ Elements of `load-path' which no longer exist are not removed."
               (dolist (f (directory-files d t (packed-el-regexp)))
                 (autoload-find-destination f (autoload-file-load-name f))))))))))
 
-
-;;; Features.
+;;; Features
 
 (defconst packed-provided-regexp "\
 \(\\(?:cc-\\|silentcomp-\\)?provide[\s\t\n]+'\
@@ -588,8 +582,7 @@ library.  If a file lacks an expected feature then loading it using
                  (add-to-list 'hard feature))))))
     (list hard soft)))
 
-
-;;; Info Pages.
+;;; Info Pages
 
 (defvar packed-ginstall-info
   (or (executable-find "ginstall-info")

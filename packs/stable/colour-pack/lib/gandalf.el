@@ -24,7 +24,7 @@
      (border-glyph ((t (nil))))
      (buffers-tab ((t (:background "white" :foreground "black"))))
      (font-lock-builtin-face ((t (:foreground "blue" :bold t))))
-     (font-lock-comment-face ((t (:italic t :foreground "white" ))))
+     (font-lock-comment-face ((t (:italic t :foreground "grey50" ))))
      (font-lock-constant-face ((t (:foreground "dark blue"))))
      (font-lock-doc-string-face ((t (:foreground "black"))))
      (font-lock-function-name-face ((t (:foreground "deep pink" :bold t))))
@@ -40,7 +40,7 @@
      (window-number-face ((t (:background "deep pink" :foreground "black"))))
 
      (font-lock-type-face ((t (:foreground "blue"))))
-     (font-lock-variable-name-face ((t (:foreground "#96CBFE" :bold t))))
+     (font-lock-variable-name-face ((t (:foreground "deep pink" :bold t))))
      (font-lock-warning-face ((t (:bold t :foreground "black"))))
      (gui-element ((t (:background "grey40" :foreground "#96CBFE"))))
      (region ((t (:background "#758BC6"))))
@@ -57,14 +57,16 @@
      (text-cursor ((t (:background "yellow" :foreground "black"))))
      (toolbar ((t (nil))))
      (underline ((nil (:underline nil))))
-     (vertical-border ((t (:background "black" :foreground "#333333"))))
+     (vertical-border ((t (:background "white" :foreground "#333333"))))
      (zmacs-region ((t (:background "snow" :foreground "ble"))))
      (erc-default-face ((t (:foreground "dark green"))))
+
+     (minibuffer-prompt ((t (:foreground "black" :background "grey70"))))
      (ido-first-match ((t (:foreground "black" :background "grey70"))))
      (ido-only-match ((t (:foreground "black" :background "grey95"))))
      (ido-subdir ((t (:foreground "white" :background "#758BC6"))))
      (ido-indicator ((t (:foreground "black" :background "deep pink"))))
-     (ido-indicator ((t (:foreground "black" :background "deep pink"))))
+     (ido-incomplete-regexp ((t (:foreground "black" :background "deep pink"))))
      (flx-highlight-face ((t (:foreground "black" :background "deep pink"))))
 
      ;; magit
@@ -100,7 +102,7 @@
      (git-gutter:added ((t (:foreground "#61CE3C" :background "gray60" ))) )
      (git-gutter:unchanged ((t (:background "gray60" ))) )
 
-     (term-color-black ((t (:background "black" :foreground "black"))))
+     (term-color-black ((t (:background "white" :foreground "black"))))
      (term-color-blue ((t (:background "blue2" :foreground "blue2"))))
      (term-color-cyan ((t (:background "cyan3" :foreground "cyan3"))))
      (term-color-green ((t (:background "green3" :foreground "green3"))))

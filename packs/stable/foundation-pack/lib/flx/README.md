@@ -2,8 +2,9 @@
 
 ## Status
 
-This project is in its infancy yet.  It's unlikely to crash your Emacs, but do
-expect to encounter bugs.
+This project is more than a year old now.  Lots of bugs have been worked out.
+
+It appears some people use it on a regular basis.
 
 ## Screencast
 
@@ -56,20 +57,26 @@ contiguous matches (substring).
 The longer the substring match, the higher it scores.  This maps well to how
 we think about matching.
 
-In general, it's better form queries wiht only **alphanumeric** characters so
+In general, it's better form queries with only lowercase characters so
 the sorting algorithm can do something smart.
 
 For example, if you have these files:
 
-    projects/clojure-mode/clojure-mode.el
-    projects/prelude/core/prelude-mode.el
+        projects/clojure-mode/clojure-mode.el
+        projects/prelude/core/prelude-mode.el
 
-If the search term was "pre-mode", you might expect "prelude-mode.el" to be
-ranked higher.  However because the substring match "re-mode" is so long,
+If the search term was *pre-mode*, you might expect "prelude-mode.el" to rank
+higher.  However because the substring match "re-mode" is so long,
 "clojure-mode.el" actually scores higher.
 
+**Here, using *premode* would give the expected order.** Notice that the
+"-" actually prevents the algorithm from helping you.
 
-Here, using "premode" would give the expected order
+### uppercase letters
+
+Flx always folds lowercase letters to match uppercase.  However, you can use upper case letters for force flx to only match uppercase.
+
+This is similar to Emacs' case-folding.  The difference is mixing in uppercase letters **does not disable** folding.
 
 ### completing file names
 
@@ -85,10 +92,11 @@ Add this to your init file and *flx* match will be enabled for ido.
 (ido-everywhere 1)
 (flx-ido-mode 1)
 ;; disable ido faces to see flx highlights.
+(setq ido-enable-flex-matching t)
 (setq ido-use-faces nil)
 ```
 
-If don't want to use the `flx`'s highlights you can turn them off like this:
+If you don't want to use the `flx`'s highlights you can turn them off like this:
 
 ```lisp
 (setq flx-ido-use-faces nil)
@@ -96,10 +104,10 @@ If don't want to use the `flx`'s highlights you can turn them off like this:
 
 ### Flx uses a complex matching heuristics which can be slow for large collections
 
-Customize `flx-ido-threshhold` to change the collection size above which flx
+Customize `flx-ido-threshold` to change the collection size above which flx
 will revert to flex matching.
 
-As soon as the collection is narrowed below `flx-ido-threshhold`, flx will
+As soon as the collection is narrowed below `flx-ido-threshold`, flx will
 kick in again.
 
 As a point of reference for a 2.3 GHz quad-core i7 processor, a value of

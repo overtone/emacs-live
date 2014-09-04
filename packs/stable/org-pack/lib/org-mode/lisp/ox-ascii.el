@@ -192,8 +192,10 @@ original Org buffer at the same place."
 (defcustom org-ascii-indented-line-width 'auto
   "Additional indentation width for the first line in a paragraph.
 If the value is an integer, indent the first line of each
-paragraph by this number.  If it is the symbol `auto' preserve
-indentation from original document."
+paragraph by this width, unless it is located at the beginning of
+a section, in which case indentation is removed from that line.
+If it is the symbol `auto' preserve indentation from original
+document."
   :group 'org-export-ascii
   :version "24.4"
   :package-version '(Org . "8.0")
@@ -455,7 +457,7 @@ HOW determines the type of justification: it can be `left',
 Empty lines are not indented."
   (when (stringp s)
     (replace-regexp-in-string
-     "\\(^\\)\\(?:.*\\S-\\)" (make-string width ? ) s nil nil 1)))
+     "\\(^\\)[ \t]*\\S-" (make-string width ?\s) s nil nil 1)))
 
 (defun org-ascii--box-string (s info)
   "Return string S with a partial box to its left.
@@ -473,7 +475,7 @@ INFO is a plist used as a communication channel."
   (case (org-element-type element)
     ;; Elements with an absolute width: `headline' and `inlinetask'.
     (inlinetask org-ascii-inlinetask-width)
-    ('headline
+    (headline
      (- org-ascii-text-width
 	(let ((low-level-rank (org-export-low-level-p element info)))
 	  (if low-level-rank (* low-level-rank 2) org-ascii-global-margin))))
@@ -750,7 +752,6 @@ generation.  INFO is a plist used as a communication channel."
 
 (defun org-ascii--unique-links (element info)
   "Return a list of unique link references in ELEMENT.
-
 ELEMENT is either a headline element or a section element.  INFO
 is a plist used as a communication channel."
   (let* (seen
@@ -760,8 +761,14 @@ is a plist used as a communication channel."
 	   ;; Update SEEN links along the way.
 	   (lambda (link)
 	     (let ((footprint
+		    ;; Normalize description in footprints.
 		    (cons (org-element-property :raw-link link)
-			  (org-element-contents link))))
+			  (let ((contents (org-element-contents link)))
+			    (and contents
+				 (replace-regexp-in-string
+				  "[ \r\t\n]+" " "
+				  (org-trim
+				   (org-element-interpret-data contents))))))))
 	       ;; Ignore LINK if it hasn't been translated already.
 	       ;; It can happen if it is located in an affiliated
 	       ;; keyword that was ignored.
@@ -1387,10 +1394,7 @@ INFO is a plist holding contextual information."
 		(org-export-resolve-coderef ref info))))
      ;; Do not apply a special syntax on radio links.  Though, use
      ;; transcoded target's contents as output.
-     ((string= type "radio")
-      (let ((destination (org-export-resolve-radio-link link info)))
-	(when destination
-	  (org-export-data (org-element-contents destination) info))))
+     ((string= type "radio") desc)
      ;; Do not apply a special syntax on fuzzy links pointing to
      ;; targets.
      ((string= type "fuzzy")
@@ -1416,12 +1420,16 @@ INFO is a plist holding contextual information."
   "Transcode a PARAGRAPH element from Org to ASCII.
 CONTENTS is the contents of the paragraph, as a string.  INFO is
 the plist used as a communication channel."
-  (let ((contents (if (not (wholenump org-ascii-indented-line-width)) contents
-		    (concat
-		     (make-string org-ascii-indented-line-width ? )
-		     (replace-regexp-in-string "\\`[ \t]+" "" contents)))))
-    (org-ascii--fill-string
-     contents (org-ascii--current-text-width paragraph info) info)))
+  (org-ascii--fill-string
+   (if (not (wholenump org-ascii-indented-line-width)) contents
+     (concat
+      ;; Do not indent first paragraph in a section.
+      (unless (and (not (org-export-get-previous-element paragraph info))
+		   (eq (org-element-type (org-export-get-parent paragraph))
+		       'section))
+	(make-string org-ascii-indented-line-width ?\s))
+      (replace-regexp-in-string "\\`[ \t]+" "" contents)))
+   (org-ascii--current-text-width paragraph info) info))
 
 
 ;;;; Plain List
@@ -1589,8 +1597,8 @@ contextual information."
 CONTENTS is the contents of the object.  INFO is a plist holding
 contextual information."
   (if (org-element-property :use-brackets-p superscript)
-      (format "_{%s}" contents)
-    (format "_%s" contents)))
+      (format "^{%s}" contents)
+    (format "^%s" contents)))
 
 
 ;;;; Strike-through
@@ -1657,20 +1665,25 @@ are ignored."
     (or (gethash key cache)
 	(puthash
 	 key
-	 (or (and (not org-ascii-table-widen-columns)
-		  (org-export-table-cell-width table-cell info))
-	     (let* ((max-width 0))
-	       (org-element-map table 'table-row
-		 (lambda (row)
-		   (setq max-width
-			 (max (string-width
-			       (org-export-data
-				(org-element-contents
-				 (elt (org-element-contents row) col))
-				info))
-			      max-width)))
-		 info)
-	       max-width))
+	 (let ((cookie-width (org-export-table-cell-width table-cell info)))
+	   (or (and (not org-ascii-table-widen-columns) cookie-width)
+	       (let ((contents-width
+		      (let ((max-width 0))
+			(org-element-map table 'table-row
+			  (lambda (row)
+			    (setq max-width
+				  (max (string-width
+					(org-export-data
+					 (org-element-contents
+					  (elt (org-element-contents row) col))
+					 info))
+				       max-width)))
+			  info)
+			max-width)))
+		 (cond ((not cookie-width) contents-width)
+		       (org-ascii-table-widen-columns
+			(max cookie-width contents-width))
+		       (t cookie-width)))))
 	 cache))))
 
 (defun org-ascii-table-cell (table-cell contents info)

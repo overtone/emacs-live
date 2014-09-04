@@ -6,7 +6,6 @@ except (ImportError, ValueError):
 
 class BaseProtocol(event_emitter.EventEmitter):
     ''' Base FD Interface'''
-    NEWLINE = '\n'.encode('utf-8')
 
     def __init__(self, host, port, secure=True):
         super(BaseProtocol, self).__init__()
@@ -37,6 +36,9 @@ class BaseProtocol(event_emitter.EventEmitter):
 
     def reconnect(self):
         raise NotImplementedError("reconnect not implemented.")
+
+    def reset_retries(self):
+        raise NotImplementedError("reset_retries not implemented.")
 
     def stop(self):
         self.cleanup()

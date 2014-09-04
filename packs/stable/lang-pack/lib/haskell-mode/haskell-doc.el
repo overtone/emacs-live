@@ -1855,7 +1855,7 @@ This function switches to and potentially loads many buffers."
   (save-current-buffer
     (mapcar (lambda (f)
               (set-buffer (find-file-noselect f))
-              (imenu--make-index-alist)
+              (imenu--make-index-alist t)
               (cons f
                     (mapcar (lambda (x)
                               `(,(car x) . ,(haskell-doc-grab-line x)))

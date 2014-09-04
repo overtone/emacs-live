@@ -119,7 +119,7 @@ This will either look for a Cabal file or a \"module\" statement in the file."
   :group 'inferior-haskell
   (set (make-local-variable 'comint-prompt-regexp)
        ;; Whay the backslash in [\\._[:alnum:]]?
-       "^\\*?[[:upper:]][\\._[:alnum:]]*\\(?: \\*?[[:upper:]][\\._[:alnum:]]*\\)*> \\|^λ?> $")
+       "^\\*?[[:upper:]][\\._[:alnum:]]*\\(?: \\*?[[:upper:]][\\._[:alnum:]]*\\)*\\( λ\\)?> \\|^λ?> $")
   (set (make-local-variable 'comint-input-autoexpand) nil)
   (add-hook 'comint-preoutput-filter-functions
             'inferior-haskell-send-decl-post-filter)
@@ -628,10 +628,12 @@ By default this is set to `ghc --print-libdir`/package.conf."
     (unless (string-match inferior-haskell-module-re info)
       (error
        "No documentation information available.  Did you forget to C-c C-l?"))
-    (let ((module-name (match-string-no-properties 1 info)))
+    (let* ((module-name (match-string-no-properties 1 info))
+          (first-character (substring module-name 0 1)))
       ;; Handles GHC 7.4.1+ which quotes module names like
       ;; `System.Random', whereas previous GHC did not quote at all.
-      (if (string= "`" (substring module-name 0 1))
+      (if (or (string= "`" first-character) (string= "‘" first-character))
+
           (substring module-name 1 (- (length module-name) 1))
         module-name))))
 
@@ -791,6 +793,35 @@ we load it."
          ;; Jump to the symbol within Haddock.
          (url (concat url "#v:" sym)))
     (if url (browse-url url) (error "Local file doesn't exist"))))
+
+(defvar inf-haskell-mode-map
+  (let ((map (make-sparse-keymap)))
+    ;; (define-key map [?\M-C-x]     'inferior-haskell-send-defun)
+    ;; (define-key map [?\C-x ?\C-e] 'inferior-haskell-send-last-sexp)
+    ;; (define-key map [?\C-c ?\C-r] 'inferior-haskell-send-region)
+    (define-key map [?\C-x ?\C-d] 'inferior-haskell-send-decl)
+    (define-key map [?\C-c ?\C-z] 'switch-to-haskell)
+    (define-key map [?\C-c ?\C-l] 'inferior-haskell-load-file)
+    ;; I think it makes sense to bind inferior-haskell-load-and-run to C-c
+    ;; C-r, but since it used to be bound to `reload' until June 2007, I'm
+    ;; going to leave it out for now.
+    ;; (define-key map [?\C-c ?\C-r] 'inferior-haskell-load-and-run)
+    (define-key map [?\C-c ?\C-b] 'switch-to-haskell)
+    ;; (define-key map [?\C-c ?\C-s] 'inferior-haskell-start-process)
+    ;; That's what M-; is for.
+    (define-key map (kbd "C-c C-t") 'inferior-haskell-type)
+    (define-key map (kbd "C-c C-i") 'inferior-haskell-info)
+    (define-key map (kbd "C-c M-.") 'inferior-haskell-find-definition)
+    (define-key map (kbd "C-c C-d") 'inferior-haskell-find-haddock)
+    (define-key map [?\C-c ?\C-v] 'haskell-check)
+    map)
+  "Keymap for using inf-haskell.")
+
+;;;###autoload
+(define-minor-mode inf-haskell-mode
+  "Minor mode for enabling inf-haskell process interaction."
+  :lighter " Inf-Haskell"
+  :keymap inf-haskell-mode-map)
 
 (provide 'inf-haskell)
 

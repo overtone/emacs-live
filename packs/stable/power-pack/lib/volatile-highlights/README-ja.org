@@ -1,0 +1,74 @@
+#+STARTUP: indent
+#+OPTIONS: num:nil toc:nil author:nil timestamp:nil
+
+# Copyright (C) 2001, 2010-2014 K-talo Miyazaki, all rights reserved.
+
+* volatile-highlights.el --- 操作に視覚的フィードバックを与える
+
+** 概要
+
+本ライブラリは、ある操作に関連した部位を強調表示することで、
+その操作に対する視覚的フィードバックを与えるマイナーモード
+`volatile-highlights-mode' を提供する。
+
+本ライブラリにより作成された強調表示は、新たな操作の
+実行により消去される。
+
+
+** INSTALLING
+
+本ライブラリをインストールするには、 =load-path= ( =C-h v load-path <RET>=
+で確認可能) で設定されたディレクトリにファイル "volatile-highlights.el" を
+保存し、以下の内容を =.emacs= に追記する:
+
+#+BEGIN_EXAMPLE
+  (require 'volatile-highlights)
+  (volatile-highlights-mode t)
+#+END_EXAMPLE
+
+
+** USING
+
+=volatile-highlights-mode= をトグルするには、以下の様にタイプする:
+
+: M-x volatile-highlights-mode <RET>
+
+本マイナーモードがオンである間、モードラインには `VHL' と表示される。
+
+
+現在のところ、以下にリストされた操作について強調表示が行われる:
+
+    - =undo= ::
+      =undo= で挿入されたテキストに強調表示が施される。
+
+    - =yank= and =yank-pop= ::
+      =yank= または =yank-pop= で挿入されたテキストに強調表示が施される。
+
+    - =kill-region=,  =kill-line=,  あるいはその他のキル操作 ::
+      キルされたテキストが存在した位置に強調表示が施される。
+
+    - =delete-region= ::
+      =kill-region= と同様である。
+
+    - =find-tag= ::
+      =find-tag= により検出されたタグ名に強調表示が施される。
+
+    - =occur-mode-goto-occurrence= and =occur-mode-display-occurrence= ::
+      =occur-mode-goto-occurrence= または =occur-mode-display-occurrence= により
+      選択されたマッチ部位に強調表示が施される。
+
+    - 非インクリメンタル検索 ::
+      
+      以下のコマンドで検索されたテキストに強調表示が施される。
+
+        : nonincremental-search-forward
+        : nonincremental-search-backward
+        : nonincremental-re-search-forward
+        : nonincremental-re-search-backward
+        : nonincremental-repeat-search-forward
+        : nonincremental-repeat-search-backward
+
+各操作に対する強調表示は、カスタマイズにて個別にオン・オフできる。
+以下の操作でカスタマイズグループを確認できる:
+
+: M-x customize-group RET volatile-highlights RET

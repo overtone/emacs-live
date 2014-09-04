@@ -5,9 +5,11 @@ try:
     from . import shared as G
     assert G
     unicode = str
+    from .exc_fmt import str_e
     python2 = False
 except ImportError:
     python2 = True
+    from exc_fmt import str_e
     import shared as G
 
 
@@ -29,9 +31,21 @@ except Exception as e:
     pass
 
 
+def safe_print(msg):
+    # Some environments can have trouble printing unicode:
+    #    "When print() is not outputting to the terminal (being redirected to
+    #    a file, for instance), print() decides that it does not know what
+    #    locale to use for that file and so it tries to convert to ASCII instead."
+    # See: https://pythonhosted.org/kitchen/unicode-frustrations.html#frustration-3-inconsistent-treatment-of-output
+    try:
+        print(msg)
+    except UnicodeEncodeError:
+        print(msg.encode('utf-8'))
+
+
 # Overridden by each editor
 def editor_log(msg):
-    print(msg)
+    safe_print(msg)
 
 
 class MSG(object):
@@ -49,12 +63,18 @@ class MSG(object):
         if G.LOG_TO_CONSOLE or G.CHAT_VIEW is None:
             # TODO: ridiculously inefficient
             try:
-                fd = open(LOG_FILE, 'a+')
-                fd.write(msg)
+                fd = open(LOG_FILE, 'ab')
+                fmsg = msg
+                try:
+                    fmsg = fmsg.encode('utf-8')
+                except Exception:
+                    pass
+                fd.write(fmsg)
+                fd.write(b'\n')
                 fd.close()
             except Exception as e:
-                print(unicode(e))
-            print(msg)
+                safe_print(str_e(e))
+            safe_print(msg)
         else:
             editor_log(msg)
 
@@ -65,21 +85,34 @@ class MSG(object):
 
     def __unicode__(self):
         if self.username:
-            msg = '[{time}] <{user}> {msg}\n'
+            msg = '[{time}] <{user}> {msg}'
         else:
-            msg = '[{time}] {msg}\n'
-        return unicode(msg).format(user=self.username, time=time.ctime(self.timestamp), msg=self.msg)
+            msg = '[{time}] {msg}'
+        try:
+            return unicode(msg).format(user=self.username, time=time.ctime(self.timestamp), msg=self.msg)
+        except UnicodeEncodeError:
+            return unicode(msg).format(user=self.username, time=time.ctime(self.timestamp), msg=self.msg.encode(
+                'utf-8'))
 
 
 def msg_format(message, *args, **kwargs):
-    message += ' '.join([unicode(x) for x in args])
+    try:
+        message = unicode(message)
+    except UnicodeEncodeError:
+        message = str(message)
+    for arg in args:
+        try:
+            message += unicode(arg)
+        except UnicodeEncodeError:
+            message += arg
     if kwargs:
-        message = unicode(message).format(**kwargs)
+        message = message.format(**kwargs)
     return message
 
 
 def _log(message, level, *args, **kwargs):
     if level >= LOG_LEVEL:
+        # TODO: kill MSG class and just format and print the thing right away
         MSG(msg_format(message, *args, **kwargs), level=level).display()
 
 

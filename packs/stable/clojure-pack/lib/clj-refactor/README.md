@@ -1,4 +1,4 @@
-# clj-refactor.el [![Build Status](https://secure.travis-ci.org/magnars/clj-refactor.el.png)](http://travis-ci.org/magnars/clj-refactor.el)
+# clj-refactor.el [![Build Status](https://secure.travis-ci.org/clojure-emacs/clj-refactor.el.png)](http://travis-ci.org/clojure-emacs/clj-refactor.el)
 
 A collection of simple clojure refactoring functions. Please send help.
 
@@ -75,12 +75,16 @@ This is it so far:
  - `ai`: add import to namespace declaration, then jump back
  - `ru`: replace all `:use` in namespace with `:refer :all`
  - `sn`: sort :use, :require and :import in the ns form
+ - `rr`: remove unused requires
+ - `pc`: run project cleaner functions on the whole project
  - `sr`: stop referring (removes `:refer []` from current require, fixing references)
  - `cc`: cycle surrounding collection type
  - `cp`: cycle privacy of `defn`s and `def`s
  - `cs`: cycle between "string" -> :string -> "string"
+ - `ci`: refactoring between `if` and `if-not`
  - `ad`: add declaration for current top-level form
  - `dk`: destructure keys
+ - `mf`: move one or more forms to another namespace, `:refer` any functions
 
 Combine with your keybinding prefix/modifier.
 
@@ -351,6 +355,61 @@ some snippet packages for Clojure:
 
  - David Nolen has created some [clojure-snippets](https://github.com/swannodette/clojure-snippets)
  - I've made some [datomic-snippets](https://github.com/magnars/datomic-snippets)
+ - Max Penet has also created some [clojure-snippets](https://github.com/mpenet/clojure-snippets), early fork of dnolens' with tons of additions and MELPA compatible 
+
+## Changing the way how the ns declaration is sorted
+
+By default sort ns `sn` will sort your ns declaration alphabetically. You can change this by setting `cljr-sort-comparator` in your clj-refactor configuration.
+
+Sort it longer first:
+
+```cl
+(setq cljr-sort-comparator 'cljr--string-length-comparator)
+```
+
+Or you can use the semantic comparator:
+
+```cl
+(setq cljr-sort-comparator 'cljr--semantic-comparator)
+```
+
+The semantic comparator sorts used and required namespaces closer to the namespace of the current buffer before the rest. When this is not applicable it falls back to alphabetical sorting.
+
+For example the following namespace:
+
+```clj
+(ns foo.bar.baz.goo
+  (:require [clj-time.bla :as bla]
+            [foo.bar.baz.bam :refer :all]
+            [foo.bar.async :refer :all]
+            [foo [bar.goo :refer :all] [baz :refer :all]]
+            [async.funkage.core :as afc]
+            [clj-time.core :as clj-time]
+            [foo.async :refer :all])
+  (:import (java.security MessageDigest)
+           java.util.Calendar
+           [org.joda.time DateTime]
+           (java.nio.charset Charset)))
+```
+
+will be sorted like this:
+
+```clj
+(ns foo.bar.baz.goo
+  (:require [foo.bar.baz.bam :refer :all]
+            [foo.bar.async :refer :all]
+            [foo.async :refer :all]
+            [foo [bar.goo :refer :all] [baz :refer :all]]
+            [async.funkage.core :as afc]
+            [clj-time.bla :as bla]
+            [clj-time.core :as clj-time])
+  (:import (java.nio.charset Charset)
+           (java.security MessageDigest)
+           java.util.Calendar
+           [org.joda.time DateTime]))
+```
+
+The `cljr-sort-comparator` variable also enables you to write your own comparator function if you prefer. Comparator is called with two elements of the sub section of the ns declaration, and should return non-nil if the first element should sort before the second.
 
 ## Automatic insertion of namespace declaration
 
@@ -370,6 +429,47 @@ Prefer to insert your own ns-declarations? Then:
 (setq clj-add-ns-to-blank-clj-files nil)
 ```
 
+## Magic requires
+
+Common namespace shorthands are automatically required when you type
+them:
+
+For instance, typing `(io/)` adds `[clojure.java.io :as io]` to the requires.
+
+- `io` is `clojure.java.io`
+- `set` is `clojure.set`
+- `str` is `clojure.string`
+- `walk` is `clojure.walk`
+- `zip` is `clojure.zip`
+
+You can turn this off with:
+
+```cl
+(setq cljr-magic-requires nil)
+```
+
+or set it to `:prompt` if you want to confirm before it inserts.
+
+## Project clean up
+
+`cljr-project-clean` runs some clean up functions on all clj files in a project in bulk. By default these are `cljr-remove-unused-requires` and `cljr-sort-ns`. Before changes are made the function prompts if you really want to proceed as many files in the project can be potentially affected.
+
+This promting can be switched off by setting `cljr-project-clean-prompt` nil:
+
+```cl
+(setq cljr-project-clean-prompt nil)
+```
+
+The list of functions to run with `cljr-project-clean` is also configurable via `cljr-project-clean-functions`. You can add more functions defined in clj-refactor or remove some or even write your own.
+
+`cljr-project-clean` will only work with leiningen managed projects with a project.clj in their root directory. This limitation will very likely be fixed when [#27](https://github.com/magnars/clj-refactor.el/issues/27) is done.
+
+## Miscellaneous
+
+With clj-refactor enabled, any keybindings for `paredit-raise-sexp` is
+replaced by `cljr-raise-sexp` which does the same thing - except it
+also removes any `#` in front of function literals and sets.
+
 ## More stuff to check out
 
 You might also like
@@ -377,6 +477,23 @@ You might also like
 - [align-cljlet](https://github.com/gstamp/align-cljlet) - which is an Emacs package for aligning let-like forms.
 
 ## Changelog
+
+- Add `cljr-cycle-if` [AlexBaranosky](https://github.com/AlexBaranosky)
+- Common namespace shorthands are (optionally) automatically required when you type it.
+- Comparator for sort require, use and import is configurable, add optional lenght based comparator to sort longer first [Benedek Fazekas](https://github.com/benedekfazekas)
+- Add semantic comparator to sort items closer to the current namespace first [Benedek Fazekas](https://github.com/benedekfazekas)
+- Add `cljr-project-clean` with configurable clean functions [Benedek Fazekas](https://github.com/benedekfazekas)
+
+#### From 0.11 to 0.12
+
+- When expanding let, or moving expressions to let, it now replaces
+  duplicates in the let body with the bound name. [Benedek Fazekas](https://github.com/benedekfazekas)
+
+#### From 0.10 to 0.11
+
+- Add `cljr-raise-sexp`
+- Add `cljr-remove-unused-requires` [Benedek Fazekas](https://github.com/benedekfazekas)
+- Add `cljr-move-form` [Lars Andersen](https://github.com/expez)
 
 #### From 0.9 to 0.10
 
@@ -426,13 +543,14 @@ Run the tests with:
 ## Contributors
 
 - [AlexBaranosky](https://github.com/AlexBaranosky) added a bunch of features. See the [Changelog](#changelog) for details.
-- [Lars Andersen](https://github.com/expez) added `cljr-replace-use` and `cljr-add-declaration`.
+- [Lars Andersen](https://github.com/expez) added `cljr-replace-use`, `cljr-add-declaration` and `cljr-move-form`.
+- [Benedek Fazekas](https://github.com/benedekfazekas) added `cljr-remove-unused-requires` and improved on the let-expanding functions.
 
 Thanks!
 
 ## License
 
-Copyright © 2012-2013 Magnar Sveen
+Copyright © 2012-2014 Magnar Sveen
 
 Authors: Magnar Sveen <magnars@gmail.com>
 Keywords: clojure convenience

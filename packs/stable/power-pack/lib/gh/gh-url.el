@@ -158,7 +158,8 @@
   (concat "?" (gh-url-form-encode form)))
 
 (defmethod gh-url-run-request ((req gh-url-request) &optional resp)
-  (let ((url-request-method (oref req :method))
+  (let ((url-privacy-level 'high)
+        (url-request-method (oref req :method))
         (url-request-data (oref req :data))
         (url-request-extra-headers (oref req :headers))
         (url (concat (oref req :url)

@@ -17,7 +17,6 @@ help helpall::
 	$(info )
 	$(info Getting Help)
 	$(info ============)
-	$(info )
 	$(info make help           - show brief help)
 	$(info make targets        - ditto)
 	$(info make helpall        - show extended help)

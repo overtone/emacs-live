@@ -1,3 +1,5 @@
+;;; This is just a big list of files for experimenting
+
 (provide 'flx-test-list)
 (defvar foo-list
       '(".autotest"
@@ -4013,3 +4015,5 @@
         "vendor/gems/simple_handlebars_rails/lib/simple_handlebars_rails/simple_handlebars_template.rb"
         "vendor/gems/simple_handlebars_rails/simple_handlebars_rails.gemspec")
       "combined listing of redmine and discourse for study")
+
+;; (ido-completing-read ": " foo-list)

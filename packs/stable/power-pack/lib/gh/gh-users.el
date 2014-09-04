@@ -87,7 +87,7 @@
           organizations-url (gh-read data 'organizations_url)
           repos-url (gh-read data 'repos_url)
           events-url (gh-read data 'events_url)
-          received-events-url (gh-read data 'received-events_url)
+          received-events-url (gh-read data 'received_events_url)
           type (gh-read data 'type)
           site-admin (gh-read data 'site_admin)
           name (gh-read data 'name)

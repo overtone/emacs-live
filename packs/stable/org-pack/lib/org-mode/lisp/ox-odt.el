@@ -1502,7 +1502,7 @@ original parsed data.  INFO is a plist holding export options."
 	      (email (and (plist-get info :with-email) email)))
 	 (concat
 	  ;; Title.
-	  (when title
+	  (when (org-string-nw-p title)
 	    (concat
 	     (format "\n<text:p text:style-name=\"%s\">%s</text:p>"
 		     "OrgTitle" (format "\n<text:title>%s</text:title>" title))
@@ -1741,7 +1741,8 @@ CONTENTS is nil.  INFO is a plist holding contextual information."
 			       :transcoders
 			       '((paragraph . (lambda (p c i)
 						(org-odt--format-paragraph
-						 p c "Footnote"
+						 p c i
+						 "Footnote"
 						 "OrgFootnoteCenter"
 						 "OrgFootnoteQuotations")))))
 			      info))))
@@ -2713,10 +2714,8 @@ INFO is a plist holding contextual information.  See
 	 (path (cond
 		((member type '("http" "https" "ftp" "mailto"))
 		 (concat type ":" raw-path))
-		((string= type "file")
-		 (if (file-name-absolute-p raw-path)
-		     (concat "file://" (expand-file-name raw-path))
-		   (concat "file://" raw-path)))
+		((and (string= type "file") (file-name-absolute-p raw-path))
+		 (concat "file:" raw-path))
 		(t raw-path)))
 	 ;; Convert & to &amp; for correct XML representation
 	 (path (replace-regexp-in-string "&" "&amp;" path))
@@ -2735,11 +2734,11 @@ INFO is a plist holding contextual information.  See
      ((string= type "radio")
       (let ((destination (org-export-resolve-radio-link link info)))
 	(when destination
-	  (let ((desc (org-export-data (org-element-contents destination) info))
-		(href (org-export-solidify-link-text path)))
-	    (format
-	     "<text:bookmark-ref text:reference-format=\"text\" text:ref-name=\"OrgXref.%s\">%s</text:bookmark-ref>"
-	     href desc)))))
+	  (format
+	   "<text:bookmark-ref text:reference-format=\"text\" text:ref-name=\"OrgXref.%s\">%s</text:bookmark-ref>"
+	   (org-export-solidify-link-text
+	    (org-element-property :value destination))
+	   desc))))
      ;; Links pointing to a headline: Find destination and build
      ;; appropriate referencing command.
      ((member type '("custom-id" "fuzzy" "id"))
@@ -2834,33 +2833,44 @@ INFO is a plist holding contextual information.  See
 
 ;;;; Paragraph
 
-(defun org-odt--format-paragraph (paragraph contents default center quote)
+(defun org-odt--paragraph-style (paragraph)
+  "Return style of PARAGRAPH.
+Style is a symbol among `quoted', `centered' and nil."
+  (let ((up paragraph))
+    (while (and (setq up (org-element-property :parent up))
+		(not (memq (org-element-type up)
+			   '(center-block quote-block section)))))
+    (case (org-element-type up)
+      (center-block 'centered)
+      (quote-block 'quoted))))
+
+(defun org-odt--format-paragraph (paragraph contents info default center quote)
   "Format paragraph according to given styles.
 PARAGRAPH is a paragraph type element.  CONTENTS is the
-transcoded contents of that paragraph, as a string.  DEFAULT,
-CENTER and QUOTE are, respectively, style to use when paragraph
-belongs to no special environment, a center block, or a quote
-block."
-  (let* ((parent (org-export-get-parent paragraph))
-	 (parent-type (org-element-type parent))
-	 (style (case parent-type
-		  (quote-block quote)
-		  (center-block center)
-		  (t default))))
-    ;; If this paragraph is a leading paragraph in an item and the
-    ;; item has a checkbox, splice the checkbox and paragraph contents
-    ;; together.
-    (when (and (eq (org-element-type parent) 'item)
-	       (eq paragraph (car (org-element-contents parent))))
-      (setq contents (concat (org-odt--checkbox parent) contents)))
-    (format "\n<text:p text:style-name=\"%s\">%s</text:p>" style contents)))
+transcoded contents of that paragraph, as a string.  INFO is
+a plist used as a communication channel.  DEFAULT, CENTER and
+QUOTE are, respectively, style to use when paragraph belongs to
+no special environment, a center block, or a quote block."
+  (format "\n<text:p text:style-name=\"%s\">%s</text:p>"
+	  (case (org-odt--paragraph-style paragraph)
+	    (quoted quote)
+	    (centered center)
+	    (otherwise default))
+	  ;; If PARAGRAPH is a leading paragraph in an item that has
+	  ;; a checkbox, splice checkbox and paragraph contents
+	  ;; together.
+	  (concat (let ((parent (org-element-property :parent paragraph)))
+		    (and (eq (org-element-type parent) 'item)
+			 (not (org-export-get-previous-element paragraph info))
+			 (org-odt--checkbox parent)))
+		  contents)))
 
 (defun org-odt-paragraph (paragraph contents info)
   "Transcode a PARAGRAPH element from Org to ODT.
 CONTENTS is the contents of the paragraph, as a string.  INFO is
 the plist used as a communication channel."
   (org-odt--format-paragraph
-   paragraph contents
+   paragraph contents info
    (or (org-element-property :style paragraph) "Text_20_body")
    "OrgCenter"
    "Quotations"))

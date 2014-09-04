@@ -4,6 +4,15 @@ Multiple cursors for Emacs. This is some pretty crazy functionality, so yes,
 there are kinks. Don't be afraid tho, I've been using it since 2011 with
 great success and much merriment.
 
+## Installation
+
+I highly recommend installing multiple-cursors through elpa.
+
+It's available on [marmalade](http://marmalade-repo.org/) and
+[melpa](http://melpa.milkbox.net/):
+
+    M-x package-install multiple-cursors
+
 ## Basic usage
 
 Start out with:
@@ -86,7 +95,8 @@ You can [watch an intro to multiple-cursors at Emacs Rocks](http://emacsrocks.co
   insert a newline in multiple-cursors-mode, use `C-j`.
 
 - Sometimes you end up with cursors outside of your view. You can
-  scroll the screen to center on each cursor with `C-v` and `M-v`.
+  scroll the screen to center on each cursor with `C-v` and `M-v` or you can
+  press `C-'` to hide all lines without a cursor, press `C-'` again to unhide.
 
 - Try pressing `mc/mark-next-like-this` with no region selected. It
   will just add a cursor on the next line.
@@ -175,6 +185,7 @@ Run the tests with:
 * [Fuco](https://github.com/Fuco1) added the first version of `mc/mark-all-like-this-dwim`
 * [Zach Kost-Smith](https://github.com/smithzvk) added `mc/mark-pop`
 * [Maciej Katafiasz](https://github.com/mathrick) added `mc/mark-all-dwim`
+* [Aleksey Fedotov](https://github.com/lexa) added `mc-hide-unmatched-lines-mode`
 
 Thanks!
 

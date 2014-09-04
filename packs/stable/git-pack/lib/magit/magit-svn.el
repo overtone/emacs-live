@@ -65,10 +65,7 @@
                        ,(concat "r" rev)
                        ,@(when branch (list branch))))))
     (if sha
-        (magit-show-commit
-         (magit-with-section (section commit sha)
-           (setf (magit-section-info section) sha)
-           sha))
+        (magit-show-commit sha)
       (user-error "Revision %s could not be mapped to a commit" rev))))
 
 ;;;###autoload
@@ -194,14 +191,14 @@ If USE-CACHE is non nil, use the cached information."
   (when (magit-svn-enabled)
     (magit-git-insert-section (svn-unpulled "Unpulled commits (SVN):")
         (apply-partially 'magit-wash-log 'unique)
-      "log" "--format=format:* %h %s" (magit-diff-abbrev-arg)
+      "log" "--format=format:%h %s"
       (format "HEAD..%s" (magit-svn-get-ref t)))))
 
 (defun magit-insert-svn-unpushed ()
   (when (magit-svn-enabled)
     (magit-git-insert-section (svn-unpushed "Unpushed commits (SVN):")
         (apply-partially 'magit-wash-log 'unique)
-      "log" "--format=format:* %h %s" (magit-diff-abbrev-arg)
+      "log" "--format=format:%h %s"
       (format "%s..HEAD" (magit-svn-get-ref t)))))
 
 (magit-define-section-jumper svn-unpushed  "Unpushed commits (SVN)")
@@ -303,6 +300,9 @@ If USE-CACHE is non nil, use the cached information."
 (defun turn-on-magit-svn ()
   "Unconditionally turn on `magit-svn-mode'."
   (magit-svn-mode 1))
+
+;;;###autoload
+(custom-add-option 'magit-mode-hook #'magit-svn-mode)
 
 (provide 'magit-svn)
 ;; Local Variables:

@@ -1,6 +1,6 @@
 ;;; exec-path-from-shell.el --- Get environment variables such as $PATH from the shell
 
-;; Copyright (C) 2012 Steve Purcell
+;; Copyright (C) 2012-2014 Steve Purcell
 
 ;; Author: Steve Purcell <steve@sanityinc.com>
 ;; Keywords: environment
@@ -36,9 +36,18 @@
 ;; It also allows other environment variables to be retrieved from the
 ;; shell, so that Emacs will see the same values you get in a terminal.
 
+;; If you use a non-POSIX-standard shell like "tcsh" or "fish", your
+;; shell will be asked to execute "sh" as a subshell in order to print
+;; out the variables in a format which can be reliably parsed. "sh"
+;; must be a POSIX-compliant shell in this case.
+
+;; Note that shell variables which have not been exported as
+;; environment variables (e.g. using the "export" keyword) may not be
+;; visible to `exec-path-from-shell'.
+
 ;; Installation:
 
-;; ELPA packages are available on Marmalade and Melpa. Alternatively, place
+;; ELPA packages are available on Marmalade and MELPA. Alternatively, place
 ;; this file on a directory in your `load-path', and explicitly require it.
 
 ;; Usage:
@@ -70,18 +79,40 @@
 (defcustom exec-path-from-shell-variables
   '("PATH" "MANPATH")
   "List of environment variables which are copied from the shell."
+  :type '(repeat (string :tag "Environment variable"))
   :group 'exec-path-from-shell)
+
+(defvar exec-path-from-shell-debug nil
+  "Display debug info when non-nil.")
 
 (defun exec-path-from-shell--double-quote (s)
   "Double-quote S, escaping any double-quotes already contained in it."
   (concat "\"" (replace-regexp-in-string "\"" "\\\\\"" s) "\""))
 
 (defun exec-path-from-shell--tcsh-p (shell)
+  "Return non-nil if SHELL appears to be tcsh."
   (string-match "tcsh$" shell))
 
 (defun exec-path-from-shell--login-arg (shell)
   "Return the name of the --login arg for SHELL."
   (if (exec-path-from-shell--tcsh-p shell) "-d" "-l"))
+
+(defcustom exec-path-from-shell-arguments
+  (list (exec-path-from-shell--login-arg (getenv "SHELL")) "-i")
+  "Additional arguments to pass to the shell.
+
+The default value denotes an interactive login shell."
+  :type '(repeat (string :tag "Shell argument"))
+  :group 'exec-path-from-shell)
+
+(defun exec-path-from-shell--debug (msg &rest args)
+  "Print MSG and ARGS like `message', but only if debug output is enabled."
+  (when exec-path-from-shell-debug
+    (apply 'message msg args)))
+
+(defun exec-path-from-shell--standard-shell-p (shell)
+  "Return non-nil iff SHELL supports the standard ${VAR-default} syntax."
+  (not (string-match "\\(fish\\|tcsh\\)$" shell)))
 
 (defun exec-path-from-shell-printf (str &optional args)
   "Return the result of printing STR in the user's shell.
@@ -99,31 +130,34 @@ shell-escaped, so they may contain $ etc."
          (printf-command
           (concat printf-bin
                   " '__RESULT\\000" str "' "
-                  (mapconcat #'exec-path-from-shell--double-quote args " "))))
+                  (mapconcat #'exec-path-from-shell--double-quote args " ")))
+         (shell-args (append exec-path-from-shell-arguments
+                             (list "-c"
+                                   (if (exec-path-from-shell--standard-shell-p (getenv "SHELL"))
+                                       printf-command
+                                     (concat "sh -c " (shell-quote-argument printf-command))))))
+         (shell (getenv "SHELL")))
     (with-temp-buffer
-      (let ((shell (getenv "SHELL")))
-        (call-process shell nil (current-buffer) nil
-                      (exec-path-from-shell--login-arg shell)
-                      "-i" "-c" printf-command))
+      (exec-path-from-shell--debug "Invoking shell %s with args %S" shell shell-args)
+      (let ((exit-code (apply #'call-process shell nil t nil shell-args)))
+        (exec-path-from-shell--debug "Shell printed: %S" (buffer-string))
+        (unless (zerop exit-code)
+          (error "Non-zero exit code from shell %s invoked with args %S.  Output was:\n%S"
+                 shell shell-args (buffer-string))))
       (goto-char (point-min))
-      (when (re-search-forward "__RESULT\0\\(.*\\)" nil t)
-        (match-string 1)))))
+      (if (re-search-forward "__RESULT\0\\(.*\\)" nil t)
+          (match-string 1)
+        (error "Expected printf output from shell, but got: %S" (buffer-string))))))
 
 (defun exec-path-from-shell-getenvs (names)
   "Get the environment variables with NAMES from the user's shell.
 
-Execute $SHELL as interactive login shell.  The result is a list
-of (NAME . VALUE) pairs."
-  (let* ((dollar-names (mapcar (lambda (n) (concat "$" n)) names))
-         (values (if (exec-path-from-shell--tcsh-p (getenv "SHELL"))
-                     ;; Dumb shell
-                     (mapcar (lambda (v)
-                               (exec-path-from-shell-printf "%s" (list v)))
-                             dollar-names)
-                   ;; Decent shell
-                   (split-string (exec-path-from-shell-printf
-                                  (mapconcat #'identity (make-list (length names) "%s") "\\000")
-                                  dollar-names) "\0"))))
+Execute $SHELL according to `exec-path-from-shell-arguments'.
+The result is a list of (NAME . VALUE) pairs."
+  (let* ((dollar-names (mapcar (lambda (n) (format "${%s-}" n)) names))
+         (values (split-string (exec-path-from-shell-printf
+                                (mapconcat #'identity (make-list (length names) "%s") "\\000")
+                                dollar-names) "\0")))
     (let (result)
       (while names
         (prog1
@@ -146,7 +180,7 @@ variables such as `exec-path'."
   (setenv name value)
   (when (string-equal "PATH" name)
     (setq eshell-path-env value
-          exec-path (parse-colon-path value))))
+          exec-path (append (parse-colon-path value) (list exec-directory)))))
 
 ;;;###autoload
 (defun exec-path-from-shell-copy-envs (names)

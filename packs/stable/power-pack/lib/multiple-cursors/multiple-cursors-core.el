@@ -428,7 +428,7 @@ So you can paste it in later with `yank-rectangle'."
     (unless (mc--all-equal entries)
       (setq killed-rectangle entries))))
 
-(defvar mc/unsupported-minor-modes '(auto-complete-mode flyspell-mode)
+(defvar mc/unsupported-minor-modes '(company-mode auto-complete-mode flyspell-mode jedi-mode)
   "List of minor-modes that does not play well with multiple-cursors.
 They are temporarily disabled when multiple-cursors are active.")
 
@@ -596,6 +596,9 @@ for running commands with multiple cursors.")
                                      mc/skip-to-next-like-this
                                      mc/skip-to-previous-like-this
                                      rrm/switch-to-multiple-cursors
+                                     mc-hide-unmatched-lines-mode
+                                     hum/keyboard-quit
+                                     hum/unhide-invisible-overlays
                                      save-buffer
                                      ido-exit-minibuffer
                                      exit-minibuffer

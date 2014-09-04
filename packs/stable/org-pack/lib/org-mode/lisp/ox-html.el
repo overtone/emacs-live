@@ -170,10 +170,8 @@
     "progress" "section" "video")
   "New elements in html5.
 
-<hgroup> is not included because it's currently impossible to
-wrap special blocks around multiple headlines. For other blocks
-that should contain headlines, use the HTML_CONTAINER property on
-the headline itself.")
+For blocks that should contain headlines, use the HTML_CONTAINER
+property on the headline itself.")
 
 (defconst org-html-special-string-regexps
   '(("\\\\-" . "&#x00ad;")		; shy
@@ -457,6 +455,7 @@ export back-end currently used."
 	      (not org-html-use-infojs)
 	      (and (eq org-html-use-infojs 'when-configured)
 		   (or (not (plist-get exp-plist :infojs-opt))
+		       (string= "" (plist-get exp-plist :infojs-opt))
 		       (string-match "\\<view:nil\\>"
 				     (plist-get exp-plist :infojs-opt)))))
     (let* ((template org-html-infojs-template)
@@ -2597,18 +2596,17 @@ if its description is a single link targeting an image file."
 
 (defvar org-html-standalone-image-predicate)
 (defun org-html-standalone-image-p (element info)
-  "Test if ELEMENT is a standalone image.
+  "Non-nil if ELEMENT is a standalone image.
 
 INFO is a plist holding contextual information.
 
-Return non-nil, if ELEMENT is of type paragraph and its sole
-content, save for white spaces, is a link that qualifies as an
-inline image.
+An element or object is a standalone image when
 
-Return non-nil, if ELEMENT is of type link and its containing
-paragraph has no other content save white spaces.
+  - its type is `paragraph' and its sole content, save for white
+    spaces, is a link that qualifies as an inline image;
 
-Return nil, otherwise.
+  - its type is `link' and its containing paragraph has no other
+    content save white spaces.
 
 Bind `org-html-standalone-image-predicate' to constrain paragraph
 further.  For example, to check for only captioned standalone
@@ -2619,19 +2617,21 @@ images, set it to:
 		     (paragraph element)
 		     (link (org-export-get-parent element)))))
     (and (eq (org-element-type paragraph) 'paragraph)
-	 (or (not (and (boundp 'org-html-standalone-image-predicate)
-		       (functionp org-html-standalone-image-predicate)))
+	 (or (not (fboundp 'org-html-standalone-image-predicate))
 	     (funcall org-html-standalone-image-predicate paragraph))
-	 (not (let ((link-count 0))
-		(org-element-map (org-element-contents paragraph)
-		    (cons 'plain-text org-element-all-objects)
-		  (lambda (obj) (case (org-element-type obj)
-			     (plain-text (org-string-nw-p obj))
-			     (link
-			      (or (> (incf link-count) 1)
-				  (not (org-html-inline-image-p obj info))))
-			     (otherwise t)))
-		  info 'first-match 'link))))))
+	 (catch 'exit
+	   (let ((link-count 0))
+	     (org-element-map (org-element-contents paragraph)
+		 (cons 'plain-text org-element-all-objects)
+	       #'(lambda (obj)
+		   (when (case (org-element-type obj)
+			   (plain-text (org-string-nw-p obj))
+			   (link (or (> (incf link-count) 1)
+				     (not (org-html-inline-image-p obj info))))
+			   (otherwise t))
+		     (throw 'exit nil)))
+	       info nil 'link)
+	     (= link-count 1))))))
 
 (defun org-html-link (link desc info)
   "Transcode a LINK object from Org to HTML.
@@ -2661,19 +2661,20 @@ INFO is a plist holding contextual information.  See
 	 (path
 	  (cond
 	   ((member type '("http" "https" "ftp" "mailto"))
-	    (concat type ":" raw-path))
+	    (org-link-escape
+	     (org-link-unescape
+	      (concat type ":" raw-path)) org-link-escape-chars-browser))
 	   ((string= type "file")
 	    ;; Treat links to ".org" files as ".html", if needed.
 	    (setq raw-path
 		  (funcall link-org-files-as-html-maybe raw-path info))
 	    ;; If file path is absolute, prepend it with protocol
-	    ;; component - "file://".
-	    (cond ((file-name-absolute-p raw-path)
-		   (setq raw-path
-			 (concat "file://" (expand-file-name
-					    raw-path))))
-		  ((and home use-abs-url)
-		   (setq raw-path (concat (file-name-as-directory home) raw-path))))
+	    ;; component - "file:".
+	    (cond
+	     ((file-name-absolute-p raw-path)
+	      (setq raw-path (concat "file:" raw-path)))
+	     ((and home use-abs-url)
+	      (setq raw-path (concat (file-name-as-directory home) raw-path))))
 	    ;; Add search option, if any.  A search option can be
 	    ;; relative to a custom-id or a headline title.  Any other
 	    ;; option is ignored.
@@ -2721,9 +2722,9 @@ INFO is a plist holding contextual information.  See
       (let ((destination (org-export-resolve-radio-link link info)))
 	(when destination
 	  (format "<a href=\"#%s\"%s>%s</a>"
-		  (org-export-solidify-link-text path)
-		  attributes
-		  (org-export-data (org-element-contents destination) info)))))
+		  (org-export-solidify-link-text
+		   (org-element-property :value destination))
+		  attributes desc))))
      ;; Links pointing to a headline: Find destination and build
      ;; appropriate referencing command.
      ((member type '("custom-id" "fuzzy" "id"))

@@ -171,6 +171,18 @@ then inline code snippets will be wrapped into the formatting string.
 - =org-screenshot.el= by Max Mikhanosha :: an utility to handle
      screenshots easily from Org, using the external tool [[http://freecode.com/projects/scrot][scrot]].
 
+** Miscellaneous
+
+*** "QUOTE" keywords in headlines are deprecated
+
+"QUOTE" keywords are an undocumented feature in Org.  When a headline
+starts with the keyword "QUOTE", its contents are parsed as
+a ~quote-section~ and treated as an example block.  You can achieve
+the same with example blocks.
+
+This feature is deprecated and will be removed in the next Org
+release.
+
 * Version 8.0.1
 
 ** Installation

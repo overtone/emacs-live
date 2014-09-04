@@ -3,8 +3,20 @@ Haskell Mode for Emacs
 
 [![Build Status](https://travis-ci.org/haskell/haskell-mode.png?branch=master)](https://travis-ci.org/haskell/haskell-mode)
 
-This is the Haskell mode package for Emacs.  Its use should be mostly
-self-explanatory if you're accustomed to Emacs.
+This is the Haskell mode package for Emacs.
+
+Please see
+[the online haskell-mode manual](https://github.com/haskell/haskell-mode/wiki)
+for setup and use guide.
+
+To report problems or suggestions, please
+[open an issue](https://github.com/haskell/haskell-mode/issues?state=open)
+in the issue tracker.
+
+Below is a brief setup guide.
+
+Quick Emacs rundown
+--------------------
 
 When Emacs is started up, it normally loads the
 [Emacs initialization file](http://www.gnu.org/software/emacs/manual/html_node/emacs/Init-File.html)
@@ -110,13 +122,13 @@ $ apt-get install haskell-mode
 
     - Invoking `make haskell-mode-autoloads.el`, or `make all` (use
       this to perform byte-compilation and Info manual generation)
-    
+
     - From inside Emacs, `M-x update-directory-autoloads` and answering the question for
       the folder with `~/lib/emacs/haskell-mode/` and the question for the output-file with
       `~/lib/emacs/haskell-mode/haskell-mode-autoloads.el`
-    
+
     and then adding the following command to your `.emacs`:
-  
+
     ```el
     (add-to-list 'load-path "~/lib/emacs/haskell-mode/")
     (require 'haskell-mode-autoloads)
