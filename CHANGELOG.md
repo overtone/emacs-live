@@ -1,5 +1,11 @@
 # Emacs Live Changelog
 
+## 1.0-BETA-25 (Thurs 4th Sept 2014)
+* Update many, many dependencies (As usual)
+* Move to CIDER 0.7.0
+* Enable stacktrace popup for CIDER
+* Improve Gandalf theme a little
+
 ## 1.0-BETA-24 (Thurs 6th Feb 2014)
 * Update many, many dependencies (As usual)
 * Move from nrepl.el to new cider library
