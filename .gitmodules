@@ -149,3 +149,6 @@
 [submodule "packs/dev/foundation-pack/vendor/submodules/epl"]
         path = packs/dev/foundation-pack/vendor/submodules/epl
         url = git://github.com/cask/epl.git
+[submodule "packs/dev/foundation-pack/vendor/submodules/find-file-in-project"]
+	path = packs/dev/foundation-pack/vendor/submodules/find-file-in-project
+	url = https://github.com/technomancy/find-file-in-project
