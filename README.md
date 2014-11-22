@@ -144,7 +144,7 @@ accepted for appropriate improvements to Gandalf.
 
 A set of goodies to get you hacking Clojure like a pro.
 
-* Clojure Mode (with fancy (λ [a] (+ a 5)) and ƒ(+ % 5) prettifications)
+* Clojure Mode (with fancy `(λ [a] (+ a 5))` and `ƒ(+ % 5)` prettifications)
 * cider (for communicating with nREPL servers)
 * Auto completion (configured to work with nREPL for inline auto
   completion of documentation)
