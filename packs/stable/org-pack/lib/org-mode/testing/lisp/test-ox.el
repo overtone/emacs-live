@@ -1890,68 +1890,6 @@ Another text. (ref:text)
 
 
 
-;;; Special blocks
-
-(ert-deftest test-org-export/raw-special-block-p ()
-  "Test `org-export-raw-special-block-p' specifications."
-  ;; Standard test.
-  (should
-   (org-test-with-parsed-data "#+BEGIN_FOO\nContents\n#+END_FOO"
-     (let ((info (org-combine-plists
-		  info (list :back-end
-			     (org-export-create-backend :blocks '("FOO"))))))
-       (org-export-raw-special-block-p
-	(org-element-map tree 'special-block #'identity info t) info))))
-  (should-not
-   (org-test-with-parsed-data "#+BEGIN_BAR\nContents\n#+END_BAR"
-     (let ((info (org-combine-plists
-		  info (list :back-end
-			     (org-export-create-backend :blocks '("FOO"))))))
-       (org-export-raw-special-block-p
-	(org-element-map tree 'special-block #'identity info t) info))))
-  ;; Check is not case-sensitive.
-  (should
-   (org-test-with-parsed-data "#+begin_foo\nContents\n#+end_foo"
-     (let ((info (org-combine-plists
-		  info (list :back-end
-			     (org-export-create-backend :blocks '("FOO"))))))
-       (org-export-raw-special-block-p
-	(org-element-map tree 'special-block #'identity info t) info))))
-  ;; Test inheritance.
-  (should
-   (org-test-with-parsed-data "#+BEGIN_FOO\nContents\n#+END_FOO"
-     (let* ((org-export--registered-backends
-	     (list (org-export-create-backend :name 'b1 :blocks '("FOO"))))
-	    (info (org-combine-plists
-		   info (list :back-end
-			      (org-export-create-backend :parent 'b1
-							 :blocks '("BAR"))))))
-       (org-export-raw-special-block-p
-	(org-element-map tree 'special-block #'identity info t) info))))
-  (should-not
-   (org-test-with-parsed-data "#+BEGIN_BAZ\nContents\n#+END_BAZ"
-     (let* ((org-export--registered-backends
-	     (list (org-export-create-backend :name 'b1 :blocks '("FOO"))))
-	    (info (org-combine-plists
-		   info (list :back-end
-			      (org-export-create-backend :parent 'b1
-							 :blocks '("BAR"))))))
-       (org-export-raw-special-block-p
-	(org-element-map tree 'special-block #'identity info t) info))))
-  ;; With optional argument, ignore inheritance.
-  (should-not
-   (org-test-with-parsed-data "#+BEGIN_FOO\nContents\n#+END_FOO"
-     (let* ((org-export--registered-backends
-	     (list (org-export-create-backend :name 'b1 :blocks '("FOO"))))
-	    (info (org-combine-plists
-		   info (list :back-end
-			      (org-export-create-backend :parent 'b1
-							 :blocks '("BAR"))))))
-       (org-export-raw-special-block-p
-	(org-element-map tree 'special-block #'identity info t) info t)))))
-
-
-
 ;;; Src-block and example-block
 
 (ert-deftest test-org-export/unravel-code ()

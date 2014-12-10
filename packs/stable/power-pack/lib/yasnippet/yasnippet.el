@@ -148,6 +148,7 @@
 
 (defgroup yasnippet nil
   "Yet Another Snippet extension"
+  :prefix "yas-"
   :group 'editing)
 
 (defvar yas-installed-snippets-dir nil)
@@ -288,7 +289,7 @@ next field"
   `yas-expand' returns nil)
 
 - A Lisp form (apply COMMAND . ARGS) means interactively call
-  COMMAND, if ARGS is non-nil, call COMMAND non-interactively
+  COMMAND. If ARGS is non-nil, call COMMAND non-interactively
   with ARGS as arguments."
   :type '(choice (const :tag "Call previous command"  call-other-command)
                  (const :tag "Do nothing"             return-nil))
@@ -558,7 +559,7 @@ snippet itself contains a condition that returns the symbol
 
 (defun yas--snippet-next-id ()
   (let ((id yas--snippet-id-seed))
-    (incf yas--snippet-id-seed)
+    (cl-incf yas--snippet-id-seed)
     id))
 
 
@@ -2247,8 +2248,19 @@ Common gateway for `yas-expand-from-trigger-key' and
   (cond ((eq yas-fallback-behavior 'return-nil)
          ;; return nil
          nil)
+        ((eq yas-fallback-behavior 'yas--fallback)
+         (error (concat "yasnippet fallback loop!\n"
+                        "This can happen when you bind `yas-expand' "
+                        "outside of the `yas-minor-mode-map'.")))
         ((eq yas-fallback-behavior 'call-other-command)
-         (let* ((beyond-yasnippet (yas--keybinding-beyond-yasnippet)))
+         (let* ((yas-fallback-behavior 'yas--fallback)
+                ;; Also bind `yas-minor-mode' to prevent fallback
+                ;; loops when other extensions use mechanisms similar
+                ;; to `yas--keybinding-beyond-yasnippet'. (github #525
+                ;; and #526)
+                ;; 
+                (yas-minor-mode nil)
+                (beyond-yasnippet (yas--keybinding-beyond-yasnippet)))
            (yas--message 4 "Falling back to %s"  beyond-yasnippet)
            (assert (or (null beyond-yasnippet) (commandp beyond-yasnippet)))
            (setq this-original-command beyond-yasnippet)
@@ -2257,18 +2269,21 @@ Common gateway for `yas-expand-from-trigger-key' and
         ((and (listp yas-fallback-behavior)
               (cdr yas-fallback-behavior)
               (eq 'apply (car yas-fallback-behavior)))
-         (if (cddr yas-fallback-behavior)
-             (apply (cadr yas-fallback-behavior)
-                    (cddr yas-fallback-behavior))
-           (when (commandp (cadr yas-fallback-behavior))
-             (setq this-command (cadr yas-fallback-behavior))
-             (call-interactively (cadr yas-fallback-behavior)))))
+         (let ((command-or-fn (cadr yas-fallback-behavior))
+               (args (cddr yas-fallback-behavior))
+               (yas-fallback-behavior 'yas--fallback)
+               (yas-minor-mode nil))
+           (if args
+               (apply command-or-fn args)
+             (when (commandp command-or-fn)
+               (setq this-command command-or-fn)
+               (call-interactively command-or-fn)))))
         (t
          ;; also return nil if all the other fallbacks have failed
          nil)))
 
 (defun yas--keybinding-beyond-yasnippet ()
-  "Return the ??"
+  "Get current keys's binding as if YASsnippet didn't exist."
   (let* ((yas-minor-mode nil)
          (yas--direct-keymaps nil)
          (keys (this-single-command-keys)))
@@ -3017,12 +3032,14 @@ through the field's start point"
    ;; field must be zero length
    ;;
    (zerop (- (yas--field-start field) (yas--field-end field)))
-   ;; skip if:
+   ;; field must have been modified
+   ;;
+   (yas--field-modified-p field)
+   ;; either:
    (or
-    ;;  1) is a nested field and it's been modified
+    ;;  1) it's a nested field
     ;;
-    (and (yas--field-parent-field field)
-         (yas--field-modified-p field))
+    (yas--field-parent-field field)
     ;;  2) ends just before the snippet end
     ;;
     (and (eq field (car (last (yas--snippet-fields snippet))))
@@ -3421,17 +3438,10 @@ progress."
 ;; snippet outside the active field. Actual protection happens in
 ;; `yas--on-protection-overlay-modification'.
 ;;
-;; Currently this signals an error which inhibits the command. For
-;; commands that move point (like `kill-line'), point is restored in
-;; the `yas--post-command-handler' using a global
-;; `yas--protection-violation' variable.
-;;
-;; Alternatively, I've experimented with an implementation that
-;; commits the snippet before actually calling `this-command'
-;; interactively, and then signals an error, which is ignored. but
-;; blocks all other million modification hooks. This presented some
-;; problems with stacked expansion.
-;;
+;; As of github #537 this no longer inhibits the command by issuing an
+;; error: all the snippets at point, including nested snippets, are
+;; automatically commited and the current command can proceed.
+;; 
 (defun yas--make-move-field-protection-overlays (snippet field)
   "Place protection overlays surrounding SNIPPET's FIELD.
 
@@ -3464,23 +3474,17 @@ Move the overlays, or create them if they do not exit."
              ;; (overlay-put ov 'evaporate t)
              (overlay-put ov 'modification-hooks '(yas--on-protection-overlay-modification)))))))
 
-(defvar yas--protection-violation nil
-  "When non-nil, signals attempts to erroneously exit or modify the snippet.
-
-Functions in the `post-command-hook', for example
-`yas--post-command-handler' can check it and reset its value to
-nil.  The variables value is the point where the violation
-originated")
-
 (defun yas--on-protection-overlay-modification (_overlay after? _beg _end &optional _length)
   "Signals a snippet violation, then issues error.
 
 The error should be ignored in `debug-ignored-errors'"
-  (unless yas--inhibit-overlay-hooks
-    (cond ((not (or after?
-                    (yas--undo-in-progress)))
-           (setq yas--protection-violation (point))
-           (error "Exit the snippet first!")))))
+  (unless (or yas--inhibit-overlay-hooks
+              after?
+              (yas--undo-in-progress))
+    (let ((snippets (yas--snippets-at-point)))
+      (yas--message 3 "Comitting snippets. Action would destroy a protection overlay.")
+      (cl-loop for snippet in snippets
+               do (yas--commit-snippet snippet)))))
 
 (add-to-list 'debug-ignored-errors "^Exit the snippet first!$")
 
@@ -3952,7 +3956,7 @@ Meant to be called in a narrowed buffer, does various passes"
         (n (line-beginning-position)))
     (while (or (eql c ?\ )
                (eql c ?\t))
-      (incf n)
+      (cl-incf n)
       (setq c (char-after n)))
     n))
 
@@ -4279,10 +4283,7 @@ When multiple expressions are found, only the last one counts."
 ;;
 (defun yas--post-command-handler ()
   "Handles various yasnippet conditions after each command."
-  (cond (yas--protection-violation
-         (goto-char yas--protection-violation)
-         (setq yas--protection-violation nil))
-        ((eq 'undo this-command)
+  (cond ((eq 'undo this-command)
          ;;
          ;; After undo revival the correct field is sometimes not
          ;; restored correctly, this condition handles that
@@ -4593,9 +4594,9 @@ can more or less safely rely upon them.")
 
 
 (provide 'yasnippet)
-
-;;; yasnippet.el ends here
 ;; Local Variables:
 ;; coding: utf-8
+;; indent-tabs-mode: nil
 ;; byte-compile-warnings: (not cl-functions)
 ;; End:
+;;; yasnippet.el ends here

@@ -60,14 +60,19 @@ class APIResponse():
             self.code = int(lines[0])
             if self.code != 204:
                 self.body = json.loads('\n'.join(lines[1:]))
+        elif isinstance(r, URLError):
+            # horrible hack, but lots of other stuff checks the response code :/
+            self.code = 500
+            self.body = r
         else:
+            # Hopefully this is an HTTPError
             self.code = r.code
             if self.code != 204:
                 self.body = json.loads(r.read().decode("utf-8"))
 
 
 def proxy_api_request(host, url, data, method):
-    args = ['python', '-m', 'floo.proxy',  '--host', host, '--url', url]
+    args = ['python', '-m', 'floo.proxy', '--host', host, '--url', url]
     if data:
         args += ["--data", json.dumps(data)]
     if method:

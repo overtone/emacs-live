@@ -7,7 +7,7 @@
 ;; Keywords: compile, convenience, lisp, package, library
 
 ;; Package: packed-git
-;; Package-Requires: ((cl-lib "0.5") (magit "2.1.0"))
+;; Package-Requires: ((cl-lib "0.5") (magit "2.1.0") (packed "0.3.5"))
 
 ;; This file is not part of GNU Emacs.
 

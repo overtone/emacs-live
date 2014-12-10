@@ -32,6 +32,7 @@
 
 (require 'dash)
 (require 'cl-lib)
+(require 'clojure-mode)
 
 ;;; Compatibility
 (eval-and-compile
@@ -80,13 +81,12 @@ positions before and after executing BODY."
 (defun cider-property-bounds (prop)
   "Return the the positions of the previous and next change to PROP.
 PROP is the name of a text property."
-  (assert (get-text-property (point) prop))
   (let ((end (next-single-char-property-change (point) prop)))
     (list (previous-single-char-property-change end prop) end)))
 
 (defun cider-insert (text &optional face break more-text)
   "Insert TEXT with FACE, optionally followed by a line BREAK and MORE-TEXT."
-  (insert (if face (propertize text 'face face) text))
+  (insert (if face (propertize text 'font-lock-face face) text))
   (when more-text (insert more-text))
   (when break (insert "\n")))
 
@@ -98,9 +98,9 @@ PROP is the name of a text property."
     (insert string)
     ;; suppress major mode hooks as we care only about their font-locking
     ;; otherwise modes like whitespace-mode and paredit might interfere
-    (let ((delay-mode-hooks t)
-          (delayed-mode-hooks nil))
-      (funcall mode))
+    (setq-local delay-mode-hooks t)
+    (setq delayed-mode-hooks nil)
+    (funcall mode)
     (font-lock-fontify-buffer)
     (buffer-string)))
 
@@ -118,43 +118,6 @@ Unless you specify a BUFFER it will default to the current one."
   "Font-lock STRING as Clojure code."
   (cider-font-lock-as 'clojure-mode string))
 
-;; More efficient way to fontify a region, without having to delete it
-;; Unfortunately still needs work, since the font-locking code in clojure-mode
-;; is pretty convoluted
-(defun cider-fontify-region
-  (beg end keywords syntax-table syntactic-keywords syntax-propertize-fn)
-  "Fontify a region between BEG and END using another mode's fontification.
-
-KEYWORDS, SYNTAX-TABLE, SYNTACTIC-KEYWORDS and
-SYNTAX-PROPERTIZE-FN are the values of that mode's
-`font-lock-keywords', `font-lock-syntax-table',
-`font-lock-syntactic-keywords', and `syntax-propertize-function'
-respectively."
-  (save-excursion
-    (save-match-data
-      (let ((font-lock-keywords keywords)
-            (font-lock-syntax-table syntax-table)
-            (font-lock-syntactic-keywords syntactic-keywords)
-            (syntax-propertize-function syntax-propertize-fn)
-            (font-lock-multiline 'undecided)
-            (font-lock-dont-widen t)
-            font-lock-keywords-only
-            font-lock-extend-region-functions
-            font-lock-keywords-case-fold-search)
-        (save-restriction
-          (narrow-to-region (1- beg) end)
-          ;; font-lock-fontify-region apparently isn't inclusive,
-          ;; so we have to move the beginning back one char
-          (font-lock-fontify-region (1- beg) end))))))
-
-(defun cider-fontify-region-as-clojure (beg end)
-  "Use Clojure's font-lock variables to fontify the region between BEG and END."
-  (cider-fontify-region beg end
-                        clojure-font-lock-keywords
-                        clojure-mode-syntax-table
-                        nil
-                        nil))
-
 ;;; Colors
 
 (defun cider-scale-color (color scale)
@@ -171,9 +134,14 @@ respectively."
         (dark (eq (frame-parameter nil 'background-mode) 'dark)))
     (cider-scale-color color (if dark 0.05 -0.05))))
 
-(defun cider-format-pprint-eval (form)
-  "Return a string of Clojure code that will eval and pretty-print FORM."
-  (format "(let [x %s] (clojure.pprint/pprint x) x)" form))
+(defun cider-format-pprint-eval (form &optional right-margin)
+  "Return a string of Clojure code that will eval and pretty-print FORM.
+Pretty printing will avoid going beyond column RIGHT-MARGIN which defaults
+to `fill-column'."
+  (format "(clojure.core/let [x %s]
+             (binding [clojure.pprint/*print-right-margin* %d]
+               (clojure.pprint/pprint x)) x)"
+          form (or right-margin fill-column)))
 
 (autoload 'pkg-info-version-info "pkg-info.el")
 
@@ -188,6 +156,17 @@ respectively."
 (defun cider-string-join (strings &optional separator)
   "Join all STRINGS using SEPARATOR."
   (mapconcat 'identity strings separator))
+
+(defun cider-join-into-alist (candidates &optional separator)
+  "Make an alist from CANDIDATES.
+The keys are the elements joined with SEPARATOR and values are the original
+elements. Useful for `completing-read' when candidates are complex
+objects."
+  (mapcar (lambda (el)
+            (if (listp el)
+                (cons (cider-string-join el (or separator ":")) el)
+              (cons el el)))
+          candidates))
 
 (provide 'cider-util)
 

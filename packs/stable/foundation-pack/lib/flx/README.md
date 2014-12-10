@@ -74,7 +74,7 @@ higher.  However because the substring match "re-mode" is so long,
 
 ### uppercase letters
 
-Flx always folds lowercase letters to match uppercase.  However, you can use upper case letters for force flx to only match uppercase.
+Flx always folds lowercase letters to match uppercase.  However, you can use uppercase letters for force flx to only match uppercase.
 
 This is similar to Emacs' case-folding.  The difference is mixing in uppercase letters **does not disable** folding.
 

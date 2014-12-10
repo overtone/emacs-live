@@ -46,6 +46,7 @@
     "The unavoidable price of reliability is simplicity. -C.A.R. Hoare"
     "You're bound to be unhappy if you optimize everything. -Donald Knuth"
     "Simplicity is prerequisite for reliability. -Edsger W. Dijkstra"
+    "Elegance is not a dispensable luxury but a quality that decides between success and failure. -Edsger W. Dijkstra"
     "Deleted code is debugged code. -Jeff Sickel"
     "The key to performance is elegance, not battalions of special cases. -Jon Bentley and Doug McIlroy"
     "First, solve the problem. Then, write the code. -John Johnson"
@@ -56,6 +57,7 @@
     "Code never lies, comments sometimes do. -Ron Jeffries"
     "The true delight is in the finding out rather than in the knowing.  -Isaac Asimov"
     "If paredit is not for you, then you need to become the sort of person that paredit is for. -Phil Hagelberg"
+    "Express Yourself. -Madonna"
     "Take this REPL, fellow hacker, and may it serve you well."
     "Let the hacking commence!"
     "Hacks and glory await!"
@@ -96,14 +98,8 @@ NS & SESSION specify the context in which to evaluate the request."
   ;; namespace forms are always evaluated in the "user" namespace
   (let ((ns (if (cider-ns-form-p input)
                 "user"
-              ns)))
-    ;; prevent forms from being evaluated in the wrong or a non-existing namespace
-    (when (and ns
-               (derived-mode-p 'clojure-mode)
-               (not (string= ns nrepl-buffer-ns))
-               (not (cider-ns-form-p input)))
-      (cider-eval-ns-form))
-    (nrepl-send-string input callback ns session)))
+              (or ns (cider-current-ns)))))
+    (nrepl-request:eval input callback ns session)))
 
 (defun cider-tooling-eval (input callback &optional ns)
   "Send the request INPUT and register the CALLBACK as the response handler.
@@ -111,124 +107,155 @@ NS specifies the namespace in which to evaluate the request."
   ;; namespace forms are always evaluated in the "user" namespace
   (cider-eval input callback ns (nrepl-current-tooling-session)))
 
-(defun cider-eval-sync (input &optional ns session)
-  "Send the INPUT to the nREPL server synchronously.
-NS & SESSION specify the evaluation context."
-  (nrepl-send-string-sync input ns session))
-
-(defun cider-eval-and-get-value (input &optional ns session)
-  "Send the INPUT to the nREPL server synchronously and return the value.
-NS & SESSION specify the evaluation context."
-  (cider-get-value (cider-eval-sync input ns session)))
-
-(defun cider-tooling-eval-sync (input &optional ns)
-  "Send the INPUT to the nREPL server using a tooling session synchronously.
-NS specifies the namespace in which to evaluate the request."
-  (cider-eval-sync input ns (nrepl-current-tooling-session)))
-
-(defun cider-get-raw-value (eval-result)
-  "Get the raw value (as string) from EVAL-RESULT."
-  (plist-get eval-result :value))
-
-(defun cider-get-value (eval-result)
-  "Get the value from EVAL-RESULT."
-  (read (cider-get-raw-value eval-result)))
-
-(defun cider-send-op (op attributes handler)
-  "Send the specified OP with ATTRIBUTES and response HANDLER."
-  (nrepl-send-request (append
-                       (list "op" op
-                             "session" (nrepl-current-session)
-                             "ns" nrepl-buffer-ns)
-                       attributes)
-                      handler))
-
-(defun cider-send-load-file (file-contents file-path file-name)
-  "Perform the nREPL \"load-file\" op.
-FILE-CONTENTS, FILE-PATH and FILE-NAME are details of the file to be
-loaded."
-  (let ((buffer (current-buffer)))
-    (nrepl-send-request (list "op" "load-file"
-                              "session" (nrepl-current-session)
-                              "file" file-contents
-                              "file-path" file-path
-                              "file-name" file-name)
-                        (cider-load-file-handler buffer))))
-
 (defun cider-interrupt ()
   "Interrupt any pending evaluations."
   (interactive)
-  (let ((pending-request-ids (cider-util--hash-keys nrepl-pending-requests)))
-    (dolist (request-id pending-request-ids)
-      (nrepl-send-interrupt request-id (cider-interrupt-handler (current-buffer))))))
+  (with-current-buffer (nrepl-current-connection-buffer)
+    (let ((pending-request-ids (cider-util--hash-keys nrepl-pending-requests)))
+      (dolist (request-id pending-request-ids)
+        (nrepl-request:interrupt request-id (cider-interrupt-handler (current-buffer)))))))
 
 (defun cider-current-repl-buffer ()
   "The current REPL buffer."
-  (when (nrepl-current-connection-buffer)
-    (buffer-local-value 'nrepl-repl-buffer
-                        (get-buffer (nrepl-current-connection-buffer)))))
-
-(defun cider--dict-to-alist (val)
-  "Transforms a nREPL bdecoded dict VAL into an alist.
-Simply returns it if it's not a dict."
-  (if (and (listp val)
-           (eq (car val) 'dict))
-      (-map '-cons-to-list (cdr val))
-    val))
-
-(defun cider--dict-to-plist (val)
-  "Transforms a nREPL bdecoded dict VAL into a plist with symbol keys.
-Simply returns it if it's not a dict."
-  (if (and (listp val)
-           (eq (car val) 'dict))
-      (-interleave (-map 'intern (-map 'car (cdr val)))
-                   (-map 'cdr (cdr val)))
-    val))
+  (-when-let (repl-buf (nrepl-current-connection-buffer 'no-error))
+    (buffer-local-value 'nrepl-repl-buffer (get-buffer repl-buf))))
 
 (defun cider--var-choice (var-info)
   "Prompt to choose from among multiple VAR-INFO candidates, if required.
 This is needed only when the symbol queried is an unqualified host platform
 method, and multiple classes have a so-named member.  If VAR-INFO does not
 contain a `candidates' key, it is returned as is."
-  (let ((candidates (cdadr (assoc "candidates" var-info))))
+  (let ((candidates (nrepl-dict-get var-info "candidates")))
     (if candidates
-        (let* ((classes (mapcar (lambda (x) (cdr (assoc "class" x))) candidates))
+        (let* ((classes (nrepl-dict-keys candidates))
                (choice (completing-read "Member in class: " classes nil t))
-               (info (cdr (assoc choice candidates))))
-          (cider--dict-to-alist info))
+               (info (nrepl-dict-get candidates choice)))
+          info)
       var-info)))
 
 (defun cider-var-info (var &optional all)
   "Return VAR's info as an alist with list cdrs.
-
 When multiple matching vars are returned you'll be prompted to select one,
 unless ALL is truthy."
   (when (and var (not (string= var "")))
-    (let ((val (plist-get (nrepl-send-request-sync
-                           (list "op" "info"
-                                 "session" (nrepl-current-session)
-                                 "ns" (cider-current-ns)
-                                 "symbol" var))
-                          :value)))
-      (if all
-          (cider--dict-to-alist val)
-        (cider--var-choice
-         (cider--dict-to-alist val))))))
+    (let ((var-info (cider-sync-request:info var)))
+      (if all var-info (cider--var-choice var-info)))))
 
 (defun cider-member-info (class member)
   "Return the CLASS MEMBER's info as an alist with list cdrs."
   (when (and class member)
-    (let ((val (plist-get (nrepl-send-request-sync
-                           (list "op" "info"
-                                 "session" (nrepl-current-session)
-                                 "class" class
-                                 "member" member))
-                          :value)))
-      (cider--dict-to-alist val))))
+    (cider-sync-request:info nil class member)))
 
-(defun cider-get-var-attr (var-info attr)
-  "Return VAR-INFO's ATTR."
-  (cadr (assoc attr var-info)))
+
+;;; Requests
+
+(defun cider-request:load-file (file-contents file-path file-name &optional callback)
+  "Perform the nREPL \"load-file\" op.
+FILE-CONTENTS, FILE-PATH and FILE-NAME are details of the file to be
+loaded. If CALLBACK is nil, use `cider-load-file-handler'."
+  (nrepl-send-request (list "op" "load-file"
+                            "session" (nrepl-current-session)
+                            "file" file-contents
+                            "file-path" file-path
+                            "file-name" file-name)
+                      (or callback
+                          (cider-load-file-handler (current-buffer)))))
+
+
+;;; Sync Requests
+(defun cider--sync-request-value (request)
+  "Send sync REQUEST and return the \"value\" slot."
+  (cider-ensure-op-supported (lax-plist-get request "op"))
+  (nrepl-dict-get (nrepl-send-sync-request request) "value"))
+
+(defun cider-sync-request:apropos (query &optional search-ns docs-p privates-p case-sensitive-p)
+  "Send \"apropos\" op with args SEARCH-NS, DOCS-P, PRIVATES-P, CASE-SENSITIVE-P."
+  (-> `("op" "apropos"
+        "ns" ,(cider-current-ns)
+        "query" ,query
+        ,@(when search-ns `("search-ns" ,search-ns))
+        ,@(when docs-p '("docs?" "t"))
+        ,@(when privates-p '("privates?" "t"))
+        ,@(when case-sensitive-p '("case-sensitive?" "t")))
+    (nrepl-send-sync-request)
+    (nrepl-dict-get "apropos-matches")))
+
+(defun cider-sync-request:classpath ()
+  "Return a list of classpath entries."
+  (cider-ensure-op-supported "classpath")
+  (-> (list "op" "classpath"
+            "session" (nrepl-current-session))
+    (nrepl-send-sync-request)
+    (nrepl-dict-get "classpath")))
+
+(defun cider-sync-request:complete (str context)
+  "Return a list of completions for STR using nREPL's \"complete\" op."
+  (-> (list "op" "complete"
+            "session" (nrepl-current-session)
+            "ns" (cider-current-ns)
+            "symbol" str
+            "context" context)
+    (nrepl-send-sync-request)
+    (nrepl-dict-get "completions")))
+
+(defun cider-sync-request:info (symbol &optional class member)
+  "Send \"info\" op with parameters SYMBOL or CLASS and MEMBER."
+  (let ((var-info (-> `("op" "info"
+                        "session" ,(nrepl-current-session)
+                        "ns" ,(cider-current-ns)
+                        ,@(when symbol (list "symbol" symbol))
+                        ,@(when class (list "class" class))
+                        ,@(when member (list "member" member)))
+                    (nrepl-send-sync-request))))
+    (if (member "no-info" (nrepl-dict-get var-info "status"))
+        nil
+      var-info)))
+
+(defun cider-sync-request:eldoc (symbol &optional class member)
+  "Send \"eldoc\" op with parameters SYMBOL or CLASS and MEMBER."
+  (let ((eldoc (-> `("op" "eldoc"
+                     "session" ,(nrepl-current-session)
+                     "ns" ,(cider-current-ns)
+                     ,@(when symbol (list "symbol" symbol))
+                     ,@(when class (list "class" class))
+                     ,@(when member (list "member" member)))
+                 (nrepl-send-sync-request))))
+    (if (member "no-eldoc" (nrepl-dict-get eldoc "status"))
+        nil
+      eldoc)))
+
+(defun cider-sync-request:macroexpand (expander expr &optional display-namespaces)
+  "Macroexpand, using EXPANDER, the given EXPR.
+The default for DISPLAY-NAMESPACES is taken from
+`cider-macroexpansion-display-namespaces'."
+  (cider-ensure-op-supported "macroexpand")
+  (-> (list "op" "macroexpand"
+            "expander" expander
+            "code" expr
+            "ns" (cider-current-ns)
+            "display-namespaces"
+            (or display-namespaces
+                (symbol-name cider-macroexpansion-display-namespaces)))
+    (nrepl-send-sync-request)
+    (nrepl-dict-get "expansion")))
+
+(defun cider-sync-request:ns-list ()
+  "Get a list of the available namespaces."
+  (cider--sync-request-value (list "op" "ns-list"
+                                   "session" (nrepl-current-session))))
+
+(defun cider-sync-request:ns-vars (ns)
+  "Get a list of the vars in NS."
+  (cider--sync-request-value (list "op" "ns-vars"
+                                   "session" (nrepl-current-session)
+                                   "ns" ns)))
+
+(defun cider-sync-request:resource (name)
+  "Perform nREPL \"resource\" op with resource name NAME."
+  (-> (list "op" "resource"
+            "name" name)
+    (nrepl-send-sync-request)
+    (nrepl-dict-get "resource-path")))
 
 (provide 'cider-client)
 

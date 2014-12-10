@@ -19,6 +19,12 @@
 ;; character literals
 [\a \newline \u0032 \/ \+ \,, \;]
 
+;; namespaced/static calls/references
+(core.foo-baz/bar)
+@foo-bar/bar
+(FooBar/bar)
+(some.package.FooBar/baz)
+
 ;; cljx
 (defn x-to-string
   [x]

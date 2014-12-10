@@ -41,7 +41,7 @@ Turn it off for minor speed improvements on older systems."
   :type 'boolean
   :group 'smex)
 
-(defcustom smex-save-file "~/.smex-items"
+(defcustom smex-save-file (locate-user-emacs-file "smex-items" ".smex-items")
   "File in which the smex state is saved between Emacs sessions.
 Variables stored are: `smex-data', `smex-history'.
 Must be set before initializing Smex."

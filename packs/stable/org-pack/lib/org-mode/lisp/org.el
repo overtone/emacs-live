@@ -6152,13 +6152,21 @@ Use `org-reduced-level' to remove the effect of `org-odd-levels'."
 (defvar org-font-lock-keywords nil)
 
 (defsubst org-re-property (property &optional literal allow-null)
-   "Return a regexp matching a PROPERTY line.
- Match group 3 will be set to the value if it exists."
-   (concat "^\\(?4:[ \t]*\\)\\(?1::\\(?2:"
- 	  (if literal property (regexp-quote property))
-	  "\\):\\)[ \t]+\\(?3:[^ \t\r\n]"
-	  (if allow-null "*")
-	  ".*?\\)\\(?5:[ \t]*\\)$"))
+  "Return a regexp matching a PROPERTY line.
+
+When optional argument LITERAL is non-nil, do not quote PROPERTY.
+This is useful when PROPERTY is a regexp.  When ALLOW-NULL is
+non-nil, match properties even without a value.
+
+Match group 3 is set to the value when it exists.  If there is no
+value and ALLOW-NULL is non-nil, it is set to the empty string."
+  (concat
+   "^\\(?4:[ \t]*\\)"
+   (format "\\(?1::\\(?2:%s\\):\\)"
+	   (if literal property (regexp-quote property)))
+   (if allow-null
+       "\\(?:\\(?3:$\\)\\|[ \t]+\\(?3:.*?\\)\\)\\(?5:[ \t]*\\)$"
+     "[ \t]+\\(?3:[^ \r\t\n]+.*?\\)\\(?5:[ \t]*\\)$")))
 
 (defconst org-property-re
   (org-re-property ".*?" 'literal t)
@@ -6720,7 +6728,8 @@ in special contexts.
       (setq org-cycle-global-status 'overview)
       (run-hook-with-args 'org-cycle-hook 'overview)))))
 
-(defvar org-called-with-limited-levels);Dyn-bound in ̀org-with-limited-levels'.
+(defvar org-called-with-limited-levels nil
+  "Non-nil when `org-with-limited-levels' is currently active.")
 
 (defun org-cycle-internal-local ()
   "Do the local cycling action."
@@ -7724,13 +7733,12 @@ command."
   "Make the number of empty lines before current exactly N.
 So this will delete or add empty lines."
   (save-excursion
-    (goto-char (point-at-bol))
-    (if (looking-back "\\s-+" nil 'greedy)
-	(replace-match ""))
-    (or (bobp) (insert "\n"))
-    (while (> N 0)
-      (insert "\n")
-      (setq N (1- N)))))
+    (beginning-of-line)
+    (let ((p (point)))
+      (skip-chars-backward " \r\t\n")
+      (unless (bolp) (forward-line))
+      (delete-region (point) p))
+    (when (> N 0) (insert (make-string N ?\n)))))
 
 (defun org-get-heading (&optional no-tags no-todo)
   "Return the heading of the current entry, without the stars.
@@ -9091,14 +9099,16 @@ if `orgstruct-heading-prefix-regexp' is not empty."
 	    (if fallback
 		(let* ((orgstruct-mode)
 		       (binding
-			(loop with key = ,key
-			      for rep in
-			      '(nil
-				("<\\([^>]*\\)tab>" . "\\1TAB")
-				("<\\([^>]*\\)return>" . "\\1RET")
-				("<\\([^>]*\\)escape>" . "\\1ESC")
-				("<\\([^>]*\\)delete>" . "\\1DEL"))
-			      do
+			(let ((key ,key))
+			  (catch 'exit
+			    (dolist
+				(rep
+				 '(nil
+				   ("<\\([^>]*\\)tab>" . "\\1TAB")
+				   ("<\\([^>]*\\)return>" . "\\1RET")
+				   ("<\\([^>]*\\)escape>" . "\\1ESC")
+				   ("<\\([^>]*\\)delete>" . "\\1DEL"))
+				 nil)
 			      (when rep
 				(setq key (read-kbd-macro
 					   (let ((case-fold-search))
@@ -9106,7 +9116,8 @@ if `orgstruct-heading-prefix-regexp' is not empty."
 					      (car rep)
 					      (cdr rep)
 					      (key-description key))))))
-			      thereis (key-binding key))))
+			      (when (key-binding key)
+				(throw 'exit (key-binding key))))))))
 		  (if (keymapp binding)
 		      (org-set-transient-map binding)
 		    (let ((func (or binding

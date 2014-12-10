@@ -84,7 +84,7 @@ confirmation before committing."
   :type '(choice (const :tag "On style errors" t)
                  (const :tag "Never" nil)))
 
-(defcustom git-commit-mode-hook '(turn-on-auto-fill flyspell-mode)
+(defcustom git-commit-mode-hook '(turn-on-auto-fill)
   "Hook run when entering Git Commit mode."
   :options '(turn-on-auto-fill flyspell-mode git-commit-save-message)
   :type 'hook
@@ -650,10 +650,11 @@ basic structure of and errors in git commit messages."
         'git-commit-mode-flyspell-verify))
 
 ;;;###autoload
-(dolist (pattern '("/COMMIT_EDITMSG\\'" "/NOTES_EDITMSG\\'"
-                   "/MERGE_MSG\\'" "/TAG_EDITMSG\\'"
-                   "/PULLREQ_EDITMSG\\'"))
-  (add-to-list 'auto-mode-alist (cons pattern 'git-commit-mode)))
+(add-to-list 'auto-mode-alist '("/MERGE_MSG\\'" . git-commit-mode))
+;;;###autoload
+(add-to-list 'auto-mode-alist
+             '("/\\(?:COMMIT\\|NOTES\\|TAG\\|PULLREQ\\)_EDITMSG\\'"
+               . git-commit-mode))
 
 (defun git-commit-auto-mode-enable ()
   (message "git-commit-auto-mode-enable is obsolete and doesn't do anything"))

@@ -4,7 +4,7 @@
 
 ;; Author: Tomohiro Matsuyama <tomo@cx4a.org>
 ;; Keywords: lisp
-;; Version: 0.5.0
+;; Version: 0.5.1
 ;; Package-Requires: ((cl-lib "0.3"))
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -31,7 +31,7 @@
 
 (require 'cl-lib)
 
-(defconst popup-version "0.5.0")
+(defconst popup-version "0.5.1")
 
 
 
@@ -674,7 +674,8 @@ KEYMAP is a keymap that will be put on the popup contents."
         (popup-save-buffer-state
           (goto-char (point-max))
           (dotimes (i newlines)
-            (if (= (char-before) ?\n)
+            (if (and (char-before)
+                     (= (char-before) ?\n))
                 (delete-char -1)))))))
   nil)
 

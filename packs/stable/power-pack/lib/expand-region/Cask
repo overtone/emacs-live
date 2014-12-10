@@ -4,4 +4,5 @@
 
 (development
   (depends-on "ecukes")
-  (depends-on "espuds"))
+  (depends-on "espuds")
+  (depends-on "undercover"))

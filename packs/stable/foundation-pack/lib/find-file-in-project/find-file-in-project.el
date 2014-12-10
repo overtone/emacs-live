@@ -6,7 +6,7 @@
 ;; Author: Phil Hagelberg, Doug Alcorn, and Will Farrington
 ;; URL: http://www.emacswiki.org/cgi-bin/wiki/FindFileInProject
 ;; Git: git://github.com/technomancy/find-file-in-project.git
-;; Version: 3.2
+;; Version: 3.3
 ;; Created: 2008-03-18
 ;; Keywords: project, convenience
 ;; EmacsWiki: FindFileInProject
@@ -60,6 +60,8 @@
 
 ;;; Code:
 
+(require 'cl)
+
 (defvar ffip-project-file ".git"
   "The file that should be used to define a project root.
 
@@ -69,6 +71,10 @@ May be set using .dir-locals.el. Checks each entry if set to a list.")
   '("*.html" "*.org" "*.txt" "*.md" "*.el" "*.clj" "*.py" "*.rb" "*.js" "*.pl"
     "*.sh" "*.erl" "*.hs" "*.ml")
   "List of patterns to look for with `find-file-in-project'.")
+
+(defvar ffip-prune-patterns
+  '(".git")
+  "List of directory patterns to not decend into when listing files in `find-file-in-project'.")
 
 (defvar ffip-find-options ""
   "Extra options to pass to `find' when using `find-file-in-project'.
@@ -111,9 +117,15 @@ This overrides variable `ffip-project-root' when set.")
                   (car file-cons))))
 
 (defun ffip-join-patterns ()
-  "Turn `ffip-paterns' into a string that `find' can use."
+  "Turn `ffip-patterns' into a string that `find' can use."
   (mapconcat (lambda (pat) (format "-name \"%s\"" pat))
              ffip-patterns " -or "))
+
+(defun ffip-prune-patterns ()
+  "Turn `ffip-prune-patterns' into a string that `find' can use."
+  (mapconcat (lambda (pat) (format "-name \"%s\"" pat))
+             ffip-prune-patterns " -or "))
+
 
 (defun ffip-project-files ()
   "Return an alist of all filenames in the project and their path.
@@ -135,8 +147,8 @@ directory they are found in so that they are unique."
                   (add-to-list 'file-alist file-cons)
                   file-cons)))
             (split-string (shell-command-to-string
-                           (format "find %s -type f \\( %s \\) %s | head -n %s"
-                                   root (ffip-join-patterns)
+                           (format "find %s -type d -a \\( %s \\) -prune -o -type f \\( %s \\) -print %s | head -n %s"
+                                   root (ffip-prune-patterns) (ffip-join-patterns)
                                    ffip-find-options ffip-limit))))))
 
 ;;;###autoload

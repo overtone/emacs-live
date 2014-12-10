@@ -39,6 +39,9 @@
 (defvar cider-extra-eldoc-commands '("yas-expand")
   "Extra commands to be added to eldoc's safe commands list.")
 
+(defvar-local cider-eldoc-last-symbol nil
+  "The eldoc information for the last symbol we checked.")
+
 (defun cider-eldoc-format-thing (thing)
   "Format the eldoc THING."
   (propertize thing 'face 'font-lock-function-name-face))
@@ -80,40 +83,63 @@ POS is the index of current argument."
                      " ")
           ")"))
 
+(defun cider-eldoc-beginning-of-sexp ()
+  "Move to the beginning of current sexp.
+
+Return the number of nested sexp the point was over or after. "
+  (let ((parse-sexp-ignore-comments t)
+        (num-skipped-sexps 0))
+    (condition-case _
+        (progn
+          ;; First account for the case the point is directly over a
+          ;; beginning of a nested sexp.
+          (condition-case _
+              (let ((p (point)))
+                (forward-sexp -1)
+                (forward-sexp 1)
+                (when (< (point) p)
+                  (setq num-skipped-sexps 1)))
+            (error))
+          (while
+              (let ((p (point)))
+                (forward-sexp -1)
+                (when (< (point) p)
+                  (setq num-skipped-sexps (1+ num-skipped-sexps))))))
+      (error))
+    num-skipped-sexps))
+
 (defun cider-eldoc-info-in-current-sexp ()
   "Return a list of the current sexp and the current argument index."
   (save-excursion
-    (let ((argument-index (1- (eldoc-beginning-of-sexp))))
+    (let ((argument-index (1- (cider-eldoc-beginning-of-sexp))))
       ;; If we are at the beginning of function name, this will be -1.
       (when (< argument-index 0)
         (setq argument-index 0))
-      ;; Don't do anything if current word is inside a string.
-      (if (= (or (char-after (1- (point))) 0) ?\")
+      ;; Don't do anything if current word is inside a string, vector,
+      ;; hash or set literal.
+      (if (member (or (char-after (1- (point))) 0) '(?\" ?\{ ?\[))
           nil
         (list (cider-symbol-at-point) argument-index)))))
 
-(defun cider-eldoc--arglist-op-fn (thing)
-  "Return the arglist for THING using nREPL info op."
-  (let* ((var-info (cider-var-info thing t))
-         (candidates (cdadr (assoc "candidates" var-info))))
-    (if candidates
-        (->> candidates
-          (-map (lambda (x) (cdr (assoc "arglists-str" x))))
-          (-map 'read)
-          -flatten
-          -distinct)
-      (let ((arglists (cider-get-var-attr var-info "arglists-str")))
-        (when arglists
-          (read arglists))))))
-
 (defun cider-eldoc-arglist (thing)
   "Return the arglist for THING."
-  (when (nrepl-op-supported-p "info")
-    (cider-eldoc--arglist-op-fn thing)))
+  (when (and (nrepl-op-supported-p "eldoc")
+             thing
+             (not (string= thing ""))
+             (not (string-prefix-p ":" thing)))
+    ;; check if we can used the cached eldoc info
+    (if (string= thing (car cider-eldoc-last-symbol))
+        (cdr cider-eldoc-last-symbol)
+      (-when-let (eldoc-info (cider-sync-request:eldoc (substring-no-properties thing)))
+        (let ((arglist (nrepl-dict-get eldoc-info "eldoc")))
+          (setq cider-eldoc-last-symbol (cons thing arglist))
+          arglist)))))
 
 (defun cider-eldoc ()
   "Backend function for eldoc to show argument list in the echo area."
-  (when (cider-connected-p)
+  (when (and (cider-connected-p)
+             ;; don't clobber an error message in the minibuffer
+             (not (member last-command '(next-error previous-error))))
     (let* ((info (cider-eldoc-info-in-current-sexp))
            (thing (car info))
            (pos (cadr info))

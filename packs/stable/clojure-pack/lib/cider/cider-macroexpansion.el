@@ -34,23 +34,28 @@
 
 (defconst cider-macroexpansion-buffer "*cider-macroexpansion*")
 
-(push cider-macroexpansion-buffer cider-ancilliary-buffers)
+(push cider-macroexpansion-buffer cider-ancillary-buffers)
 
-(defcustom cider-macroexpansion-suppress-namespaces 'tidy
+(defcustom cider-macroexpansion-display-namespaces 'tidy
   "Determines if namespaces are displayed in the macroexpansion buffer.
 Possible values are:
 
-  nil   ;=> Vars are fully-qualified in the expansion
-  t     ;=> Vars are displayed without namespace qualification
-  'tidy ;=> Vars that are :refer-ed or defined in the current namespace are
-            displayed with their simple name, non-refered vars from other
-            namespaces are refered using the alias for that namespace (if
-            defined), other vars are displayed fully qualified."
-  :type '(choice (const :tag "Suppress namespaces" t)
-                 (const :tag "Show namespaces" nil)
+  'qualified ;=> Vars are fully-qualified in the expansion
+  'none      ;=> Vars are displayed without namespace qualification
+  'tidy      ;=> Vars that are :refer-ed or defined in the current namespace are
+                 displayed with their simple name, non-refered vars from other
+                 namespaces are refered using the alias for that namespace (if
+                 defined), other vars are displayed fully qualified."
+  :type '(choice (const :tag "Suppress namespaces" none)
+                 (const :tag "Show fully-qualified namespaces" qualified)
                  (const :tag "Show namespace aliases" tidy))
   :group 'cider
   :package-version '(cider . "0.7.0"))
+
+(define-obsolete-variable-alias
+  'cider-macroexpansion-suppress-namespaces
+  'cider-macroexpansion-display-namespaces
+  "0.8.0")
 
 (defun cider-macroexpand-undo (&optional arg)
   "Undo the last macroexpansion, using `undo-only'.
@@ -63,25 +68,16 @@ ARG is passed along to `undo-only'."
   "Specify the last macroexpansion preformed.
 This variable specifies both what was expanded and the expander.")
 
-(defun cider-macroexpansion (expander expr)
-  "Macroexpand, using EXPANDER, the given EXPR."
-  (cider-ensure-op-supported expander)
-  (plist-get (nrepl-send-request-sync
-              (list "op" expander
-                    "code" expr
-                    "ns" (cider-current-ns)
-                    "suppress-namespaces" cider-macroexpansion-suppress-namespaces)) :value))
-
 (defun cider-macroexpand-expr (expander expr)
   "Macroexpand, use EXPANDER, the given EXPR."
-  (let* ((expansion (cider-macroexpansion expander expr)))
+  (let* ((expansion (cider-sync-request:macroexpand expander expr)))
     (setq cider-last-macroexpand-expression expr)
     (cider-initialize-macroexpansion-buffer expansion (cider-current-ns))))
 
 (defun cider-macroexpand-expr-inplace (expander)
   "Substitute the form preceding point with its macroexpansion using EXPANDER."
   (interactive)
-  (let* ((expansion (cider-macroexpansion expander (cider-last-sexp)))
+  (let* ((expansion (cider-sync-request:macroexpand expander (cider-last-sexp)))
          (bounds (cons (save-excursion (backward-sexp) (point)) (point))))
     (cider-redraw-macroexpansion-buffer
      expansion (current-buffer) (car bounds) (cdr bounds))))
@@ -89,7 +85,7 @@ This variable specifies both what was expanded and the expander.")
 (defun cider-macroexpand-again ()
   "Repeat the last macroexpansion."
   (interactive)
-  (cider-initialize-macroexpansion-buffer cider-last-macroexpand-expression nrepl-buffer-ns))
+  (cider-initialize-macroexpansion-buffer cider-last-macroexpand-expression (cider-current-ns)))
 
 ;;;###autoload
 (defun cider-macroexpand-1 (&optional prefix)

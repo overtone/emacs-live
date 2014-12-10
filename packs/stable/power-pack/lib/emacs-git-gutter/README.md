@@ -1,8 +1,9 @@
-# git-gutter.el
+# git-gutter.el [![travis badge][travis-badge]][travis-link] [![melpa badge][melpa-badge]][melpa-link] [![melpa stable badge][melpa-stable-badge]][melpa-stable-link]
 
 ## Introduction
 `git-gutter.el` is port of [GitGutter](https://github.com/jisaacks/GitGutter)
-which is a plugin of Sublime Text. `git-gutter.el` supports `git` and `mercurial`.
+which is a plugin of Sublime Text. `git-gutter.el` supports `git`, `mercurial`
+and `bazaar`.
 
 
 `git-gutter.el` also supports TRAMP so you can use `git-gutter.el` for remote files.
@@ -18,6 +19,7 @@ which is a plugin of Sublime Text. `git-gutter.el` supports `git` and `mercurial
 * Emacs 24 or higher
 * [Git](http://git-scm.com/) 1.7.0 or higher
 * [Mercurial](http://mercurial.selenic.com/)
+* [Bazaar](http://bazaar.canonical.com/)
 
 
 ## git-gutter.el vs [git-gutter-fringe.el](https://github.com/syohex/emacs-git-gutter-fringe)
@@ -32,7 +34,7 @@ which is a plugin of Sublime Text. `git-gutter.el` supports `git` and `mercurial
 
 ## Installation
 
-You can install `git-gutter.el` from [MELPA](https://github.com/milkypostman/melpa.git) with package.el
+You can install `git-gutter.el` from [MELPA](http://melpa.org) with package.el
 (`M-x package-install git-gutter`).
 
 And you can also install it with [el-get](https://github.com/dimitri/el-get).
@@ -57,7 +59,6 @@ Following example of enabling `git-gutter` for some mode.
 (add-hook 'python-mode-hook 'git-gutter-mode)
 ```
 
-
 ## Commands
 
 `git-gutter.el` provides following commands.
@@ -72,7 +73,7 @@ Jump to previous hunk(alias `git-gutter:previous-diff`)
 
 #### `git-gutter:set-start-revision`
 
-Set start revision where got diff(`git diff` or `hg diff`) from.
+Set start revision where got diff(`git diff`, `hg diff` or `bzr diff`) from.
 
 #### `git-gutter:popup-hunk`
 
@@ -106,6 +107,10 @@ Toggle git-gutter
 #### `git-gutter:linum-setup`
 
 Setup for working with `linum-mode`.
+
+#### `git-gutter:update-all-windows`
+
+Update git-gutter information of buffers in all visible window.
 
 
 ## Sample Configuration
@@ -186,14 +191,16 @@ character.
 
 ### Backends
 
-`git-gutter.el` supports `git` and `mercurial` backends.
+`git-gutter.el` supports `git`, `mercurial`, and `bazaar` backends.
 You can set backends which `git-gutter.el` will be used.
-Default value of `git-gutter:handled-backends` is `'(git hg)`
+Default value of `git-gutter:handled-backends` is `'(git)`. If you want to use
+`git-gutter.el` for mercurial or bazaar projects, please change value of
+`git-gutter:handled-backends` as below.
 
 ```lisp
-;; If you can use git-gutter only for git
+;; Use git-gutter for 'git', 'mercurial' and 'bazaar' project.
 (custom-set-variables
- '(git-gutter:handled-backends '(git)))
+ '(git-gutter:handled-backends '(git hg bzr)))
 ```
 
 ### Updates hooks
@@ -314,3 +321,10 @@ Fork of `git-gutter.el`.
 ### Another implementation of git-gutter.el
 
 [How to write another implementation](wiki/Write-another-git-gutter.el-implementation)
+
+[travis-badge]: https://travis-ci.org/syohex/emacs-git-gutter.png
+[travis-link]: https://travis-ci.org/syohex/emacs-git-gutter
+[melpa-link]: http://melpa.org/#/git-gutter
+[melpa-stable-link]: http://stable.melpa.org/#/git-gutter
+[melpa-badge]: http://melpa.org/packages/git-gutter-badge.svg
+[melpa-stable-badge]: http://stable.melpa.org/packages/git-gutter-badge.svg

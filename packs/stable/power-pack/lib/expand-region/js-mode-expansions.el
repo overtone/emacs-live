@@ -150,6 +150,22 @@ If point is inside the value, that will be marked first anyway."
       (forward-char))
     (exchange-point-and-mark)))
 
+(defun er/mark-js-call ()
+  "Mark the current symbol (including dots) and then parens or squares."
+  (interactive)
+  (let ((symbol-regexp "\\(\\s_\\|\\sw\\|\\.\\)+"))
+    (when (or (looking-at symbol-regexp)
+              (er/looking-back-on-line symbol-regexp))
+      (skip-syntax-backward "_w.")
+      (when (looking-at "!")
+        (forward-char 1))
+      (set-mark (point))
+      (when (looking-at symbol-regexp)
+        (goto-char (match-end 0)))
+      (if (looking-at "\\[\\|(")
+          (forward-list))
+      (exchange-point-and-mark))))
+
 (defun er/add-js-mode-expansions ()
   "Adds JS-specific expansions for buffers in js-mode"
   (set (make-local-variable 'er/try-expand-list) (append
@@ -159,7 +175,8 @@ If point is inside the value, that will be marked first anyway."
                                                     er/mark-js-object-property
                                                     er/mark-js-if
                                                     er/mark-js-inner-return
-                                                    er/mark-js-outer-return))))
+                                                    er/mark-js-outer-return
+                                                    er/mark-js-call))))
 
 (er/enable-mode-expansions 'js-mode 'er/add-js-mode-expansions)
 (er/enable-mode-expansions 'js2-mode 'er/add-js-mode-expansions)

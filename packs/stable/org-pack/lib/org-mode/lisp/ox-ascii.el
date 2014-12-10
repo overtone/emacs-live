@@ -423,17 +423,17 @@ equivalent to `left'.  For a justification that doesn't also fill
 string, see `org-ascii--justify-string'.
 
 Return nil if S isn't a string."
-  ;; Don't fill paragraph when break should be preserved.
-  (cond ((not (stringp s)) nil)
-	((plist-get info :preserve-breaks) s)
-	(t (let ((double-space-p sentence-end-double-space))
-	     (with-temp-buffer
-	       (let ((fill-column text-width)
-		     (use-hard-newlines t)
-		     (sentence-end-double-space double-space-p))
-		 (insert s)
-		 (fill-region (point-min) (point-max) justify))
-	       (buffer-string))))))
+  (when (stringp s)
+    (let ((double-space-p sentence-end-double-space))
+      (with-temp-buffer
+	(let ((fill-column text-width)
+	      (use-hard-newlines t)
+	      (sentence-end-double-space double-space-p))
+	  (insert (if (plist-get info :preserve-breaks)
+		      (replace-regexp-in-string "\n" hard-newline s)
+		    s))
+	  (fill-region (point-min) (point-max) justify))
+	(buffer-string)))))
 
 (defun org-ascii--justify-string (s text-width how)
   "Justify string S.
@@ -463,7 +463,7 @@ Empty lines are not indented."
   "Return string S with a partial box to its left.
 INFO is a plist used as a communication channel."
   (let ((utf8p (eq (plist-get info :ascii-charset) 'utf-8)))
-    (format (if utf8p "╭────\n%s\n╰────" ",----\n%s\n`----")
+    (format (if utf8p "┌────\n%s\n└────" ",----\n%s\n`----")
 	    (replace-regexp-in-string
 	     "^" (if utf8p "│ " "| ")
 	     ;; Remove last newline character.

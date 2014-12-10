@@ -155,6 +155,12 @@ class AgentConnection(floo_handler.FlooHandler):
             return super(AgentConnection, self)._on_rename_buf(data)
         msg.debug('We already renamed %s. Skipping' % data['old_path'])
 
+    def highlight(self, user=None, **kwargs):
+        # Emacs stores highlight state separately, outside of python
+        if user is not None:
+            self.to_emacs('follow_user', {'username': user})
+        msg.log("Sent %s to emacs follow_user" % user)
+
     def _on_highlight(self, data):
         buf = self.bufs[data['id']]
         # TODO: save highlights for when user opens the buffer in emacs

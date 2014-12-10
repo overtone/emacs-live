@@ -1,4 +1,4 @@
-# expand-region.el [![Build Status](https://secure.travis-ci.org/magnars/expand-region.el.png)](http://travis-ci.org/magnars/expand-region.el)
+# expand-region.el [![Build Status](https://secure.travis-ci.org/magnars/expand-region.el.png)](http://travis-ci.org/magnars/expand-region.el) [![Coverage Status](https://img.shields.io/coveralls/magnars/expand-region.el.svg)](https://coveralls.io/r/magnars/expand-region.el)
 
 Expand region increases the selected region by semantic units. Just keep
 pressing the key until it selects what you want.
@@ -136,6 +136,7 @@ sure to add a set of basic tests around the functionality you're changing.
 * [Kang-min Liu](https://github.com/gugod) contributed Perl expansions.
 * [Alexis Gallagher](https://github.com/algal) contributs Standard ML expansions.
 * [Matt Price](https://github.com/titaniumbones) improved on org-mode expansions.
+* [Maksim Grinman](https://github.com/maksle) added inner-quotes expansion for nxml-mode.
 
 Thanks!
 

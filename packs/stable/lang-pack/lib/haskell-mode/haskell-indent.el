@@ -88,8 +88,8 @@
 
 ;;; Code:
 
+(require 'cl-lib)
 (require 'haskell-string)
-(with-no-warnings (require 'cl))
 
 (defvar haskell-literate)
 
@@ -267,7 +267,7 @@ If so, return its start; otherwise return nil:
 If it is Bird-style, then return the position of the >;
 otherwise return the ending position of \\begin{code}."
   (save-excursion
-    (case haskell-literate
+    (cl-case haskell-literate
       (bird
        (beginning-of-line)
        (if (or (eq (following-char) ?\>)
@@ -374,7 +374,7 @@ location of the opening symbol, nil otherwise."
   "Check, starting from START, if END is at or within a comment.
 Returns the location of the start of the comment, nil otherwise."
   (let (pps)
-    (assert (<= start end))
+    (cl-assert (<= start end))
     (cond ((= start end) nil)
           ((nth 4 (save-excursion (setq pps (parse-partial-sexp start end))))
            (nth 8 pps))
@@ -580,7 +580,7 @@ Returns the location of the start of the comment, nil otherwise."
                 (if rhs-sign (haskell-indent-push-pos rhs-sign)
                   (haskell-indent-push-pos-offset valname))
               (haskell-indent-push-pos-offset valname)))
-        (case                           ; general case
+        (cl-case                        ; general case
             (haskell-indent-find-case test)
           ;; "1.1.11"   1= vn gd rh arh
           (1 (haskell-indent-push-pos valname)
@@ -681,7 +681,7 @@ Returns the location of the start of the comment, nil otherwise."
                   (haskell-indent-push-pos-offset valname))))
         (if (string= haskell-indent-current-line-first-ident "::")
             (if valname (haskell-indent-push-pos valname))
-          (case                         ; general case
+          (cl-case                      ; general case
               (haskell-indent-find-case test)
             ;; "1.1.11"   1= vn gd rh arh
             (1 (if is-where
@@ -776,7 +776,7 @@ than an identifier, a guard or rhs."
       (if (and valname-string           ; special case for start keywords
                (string-match haskell-indent-start-keywords-re valname-string))
           (haskell-indent-push-pos-offset valname)
-        (case                           ; general case
+        (cl-case                        ; general case
             (haskell-indent-find-case test)
           ;; "1.1.11"   1= vn gd rh arh
           (1 (haskell-indent-push-pos aft-rhs-sign))
@@ -823,7 +823,7 @@ than an identifier, a guard or rhs."
   "Find indentation information for a value definition."
   (let ((haskell-indent-info indent-info))
     (if (< start end-visible)
-        (case curr-line-type
+        (cl-case curr-line-type
           (empty (haskell-indent-empty start end end-visible indent-info))
           (ident (haskell-indent-ident start end end-visible indent-info))
           (guard (haskell-indent-guard start end end-visible indent-info))
@@ -839,7 +839,7 @@ Separate a line of program into valdefs between offside keywords
 and find indentation info for each part."
   (save-excursion
     ;; point is (already) at line-start
-    (assert (eq (point) line-start))
+    (cl-assert (eq (point) line-start))
     (let ((haskell-indent-info indent-info)
           (start (or (haskell-indent-in-comment line-start line-end)
                      (haskell-indent-in-string line-start line-end))))
@@ -1025,7 +1025,7 @@ See http://hackage.haskell.org/trac/haskell-prime/wiki/DoAndIfThenElse"
 (defun haskell-indent-closing-keyword (start)
   (let ((open (save-excursion
                 (haskell-indent-find-matching-start
-                 (case (char-after)
+                 (cl-case (char-after)
                    (?i "\\<\\(?:\\(in\\)\\|let\\)\\>")
                    (?o "\\<\\(?:\\(of\\)\\|case\\)\\>")
                    (?t "\\<\\(?:\\(then\\)\\|if\\)\\>")
@@ -1395,7 +1395,7 @@ TYPE is either 'guard or 'rhs."
               (let ((eqn (caar eqns-start)))
                 (setq lastpos (if (cdr eqns-start)
                                   (save-excursion
-                                    (goto-char (caadr eqns-start))
+                                    (goto-char (cl-caadr eqns-start))
                                     (haskell-indent-forward-line -1)
                                     (line-end-position))
                                 end-block))
@@ -1582,9 +1582,5 @@ Invokes `haskell-indent-hook' if not nil."
     (turn-off-haskell-indent)))
 
 (provide 'haskell-indent)
-
-;; Local Variables:
-;; byte-compile-warnings: (not cl-functions)
-;; End:
 
 ;;; haskell-indent.el ends here

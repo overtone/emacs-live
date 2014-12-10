@@ -48,7 +48,11 @@ new list."
   (defexamples -mapcat
     (-mapcat 'list '(1 2 3)) => '(1 2 3)
     (-mapcat (lambda (item) (list 0 item)) '(1 2 3)) => '(0 1 0 2 0 3)
-    (--mapcat (list 0 it) '(1 2 3)) => '(0 1 0 2 0 3)))
+    (--mapcat (list 0 it) '(1 2 3)) => '(0 1 0 2 0 3))
+
+  (defexamples -copy
+    (-copy '(1 2 3)) => '(1 2 3)
+    (let ((a '(1 2 3))) (eq a (-copy a))) => nil))
 
 (def-example-group "Sublist selection"
   "Functions returning a sublist of the original list."
@@ -65,6 +69,9 @@ new list."
     (let ((mod 2)) (-remove (lambda (num) (= 0 (% num mod))) '(1 2 3 4))) => '(1 3)
     (let ((mod 2)) (--remove (= 0 (% it mod)) '(1 2 3 4))) => '(1 3))
 
+  (defexamples -non-nil
+    (-non-nil '(1 nil 2 nil nil 3 4 nil 5 nil)) => '(1 2 3 4 5))
+
   (defexamples -slice
     (-slice '(1 2 3 4 5) 1) => '(2 3 4 5)
     (-slice '(1 2 3 4 5) 0 3) => '(1 2 3)
@@ -79,7 +86,10 @@ new list."
     (-slice '(1 2 3 4 5 6) 1 4 2) => '(2 4)
     (-slice '(1 2 3 4 5 6) 2 6 3) => '(3 6)
     (-slice '(1 2 3 4 5 6) 2 -1 2) => '(3 5)
+    (-slice '(1 2 3 4 5 6) 0 -4 2) => '(1)
     (-slice '(1 2 3 4 5 6) -4 -1 2) => '(3 5)
+    (-slice '(1 2 3 4 5 6) -4 5 2) => '(3 5)
+    (-slice '(1 2 3 4 5 6) -3 5 1) => '(4 5)
     (-slice '(1 2 3 4 5 6) 1 2 10) => '(2))
 
   (defexamples -take
@@ -565,10 +575,21 @@ new list."
     (-list 1) => '(1)
     (-list 1 2 3) => '(1 2 3)
     (-list '(1 2 3) => '(1 2 3))
-    (-list '((1) (2)) => '((1) (2)))))
+    (-list '((1) (2)) => '((1) (2))))
+
+  (defexamples -fix
+    (-fix (lambda (l) (-non-nil (--mapcat (-split-at (/ (length it) 2) it) l))) '((1 2 3 4 5 6))) => '((1) (2) (3) (4) (5) (6))
+    (let ((data '(("starwars" "scifi")
+                  ("jedi" "starwars" "warrior"))))
+      (--fix (-uniq (--mapcat (cons it (cdr (assoc it data))) it)) '("jedi" "book"))) => '("jedi" "starwars" "warrior" "scifi" "book")))
 
 (def-example-group "Tree operations"
   "Functions pretending lists are trees."
+
+  (defexamples -tree-seq
+    (-tree-seq 'listp 'identity '(1 (2 3) 4 (5 (6 7)))) => '((1 (2 3) 4 (5 (6 7))) 1 (2 3) 2 3 4 (5 (6 7)) 5 (6 7) 6 7)
+    (-tree-seq 'listp 'reverse '(1 (2 3) 4 (5 (6 7)))) => '((1 (2 3) 4 (5 (6 7))) (5 (6 7)) (6 7) 7 6 5 4 (2 3) 3 2 1)
+    (--tree-seq (vectorp it) (append it nil) [1 [2 3] 4 [5 [6 7]]]) => '([1 [2 3] 4 [5 [6 7]]] 1 [2 3] 2 3 4 [5 [6 7]] 5 [6 7] 6 7))
 
   (defexamples -tree-map
     (-tree-map '1+ '(1 (2 3) (4 (5 6) 7))) => '(2 (3 4) (5 (6 7) 8))
@@ -576,6 +597,14 @@ new list."
     (--tree-map (length it) '("<body>" ("<p>" "text" "</p>") "</body>")) => '(6 (3 4 4) 7)
     (--tree-map 1 '(1 2 (3 4) (5 6))) => '(1 1 (1 1) (1 1))
     (--tree-map (cdr it) '((1 . 2) (3 . 4) (5 . 6))) => '(2 4 6))
+
+  (defexamples -tree-map-nodes
+    (-tree-map-nodes 'vectorp (lambda (x) (-sum (append x nil))) '(1 [2 3] 4 (5 [6 7] 8))) => '(1 5 4 (5 13 8))
+    (-tree-map-nodes 'keywordp (lambda (x) (symbol-name x)) '(1 :foo 4 ((5 6 :bar) :baz 8))) => '(1 ":foo" 4 ((5 6 ":bar") ":baz" 8))
+    (--tree-map-nodes
+     (eq (car-safe it) 'add-mode)
+     (-concat it (list :mode 'emacs-lisp-mode))
+     '(with-mode emacs-lisp-mode (foo bar) (add-mode a b) (baz (add-mode c d)))) => '(with-mode emacs-lisp-mode (foo bar) (add-mode a b :mode emacs-lisp-mode) (baz (add-mode c d :mode emacs-lisp-mode))))
 
   (defexamples -tree-reduce
     (-tree-reduce '+ '(1 (2 3) (4 5))) => 15
@@ -649,6 +678,8 @@ new list."
 
   (defexamples -when-let
     (-when-let (match-index (string-match "d" "abcd")) (+ match-index 2)) => 5
+    (-when-let ((&plist :foo foo) (list :foo "foo")) foo) => "foo"
+    (-when-let ((&plist :foo foo) (list :bar "bar")) foo) => nil
     (--when-let (member :b '(:a :b :c)) (cons :d it)) => '(:d :b :c)
     (--when-let (even? 3) (cat it :a)) => nil)
 
@@ -662,7 +693,154 @@ new list."
 
   (defexamples -if-let*
     (-if-let* ((x 5) (y 3) (z 7)) (+ x y z) "foo") => 15
-    (-if-let* ((x 5) (y nil) (z 7)) (+ x y z) "foo") => "foo"))
+    (-if-let* ((x 5) (y nil) (z 7)) (+ x y z) "foo") => "foo"
+    (-if-let* (((_ _ x) '(nil nil 7))) x) => 7)
+
+  (defexamples -let
+    (-let (([a (b c) d] [1 (2 3) 4])) (list a b c d)) => '(1 2 3 4)
+    (-let [(a b c . d) (list 1 2 3 4 5 6)] (list a b c d)) => '(1 2 3 (4 5 6))
+    (-let [(&plist :foo foo :bar bar) (list :baz 3 :foo 1 :qux 4 :bar 2)] (list foo bar)) => '(1 2)
+    (let ((a (list 1 2 3))
+          (b (list 'a 'b 'c)))
+      (-let (((a . b) a)
+             ((c . d) b))
+        (list a b c d))) => '(1 (2 3) a (b c))
+    (-let ((a "foo") (b "bar")) (list a b)) => '("foo" "bar")
+    (-let [foo (list 1 2 3)] foo) => '(1 2 3)
+    (-let [(&plist :foo foo :bar bar) (list :foo 1 :bar 2)] (list foo bar)) => '(1 2)
+    (-let [(&plist :foo (a b) :bar c) (list :foo (list 1 2) :bar 3)] (list a b c)) => '(1 2 3)
+    ;; nil value in plist means subsequent cons matches are nil, because
+    ;; (car nil) => nil
+    (-let [(&plist :foo (a b)) (list :bar 1)] (list a b)) => '(nil nil)
+    (-let [(&plist :foo (&plist :baz baz) :bar bar)
+           (list :foo (list 1 2 :baz 2 :bar 4) :bar 3)]
+      (list baz bar)) => '(2 3)
+    (-let [(_ (&plist :level level :title title))
+           (list 'paragraph (list :title "foo" :level 2))]
+      (list level title)) => '(2 "foo")
+    (-let [(&alist :foo (&plist 'face face 'invisible inv) :bar bar)
+           (list (cons :bar 2) (cons :foo (list 'face 'foo-face 'invisible t)))]
+      (list bar face inv)) => '(2 foo-face t)
+    (-let [(a (b c) d) (list 1 (list 2 3) 4 5 6)] (list a b c d)) => '(1 2 3 4)
+    (-let [[a _ c] [1 2 3 4]] (list a c)) => '(1 3)
+    (-let [[_ _ _ a] (vector 1 2 3 4)] a) => 4
+    (-let [[a _ _ _ b] (vector 1 2 3 4 5)] (list a b)) => '(1 5)
+    (-let [[a (b c) d] [1 (2 3) 4]] (list a b c d)) => '(1 2 3 4)
+    (-let [[a b c] (string ?f ?o ?b ?a ?r)] (list a b c)) => '(?f ?o ?b)
+    (-let [[a b c] "abcdef"] (list a b c)) => '(?a ?b ?c)
+    (-let [[a (b [c]) d] [1 (2 [3 4]) 5 6]] (list a b c d)) => '(1 2 3 5)
+    (-let [(a b c d) (list 1 2 3 4 5 6)] (list a b c d)) => '(1 2 3 4)
+    ;; d is bound to nil. I don't think we want to error in such a case.
+    ;; After all (car nil) => nil
+    (-let [(a b c d) (list 1 2 3)] (list a b c d)) => '(1 2 3 nil)
+    (-let [[a b c] [1 2 3 4]] (list a b c)) => '(1 2 3)
+    (-let [[a b &rest c] "abcdef"] (list a b c)) => '(?a ?b "cdef")
+    (-let [[a b &rest c] [1 2 3 4 5 6]] (list a b c)) => '(1 2 [3 4 5 6])
+    (-let [[a b &rest [c d]] [1 2 3 4 5 6]] (list a b c d)) => '(1 2 3 4)
+    ;; here we error, because "vectors" are rigid, immutable structures,
+    ;; so we should know how many elements there are
+    (condition-case nil
+        (-let [[a b c d] [1 2 3]]
+          (progn
+            (list a b c d)
+            (error "previous call should fail.")))
+      (args-out-of-range t)) => t
+    (-let [(a . (b . c)) (cons 1 (cons 2 3))] (list a b c)) => '(1 2 3)
+    (-let [(_ _ . [a b]) (cons 1 (cons 2 (vector 3 4)))] (list a b)) => '(3 4)
+    (-let [(_ _ . (a b)) (cons 1 (cons 2 (list 3 4)))] (list a b)) => '(3 4)
+    (-let [([a b] _ _ c) (list (vector 1 2) 3 4 5)] (list a b c)) => '(1 2 5)
+    ;; final cdr optimization
+    (-let [(((a))) (list (list (list 1 2) 3) 4)] a) => 1
+    (-let [(((a b) c) d) (list (list (list 1 2) 3) 4)] (list a b c d)) => '(1 2 3 4)
+    (-let [(((a b) . c) . d) (list (list (list 1 2) 3) 4)] (list a b c d)) => '(1 2 (3) (4))
+    (-let [(((a b) c)) (list (list (list 1 2) 3) 4)] (list a b c)) => '(1 2 3)
+    (-let [(((a b) . c)) (list (list (list 1 2) 3) 4)] (list a b c)) => '(1 2 (3))
+    ;; cdr-skip optimization
+    (-let [(_ (_ (_ a))) (list 1 (list 2 (list 3 4)))] a) => 4
+    (-let [(_ (a)) (list 1 (list 2))] a) => 2
+    (-let [(_ _ _ a) (list 1 2 3 4 5)] a) => 4
+    (-let [(_ _ _ (a b)) (list 1 2 3 (list 4 5))] (list a b)) => '(4 5)
+    (-let [(_ a _ b) (list 1 2 3 4 5)] (list a b)) => '(2 4)
+    (-let [(_ (a b) _ c) (list 1 (list 2 3) 4 5)] (list a b c)) => '(2 3 5)
+    (-let [(_ (a b) _ . c) (list 1 (list 2 3) 4 5)] (list a b c)) => '(2 3 (5))
+    (-let [(_ (a b) _ (c d)) (list 1 (list 2 3) 4 (list 5 6))] (list a b c d)) => '(2 3 5 6)
+    (-let [(_ (a b) _ _ _ (c d)) (list 1 (list 2 3) 4 5 6 (list 7 8))] (list a b c d)) => '(2 3 7 8)
+    (-let [(_ (a b) _ . (c d)) (list 1 (list 2 3) 4 5 6)] (list a b c d)) => '(2 3 5 6)
+    (-let [(_ (a b) _ _ _ [c d]) (list 1 (list 2 3) 4 5 6 (vector 7 8))] (list a b c d)) => '(2 3 7 8)
+    (-let [(_ [a b] _ _ _ [c d]) (list 1 (vector 2 3) 4 5 6 (vector 7 8))] (list a b c d)) => '(2 3 7 8)
+    (-let [(_ _ _ . a) (list 1 2 3 4 5)] a) => '(4 5)
+    (-let [(_ a _ _) (list 1 2 3 4 5)] a) => 2
+    (-let [(_ . b) (cons 1 2)] b) => 2
+    (-let [([a b c d] . e) (cons (vector 1 2 3 4) 5)] (list a b c d e)) => '(1 2 3 4 5)
+    (-let [([a b c d] _ . e) (cons (vector 1 2 3 4) (cons 5 6))] (list a b c d e)) => '(1 2 3 4 6)
+    ;; late-binding optimization
+    (-let [(((a))) (list (list (list 1 2) 3) 4)] a) => 1
+    (-let [(((&plist :foo a :bar b))) (list (list (list :bar 1 :foo 2) 3) 4)] (list a b)) => '(2 1)
+    (-let [(((a b) c) d) (list (list (list 1 2) 3) 4)] (list a b c d)) => '(1 2 3 4)
+    (-let [(((a b) c) . d) (list (list (list 1 2) 3) 4)] (list a b c d)) => '(1 2 3 (4))
+    (-let [(((a b) c)) (list (list (list 1 2) 3) 4)] (list a b c)) => '(1 2 3)
+    (-let [(a b c d) (list 1 2 3 4)] (list a b c d)) => '(1 2 3 4)
+    (-let [(a) (list 1 2 3 4)] (list a)) => '(1)
+    (-let [(_ a) (list 1 2 3 4)] (list a)) => '(2)
+    (-let [(_ _ a) (list 1 2 3 4)] (list a)) => '(3)
+    (-let [(_ _ . a) (list 1 2 3 4)] a) => '(3 4)
+    (-let [(_ _ [a b]) (list 1 2 (vector 3 4))] (list a b)) => '(3 4)
+    (-let [(a _ _ b) (list 1 2 3 4 5 6 7 8)] (list a b)) => '(1 4)
+    (-let [(_ _ a _ _ b) (list 1 2 3 4 5 6 7 8)] (list a b)) => '(3 6)
+    (-let [(_ _ a _ _ . b) (list 1 2 3 4 5 6 7 8)] (cons a b)) => '(3 6 7 8)
+    (-let [(_ a _ b) (list 1 2 3 4)] (list a b)) => '(2 4)
+    (-let [(a b c (d e)) (list 1 2 3 (list 4 5))] (list a b c d e)) => '(1 2 3 4 5)
+    (-let [(_ _ (_ _ (_ _ a))) (list 1 2 (list 3 4 (list 5 6 7)))] a) => 7
+    (-let [(_ (_ (_ a))) (list 1 (list 2 (list 3 4)))] a) => 4
+    (-let [(_ _ . (&plist :foo a :bar b)) (list 1 2 :bar 2 :foo 1)] (list a b)) => '(1 2)
+    ;; &keys support
+    (-let [(_ _ &keys :foo a :bar b) (list 1 2 :bar 4 :foo 3)] (list a b)) => '(3 4)
+    (-let [(a _ &keys :foo b :bar c) (list 1 2 :bar 4 :foo 3)] (list a b c)) => '(1 3 4)
+    (-let [(a _ _ _ &keys :foo b :bar c) (list 1 2 3 4 :bar 6 :foo 5)] (list a b c)) => '(1 5 6)
+    (-let [(a b &keys :foo c :bar d) (list 1 2 :bar 4 :foo 3)] (list a b c d)) => '(1 2 3 4)
+    (-let [(a b &keys) (list 1 2 :bar 4 :foo 3)] (list a b)) => '(1 2)
+    (-let [(&keys :foo a :bar b) (list 1 2 :bar 4 :foo 3)] (list a b)) => '(3 4)
+    (-let [(a b (c _ _ &keys :foo [d _ (&alist :bar (e &keys :baz f) :qux (&plist :fux g))] :mux h) i)
+           (list 1 2 (list 3 'skip 'skip :foo (vector 4 'skip (list (cons :bar (list 5 :baz 6)) (cons :qux (list :fux 7)))) :mux 8) 9)]
+      (list a b c d e f g h i)) => '(1 2 3 4 5 6 7 8 9)
+    ;; single-binding optimization for vectors and kv
+    (-let [[_ [_ [_ a]]] (vector 1 (vector 2 (vector 3 4)))] a) => 4
+    (-let [[a _ _ _] (vector 1 2 3 4)] a) => 1
+    (-let [[_ _ _ a] (vector 1 2 3 4)] a) => 4
+    (-let [[_ _ a _] (vector 1 2 3 4)] a) => 3
+    (-let [[a [_ [_ b]]] (vector 1 (vector 2 (vector 3 4)))] (list a b)) => '(1 4)
+    (-let [[(a _ b)] (vector (list 1 2 3 4))] (list a b)) => '(1 3)
+    (-let [(&plist 'a a) (list 'a 1 'b 2)] a) => 1
+    (-let [(&plist 'a [a b]) (list 'a [1 2] 'b 3)] (list a b)) => '(1 2)
+    (-let [(&plist 'a [a b] 'c c) (list 'a [1 2] 'c 3)] (list a b c)) => '(1 2 3))
+
+  (defexamples -let*
+    (-let* (((a . b) (cons 1 2))
+            ((c . d) (cons 3 4)))
+      (list a b c d)) => '(1 2 3 4)
+    (-let* (((a . b) (cons 1 (cons 2 3)))
+            ((c . d) b))
+      (list a b c d)) => '(1 (2 . 3) 2 3)
+    (-let* (((&alist "foo" foo "bar" bar) (list (cons "foo" 1) (cons "bar" (list 'a 'b 'c))))
+            ((a b c) bar))
+      (list foo a b c bar)) => '(1 a b c (a b c))
+    (let ((a (list 1 2 3))
+          (b (list 'a 'b 'c)))
+      (-let* (((a . b) a)
+              ((c . d) b)) ;; b here comes from above binding
+        (list a b c d))) => '(1 (2 3) 2 (3))
+    (-let* ((a "foo") (b a)) (list a b)) => '("foo" "foo"))
+
+  (defexamples -lambda
+    (-map (-lambda ((x y)) (+ x y)) '((1 2) (3 4) (5 6))) => '(3 7 11)
+    (-map (-lambda ([x y]) (+ x y)) '([1 2] [3 4] [5 6])) => '(3 7 11)
+    (funcall (-lambda ((_ . a) (_ . b)) (-concat a b)) '(1 2 3) '(4 5 6)) => '(2 3 5 6)
+    (-map (-lambda ((&plist :a a :b b)) (+ a b)) '((:a 1 :b 2) (:a 3 :b 4) (:a 5 :b 6))) => '(3 7 11)
+    (-map (-lambda (x) (let ((k (car x)) (v (cadr x))) (+ k v))) '((1 2) (3 4) (5 6))) => '(3 7 11)
+    (funcall (-lambda ((a) (b)) (+ a b)) '(1 2 3) '(4 5 6)) => 5
+    (condition-case nil (progn (-lambda a t) (error "previous form should error")) (wrong-type-argument t)) => t
+    (funcall (-lambda (a b) (+ a b)) 1 2) => 3
+    (funcall (-lambda (a (b c)) (+ a b c)) 1 (list 2 3)) => 6))
 
 (def-example-group "Side-effects"
   "Functions iterating over lists for side-effect only."
@@ -774,6 +952,12 @@ new list."
                     (-last-item (-iterate fn init (1+ 3))))
              (equal (funcall (-iteratefn fn 5) init)
                     (-last-item (-iterate fn init (1+ 5)))))))
+
+    (defexamples -fixfn
+      ;; Find solution to cos(x) = x
+      (funcall (-fixfn 'cos) 0.7) => 0.7390851332151607
+      ;; Find solution to x^4 - x - 10 = 0
+      (funcall (-fixfn (lambda (x) (expt (+ x 10) 0.25))) 2.0) => 1.8555845286409378)
 
     (defexamples -prodfn
       (funcall (-prodfn '1+ '1- 'int-to-string) '(1 2 3)) => '(2 1 "3")

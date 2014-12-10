@@ -428,6 +428,12 @@
 	  (org-test-with-temp-text "Para<point>graph"
 	    (let ((org-M-RET-may-split-line '((default . nil))))
 	      (org-insert-heading))
+	    (buffer-string))))
+  ;; Corner case: correctly insert a headline after an empty one.
+  (should
+   (equal "* \n* "
+	  (org-test-with-temp-text "* <point>"
+	    (org-insert-heading)
 	    (buffer-string)))))
 
 (ert-deftest test-org/insert-todo-heading-respect-content ()

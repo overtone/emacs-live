@@ -1,6 +1,5 @@
 (source gnu)
 (source melpa)
-(source marmalade)
 
 (package-file "git-gutter.el")
 

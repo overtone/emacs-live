@@ -87,9 +87,9 @@
 
 ;;; Code:
 
+(require 'cl-lib)
 (require 'haskell-mode)
 (require 'font-lock)
-(with-no-warnings (require 'cl))
 
 (defcustom haskell-font-lock-symbols nil
   "Display \\ and -> and such using symbols in fonts.
@@ -236,9 +236,7 @@ Regexp match data 0 points to the chars."
          sym-data)
     (if (or (memq (char-syntax (or (char-before start) ?\ )) syntaxes)
             (memq (char-syntax (or (char-after end) ?\ )) syntaxes)
-            (memq (get-text-property start 'face)
-                  '(font-lock-doc-face font-lock-string-face
-                                       font-lock-comment-face))
+            (or (elt (syntax-ppss) 3) (elt (syntax-ppss) 4))
             (and (consp (setq sym-data (cdr (assoc (match-string 0) alist))))
                  (let ((pred (cadr sym-data)))
                    (setq sym-data (car sym-data))
@@ -441,7 +439,7 @@ Returns keywords suitable for `font-lock-keywords'."
 
             (haskell-font-lock-find-pragma 0 haskell-pragma-face t)))
     (unless (boundp 'font-lock-syntactic-keywords)
-      (case literate
+      (cl-case literate
         (bird
          (setq keywords
                `(("^[^>\n].*$" 0 haskell-comment-face t)
@@ -568,22 +566,26 @@ that should be commented under LaTeX-style literate scripts."
    ;; requires extra work for each and every non-Haddock comment, so I only
    ;; go through the more expensive check if we've already seen a Haddock
    ;; comment in the buffer.
+   ;;
+   ;; And then there are also haddock section headers that start with
+   ;; any number of stars:
+   ;;   -- * ...
    ((and haskell-font-lock-haddock
          (save-excursion
            (goto-char (nth 8 state))
-           (or (looking-at "\\(-- \\|{-\\)[ \\t]*[|^]")
+           (or (looking-at "[{-]-[ \\t]*[|^*]")
                (and haskell-font-lock-seen-haddock
-                    (looking-at "-- ")
+                    (looking-at "--")
                     (let ((doc nil)
                           pos)
                       (while (and (not doc)
                                   (setq pos (line-beginning-position))
                                   (forward-comment -1)
                                   (eq (line-beginning-position 2) pos)
-                                  (looking-at "--\\( [|^]\\)?"))
+                                  (looking-at "--\\([ \\t]*[|^*]\\)?"))
                         (setq doc (match-beginning 1)))
                       doc)))))
-    (set (make-local-variable 'haskell-font-lock-seen-haddock) t)
+    (setq haskell-font-lock-seen-haddock t)
     font-lock-doc-face)
    (t font-lock-comment-face)))
 
@@ -602,14 +604,14 @@ that should be commented under LaTeX-style literate scripts."
 ;;;###autoload
 (defun haskell-font-lock-choose-keywords ()
   (let ((literate (if (boundp 'haskell-literate) haskell-literate)))
-    (case literate
+    (cl-case literate
       (bird haskell-font-lock-bird-literate-keywords)
       ((latex tex) haskell-font-lock-latex-literate-keywords)
       (t haskell-font-lock-keywords))))
 
 (defun haskell-font-lock-choose-syntactic-keywords ()
   (let ((literate (if (boundp 'haskell-literate) haskell-literate)))
-    (case literate
+    (cl-case literate
       (bird haskell-bird-syntactic-keywords)
       ((latex tex) haskell-latex-syntactic-keywords)
       (t haskell-basic-syntactic-keywords))))
@@ -691,12 +693,21 @@ Invokes `haskell-font-lock-hook' if not nil."
   "Turns off font locking in current buffer."
   (font-lock-mode -1))
 
+(defun haskell-fontify-as-mode (text mode)
+  "Fontify TEXT as MODE, returning the fontified text."
+  (with-temp-buffer
+    (funcall mode)
+    (insert text)
+    (if (fboundp 'font-lock-ensure)
+        (font-lock-ensure)
+      (with-no-warnings (font-lock-fontify-buffer)))
+    (buffer-substring (point-min) (point-max))))
+
 ;; Provide ourselves:
 
 (provide 'haskell-font-lock)
 
 ;; Local Variables:
-;; byte-compile-warnings: (not cl-functions)
 ;; tab-width: 8
 ;; End:
 

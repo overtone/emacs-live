@@ -24,7 +24,7 @@
 
 (save-excursion
   (set-buffer (get-buffer-create "test-ob-lilypond.el"))
-  (setq ly-here
+  (setq org-babel-lilypond-here
         (file-name-directory
          (or load-file-name (buffer-file-name)))))
 
@@ -52,81 +52,81 @@
 
 (ert-deftest ob-lilypond/ly-compile-lilyfile ()
   (should (equal
-           `(,(ly-determine-ly-path)    ;program
+           `(,(org-babel-lilypond-determine-ly-path)    ;program
              nil                        ;infile
              "*lilypond*"               ;buffer
              t                          ;display
-             ,(if ly-gen-png  "--png"  "") ;&rest...
-             ,(if ly-gen-html "--html" "")
-             ,(if ly-gen-pdf "--pdf" "")
-             ,(if ly-use-eps  "-dbackend=eps" "")
-             ,(if ly-gen-svg  "-dbackend=svg" "")
+             ,(if org-babel-lilypond-gen-png  "--png"  "") ;&rest...
+             ,(if org-babel-lilypond-gen-html "--html" "")
+             ,(if org-babel-lilypond-gen-pdf "--pdf" "")
+             ,(if org-babel-lilypond-use-eps  "-dbackend=eps" "")
+             ,(if org-babel-lilypond-gen-svg  "-dbackend=svg" "")
              "--output=test-file"
              "test-file.ly")
-           (ly-compile-lilyfile "test-file.ly" t))))
+           (org-babel-lilypond-compile-lilyfile "test-file.ly" t))))
 
 (ert-deftest ob-lilypond/ly-compile-post-tangle ()
-  (should (boundp 'ly-compile-post-tangle)))
+  (should (boundp 'org-babel-lilypond-compile-post-tangle)))
 
 (ert-deftest ob-lilypond/ly-display-pdf-post-tangle ()
-  (should (boundp 'ly-display-pdf-post-tangle)))
+  (should (boundp 'org-babel-lilypond-display-pdf-post-tangle)))
 
 (ert-deftest ob-lilypond/ly-play-midi-post-tangle ()
-  (should (boundp 'ly-play-midi-post-tangle)))
+  (should (boundp 'org-babel-lilypond-play-midi-post-tangle)))
 
 (ert-deftest ob-lilypond/ly-OSX-ly-path ()
-  (should (boundp 'ly-OSX-ly-path))
-  (should (stringp ly-OSX-ly-path)))
+  (should (boundp 'org-babel-lilypond-OSX-ly-path))
+  (should (stringp org-babel-lilypond-OSX-ly-path)))
 
 (ert-deftest ob-lilypond/ly-OSX-pdf-path ()
-  (should (boundp 'ly-OSX-pdf-path))
-  (should (stringp ly-OSX-pdf-path)))
+  (should (boundp 'org-babel-lilypond-OSX-pdf-path))
+  (should (stringp org-babel-lilypond-OSX-pdf-path)))
 
 (ert-deftest ob-lilypond/ly-OSX-midi-path ()
-  (should (boundp 'ly-OSX-midi-path))
-  (should (stringp ly-OSX-midi-path)))
+  (should (boundp 'org-babel-lilypond-OSX-midi-path))
+  (should (stringp org-babel-lilypond-OSX-midi-path)))
 
 (ert-deftest ob-lilypond/ly-nix-ly-path ()
-  (should (boundp 'ly-nix-ly-path))
-  (should (stringp ly-nix-ly-path)))
+  (should (boundp 'org-babel-lilypond-nix-ly-path))
+  (should (stringp org-babel-lilypond-nix-ly-path)))
 
 (ert-deftest ob-lilypond/ly-nix-pdf-path ()
-  (should (boundp 'ly-nix-pdf-path))
-  (should (stringp ly-nix-pdf-path)))
+  (should (boundp 'org-babel-lilypond-nix-pdf-path))
+  (should (stringp org-babel-lilypond-nix-pdf-path)))
 
 (ert-deftest ob-lilypond/ly-nix-midi-path ()
-  (should (boundp 'ly-nix-midi-path))
-  (should (stringp ly-nix-midi-path)))
+  (should (boundp 'org-babel-lilypond-nix-midi-path))
+  (should (stringp org-babel-lilypond-nix-midi-path)))
 
 (ert-deftest ob-lilypond/ly-w32-ly-path ()
-  (should (boundp 'ly-w32-ly-path))
-  (should (stringp ly-w32-ly-path)))
+  (should (boundp 'org-babel-lilypond-w32-ly-path))
+  (should (stringp org-babel-lilypond-w32-ly-path)))
 
 (ert-deftest ob-lilypond/ly-w32-pdf-path ()
-  (should (boundp 'ly-w32-pdf-path))
-  (should (stringp ly-w32-pdf-path)))
+  (should (boundp 'org-babel-lilypond-w32-pdf-path))
+  (should (stringp org-babel-lilypond-w32-pdf-path)))
 
 (ert-deftest ob-lilypond/ly-w32-midi-path ()
-  (should (boundp 'ly-w32-midi-path))
-  (should (stringp ly-w32-midi-path)))
+  (should (boundp 'org-babel-lilypond-w32-midi-path))
+  (should (stringp org-babel-lilypond-w32-midi-path)))
 
 (ert-deftest ob-lilypond/ly-gen-png ()
-  (should (boundp 'ly-gen-png)))
+  (should (boundp 'org-babel-lilypond-gen-png)))
 
 (ert-deftest ob-lilypond/ly-gen-svg ()
-  (should (boundp 'ly-gen-svg)))
+  (should (boundp 'org-babel-lilypond-gen-svg)))
 
 (ert-deftest ob-lilypond/ly-gen-html ()
-  (should (boundp 'ly-gen-html)))
+  (should (boundp 'org-babel-lilypond-gen-html)))
 
 (ert-deftest ob-lilypond/ly-gen-html ()
-  (should (boundp 'ly-gen-pdf)))
+  (should (boundp 'org-babel-lilypond-gen-pdf)))
 
 (ert-deftest ob-lilypond/use-eps ()
-  (should (boundp 'ly-use-eps)))
+  (should (boundp 'org-babel-lilypond-use-eps)))
 
 (ert-deftest ob-lilypond/ly-arrange-mode ()
-  (should (boundp 'ly-arrange-mode)))
+  (should (boundp 'org-babel-lilypond-arrange-mode)))
 
 ;; (ert-deftest ob-lilypond/org-babel-default-header-args:lilypond ()
 ;;   (should (equal  '((:tangle . "yes")
@@ -140,32 +140,32 @@
   (should (equal "This is a test"
                  (org-babel-expand-body:lilypond "This is a test" ()))))
 
-;;TODO (ert-deftest ly-test-org-babel-execute:lilypond ())
+;;TODO (ert-deftest org-babel-lilypond-test-org-babel-execute:lilypond ())
 (ert-deftest ob-lilypond/ly-check-for-compile-error ()
   (set-buffer (get-buffer-create "*lilypond*"))
   (erase-buffer)
-  (should (not (ly-check-for-compile-error nil t)))
-  (insert-file-contents (concat ly-here
+  (should (not (org-babel-lilypond-check-for-compile-error nil t)))
+  (insert-file-contents (concat org-babel-lilypond-here
                                 "../examples/ob-lilypond-test.error")
                         nil nil nil t)
   (goto-char (point-min))
-  (should (ly-check-for-compile-error nil t))
+  (should (org-babel-lilypond-check-for-compile-error nil t))
   (kill-buffer "*lilypond*"))
 
 (ert-deftest ob-lilypond/ly-process-compile-error ()
   (find-file-other-window (concat
-                           ly-here
+                           org-babel-lilypond-here
                            "../examples/ob-lilypond-broken.org"))
   (set-buffer (get-buffer-create "*lilypond*"))
   (insert-file-contents (concat
-                         ly-here
+                         org-babel-lilypond-here
                          "../examples/ob-lilypond-test.error")
                         nil nil nil t)
   (goto-char (point-min))
   (search-forward "error:" nil t)
   (should-error
-   (ly-process-compile-error (concat
-                              ly-here
+   (org-babel-lilypond-process-compile-error (concat
+                              org-babel-lilypond-here
                               "../examples/ob-lilypond-broken.ly"))
    :type 'error)
   (set-buffer "ob-lilypond-broken.org")
@@ -177,13 +177,13 @@
 
 (ert-deftest ob-lilypond/ly-mark-error-line ()
   (let ((file-name (concat
-                    ly-here
+                    org-babel-lilypond-here
                     "../examples/ob-lilypond-broken.org"))
         (expected-point-min 198)
         (expected-point-max 205)
         (line "line 20"))
     (find-file-other-window file-name)
-    (ly-mark-error-line file-name line)
+    (org-babel-lilypond-mark-error-line file-name line)
     (should (equal expected-point-min (point)))
 
     (exchange-point-and-mark)
@@ -193,174 +193,174 @@
 (ert-deftest ob-lilypond/ly-parse-line-num ()
   (with-temp-buffer
     (insert-file-contents (concat
-                           ly-here
+                           org-babel-lilypond-here
                            "../examples/ob-lilypond-test.error")
                           nil nil nil t)
     (goto-char (point-min))
     (search-forward "error:")
-    (should (equal 25 (ly-parse-line-num (current-buffer))))))
+    (should (equal 25 (org-babel-lilypond-parse-line-num (current-buffer))))))
 
 (ert-deftest ob-lilypond/ly-parse-error-line ()
-  (let ((ly-file (concat
-                  ly-here
+  (let ((org-babel-lilypond-file (concat
+                  org-babel-lilypond-here
                   "../examples/ob-lilypond-broken.ly")))
     (should (equal "line 20"
-                   (ly-parse-error-line ly-file 20)))
-    (should (not (ly-parse-error-line ly-file 0)))))
+                   (org-babel-lilypond-parse-error-line org-babel-lilypond-file 20)))
+    (should (not (org-babel-lilypond-parse-error-line org-babel-lilypond-file 0)))))
 
 (ert-deftest ob-lilypond/ly-attempt-to-open-pdf ()
-  (let ((post-tangle ly-display-pdf-post-tangle)
-        (ly-file (concat
-                  ly-here
+  (let ((post-tangle org-babel-lilypond-display-pdf-post-tangle)
+        (org-babel-lilypond-file (concat
+                  org-babel-lilypond-here
                   "../examples/ob-lilypond-test.ly"))
         (pdf-file (concat
-                   ly-here
+                   org-babel-lilypond-here
                    "../examples/ob-lilypond-test.pdf")))
-    (setq ly-display-pdf-post-tangle t)
+    (setq org-babel-lilypond-display-pdf-post-tangle t)
     (when (not (file-exists-p pdf-file))
       (set-buffer (get-buffer-create (file-name-nondirectory pdf-file)))
       (write-file pdf-file))
     (should (equal
              (concat
-              (ly-determine-pdf-path) " " pdf-file)
-             (ly-attempt-to-open-pdf ly-file t)))
+              (org-babel-lilypond-determine-pdf-path) " " pdf-file)
+             (org-babel-lilypond-attempt-to-open-pdf org-babel-lilypond-file t)))
     (delete-file pdf-file)
     (kill-buffer (file-name-nondirectory pdf-file))
     (should (equal
              "No pdf file generated so can't display!"
-             (ly-attempt-to-open-pdf pdf-file)))
-    (setq ly-display-pdf-post-tangle post-tangle)))
+             (org-babel-lilypond-attempt-to-open-pdf pdf-file)))
+    (setq org-babel-lilypond-display-pdf-post-tangle post-tangle)))
 
 (ert-deftest ob-lilypond/ly-attempt-to-play-midi ()
-  (let ((post-tangle ly-play-midi-post-tangle)
-        (ly-file (concat
-                  ly-here
+  (let ((post-tangle org-babel-lilypond-play-midi-post-tangle)
+        (org-babel-lilypond-file (concat
+                  org-babel-lilypond-here
                   "../examples/ob-lilypond-test.ly"))
         (midi-file (concat
-                    ly-here
+                    org-babel-lilypond-here
                     "../examples/ob-lilypond-test.midi")))
-    (setq ly-play-midi-post-tangle t)
+    (setq org-babel-lilypond-play-midi-post-tangle t)
     (when (not (file-exists-p midi-file))
       (set-buffer (get-buffer-create (file-name-nondirectory midi-file)))
       (write-file midi-file))
     (should (equal
              (concat
-              (ly-determine-midi-path) " " midi-file)
-             (ly-attempt-to-play-midi ly-file t)))
+              (org-babel-lilypond-determine-midi-path) " " midi-file)
+             (org-babel-lilypond-attempt-to-play-midi org-babel-lilypond-file t)))
     (delete-file midi-file)
     (kill-buffer (file-name-nondirectory midi-file))
     (should (equal
              "No midi file generated so can't play!"
-             (ly-attempt-to-play-midi midi-file)))
-    (setq ly-play-midi-post-tangle post-tangle)))
+             (org-babel-lilypond-attempt-to-play-midi midi-file)))
+    (setq org-babel-lilypond-play-midi-post-tangle post-tangle)))
 
 (ert-deftest ob-lilypond/ly-determine-ly-path ()
-  (should (equal ly-OSX-ly-path
-                 (ly-determine-ly-path "darwin")))
-  (should (equal ly-w32-ly-path
-                 (ly-determine-ly-path "windows-nt")))
-  (should (equal ly-nix-ly-path
-                 (ly-determine-ly-path "nix"))))
+  (should (equal org-babel-lilypond-OSX-ly-path
+                 (org-babel-lilypond-determine-ly-path "darwin")))
+  (should (equal org-babel-lilypond-w32-ly-path
+                 (org-babel-lilypond-determine-ly-path "windows-nt")))
+  (should (equal org-babel-lilypond-nix-ly-path
+                 (org-babel-lilypond-determine-ly-path "nix"))))
 
 (ert-deftest ob-lilypond/ly-determine-pdf-path ()
-  (should (equal ly-OSX-pdf-path
-                 (ly-determine-pdf-path "darwin")))
-  (should (equal ly-w32-pdf-path
-                 (ly-determine-pdf-path "windows-nt")))
-  (should (equal ly-nix-pdf-path
-                 (ly-determine-pdf-path "nix"))))
+  (should (equal org-babel-lilypond-OSX-pdf-path
+                 (org-babel-lilypond-determine-pdf-path "darwin")))
+  (should (equal org-babel-lilypond-w32-pdf-path
+                 (org-babel-lilypond-determine-pdf-path "windows-nt")))
+  (should (equal org-babel-lilypond-nix-pdf-path
+                 (org-babel-lilypond-determine-pdf-path "nix"))))
 
 (ert-deftest ob-lilypond/ly-determine-midi-path ()
-  (should (equal ly-OSX-midi-path
-                 (ly-determine-midi-path "darwin")))
-  (should (equal ly-w32-midi-path
-                 (ly-determine-midi-path "windows-nt")))
-  (should (equal ly-nix-midi-path
-                 (ly-determine-midi-path "nix"))))
+  (should (equal org-babel-lilypond-OSX-midi-path
+                 (org-babel-lilypond-determine-midi-path "darwin")))
+  (should (equal org-babel-lilypond-w32-midi-path
+                 (org-babel-lilypond-determine-midi-path "windows-nt")))
+  (should (equal org-babel-lilypond-nix-midi-path
+                 (org-babel-lilypond-determine-midi-path "nix"))))
 
 (ert-deftest ob-lilypond/ly-toggle-midi-play-toggles-flag ()
-  (if ly-play-midi-post-tangle
+  (if org-babel-lilypond-play-midi-post-tangle
       (progn
-        (ly-toggle-midi-play)
-         (should (not ly-play-midi-post-tangle))
-        (ly-toggle-midi-play)
-        (should ly-play-midi-post-tangle))
-    (ly-toggle-midi-play)
-    (should ly-play-midi-post-tangle)
-    (ly-toggle-midi-play)
-    (should (not ly-play-midi-post-tangle))))
+        (org-babel-lilypond-toggle-midi-play)
+         (should (not org-babel-lilypond-play-midi-post-tangle))
+        (org-babel-lilypond-toggle-midi-play)
+        (should org-babel-lilypond-play-midi-post-tangle))
+    (org-babel-lilypond-toggle-midi-play)
+    (should org-babel-lilypond-play-midi-post-tangle)
+    (org-babel-lilypond-toggle-midi-play)
+    (should (not org-babel-lilypond-play-midi-post-tangle))))
 
 (ert-deftest ob-lilypond/ly-toggle-pdf-display-toggles-flag ()
-  (if ly-display-pdf-post-tangle
+  (if org-babel-lilypond-display-pdf-post-tangle
       (progn
-        (ly-toggle-pdf-display)
-         (should (not ly-display-pdf-post-tangle))
-        (ly-toggle-pdf-display)
-        (should ly-display-pdf-post-tangle))
-    (ly-toggle-pdf-display)
-    (should ly-display-pdf-post-tangle)
-    (ly-toggle-pdf-display)
-    (should (not ly-display-pdf-post-tangle))))
+        (org-babel-lilypond-toggle-pdf-display)
+         (should (not org-babel-lilypond-display-pdf-post-tangle))
+        (org-babel-lilypond-toggle-pdf-display)
+        (should org-babel-lilypond-display-pdf-post-tangle))
+    (org-babel-lilypond-toggle-pdf-display)
+    (should org-babel-lilypond-display-pdf-post-tangle)
+    (org-babel-lilypond-toggle-pdf-display)
+    (should (not org-babel-lilypond-display-pdf-post-tangle))))
 
 (ert-deftest ob-lilypond/ly-toggle-pdf-generation-toggles-flag ()
-  (if ly-gen-pdf
+  (if org-babel-lilypond-gen-pdf
       (progn
-        (ly-toggle-pdf-generation)
-         (should (not ly-gen-pdf))
-        (ly-toggle-pdf-generation)
-        (should ly-gen-pdf))
-    (ly-toggle-pdf-generation)
-    (should ly-gen-pdf)
-    (ly-toggle-pdf-generation)
-    (should (not ly-gen-pdf))))
+        (org-babel-lilypond-toggle-pdf-generation)
+         (should (not org-babel-lilypond-gen-pdf))
+        (org-babel-lilypond-toggle-pdf-generation)
+        (should org-babel-lilypond-gen-pdf))
+    (org-babel-lilypond-toggle-pdf-generation)
+    (should org-babel-lilypond-gen-pdf)
+    (org-babel-lilypond-toggle-pdf-generation)
+    (should (not org-babel-lilypond-gen-pdf))))
 
 (ert-deftest ob-lilypond/ly-toggle-arrange-mode ()
-  (if ly-arrange-mode
+  (if org-babel-lilypond-arrange-mode
       (progn
-        (ly-toggle-arrange-mode)
-        (should (not ly-arrange-mode))
-        (ly-toggle-arrange-mode)
-        (should ly-arrange-mode))
-    (ly-toggle-arrange-mode)
-    (should ly-arrange-mode)
-    (ly-toggle-arrange-mode)
-    (should (not ly-arrange-mode))))
+        (org-babel-lilypond-toggle-arrange-mode)
+        (should (not org-babel-lilypond-arrange-mode))
+        (org-babel-lilypond-toggle-arrange-mode)
+        (should org-babel-lilypond-arrange-mode))
+    (org-babel-lilypond-toggle-arrange-mode)
+    (should org-babel-lilypond-arrange-mode)
+    (org-babel-lilypond-toggle-arrange-mode)
+    (should (not org-babel-lilypond-arrange-mode))))
 
 (ert-deftest ob-lilypond/ly-toggle-png-generation-toggles-flag ()
-  (if ly-gen-png
+  (if org-babel-lilypond-gen-png
       (progn
-        (ly-toggle-png-generation)
-         (should (not ly-gen-png))
-        (ly-toggle-png-generation)
-        (should ly-gen-png))
-    (ly-toggle-png-generation)
-    (should ly-gen-png)
-    (ly-toggle-png-generation)
-    (should (not ly-gen-png))))
+        (org-babel-lilypond-toggle-png-generation)
+         (should (not org-babel-lilypond-gen-png))
+        (org-babel-lilypond-toggle-png-generation)
+        (should org-babel-lilypond-gen-png))
+    (org-babel-lilypond-toggle-png-generation)
+    (should org-babel-lilypond-gen-png)
+    (org-babel-lilypond-toggle-png-generation)
+    (should (not org-babel-lilypond-gen-png))))
 
 (ert-deftest ob-lilypond/ly-toggle-html-generation-toggles-flag ()
-  (if ly-gen-html
+  (if org-babel-lilypond-gen-html
       (progn
-        (ly-toggle-html-generation)
-         (should (not ly-gen-html))
-        (ly-toggle-html-generation)
-        (should ly-gen-html))
-    (ly-toggle-html-generation)
-    (should ly-gen-html)
-    (ly-toggle-html-generation)
-    (should (not ly-gen-html))))
+        (org-babel-lilypond-toggle-html-generation)
+         (should (not org-babel-lilypond-gen-html))
+        (org-babel-lilypond-toggle-html-generation)
+        (should org-babel-lilypond-gen-html))
+    (org-babel-lilypond-toggle-html-generation)
+    (should org-babel-lilypond-gen-html)
+    (org-babel-lilypond-toggle-html-generation)
+    (should (not org-babel-lilypond-gen-html))))
 
 (ert-deftest ob-lilypond/ly-switch-extension-with-extensions ()
   (should (equal "test-name.xyz"
-                 (ly-switch-extension "test-name" ".xyz")))
+                 (org-babel-lilypond-switch-extension "test-name" ".xyz")))
   (should (equal "test-name.xyz"
-                 (ly-switch-extension "test-name.abc" ".xyz")))
+                 (org-babel-lilypond-switch-extension "test-name.abc" ".xyz")))
   (should (equal "test-name"
-                 (ly-switch-extension "test-name.abc" ""))))
+                 (org-babel-lilypond-switch-extension "test-name.abc" ""))))
 
 (ert-deftest ob-lilypond/ly-switch-extension-with-paths ()
   (should (equal "/some/path/to/test-name.xyz"
-                  (ly-switch-extension "/some/path/to/test-name" ".xyz"))))
+                  (org-babel-lilypond-switch-extension "/some/path/to/test-name" ".xyz"))))
 
 (ert-deftest ob-lilypond/ly-get-header-args ()
   (should (equal '((:tangle . "yes")
@@ -368,20 +368,20 @@
                    (:results . "silent")
                    (:cache . "yes")
                    (:comments . "yes"))
-                 (ly-set-header-args t)))
+                 (org-babel-lilypond-set-header-args t)))
   (should (equal '((:results . "file")
                    (:exports . "results"))
-                 (ly-set-header-args nil))))
+                 (org-babel-lilypond-set-header-args nil))))
 
 (ert-deftest ob-lilypond/ly-set-header-args ()
-  (ly-set-header-args t)
+  (org-babel-lilypond-set-header-args t)
   (should (equal '((:tangle . "yes")
                    (:noweb . "yes")
                    (:results . "silent")
                    (:cache . "yes")
                    (:comments . "yes"))
                  org-babel-default-header-args:lilypond))
-  (ly-set-header-args nil)
+  (org-babel-lilypond-set-header-args nil)
   (should (equal '((:results . "file")
                    (:exports . "results"))
                  org-babel-default-header-args:lilypond)))
