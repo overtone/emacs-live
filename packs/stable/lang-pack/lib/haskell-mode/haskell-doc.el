@@ -345,7 +345,6 @@
 (require 'haskell-mode)
 (require 'inf-haskell)
 (require 'imenu)
-(with-no-warnings (require 'cl))
 
 (defgroup haskell-doc nil
   "Show Haskell function types in echo area."
@@ -1973,9 +1972,5 @@ This function switches to and potentially loads many buffers."
 ;;@section Token
 
 (provide 'haskell-doc)
-
-;; Local Variables:
-;; byte-compile-warnings: (not cl-functions)
-;; End:
 
 ;;; haskell-doc.el ends here

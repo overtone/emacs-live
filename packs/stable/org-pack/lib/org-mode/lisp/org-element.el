@@ -727,11 +727,11 @@ CONTENTS is the contents of the footnote-definition."
 
 Return a list whose CAR is `headline' and CDR is a plist
 containing `:raw-value', `:title', `:alt-title', `:begin',
-`:end', `:pre-blank', `:hiddenp', `:contents-begin' and
+`:end', `:pre-blank', `:hiddenp', `:contents-begin',
 `:contents-end', `:level', `:priority', `:tags',
 `:todo-keyword',`:todo-type', `:scheduled', `:deadline',
-`:closed', `:quotedp', `:archivedp', `:commentedp' and
-`:footnote-section-p' keywords.
+`:closed', `:quotedp', `:archivedp', `:commentedp',
+`:footnote-section-p' and `:post-blank' keywords.
 
 The plist also contains any property set in the property drawer,
 with its name in upper cases and colons added at the
@@ -870,38 +870,40 @@ CONTENTS is the contents of the element."
 					 (org-element-property :tags headline))
 				 (org-element-property :tags headline))))
 		 (and tag-list
-		      (format ":%s:" (mapconcat 'identity tag-list ":")))))
+		      (format ":%s:" (mapconcat #'identity tag-list ":")))))
 	 (commentedp (org-element-property :commentedp headline))
 	 (quotedp (org-element-property :quotedp headline))
 	 (pre-blank (or (org-element-property :pre-blank headline) 0))
-	 (heading (concat (make-string (org-reduced-level level) ?*)
-			  (and todo (concat " " todo))
-			  (and quotedp (concat " " org-quote-string))
-			  (and commentedp (concat " " org-comment-string))
-			  (and priority
-			       (format " [#%s]" (char-to-string priority)))
-			  (cond ((and org-footnote-section
-				      (org-element-property
-				       :footnote-section-p headline))
-				 (concat " " org-footnote-section))
-				(title (concat " " title))))))
-    (concat heading
-	    ;; Align tags.
-	    (when tags
-	      (cond
-	       ((zerop org-tags-column) (format " %s" tags))
-	       ((< org-tags-column 0)
-		(concat
-		 (make-string
-		  (max (- (+ org-tags-column (length heading) (length tags))) 1)
-		  ? )
-		 tags))
-	       (t
-		(concat
-		 (make-string (max (- org-tags-column (length heading)) 1) ? )
-		 tags))))
-	    (make-string (1+ pre-blank) 10)
-	    contents)))
+	 (heading
+	  (concat (make-string (if org-odd-levels-only (1- (* level 2)) level)
+			       ?*)
+		  (and todo (concat " " todo))
+		  (and quotedp (concat " " org-quote-string))
+		  (and commentedp (concat " " org-comment-string))
+		  (and priority (format " [#%s]" (char-to-string priority)))
+		  " "
+		  (if (and org-footnote-section
+			   (org-element-property :footnote-section-p headline))
+		      org-footnote-section
+		    title))))
+    (concat
+     heading
+     ;; Align tags.
+     (when tags
+       (cond
+	((zerop org-tags-column) (format " %s" tags))
+	((< org-tags-column 0)
+	 (concat
+	  (make-string
+	   (max (- (+ org-tags-column (length heading) (length tags))) 1)
+	   ?\s)
+	  tags))
+	(t
+	 (concat
+	  (make-string (max (- org-tags-column (length heading)) 1) ?\s)
+	  tags))))
+     (make-string (1+ pre-blank) ?\n)
+     contents)))
 
 
 ;;;; Inlinetask
@@ -1310,36 +1312,36 @@ containing `:begin', `:end', `:hiddenp', `:contents-begin',
 `:contents-end', `:post-blank' and `:post-affiliated' keywords.
 
 Assume point is at the beginning of the property drawer."
-  (save-excursion
-    (let ((case-fold-search t))
-      (if (not (save-excursion
-		 (re-search-forward "^[ \t]*:END:[ \t]*$" limit t)))
-	  ;; Incomplete drawer: parse it as a paragraph.
-	  (org-element-paragraph-parser limit affiliated)
-	(save-excursion
-	  (let* ((drawer-end-line (match-beginning 0))
-		 (begin (car affiliated))
-		 (post-affiliated (point))
-		 (contents-begin (progn (forward-line)
-					(and (< (point) drawer-end-line)
-					     (point))))
-		 (contents-end (and contents-begin drawer-end-line))
-		 (hidden (org-invisible-p2))
-		 (pos-before-blank (progn (goto-char drawer-end-line)
-					  (forward-line)
-					  (point)))
-		 (end (progn (skip-chars-forward " \r\t\n" limit)
-			     (if (eobp) (point) (line-beginning-position)))))
-	    (list 'property-drawer
-		  (nconc
-		   (list :begin begin
-			 :end end
-			 :hiddenp hidden
-			 :contents-begin contents-begin
-			 :contents-end contents-end
-			 :post-blank (count-lines pos-before-blank end)
-			 :post-affiliated post-affiliated)
-		   (cdr affiliated)))))))))
+  (let ((case-fold-search t))
+    (if (not (save-excursion (re-search-forward "^[ \t]*:END:[ \t]*$" limit t)))
+	;; Incomplete drawer: parse it as a paragraph.
+	(org-element-paragraph-parser limit affiliated)
+      (save-excursion
+	(let* ((drawer-end-line (match-beginning 0))
+	       (begin (car affiliated))
+	       (post-affiliated (point))
+	       (contents-begin
+		(progn
+		  (forward-line)
+		  (and (re-search-forward org-property-re drawer-end-line t)
+		       (line-beginning-position))))
+	       (contents-end (and contents-begin drawer-end-line))
+	       (hidden (org-invisible-p2))
+	       (pos-before-blank (progn (goto-char drawer-end-line)
+					(forward-line)
+					(point)))
+	       (end (progn (skip-chars-forward " \r\t\n" limit)
+			   (if (eobp) (point) (line-beginning-position)))))
+	  (list 'property-drawer
+		(nconc
+		 (list :begin begin
+		       :end end
+		       :hiddenp hidden
+		       :contents-begin contents-begin
+		       :contents-end contents-end
+		       :post-blank (count-lines pos-before-blank end)
+		       :post-affiliated post-affiliated)
+		 (cdr affiliated))))))))
 
 (defun org-element-property-drawer-interpreter (property-drawer contents)
   "Interpret PROPERTY-DRAWER element as Org syntax.
@@ -2094,28 +2096,28 @@ LIMIT bounds the search.
 Return a list whose CAR is `node-property' and CDR is a plist
 containing `:key', `:value', `:begin', `:end' and `:post-blank'
 keywords."
-  (save-excursion
-    (looking-at org-property-re)
-    (let ((case-fold-search t)
-	  (begin (point))
-	  (key   (org-match-string-no-properties 2))
-	  (value (org-match-string-no-properties 3))
-	  (pos-before-blank (progn (forward-line) (point)))
-	  (end (progn (skip-chars-forward " \r\t\n" limit)
-		      (if (eobp) (point) (point-at-bol)))))
-      (list 'node-property
-	    (list :key key
-		  :value value
-		  :begin begin
-		  :end end
-		  :post-blank (count-lines pos-before-blank end))))))
+  (looking-at org-property-re)
+  (let ((begin (point))
+	(key   (org-match-string-no-properties 2))
+	(value (org-match-string-no-properties 3))
+	(end (save-excursion
+	       (end-of-line)
+	       (if (re-search-forward org-property-re limit t)
+		   (line-beginning-position)
+		 limit))))
+    (list 'node-property
+	  (list :key key
+		:value value
+		:begin begin
+		:end end
+		:post-blank 0))))
 
 (defun org-element-node-property-interpreter (node-property contents)
   "Interpret NODE-PROPERTY element as Org syntax.
 CONTENTS is nil."
   (format org-property-format
 	  (format ":%s:" (org-element-property :key node-property))
-	  (org-element-property :value node-property)))
+	  (or (org-element-property :value node-property) "")))
 
 
 ;;;; Paragraph
@@ -2481,7 +2483,7 @@ Assume point is at the beginning of the table."
 
 (defun org-element-table-interpreter (table contents)
   "Interpret TABLE element as Org syntax.
-CONTENTS is nil."
+CONTENTS is a string, if table's type is `org', or nil."
   (if (eq (org-element-property :type table) 'table.el)
       (org-remove-indentation (org-element-property :value table))
     (concat (with-temp-buffer (insert contents)
@@ -4612,29 +4614,29 @@ indentation is not done with TAB characters."
   (let* ((min-ind most-positive-fixnum)
 	 find-min-ind			; For byte-compiler.
 	 (find-min-ind
-	  (function
-	   ;; Return minimal common indentation within BLOB.  This is
-	   ;; done by walking recursively BLOB and updating MIN-IND
-	   ;; along the way.  FIRST-FLAG is non-nil when the first
-	   ;; string hasn't been seen yet.  It is required as this
-	   ;; string is the only one whose indentation doesn't happen
-	   ;; after a newline character.
-	   (lambda (blob first-flag)
-	     (dolist (object (org-element-contents blob))
-	       (when (and first-flag (stringp object))
-		 (setq first-flag nil)
-		 (string-match "\\`\\( *\\)" object)
-		 (let ((len (length (match-string 1 object))))
-		   ;; An indentation of zero means no string will be
-		   ;; modified.  Quit the process.
-		   (if (zerop len) (throw 'zero (setq min-ind 0))
-		     (setq min-ind (min len min-ind)))))
-	       (cond
-		((stringp object)
-		 (dolist (line (delq "" (cdr (org-split-string object " *\n"))))
-		   (setq min-ind (min (org-get-indentation line) min-ind))))
-		((memq (org-element-type object) org-element-recursive-objects)
-		 (funcall find-min-ind object first-flag))))))))
+	  ;; Return minimal common indentation within BLOB.  This is
+	  ;; done by walking recursively BLOB and updating MIN-IND
+	  ;; along the way.  FIRST-FLAG is non-nil when the first
+	  ;; string hasn't been seen yet.  It is required as this
+	  ;; string is the only one whose indentation doesn't happen
+	  ;; after a newline character.
+	  (lambda (blob first-flag)
+	    (dolist (object (org-element-contents blob))
+	      (when (and first-flag (stringp object))
+		(setq first-flag nil)
+		(string-match "\\` *" object)
+		(let ((len (match-end 0)))
+		  ;; An indentation of zero means no string will be
+		  ;; modified.  Quit the process.
+		  (if (zerop len) (throw 'zero (setq min-ind 0))
+		    (setq min-ind (min len min-ind)))))
+	      (cond
+	       ((stringp object)
+		(dolist (line (cdr (org-split-string object " *\n")))
+		  (unless (string= line "")
+		    (setq min-ind (min (org-get-indentation line) min-ind)))))
+	       ((memq (org-element-type object) org-element-recursive-objects)
+		(funcall find-min-ind object first-flag)))))))
     ;; Find minimal indentation in ELEMENT.
     (catch 'zero (funcall find-min-ind element (not ignore-first)))
     (if (or (zerop min-ind) (= min-ind most-positive-fixnum)) element

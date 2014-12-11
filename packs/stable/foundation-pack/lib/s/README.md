@@ -85,6 +85,7 @@ Or you can just dump `s.el` in your load path somewhere.
 * [s-format](#s-format-template-replacer-optional-extra) `(template replacer &optional extra)`
 * [s-lex-format](#s-lex-format-format-str) `(format-str)`
 * [s-count-matches](#s-count-matches-regexp-s-optional-start-end) `(regexp s &optional start end)`
+* [s-wrap](#s-wrap-s-prefix-optional-suffix) `(s prefix &optional suffix)`
 
 ### Pertaining to words
 
@@ -704,6 +705,20 @@ to match.
 (s-count-matches "a" "aba") ;; => 2
 (s-count-matches "a" "aba" 0 2) ;; => 1
 (s-count-matches "\\w\\{2\\}[0-9]+" "ab1bab2frobinator") ;; => 2
+```
+
+### s-wrap `(s prefix &optional suffix)`
+
+Wrap string `s` with `prefix` and optionally `suffix`.
+
+Return string `s` with `prefix` prepended.  If `suffix` is present, it
+is appended, otherwise `prefix` is used as both prefix and
+suffix.
+
+```cl
+(s-wrap "foo" "\"") ;; => "\"foo\""
+(s-wrap "foo" "(" ")") ;; => "(foo)"
+(s-wrap "foo" "bar") ;; => "barfoobar"
 ```
 
 

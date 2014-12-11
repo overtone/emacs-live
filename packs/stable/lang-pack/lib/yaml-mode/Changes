@@ -1,3 +1,5 @@
+0.0.11 Tue Nov 25 08:35:56 GMT 2014
+        * Fix incorrect highlighting of colons in comments. (Wilfred)
 0.0.10 Mon Aug 25 04:06:50 GMT 2014
         * Remove default C-j binding. (barrkel)
 0.0.9  Mon Mar 11 12:43:23 2013

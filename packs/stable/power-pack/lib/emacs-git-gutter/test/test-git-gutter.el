@@ -203,10 +203,38 @@ bar
            (got (git-gutter:hg-diff-arguments file)))
       (should (equal got '("-a" "-b" "-c" "-r" "30000" "git-gutter.el"))))))
 
+(ert-deftest git-gutter-bzr-diff-arguments ()
+  "Command line options of `bzr diff'"
+
+  (let ((git-gutter:bazaar-diff-option "-a -b -c")
+        (file "git-gutter.el"))
+    (let ((got (git-gutter:bzr-diff-arguments file)))
+      (should (equal got '("-a" "-b" "-c" "git-gutter.el"))))
+
+    (let* ((git-gutter:start-revision "30000")
+           (got (git-gutter:bzr-diff-arguments file)))
+      (should (equal got '("-a" "-b" "-c" "-r" "30000" "git-gutter.el"))))))
+
 (ert-deftest git-gutter-vcs-check-functions ()
   "Check function of VCS"
 
   (should (eq (git-gutter:vcs-check-function 'git) 'git-gutter:in-git-repository-p))
-  (should (eq (git-gutter:vcs-check-function 'hg) 'git-gutter:in-hg-repository-p)))
+  (should (eq (git-gutter:vcs-check-function 'hg) 'git-gutter:in-hg-repository-p))
+  (should (eq (git-gutter:vcs-check-function 'bzr) 'git-gutter:in-bzr-repository-p)))
+
+(ert-deftest git-gutter-read-header ()
+  "Read header of diff hunk"
+
+  (let ((got (git-gutter:read-hunk-header "@@ -658,31 +688,30 @@")))
+    (should (= (nth 0 got) 658))
+    (should (= (nth 1 got) 31))
+    (should (= (nth 2 got) 688))
+    (should (= (nth 3 got) 30)))
+
+  (let ((got (git-gutter:read-hunk-header "@@ -100 +200 @@")))
+    (should (= (nth 0 got) 100))
+    (should (= (nth 1 got) 1))
+    (should (= (nth 2 got) 200))
+    (should (= (nth 3 got) 1))))
 
 ;;; test-git-gutter.el end here

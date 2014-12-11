@@ -30,8 +30,8 @@
 ;;; Code:
 
 (defvar sexp-show "sexp-show")
+(require 'cl-lib)
 (require 'haskell-string)
-(with-no-warnings (require 'cl))
 
 (defun haskell-show-replace-region ()
   "Replace the given region with a pretty printed version."
@@ -76,7 +76,7 @@
 
 (defun haskell-show-insert-pretty (column tree &optional parens)
   "Insert a Show `tree' into the current buffer with collapsible nodes."
-  (case (car tree)
+  (cl-case (car tree)
     ('list (let ((start (point)))
              (insert "[")
              (haskell-show-mapcar/i (lambda (x i len)
@@ -105,7 +105,7 @@
        (let ((link-start (point)))
          (insert (car record))
          (let ((button (make-text-button link-start (point) :type 'haskell-show-toggle-button)))
-           (put-text-property link-start (point) 'face 'font-lock-type-face)
+           (put-text-property link-start (point) 'font-lock-face 'font-lock-type-face)
            (button-put button 'overlay overlay)))
        (insert " {\n")
        (let ((curly-start (1- (point)))
@@ -116,7 +116,7 @@
                                     (if (and (> i 0) (< show-len 80)) 0 column)
                                     (car field)))
                                   (insert " = ")
-                                  (put-text-property (- (point) 3) (point) 'face
+                                  (put-text-property (- (point) 3) (point) 'font-lock-face
                                                      'font-lock-constant-face)
                                   (haskell-show-insert-pretty
                                    (if (< show-len 80)
@@ -135,23 +135,23 @@
          (insert (if parens ")" "")))))
     ('num (let ((num-start (point)))
             (insert (format "%d" (cdr tree)))
-            (put-text-property num-start (point) 'face 'font-lock-constant-face)))
+            (put-text-property num-start (point) 'font-lock-face 'font-lock-constant-face)))
     ('string (let ((str-start (point)))
                (insert "\"")
                (if (< (+ column (length (cdr tree))) 60)
                    (progn
                      (insert (format "%s" (cdr tree)))
-                     (put-text-property (+ 1 str-start) (point) 'face 'font-lock-string-face))
+                     (put-text-property (+ 1 str-start) (point) 'font-lock-face 'font-lock-string-face))
                  (progn
                    (insert "…")
                    (insert (format "%s" (cdr tree)))
                    (let ((overlay (make-overlay (+ 2 str-start) (point) nil t)))
                      (overlay-put overlay 'invisible t)
-                     (put-text-property (+ 2 str-start) (point) 'face 'font-lock-string-face)
+                     (put-text-property (+ 2 str-start) (point) 'font-lock-face 'font-lock-string-face)
                      (let ((button (make-text-button (+ 1 str-start) (+ 2 str-start)
                                                      :type 'haskell-show-toggle-button)))
                        (put-text-property (+ 1 str-start) (+ 2 str-start)
-                                          'face 'font-lock-keyword-face)
+                                          'font-lock-face 'font-lock-keyword-face)
                        (button-put button 'overlay (list overlay))
                        (button-put button 'hide-on-click t)))))
                (insert "\"")))
@@ -159,7 +159,7 @@
              (insert (if parens "(" ""))
              (let ((cons-start (point)))
                (insert (car data))
-               (put-text-property cons-start (point) 'face 'font-lock-type-face))
+               (put-text-property cons-start (point) 'font-lock-face 'font-lock-type-face))
              (unless (null (cdr data))
                (progn (insert " ")
                       (haskell-show-mapcar/i
@@ -171,11 +171,11 @@
              (insert (if parens ")" ""))))
     ('char (progn (insert "'")
                   (insert (char-to-string (cdr tree)))
-                  (put-text-property (- (point) 1) (point) 'face 'font-lock-string-face)
+                  (put-text-property (- (point) 1) (point) 'font-lock-face 'font-lock-string-face)
                   (insert "'")))
     ('arbitrary (let ((start (point)))
                   (insert (cdr tree))
-                  (put-text-property start (point) 'face 'font-lock-comment-face)))
+                  (put-text-property start (point) 'font-lock-face 'font-lock-comment-face)))
     (otherwise (error "Unsupported node type: %S" tree))))
 
 (define-button-type 'haskell-show-toggle-button
@@ -196,7 +196,7 @@
 
 (defun haskell-show-pretty (tree &optional parens)
   "Show a Show `tree'."
-  (case (car tree)
+  (cl-case (car tree)
     ('list (format "[%s]"
                    (mapconcat
                     (lambda (x)
@@ -255,9 +255,5 @@
           s))
 
 (provide 'haskell-show)
-
-;; Local Variables:
-;; byte-compile-warnings: (not cl-functions)
-;; End:
 
 ;;; haskell-show.el ends here

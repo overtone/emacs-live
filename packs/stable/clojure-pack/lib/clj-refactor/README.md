@@ -1,4 +1,8 @@
-# clj-refactor.el [![Build Status](https://secure.travis-ci.org/clojure-emacs/clj-refactor.el.png)](http://travis-ci.org/clojure-emacs/clj-refactor.el)
+[![MELPA](http://melpa.org/packages/clj-refactor-badge.svg)](http://melpa.org/#/clj-refactor)
+[![MELPA Stable](http://stable.melpa.org/packages/clj-refactor-badge.svg)](http://stable.melpa.org/#/clj-refactor)
+[![Build Status](https://secure.travis-ci.org/clojure-emacs/clj-refactor.el.png)](http://travis-ci.org/clojure-emacs/clj-refactor.el)
+
+# clj-refactor.el
 
 A collection of simple clojure refactoring functions. Please send help.
 
@@ -7,7 +11,7 @@ A collection of simple clojure refactoring functions. Please send help.
 I highly recommend installing clj-refactor through elpa.
 
 It's available on [marmalade](http://marmalade-repo.org/) and
-[melpa](http://melpa.milkbox.net/):
+[melpa](http://melpa.org/):
 
     M-x package-install clj-refactor
 
@@ -22,7 +26,7 @@ clj-refactor in your path somewhere:
 
 ## Setup
 
-```cl
+```el
 (require 'clj-refactor)
 (add-hook 'clojure-mode-hook (lambda ()
                                (clj-refactor-mode 1)
@@ -32,20 +36,20 @@ clj-refactor in your path somewhere:
 
 You'll also have to set up the keybindings in the lambda. Read on.
 
-## Setup keybindings
+### Setup keybindings
 
 All functions in clj-refactor have a two-letter mnemonic shortcut. For
 instance, rename-file is `rf`. You get to choose how those are bound.
 Here's how:
 
-```cl
+```el
 (cljr-add-keybindings-with-prefix "C-c C-m")
 ;; eg. rename files with `C-c C-m rf`.
 ```
 
 If you would rather have a modifier key, instead of a prefix, do:
 
-```cl
+```el
 (cljr-add-keybindings-with-modifier "C-s-")
 ;; eg. rename files with `C-s-r C-s-f`.
 ```
@@ -53,8 +57,38 @@ If you would rather have a modifier key, instead of a prefix, do:
 If neither of these appeal to your sense of keyboard layout aesthetics, feel free
 to pick and choose your own keybindings with a smattering of:
 
-```cl
+```el
 (define-key clj-refactor-map (kbd "C-x C-r") 'cljr-rename-file)
+```
+
+**The keybindings suggested here might be conflicting with keybindings in
+either clojure-mode or cider. Ideally, you should pick keybindings that don't
+interfere with both.**
+
+### Refactor nREPL middleware
+
+The project is going forward towards smarter refactorings. To achieve this we need our library to better understand clojure code. Therefore we are investing into an nREPL middleware called [refactor-nrepl](https://github.com/clojure-emacs/refactor-nrepl). This middleware working together with an embedded [cider](https://github.com/clojure-emacs/cider) backed REPL in your Emacs can do some smart refactorings.
+
+Certain features are only available with the middleware added: please see these marked in our list of features.
+
+To set it up you need to add the middleware as you add the middleware for cider. Add the following, either in your project's `project.clj`,  or in the `:user` profile found at `~/.lein/profiles.clj`:
+
+```clojure
+:plugins [[refactor-nrepl "0.1.0"]]
+```
+
+For more details see [refactor-nrepl](https://github.com/clojure-emacs/refactor-nrepl)
+
+For most of the `refactor-nrepl` middleware supported refactorings we need to build an AST representation of the code. [tools.analyzer](https://github.com/clojure/tools.analyzer) and [tools.analyzer.jvm](https://github.com/clojure/tools.analyzer.jvm) is used for this. (Thanks for @Bronsa's good work.)
+
+**WARNING** The analyzer for some (not all) cases need to eval the code too in order to be able to build the AST we can work with. That means your namespace will be loaded as side effect. If loading your code (particularly test files) causes side effects like writing files, opening connections to servers, modifying databases, etc. performing certain refactoring functions on your code will do that, too.
+
+### Populate the artifact cache on startup
+
+The `add-project-dependency` functionality caches the list of available artifacts for one day, instead of hitting the web every time.  If you don't want to wait for the cache to be populated, when you first call `add-project-dependency`, you can do the following, to have this happen in the background:
+
+```el
+(add-hook 'nrepl-connected-hook #'cljr-update-artifact-cache)
 ```
 
 ## Usage
@@ -85,6 +119,9 @@ This is it so far:
  - `ad`: add declaration for current top-level form
  - `dk`: destructure keys
  - `mf`: move one or more forms to another namespace, `:refer` any functions
+ - `sp`: Sort all dependency vectors in project.clj
+ - `rd`: Remove (debug) function invocations **depends on refactor-nrepl**
+ - `ap`: add a dependency to your project **depends on refactor-nrepl**
 
 Combine with your keybinding prefix/modifier.
 
@@ -264,31 +301,6 @@ I do `cljr-cycle-coll` to return:
 (:a 1 :b 2)
 ```
 
-## Cycling Between Strings and Keywords
-
-Given this string:
-
-```clj
-"refactor"
-```
-
-I do `cljr-cycle-stringlike` to return:
-
-```clj
-:refactor
-```
-
-... and then 3 more times:
-
-```clj
-"refactor"
-:refactor
-"refactor"
-```
-
-Thanks to [Jay Fields](https://github.com/jaycfields) and
-[emacs-live](https://github.com/overtone/emacs-live) for these cycling features. Good idea!
-
 ## Destructuring keys
 
 Given this:
@@ -340,13 +352,13 @@ I place cursor on `my.lib` and do `cljr-stop-referring`:
 If you're not using yasnippet, then the "jumping back"-part of adding to
 namespace won't work. To remedy that, enable the mode with either:
 
-```cl
+```el
 (yas/global-mode 1)
 ```
 
 or
 
-```cl
+```el
 (add-hook 'clojure-mode-hook (lambda () (yas/minor-mode 1)))
 ```
 
@@ -355,7 +367,7 @@ some snippet packages for Clojure:
 
  - David Nolen has created some [clojure-snippets](https://github.com/swannodette/clojure-snippets)
  - I've made some [datomic-snippets](https://github.com/magnars/datomic-snippets)
- - Max Penet has also created some [clojure-snippets](https://github.com/mpenet/clojure-snippets), early fork of dnolens' with tons of additions and MELPA compatible 
+ - Max Penet has also created some [clojure-snippets](https://github.com/mpenet/clojure-snippets), early fork of dnolens' with tons of additions and MELPA compatible
 
 ## Changing the way how the ns declaration is sorted
 
@@ -363,13 +375,13 @@ By default sort ns `sn` will sort your ns declaration alphabetically. You can ch
 
 Sort it longer first:
 
-```cl
+```el
 (setq cljr-sort-comparator 'cljr--string-length-comparator)
 ```
 
 Or you can use the semantic comparator:
 
-```cl
+```el
 (setq cljr-sort-comparator 'cljr--semantic-comparator)
 ```
 
@@ -425,7 +437,7 @@ test files with `_test`.
 
 Prefer to insert your own ns-declarations? Then:
 
-```cl
+```el
 (setq clj-add-ns-to-blank-clj-files nil)
 ```
 
@@ -444,7 +456,7 @@ For instance, typing `(io/)` adds `[clojure.java.io :as io]` to the requires.
 
 You can turn this off with:
 
-```cl
+```el
 (setq cljr-magic-requires nil)
 ```
 
@@ -452,17 +464,25 @@ or set it to `:prompt` if you want to confirm before it inserts.
 
 ## Project clean up
 
-`cljr-project-clean` runs some clean up functions on all clj files in a project in bulk. By default these are `cljr-remove-unused-requires` and `cljr-sort-ns`. Before changes are made the function prompts if you really want to proceed as many files in the project can be potentially affected.
+`cljr-project-clean` runs some clean up functions on all clj files in a project in bulk. By default these are `cljr-remove-unused-requires` and `cljr-sort-ns`. Additionally, `cljr-sort-project-dependencies` is called to put the `project.clj` file in order.  Before any changes are made, the user is prompted for confirmation because this function can touch a large number of files.
 
 This promting can be switched off by setting `cljr-project-clean-prompt` nil:
 
-```cl
+```el
 (setq cljr-project-clean-prompt nil)
 ```
 
 The list of functions to run with `cljr-project-clean` is also configurable via `cljr-project-clean-functions`. You can add more functions defined in clj-refactor or remove some or even write your own.
 
 `cljr-project-clean` will only work with leiningen managed projects with a project.clj in their root directory. This limitation will very likely be fixed when [#27](https://github.com/magnars/clj-refactor.el/issues/27) is done.
+
+## Add project dependency
+
+When this function is called with a prefix the artifact cache is invalidated and updated.  This happens synchronously.  If you want to update the artifact cache in the background you can call `cljr-update-artifact-cache`.
+
+## Remove (debug) function invocations
+
+Removes invocations of a predefined set of functions from the namespace. Remove function invocations are configurable `cljr-debug-functions`; default value is `"println,pr,prn"`.
 
 ## Miscellaneous
 
@@ -478,11 +498,18 @@ You might also like
 
 ## Changelog
 
+#### From 0.12 to 0.13
+
+- Removed `cljr-cycle-stringlike`.  This function was duplicating the functionality of [clojure-mode's](https://github.com/clojure-emacs/clojure-mode) `clojure-toggle-keyword-string`
 - Add `cljr-cycle-if` [AlexBaranosky](https://github.com/AlexBaranosky)
 - Common namespace shorthands are (optionally) automatically required when you type it.
 - Comparator for sort require, use and import is configurable, add optional lenght based comparator to sort longer first [Benedek Fazekas](https://github.com/benedekfazekas)
 - Add semantic comparator to sort items closer to the current namespace first [Benedek Fazekas](https://github.com/benedekfazekas)
 - Add `cljr-project-clean` with configurable clean functions [Benedek Fazekas](https://github.com/benedekfazekas)
+- Add `cljr-sort-project-dependencies` [Lars Andersen](https://github.com/expez)
+- Add `cljr-add-project-dependency` [Lars Andersen](https://github.com/expez)
+- Add `cljr-remove-debug-fns` [Benedek Fazekas](https://github.com/benedekfazekas)
+- performance tweak for `cljr-remove-unused-requires` if `refactor-nrepl` is used [Benedek Fazekas](https://github.com/benedekfazekas)
 
 #### From 0.11 to 0.12
 
@@ -527,10 +554,10 @@ specific feature, or I might break it later.
 
 You'll find the repo at:
 
-    https://github.com/magnars/clj-refactor.el
+    https://github.com/clojure-emacs/clj-refactor.el
 
 To fetch the test dependencies, install
-[cask](https://github.com/rejeep/cask.el) if you haven't already,
+[cask](https://github.com/cask/cask) if you haven't already,
 then:
 
     $ cd /path/to/clj-refactor
@@ -543,8 +570,8 @@ Run the tests with:
 ## Contributors
 
 - [AlexBaranosky](https://github.com/AlexBaranosky) added a bunch of features. See the [Changelog](#changelog) for details.
-- [Lars Andersen](https://github.com/expez) added `cljr-replace-use`, `cljr-add-declaration` and `cljr-move-form`.
-- [Benedek Fazekas](https://github.com/benedekfazekas) added `cljr-remove-unused-requires` and improved on the let-expanding functions.
+- [Lars Andersen](https://github.com/expez) added `cljr-replace-use`, `cljr-add-declaration` and `cljr-move-form`, `cljr-sort-project-dependencies`  and `cljr-add-project-dependency`.
+- [Benedek Fazekas](https://github.com/benedekfazekas) added `cljr-remove-unused-requires` and improved on the let-expanding functions, `cljr-project-clean`, `cljr-remove-debug-fns` and `refactor-nrepl` integration.
 
 Thanks!
 

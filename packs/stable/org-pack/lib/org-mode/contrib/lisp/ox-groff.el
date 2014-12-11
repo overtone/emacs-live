@@ -1268,7 +1268,7 @@ INFO is a plist holding contextual information.  See
      ;; description.
      ((string= type "radio")
       (let ((destination (org-export-resolve-radio-link link info)))
-        (when destination
+        (if (not destination) desc
           (format "\\fI [%s] \\fP"
                   (org-export-solidify-link-text
 		   (org-element-property :value destination))))))

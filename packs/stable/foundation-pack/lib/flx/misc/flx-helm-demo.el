@@ -11,7 +11,7 @@ The score info we add here is later removed with another filter."
            (flx-pattern (cdar mp-3-patterns))
            (patterns (cons (cons 'identity
                                  (mapconcat
-                                  #'identity
+                                  #'regexp-quote
                                   (split-string flx-pattern "" t)
                                   ".*"))
                            (cdr mp-3-patterns)))

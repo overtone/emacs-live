@@ -47,7 +47,7 @@ class FlooUI(event_emitter.EventEmitter):
     @utils.inlined_callbacks
     def link_account(self, context, host, cb):
         prompt = 'No credentials found in ~/.floorc.json for %s. Would you like to sign in? (opens a browser)' % host
-        yes = yield self.user_y_or_n, context,  prompt, 'Sign in'
+        yes = yield self.user_y_or_n, context, prompt, 'Sign in'
         if not yes:
             return
 
@@ -279,6 +279,38 @@ class FlooUI(event_emitter.EventEmitter):
         return self.join_workspace(context, d['host'], d['workspace'], d['owner'], possible_dirs)
 
     @utils.inlined_callbacks
+    def follow_user(self, context):
+        users = self.agent.workspace_info.get('users')
+        userNames = set()
+        me = self.agent.get_username_by_id(self.agent.workspace_info['user_id'])
+        for user in users.values():
+            username = user['username']
+            if username == me:
+                continue
+            if user['client'] == 'flooty':
+                continue
+            if 'highlight' not in user['perms']:
+                continue
+            userNames.add(username)
+        if not userNames:
+            editor.error_message("There are no other users that can be followed at this time.  NOTE: you can only follow users who have highlight permission.")
+            return
+        userNames = list(userNames)
+        userNames.sort()
+        small = [(x in G.FOLLOW_USERS) and "unfollow" or "follow" for x in userNames]
+        selected_user, index = yield self.user_select, context, "select a user to follow", list(userNames), small
+
+        if not selected_user:
+            return
+
+        if selected_user in G.FOLLOW_USERS:
+            G.FOLLOW_USERS.remove(selected_user)
+            return
+
+        G.FOLLOW_USERS.add(selected_user)
+        G.AGENT.highlight(user=selected_user)
+
+    @utils.inlined_callbacks
     def join_workspace(self, context, host, name, owner, possible_dirs=None):
         utils.reload_settings()
 
@@ -337,7 +369,7 @@ class FlooUI(event_emitter.EventEmitter):
 
     @utils.inlined_callbacks
     def prompt_share_dir(self, context, ask_about_dir, api_args):
-        dir_to_share = yield self.user_dir, 'Directory to share: ', ask_about_dir
+        dir_to_share = yield self.user_dir, context, 'Directory to share: ', ask_about_dir
         if not dir_to_share:
             return
         self.share_dir(context, dir_to_share, api_args)

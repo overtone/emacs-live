@@ -19,11 +19,11 @@ If you want the function combinators, then also:
 
 Add this to the big comment block at the top:
 
-    ;; Package-Requires: ((dash "2.8.0"))
+    ;; Package-Requires: ((dash "2.10.0"))
 
 To get function combinators:
 
-    ;; Package-Requires: ((dash "2.8.0") (dash-functional "1.1.0") (emacs "24"))
+    ;; Package-Requires: ((dash "2.10.0") (dash-functional "1.2.0") (emacs "24"))
 
 ## Syntax highlighting of dash functions
 
@@ -45,7 +45,7 @@ While `-map` takes a function to map over the list, you can also use
 the anaphoric form with double dashes - which will then be executed
 with `it` exposed as the list item. Here's an example:
 
-```cl
+```el
 (-map (lambda (n) (* n n)) '(1 2 3 4)) ;; normal version
 
 (--map (* it it) '(1 2 3 4)) ;; anaphoric version
@@ -53,7 +53,7 @@ with `it` exposed as the list item. Here's an example:
 
 of course the original can also be written like
 
-```cl
+```el
 (defun square (n) (* n n))
 
 (-map 'square '(1 2 3 4))
@@ -90,6 +90,19 @@ Oh, and don't edit `README.md` directly, it is auto-generated.
 Change `readme-template.md` or `examples-to-docs.el` instead.
 
 ## Changelist
+
+### From 2.9 to 2.10
+
+- Add `-let` destructuring to `-if-let` and `-when-let` (Fredrik Bergroth)
+
+### From 2.8 to 2.9
+
+- Add `-let`, `-let*` and `-lambda` with destructuring
+- Add `-tree-seq` and `-tree-map-nodes`
+- Add `-non-nil`
+- Add `-fix`
+- Add `-fixfn` (dash-functional 1.2)
+- Add `-copy` (Wilfred Hughes)
 
 ### From 2.7 to 2.8
 
@@ -190,12 +203,13 @@ Change `readme-template.md` or `examples-to-docs.el` instead.
  - [Johan Andersson](https://github.com/rejeep) contributed `-sum`, `-product` and `-same-items?`
  - [Christina Whyte](https://github.com/kurisuwhyte) contributed `-compose`
  - [Steve Lamb](https://github.com/steventlamb) contributed `-cycle`, `-pad`, `-annotate`, `-zip-fill` and an n-ary version of `-zip`.
+ - [Fredrik Bergroth](https://github.com/fbergroth) made the `-if-let` family use `-let` destructuring and improved script for generating documentation.
 
 Thanks!
 
 ## License
 
-Copyright (C) 2012-2013 Magnar Sveen
+Copyright (C) 2012-2014 Magnar Sveen
 
 Authors: Magnar Sveen <magnars@gmail.com>
 Keywords: lists

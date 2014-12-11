@@ -34,7 +34,7 @@
 
 ;;;###autoload
 (defcustom cider-mode-line
-  '(" cider" (:eval (format "[%s]" (cider-current-ns))))
+  '(:eval (format " cider[%s]" (cider-current-ns)))
   "Mode line ligher for `cider-mode'.
 
 The value of this variable is a mode line template as in
@@ -69,14 +69,16 @@ entirely."
     (define-key map (kbd "C-c C-r") 'cider-eval-region)
     (define-key map (kbd "C-c C-n") 'cider-eval-ns-form)
     (define-key map (kbd "C-c M-:") 'cider-read-and-eval)
+    (define-key map (kbd "C-c C-u") 'cider-undef)
     (define-key map (kbd "C-c C-m") 'cider-macroexpand-1)
     (define-key map (kbd "C-c M-m") 'cider-macroexpand-all)
     (define-key map (kbd "C-c M-n") 'cider-repl-set-ns)
     (define-key map (kbd "C-c M-i") 'cider-inspect)
-    (define-key map (kbd "C-c M-t") 'cider-toggle-trace)
+    (define-key map (kbd "C-c M-t v") 'cider-toggle-trace-var)
+    (define-key map (kbd "C-c M-t n") 'cider-toggle-trace-ns)
     (define-key map (kbd "C-c C-z") 'cider-switch-to-repl-buffer)
     (define-key map (kbd "C-c M-o") 'cider-find-and-clear-repl-buffer)
-    (define-key map (kbd "C-c C-k") 'cider-load-current-buffer)
+    (define-key map (kbd "C-c C-k") 'cider-load-buffer)
     (define-key map (kbd "C-c C-l") 'cider-load-file)
     (define-key map (kbd "C-c C-b") 'cider-interrupt)
     (define-key map (kbd "C-c ,")   'cider-test-run-tests)
@@ -104,8 +106,8 @@ entirely."
         ["Eval ns form" cider-eval-ns-form]
         ["Insert last sexp in REPL" cider-insert-last-sexp-in-repl]
         "--"
-        ["Load current buffer" cider-load-current-buffer]
-        ["Load file" cider-load-file]
+        ["Load (eval) buffer" cider-load-buffer]
+        ["Load (eval) file" cider-load-file]
         "--"
         ["Macroexpand-1" cider-macroexpand-1]
         ["Macroexpand-all" cider-macroexpand-all]
@@ -131,6 +133,8 @@ entirely."
         ["Quit" cider-quit]
         ["Restart" cider-restart]
         "--"
+        ["Describe nREPL session" cider-describe-nrepl-session]
+        ["Close nREPL session" cider-close-nrepl-session]
         ["Display nREPL connection" cider-display-current-connection-info]
         ["Rotate nREPL connection" cider-rotate-connection]
         "--"

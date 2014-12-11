@@ -2,7 +2,7 @@
 
 Real-time collaborative editing. Think Etherpad, but with native editors. This is the plugin for Emacs. We also have plugins for [Sublime Text](https://github.com/Floobits/floobits-sublime), [Vim](https://github.com/Floobits/floobits-vim), and [IntelliJ](https://github.com/Floobits/floobits-intellij).
 
-### Development status: New, but reasonably stable. We've tested it on Emacs 24 and later. Earlier versions probably won't work. This plugin requires Python 2.7 or later.
+### Development status: Reasonably stable. We've tested it on Emacs 24 and later. Earlier versions probably won't work. This plugin requires Python 2.7 or later.
 
 ## Installation
 ### MELPA
@@ -24,15 +24,18 @@ If you have [el-get](https://github.com/dimitri/el-get), simply `M-x el-get-inst
 ## Initial set-up
 
 * [Create a Floobits account](https://floobits.com/signup/) or [sign in with GitHub](https://floobits.com/login/github/?next=/dash/).
-* Set up your `~/.floorc`. You can find a personalized `~/.floorc` on [your settings page](https://floobits.com/dash/settings/). A typical `~/.floorc` looks like this:
+* Set up your `~/.floorc.json`. You can find a personalized `~/.floorc.json` on [your settings page](https://floobits.com/dash/settings/). A typical `~/.floorc.json` looks like this:
 
 ```
-username myuser
-api_key user_kr30t28e
-secret gii9Ka8aZei3ej1eighu2vi8D
-vim_executable mvim
-```
-
+{
+  "auth": {
+    "floobits.com": {
+      "username": "your_username",
+      "api_key": "your_api_key",
+      "secret": "your_api_secret_not_your_password"
+    }
+  }
+}```
 
 ## Usage
 

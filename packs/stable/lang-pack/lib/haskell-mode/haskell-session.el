@@ -27,31 +27,18 @@
 
 ;;; Code:
 
+(require 'cl-lib)
 (require 'haskell-cabal)
 (require 'haskell-string)
-(require 'haskell-mode)
-(with-no-warnings (require 'cl))
-
-(declare-function haskell-interactive-mode "haskell-interactive-mode" ())
-(declare-function haskell-kill-session-process "haskell-process" (&optional session))
-(declare-function haskell-process-start "haskell-process" (session))
-(declare-function haskell-process-cd "haskell-process" (&optional not-interactive))
-
-;; Dynamically scoped variables.
-(defvar haskell-process-type)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Configuration
-
-(defcustom haskell-ask-also-kill-buffers
-  t
-  "Ask whether to kill all associated buffers when a session
- process is killed."
-  :type 'boolean
-  :group 'haskell-interactive)
+(require 'haskell-customize)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Globals
+
+;; Used internally
+(defvar haskell-session)
+
+(make-variable-buffer-local 'haskell-session)
 
 (defvar haskell-sessions (list)
   "All Haskell sessions in the Emacs session.")
@@ -60,96 +47,8 @@
   "Get the filename for the TAGS file."
   (concat (haskell-session-cabal-dir session) "/TAGS"))
 
-;;;###autoload
-(defun haskell-session-all-modules (&optional dontcreate)
-  "Get all modules -- installed or in the current project.
-If DONTCREATE is non-nil don't create a new session."
-  (append (haskell-session-installed-modules dontcreate)
-          (haskell-session-project-modules dontcreate)))
-
-;;;###autoload
-(defun haskell-session-installed-modules (&optional dontcreate)
-  "Get the modules installed in the current package set.
-If DONTCREATE is non-nil don't create a new session."
-  ;; TODO: Again, this makes HEAVY use of unix utilities. It'll work
-  ;; fine in Linux, probably okay on OS X, and probably not at all on
-  ;; Windows. Again, if someone wants to test on Windows and come up
-  ;; with alternatives that's OK.
-  ;;
-  ;; Ideally all these package queries can be provided by a Haskell
-  ;; program based on the Cabal API. Possibly as a nice service. Such
-  ;; a service could cache and do nice things like that. For now, this
-  ;; simple shell script takes us far.
-  ;;
-  ;; Probably also we can take the code from inferior-haskell-mode.
-  ;;
-  ;; Ugliness aside, if it saves us time to type it's a winner.
-  ;;
-  ;; FIXME/TODO: add support for (eq 'cabal-repl haskell-process-type)
-  (require 'haskell-process) ; hack for accessing haskell-process-type
-  (let ((modules (shell-command-to-string
-                  (format "%s | %s | %s"
-                          (if (eq 'cabal-dev haskell-process-type)
-                              (if (or (not dontcreate) (haskell-session-maybe))
-                                  (format "cabal-dev -s %s/cabal-dev ghc-pkg dump"
-                                          (haskell-session-cabal-dir (haskell-session)))
-                                "echo ''")
-                            "ghc-pkg dump")
-                          "egrep '^(exposed-modules: |                 )[A-Z]'"
-                          "cut -c18-"))))
-    (split-string modules)))
-
-(defun haskell-session-project-modules (&optional dontcreate)
-  "Get the modules of the current project.
-If DONTCREATE is non-nil don't create a new session."
-  (if (or (not dontcreate) (haskell-session-maybe))
-      (let* ((session (haskell-session))
-             (modules
-              (shell-command-to-string
-               (format "%s && %s"
-                       (format "cd %s" (haskell-session-cabal-dir session))
-                       ;; TODO: Use a different, better source. Possibly hasktags or some such.
-                       ;; TODO: At least make it cross-platform. Linux
-                       ;; (and possibly OS X) have egrep, Windows
-                       ;; doesn't -- or does it via Cygwin or MinGW?
-                       ;; This also doesn't handle module\nName. But those gits can just cut it out!
-                       "egrep '^module[\t\r ]+[^(\t\r ]+' . -r -I --include='*.*hs' --include='*.hsc' -s -o -h | sed 's/^module[\t\r ]*//' | sort | uniq"))))
-        (split-string modules))))
-
-(defun haskell-session-kill (&optional leave-interactive-buffer)
-  "Kill the session process and buffer, delete the session.
-0. Prompt to kill all associated buffers.
-1. Kill the process.
-2. Kill the interactive buffer.
-3. Walk through all the related buffers and set their haskell-session to nil.
-4. Remove the session from the sessions list."
-  (interactive)
-  (let* ((session (haskell-session))
-         (name (haskell-session-name session))
-         (also-kill-buffers
-          (and haskell-ask-also-kill-buffers
-               (y-or-n-p (format "Killing `%s'. Also kill all associated buffers?" name)))))
-    (haskell-kill-session-process session)
-    (unless leave-interactive-buffer
-      (kill-buffer (haskell-session-interactive-buffer session)))
-    (loop for buffer in (buffer-list)
-          do (with-current-buffer buffer
-               (when (and (boundp 'haskell-session)
-                          (string= (haskell-session-name haskell-session) name))
-                 (setq haskell-session nil)
-                 (when also-kill-buffers
-                   (kill-buffer)))))
-    (setq haskell-sessions
-          (remove-if (lambda (session)
-                       (string= (haskell-session-name session)
-                                name))
-                     haskell-sessions))))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Finding/clearing the session
-
-;; Used internally
-(defvar haskell-session)
 
 ;;;###autoload
 (defun haskell-session-maybe ()
@@ -158,54 +57,26 @@ If DONTCREATE is non-nil don't create a new session."
       haskell-session
     (setq haskell-session nil)))
 
-;;;###autoload
-(defun haskell-session ()
-  "Get the Haskell session, prompt if there isn't one or fail."
-  (or (haskell-session-maybe)
-      (haskell-session-assign
-       (or (haskell-session-from-buffer)
-           (haskell-session-new-assume-from-cabal)
-           (haskell-session-choose)
-           (haskell-session-new)))))
-
-(defun haskell-session-new-assume-from-cabal ()
-  "Prompt to create a new project based on a guess from the nearest Cabal file."
-  (let ((name (haskell-session-default-name)))
-    (unless (haskell-session-lookup name)
-      (when (y-or-n-p (format "Start a new project named “%s”? "
-                              name))
-        (haskell-session-make name)))))
-
 (defun haskell-session-from-buffer ()
   "Get the session based on the buffer."
   (when (and (buffer-file-name)
              (consp haskell-sessions))
-    (reduce (lambda (acc a)
-              (let ((dir (haskell-session-cabal-dir a t)))
-                (if dir
-                    (if (haskell-is-prefix-of dir
-                                              (file-name-directory (buffer-file-name)))
-                        (if acc
-                            (if (and
-                                 (> (length (haskell-session-cabal-dir a t))
-                                    (length (haskell-session-cabal-dir acc t))))
-                                a
-                              acc)
-                          a)
-                      acc)
-                  acc)))
-            haskell-sessions
-            :initial-value nil)))
-
-(defun haskell-session-new ()
-  "Make a new session."
-  (let ((name (read-from-minibuffer "Project name: " (haskell-session-default-name))))
-    (when (not (string= name ""))
-      (let ((session (haskell-session-lookup name)))
-        (if session
-            (when (y-or-n-p (format "Session %s already exists. Use it?" name))
-              session)
-          (haskell-session-make name))))))
+    (cl-reduce (lambda (acc a)
+                 (let ((dir (haskell-session-cabal-dir a t)))
+                   (if dir
+                       (if (haskell-is-prefix-of dir
+                                                 (file-name-directory (buffer-file-name)))
+                           (if acc
+                               (if (and
+                                    (> (length (haskell-session-cabal-dir a t))
+                                       (length (haskell-session-cabal-dir acc t))))
+                                   a
+                                 acc)
+                             a)
+                         acc)
+                     acc)))
+               haskell-sessions
+               :initial-value nil)))
 
 (defun haskell-session-default-name ()
   "Generate a default project name for the new project prompt."
@@ -224,38 +95,84 @@ If DONTCREATE is non-nil don't create a new session."
   (when haskell-sessions
     (let* ((session-name (funcall haskell-completing-read-function
                                   "Choose Haskell session: "
-                                  (remove-if (lambda (name)
-                                               (and haskell-session
-                                                    (string= (haskell-session-name haskell-session)
-                                                             name)))
-                                             (mapcar 'haskell-session-name haskell-sessions))))
-           (session (find-if (lambda (session)
-                               (string= (haskell-session-name session)
-                                        session-name))
-                             haskell-sessions)))
+                                  (cl-remove-if (lambda (name)
+                                                  (and haskell-session
+                                                       (string= (haskell-session-name haskell-session)
+                                                                name)))
+                                                (mapcar 'haskell-session-name haskell-sessions))))
+           (session (cl-find-if (lambda (session)
+                                  (string= (haskell-session-name session)
+                                           session-name))
+                                haskell-sessions)))
       session)))
 
 (defun haskell-session-clear ()
   "Clear the buffer of any Haskell session choice."
   (set (make-local-variable 'haskell-session) nil))
 
-(defun haskell-session-change ()
-  "Change the session for the current buffer."
-  (interactive)
-  (haskell-session-assign (or (haskell-session-new-assume-from-cabal)
-                              (haskell-session-choose)
-                              (haskell-session-new))))
+(defun haskell-session-lookup (name)
+  "Get the session by name."
+  (cl-remove-if-not (lambda (s)
+                      (string= name (haskell-session-name s)))
+                    haskell-sessions))
 
-(defun haskell-session-change-target (target)
-  "Set the build target for cabal repl"
-  (interactive "sNew build target:")
-  (let* ((session haskell-session)
-         (old-target (haskell-session-get session 'target)))
-    (when session
-      (haskell-session-set-target session target)
-      (when (and (not (string= old-target target))
-                 (y-or-n-p "Target changed, restart haskell process?"))
-        (haskell-process-start session)))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Session modules
+
+;;;###autoload
+(defun haskell-session-installed-modules (session &optional dontcreate)
+  "Get the modules installed in the current package set.
+If DONTCREATE is non-nil don't create a new session."
+  ;; TODO: Again, this makes HEAVY use of unix utilities. It'll work
+  ;; fine in Linux, probably okay on OS X, and probably not at all on
+  ;; Windows. Again, if someone wants to test on Windows and come up
+  ;; with alternatives that's OK.
+  ;;
+  ;; Ideally all these package queries can be provided by a Haskell
+  ;; program based on the Cabal API. Possibly as a nice service. Such
+  ;; a service could cache and do nice things like that. For now, this
+  ;; simple shell script takes us far.
+  ;;
+  ;; Probably also we can take the code from inferior-haskell-mode.
+  ;;
+  ;; Ugliness aside, if it saves us time to type it's a winner.
+  ;;
+  ;; FIXME/TODO: add support for (eq 'cabal-repl (haskell-process-type))
+  (let ((modules (shell-command-to-string
+                  (format "%s | %s | %s"
+                          (if (eq 'cabal-dev (haskell-process-type))
+                              (if (or (not dontcreate) (haskell-session-maybe))
+                                  (format "cabal-dev -s %s/cabal-dev ghc-pkg dump"
+                                          (haskell-session-cabal-dir session))
+                                "echo ''")
+                            "ghc-pkg dump")
+                          "egrep '^(exposed-modules: |                 )[A-Z]'"
+                          "cut -c18-"))))
+    (split-string modules)))
+
+;;;###autoload
+(defun haskell-session-all-modules (session &optional dontcreate)
+  "Get all modules -- installed or in the current project.
+If DONTCREATE is non-nil don't create a new session."
+  (append (haskell-session-installed-modules session dontcreate)
+          (haskell-session-project-modules session dontcreate)))
+
+;;;###autoload
+(defun haskell-session-project-modules (session &optional dontcreate)
+  "Get the modules of the current project.
+If DONTCREATE is non-nil don't create a new session."
+  (if (or (not dontcreate) (haskell-session-maybe))
+      (let* ((modules
+              (shell-command-to-string
+               (format "%s && %s"
+                       (format "cd %s" (haskell-session-cabal-dir session))
+                       ;; TODO: Use a different, better source. Possibly hasktags or some such.
+                       ;; TODO: At least make it cross-platform. Linux
+                       ;; (and possibly OS X) have egrep, Windows
+                       ;; doesn't -- or does it via Cygwin or MinGW?
+                       ;; This also doesn't handle module\nName. But those gits can just cut it out!
+                       "egrep '^module[\t\r ]+[^(\t\r ]+' . -r -I --include='*.*hs' --include='*.hsc' -s -o -h | sed 's/^module[\t\r ]*//' | sort | uniq"))))
+        (split-string modules))))
 
 (defun haskell-session-strip-dir (session file)
   "Strip the load dir from the file path."
@@ -270,27 +187,14 @@ If DONTCREATE is non-nil don't create a new session."
           file)
       file)))
 
-(defun haskell-session-lookup (name)
-  "Get the session by name."
-  (remove-if-not (lambda (s)
-                   (string= name (haskell-session-name s)))
-                 haskell-sessions))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Building the session
-
-(defun haskell-session-make (name)
-  "Make a Haskell session."
-  (when (haskell-session-lookup name)
-    (error "Session of name %s already exists!" name))
-  (let ((session (set (make-local-variable 'haskell-session)
-                      (list (cons 'name name)))))
-    (add-to-list 'haskell-sessions session)
-    (haskell-process-start session)
-    session))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Accessing the session
+
+(defun haskell-session-current-dir (s)
+  "Get the session current directory."
+  (let ((dir (haskell-session-get s 'current-dir)))
+    (or dir
+        (error "No current directory."))))
 
 (defun haskell-session-name (s)
   "Get the session name."
@@ -308,19 +212,6 @@ If DONTCREATE is non-nil don't create a new session."
 (defun haskell-session-set-target (s target)
   "Set the session build target."
   (haskell-session-set s 'target target))
-
-(defun haskell-session-interactive-buffer (s)
-  "Get the session interactive buffer."
-  (let ((buffer (haskell-session-get s 'interactive-buffer)))
-    (if (and buffer (buffer-live-p buffer))
-        buffer
-      (let ((buffer (get-buffer-create (format "*%s*" (haskell-session-name s)))))
-        (haskell-session-set-interactive-buffer s buffer)
-        (with-current-buffer buffer
-          (haskell-interactive-mode)
-          (haskell-session-assign s))
-        (switch-to-buffer-other-window buffer)
-        buffer))))
 
 (defun haskell-session-set-interactive-buffer (s v)
   "Set the session interactive buffer."
@@ -350,12 +241,6 @@ If DONTCREATE is non-nil don't create a new session."
   "Set the session checksum of .cabal files"
   (haskell-session-set s 'cabal-checksum
                        (haskell-cabal-compute-checksum cabal-dir)))
-
-(defun haskell-session-current-dir (s)
-  "Get the session current directory."
-  (let ((dir (haskell-session-get s 'current-dir)))
-    (or dir
-        (haskell-process-cd t))))
 
 (defun haskell-session-cabal-dir (s &optional no-prompt)
   "Get the session cabal-dir."
@@ -392,9 +277,5 @@ Returns newly set VALUE."
       value)))
 
 (provide 'haskell-session)
-
-;; Local Variables:
-;; byte-compile-warnings: (not cl-functions)
-;; End:
 
 ;;; haskell-session.el ends here

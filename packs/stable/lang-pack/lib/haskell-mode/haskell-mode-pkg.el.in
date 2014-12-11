@@ -1,1 +1,2 @@
-(define-package "haskell-mode" "@VERSION@" "A Haskell editing mode")
+(define-package "haskell-mode" "@VERSION@" "A Haskell editing mode"
+  '((cl-lib "0.5")))

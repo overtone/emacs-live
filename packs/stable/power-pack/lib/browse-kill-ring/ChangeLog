@@ -1,3 +1,36 @@
+2014-11-04 Toon Claes <toon@tonotdo.com>
+	v2.0 release:
+	Legacy code is removed, README is converted and
+	all issues on GitHub are closed.
+
+2014-09-15 Andrew Burgess <andrew.burgess@embecosm.com>
+	When editing entries from the *Kill Ring* buffer, reducing the
+	entry to the empty string will cause the item to be deleted from
+	the kill-ring once the edit is complete.
+
+2014-09-11 Andrew Burgess <andrew.burgess@embecosm.com>
+	Fix for http://bugs.debian.org/224751, inhibit all read only
+	properties before trying to delete an entry from the *Kill Ring*
+	buffer.
+
+2014-09-08 Andrew Burgess <andrew.burgess@embecosm.com>
+	Fix bug in `browse-kill-ring-occur' due to change in parameters of
+	`browse-kill-ring-setup'.
+
+2014-09-07 Andrew Burgess <andrew.burgess@embecosm.com>
+	Perform the quit action early, causing the `*Kill Ring*' buffer to
+	close before inserting the item.  This gives a better user
+	experience when the inserted item is being highlighted, previously
+	the highlighting would keep the *Kill Ring* buffer around for 0.5
+	second acter the user has pressed the insert key, making it appear
+	that `browse-kill-ring' was slow to respond.
+
+2014-09-06 Andrew Burgess <andrew.burgess@embecosm.com>
+	Register a `kill-buffer-hook' to ensure that the preview is
+	removed even if the `*Kill Ring*' bufer is killed in an unexpected
+	way, that is, by not calling `browse-kill-ring-quit' but calling
+	`kill-buffer' directly.
+
 2014-09-03 Andrew Burgess <andrew.burgess@embecosm.com>
 	Disable the preview overlay before inserting the item from the
 	`kill-ring', then reenable once the item has been inserted, moving

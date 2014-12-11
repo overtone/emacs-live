@@ -1,6 +1,93 @@
 # Changelog
 
-## master
+## master (unreleased)
+
+## 0.8.0 / 2014-11-20
+
+### New features
+
+* `cider-auto-jump-to-error` accepts new option `'errors-only`
+* `cider-connect` now asks for remote hosts defined in machine-wide `ssh`
+  configuration files and automatically detects running instances of lein
+  server, both on local and remote machines.
+* New defcustom `cider-stacktrace-print-level`.  Controls the `*print-level*` used when
+  pretty printing an exception cause's data.  Defaults to 50.
+* New interactive command `cider-undef`.
+* New interactive command `cider-clear-compilation-highlights`.
+* First pass at a CIDER quick reference card.
+* `completion-at-point` now annotates functions, macros and special forms, thus making it
+simpler to gain understanding of what you're using (disabled by default).
+* When invoked with a prefix argument `cider-quit` doesn't ask for confirmation.
+* Enhance stacktrace to definition navigation to work for interactively defined vars.
+* New vars: `cider-to-nrepl-filename-function` and `cider-from-nrepl-filename-function`
+are used to translate filenames from/to the nREPL server (default Cygwin implementation provided).
+* Java classpath browser (`M-x cider-classpath`).
+* Clojure namespace browser (`M-x cider-browse-ns` and `M-x cider-browse-ns-all`).
+* Added the ability to jump to a definition from a docview buffer.
+* New interactive command `cider-close-nrepl-session`.
+* New interactive command `cider-describe-nrepl-session`.
+* New interactive command `cider-toggle-trace-ns` (mapped to <kbd>C-c M-t n</kbd>)
+* New interactive command `cider-repl-require-repl-utils`.
+* [#784](https://github.com/clojure-emacs/cider/issues/784): Make it possible to run tests in
+the current ns with `C-u C-c ,`.
+
+### Changes
+
+* bencode decoder was rewritten:
+  - nREPL dicts are now plists and accessor api is given by `nrepl-dict-p`,
+    `nrepl-dict-get` and `nrepl-dict-put`.
+  - nested stack is used for decoded messages to avoid re-parsing of incomplete messages
+  - queues are used for incoming strings from the server and for the decoded responses
+* REPL buffers are now connection buffers for REPL client connections.
+* Server and client cranking were isolated into `nrepl-start-server-process` and
+  `nrepl-start-client-process`.
+
+* nrepl-client.el refactoring:
+
+  - `nrepl-send-request-sync` was renamed into `nrepl-send-sync-request` to comply
+  -  with the names of other 'sync' variables.
+
+  - nREPL requests are now named with `nrepl-request:OP` where "OP" stands for
+    the type of the request (eval, clone etc.). The following functions
+    were renamed:
+
+       `nrepl-send-string` -> `nrepl-request:eval`
+       `nrepl-send-string-sync` -> `nrepl-sync-request:eval`
+       `nrepl-send-interrupt` -> `nrepl-request:interrupt`
+       `nrepl-send-stdin` -> `nrepl-request:stdin`
+       `nrepl-describe-session` -> `nrepl-request:describe`
+       `nrepl-create-client-session` -> `nrepl-request:clone`
+
+* Renamed `cider-macroexpansion-suppress-namespaces` to `cider-macroexpansion-display-namespaces`.
+* [#652](https://github.com/clojure-emacs/cider/issues/652): Suppress eldoc when
+an error message is displayed in the minibuffer.
+* [#719](https://github.com/clojure-emacs/cider/issues/719) The customization
+variable `cider-test-show-report-on-success` controls now, whether to show the
+`*cider-test-report*` buffer on passing tests. The default is to not show the
+buffer.
+* Renamed `cider-toggle-trace` to `cider-toggle-trace-var` and remapped it to <kbd>C-c M-t v</kbd>.
+
+### Bugs fixed
+
+* [#705](https://github.com/clojure-emacs/cider/pull/705): Fixed macroexpansion
+bug for `tidy` namespace display.
+* Font-lock properly error messages in the REPL resulting from interactive evaluation.
+* [#671](https://github.com/clojure-emacs/cider/issues/671): Remove problematic code that was
+setting the REPL's initial ns based on lein's `:init-ns` option.
+* [#695](https://github.com/clojure-emacs/cider/issues/695): Keep point at
+original position when clearing or highlighting test results.
+* [#744](https://github.com/clojure-emacs/cider/issues/744): Fix the ability to customize the
+lein command invoked by `cider-jack-in`.
+* [#752](https://github.com/clojure-emacs/cider/issues/752): Don't assume
+`clojure.core/let` is always available as `let`.
+* [#772](https://github.com/clojure-emacs/cider/issues/772): Don't try to read Clojure results as
+Emacs Lisp code.
+* [#631](https://github.com/clojure-emacs/cider/issues/631): Set `file` and `line` metadata when
+doing interactive evaluation.
+* nREPL sessions are now closed on `cider-quit`.
+* Fix minibuffer history for `cider-read-and-eval`.
+
+## 0.7.0 / 2014-08-05
 
 ### New features
 

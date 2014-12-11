@@ -1,5 +1,27 @@
 Revision history for git-gutter.el
 
+Revision 0.79 2014/11/13
+    [Incompatible Change]
+     - mercurial is not default backend now
+       If you use git-gutter.el for mercurial, please set
+       'hg' to git-gutter:handled-backends
+
+Revision 0.78 2014/10/25
+    - Support bzr
+    Thanks nikolas
+
+Revision 0.77 2014/10/08
+    - Add update command which updates all visible buffers
+
+Revision 0.76 2014/09/18
+    - Fix staging hunk command bug
+
+Revision 0.75 2014/09/14
+    - Update gutter information at magit-revert-buffer-hook
+
+Revision 0.74 2014/09/06
+   - Log level is 0 as default now.
+
 Revision 0.73 2014/08/27
    - Add margin width validation
 

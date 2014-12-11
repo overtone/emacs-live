@@ -814,7 +814,7 @@ This variable can be either set to `buffer' or `subtree'."
 
 (defcustom org-export-show-temporary-export-buffer t
   "Non-nil means show buffer after exporting to temp buffer.
-When Org exports to a file, the buffer visiting that file is ever
+When Org exports to a file, the buffer visiting that file is never
 shown, but remains buried.  However, when exporting to
 a temporary buffer, that buffer is popped up in a second window.
 When this variable is nil, the buffer remains buried also in
@@ -1332,6 +1332,10 @@ The back-end could then be called with, for example:
 ;; + `:language' :: Default language used for translations.
 ;;   - category :: option
 ;;   - type :: string
+;;
+;; + `:output-file' :: Full path to output file, if any.
+;;   - category :: option
+;;   - type :: string or nil
 ;;
 ;; + `:parse-tree' :: Whole parse tree, available at any time during
 ;;      transcoding.
@@ -4134,29 +4138,8 @@ objects of the same type."
 	    ((funcall predicate el info) (incf counter) nil)))
 	 info 'first-match)))))
 
-;;;; For Special Blocks
-;;
-;; `org-export-raw-special-block-p' check if current special block is
-;; an "export block", i.e., a block whose contents should be inserted
-;; as-is in the output.  This should generally be the first check to
-;; do when handling special blocks in the export back-end.
 
-(defun org-export-raw-special-block-p (element info &optional no-inheritance)
-  "Non-nil if ELEMENT is an export block relatively to current back-end.
-An export block is a special block whose contents should be
-included as-is in the final output.  Such blocks are defined
-through :export-block property in `org-export-define-backend',
-which see."
-  (and (eq (org-element-type element) 'special-block)
-       (let ((type (org-element-property :type element))
-	     (b (plist-get info :back-end)))
-	 (if no-inheritance (member type (org-export-backend-blocks b))
-	   (while (and b (not (member type (org-export-backend-blocks b))))
-	     (setq b (org-export-get-backend (org-export-backend-parent b))))
-	   b))))
-
-
-;;;; For Src Blocks
+;;;; For Src-Blocks
 ;;
 ;; `org-export-get-loc' counts number of code lines accumulated in
 ;; src-block or example-block elements with a "+n" switch until
@@ -5496,8 +5479,9 @@ to `:default' encoding. If it fails, return S."
 (defmacro org-export-async-start  (fun &rest body)
   "Call function FUN on the results returned by BODY evaluation.
 
-BODY evaluation happens in an asynchronous process, from a buffer
-which is an exact copy of the current one.
+FUN is an anonymous function of one argument.  BODY evaluation
+happens in an asynchronous process, from a buffer which is an
+exact copy of the current one.
 
 Use `org-export-add-to-stack' in FUN in order to register results
 in the stack.
@@ -5674,7 +5658,8 @@ The function returns either a file name returned by POST-PROCESS,
 or FILE."
   (declare (indent 2))
   (if (not (file-writable-p file)) (error "Output file not writable")
-    (let ((encoding (or org-export-coding-system buffer-file-coding-system)))
+    (let ((ext-plist (org-combine-plists `(:output-file ,file) ext-plist))
+	  (encoding (or org-export-coding-system buffer-file-coding-system)))
       (if async
           (org-export-async-start
 	      `(lambda (file)

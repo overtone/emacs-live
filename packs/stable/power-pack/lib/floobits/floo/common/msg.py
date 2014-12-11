@@ -48,6 +48,22 @@ def editor_log(msg):
     safe_print(msg)
 
 
+def floobits_log(msg):
+    # TODO: ridiculously inefficient
+    try:
+        fd = open(LOG_FILE, 'ab')
+        fmsg = msg
+        try:
+            fmsg = fmsg.encode('utf-8')
+        except Exception:
+            pass
+        fd.write(fmsg)
+        fd.write(b'\n')
+        fd.close()
+    except Exception as e:
+        safe_print(str_e(e))
+
+
 class MSG(object):
     def __init__(self, msg, timestamp=None, username=None, level=LOG_LEVELS['MSG']):
         self.msg = msg
@@ -61,22 +77,11 @@ class MSG(object):
 
         msg = unicode(self)
         if G.LOG_TO_CONSOLE or G.CHAT_VIEW is None:
-            # TODO: ridiculously inefficient
-            try:
-                fd = open(LOG_FILE, 'ab')
-                fmsg = msg
-                try:
-                    fmsg = fmsg.encode('utf-8')
-                except Exception:
-                    pass
-                fd.write(fmsg)
-                fd.write(b'\n')
-                fd.close()
-            except Exception as e:
-                safe_print(str_e(e))
+            floobits_log(msg)
             safe_print(msg)
         else:
             editor_log(msg)
+
 
     def __str__(self):
         if python2:

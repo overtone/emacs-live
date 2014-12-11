@@ -1,6 +1,10 @@
 nrepl completion source for Emacs auto-complete package
 =======================================================
 
+__Deprecation notice: These days you probably want to use
+ [ac-cider](https://github.com/clojure-emacs/ac-cider)
+ or Cider's built-in `company` completion support instead of this.__
+
 This plugin provides a completion source for the popular Emacs
 interactive auto-completion framework
 [auto-complete](http://cx4a.org/software/auto-complete/).
@@ -18,7 +22,7 @@ First, ensure `auto-complete` and `cider` are installed: I recommend
 using packages from [Marmalade][marmalade] or [Melpa][melpa].
 
 You'll need both `auto-complete` and `cider` to be enabled and
-working, so please consult the corresponding documentation is you have
+working, so please consult the corresponding documentation if you have
 any trouble with this.
 
 Next, install `ac-nrepl`. If you choose not to use the convenient
