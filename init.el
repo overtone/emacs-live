@@ -224,4 +224,12 @@
 (when (file-exists-p custom-file)
   (load custom-file))
 
+;; Bill's stuff
+
+(global-linum-mode t)
+(add-to-list 'package-archives
+             '("melpa" . "http://melpa.org/packages/") t)
+
+;; END Bill's stuff
+
 (message "\n\n Pack loading completed. Your Emacs is Live...\n\n")
