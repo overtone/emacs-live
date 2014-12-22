@@ -1245,7 +1245,7 @@ Returns (TEMPLATES START END). This function respects
         (unless (eq method (car methods))
           ;; TRICKY: `eq'-ness test means we can only be here if
           ;; `method' is a function that returned `again', and hence
-          ;; don't revert back to original position as per
+          ;; don't revert to original position as per
           ;; `yas-key-syntaxes'.
           (goto-char original))
         (setq method (car methods))
