@@ -89,6 +89,13 @@
 	    nil "Major mode for editing comma/char separated values" single
 	    ((:url . "http://centaur.maths.qmul.ac.uk/Emacs/")
 	     (:keywords "convenience"))])
+ (darkroom .
+	   [(0 1)
+	    ((cl-lib
+	      (0 5)))
+	    "Remove visual distractions and focus on writing" single
+	    ((:url . "http://elpa.gnu.org/packages/darkroom.html")
+	     (:keywords "convenience" "emulations"))])
  (debbugs .
 	  [(0 6)
 	   nil "SOAP library to access debbugs servers" tar
@@ -247,7 +254,7 @@
 	 ((:url . "http://elpa.gnu.org/packages/jumpc.html")
 	  (:keywords))])
  (let-alist .
-	    [(1 0)
+	    [(1 0 2)
 	     nil "Easily let-bind values of an assoc-list by their names" single
 	     ((:url . "http://elpa.gnu.org/packages/let-alist.html")
 	      (:keywords "extensions" "lisp"))])
@@ -331,7 +338,7 @@
 	    ((:url . "http://elpa.gnu.org/packages/omn-mode.html")
 	     (:keywords))])
  (org .
-      [(20141208)
+      [(20141222)
        nil "Outline-based notes management and organizer" tar nil])
  (osc .
       [(0 1)
@@ -422,7 +429,7 @@
 	((:url . "http://www.dr-qubit.org/emacs.php")
 	 (:keywords "extensions" "matching" "data structures tnfa" "nfa" "dfa" "finite state automata" "automata" "regexp"))])
  (temp-buffer-browse .
-		     [(1 3)
+		     [(1 4)
 		      nil "temp buffer browse mode" single
 		      ((:url . "http://elpa.gnu.org/packages/temp-buffer-browse.html")
 		       (:keywords "convenience"))])
