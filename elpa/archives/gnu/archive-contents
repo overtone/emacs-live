@@ -113,7 +113,7 @@
 	     ((:url . "http://www.dr-qubit.org/emacs.php")
 	      (:keywords "extensions" "matching" "data structures trie" "tree" "dictionary" "completion" "regexp"))])
  (diff-hl .
-	  [(1 6 0)
+	  [(1 7 0)
 	   ((cl-lib
 	     (0 2)))
 	   "Highlight uncommitted changes" tar
@@ -254,7 +254,7 @@
 	 ((:url . "http://elpa.gnu.org/packages/jumpc.html")
 	  (:keywords))])
  (let-alist .
-	    [(1 0 2)
+	    [(1 0 3)
 	     nil "Easily let-bind values of an assoc-list by their names" single
 	     ((:url . "http://elpa.gnu.org/packages/let-alist.html")
 	      (:keywords "extensions" "lisp"))])
@@ -338,7 +338,7 @@
 	    ((:url . "http://elpa.gnu.org/packages/omn-mode.html")
 	     (:keywords))])
  (org .
-      [(20141222)
+      [(20150105)
        nil "Outline-based notes management and organizer" tar nil])
  (osc .
       [(0 1)
@@ -452,7 +452,7 @@
 		   nil "Unicode confusables table" tar
 		   ((:url . "http://elpa.gnu.org/packages/uni-confusables.html"))])
  (vlf .
-      [(1 6)
+      [(1 7)
        nil "View Large Files" tar
        ((:keywords "large files" "utilities")
 	(:url . "https://github.com/m00natic/vlfi"))])
