@@ -31,7 +31,7 @@
      (font-lock-builtin-face ((t (:foreground "#FF6400"))))
      (font-lock-comment-face ((t (:italic t :foreground "#8B8989"))))
      (font-lock-constant-face ((t (:foreground "#4c83ff"))))
-     (font-lock-doc-string-face ((t (:foreground "DarkOrange"))))
+     (font-lock-doc-face ((t (:italic t :foreground "DarkOrange"))))
      (font-lock-function-name-face ((t (:foreground "deep pink"))))
      (font-lock-keyword-face ((t (:foreground "#FBDE2D"))))
      (font-lock-preprocessor-face ((t (:foreground "gray57"))))
