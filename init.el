@@ -232,6 +232,15 @@
 
 (global-set-key (kbd  "C-,") 'beginning-of-line-text)
 
+(load-file "/home/bill/.emacs.d/globalff.el")
+(setq globalff-databases "/home/bill/repos/emacs-live/locatedbs/vm.locatedb:/home/bill/repos/emacs-live/locatedbs/repos.locatedb")
+(global-set-key (kbd "C-x SPC") 'globalff)
+
+(setq frame-title-format
+  '("" invocation-name ": "(:eval (if (buffer-file-name)
+                (abbreviate-file-name (buffer-file-name))
+                  "%b"))))
+
 ;; END Bill's stuff
 
 (message "\n\n Pack loading completed. Your Emacs is Live...\n\n")
