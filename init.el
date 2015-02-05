@@ -230,6 +230,8 @@
 (add-to-list 'package-archives
              '("melpa" . "http://melpa.org/packages/") t)
 
+(global-set-key (kbd  "C-,") 'beginning-of-line-text)
+
 ;; END Bill's stuff
 
 (message "\n\n Pack loading completed. Your Emacs is Live...\n\n")
