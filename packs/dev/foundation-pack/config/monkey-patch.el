@@ -20,8 +20,10 @@ Before and after saving the buffer, this function runs
                  (not (file-exists-p buffer-file-name))))
         (let ((recent-save (recent-auto-save-p))
               setmodes)
+          ;; Set buffer to currently selected window if allowed
+          (unless (window-dedicated-p (frame-selected-window))
+            (set-window-buffer (frame-selected-window) (current-buffer)))
           ;; If buffer has no file name, ask user for one.
-          (set-window-buffer (frame-selected-window) (current-buffer))
           (when (or buffer-file-name
                    (y-or-n-p "Buffer has no associated file and not saved. Save it? "))
 
