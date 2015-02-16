@@ -232,7 +232,7 @@
 
 (global-set-key (kbd  "C-,") 'beginning-of-line-text)
 
-(load-file "/home/bill/.emacs.d/globalff.el")
+(load-file "/home/bill/.emacs.d/wip/globalff.el")
 (setq globalff-databases "/home/bill/repos/emacs-live/locatedbs/vm.locatedb:/home/bill/repos/emacs-live/locatedbs/repos.locatedb")
 (global-set-key (kbd "C-x SPC") 'globalff)
 
@@ -244,3 +244,4 @@
 ;; END Bill's stuff
 
 (message "\n\n Pack loading completed. Your Emacs is Live...\n\n")
+(put 'erase-buffer 'disabled nil)

@@ -97,6 +97,8 @@ locate command. If nil then the system default database is used."
   :type 'string
   :group 'globalff)
 
+(setq globalff-filter-regexps '("/target/"))
+
 (defcustom globalff-filter-regexps nil
  "*List of regular expressions to filter out unwanted files from the
 output."
@@ -133,7 +135,7 @@ will display file names under \"projectx\" like this:
   :type 'number
   :group 'globalff)
 
-(setq globalff-matching-filename-limit 100)
+;(setq globalff-matching-filename-limit 100)
 
 
 (defcustom globalff-matching-filename-limit 500
@@ -228,6 +230,13 @@ previously visited file again quickly."
   "The search output filter looks for this file name in the output if
 `globalff-adaptive-selection' is enabled.")
 
+(defun identity-filter (process string)
+  (with-current-buffer globalff-buffer
+      (save-excursion
+        (goto-char (point-max))
+        (insert string)
+        (insert "\n===== end ====="))))
+
 
 (defun globalff-output-filter (process string)
   "Avoid moving of point if the buffer is empty."
@@ -236,48 +245,25 @@ previously visited file again quickly."
     (save-excursion
       (goto-char (point-max))
 
-      (let ((begin (point-at-bol))
-            (sort-str (join-string (sort  (split-string string)
-                                          (lambda (a b) (>= (first (b-flx-score a
-                                                                                globalff-previous-input))
-                                                            (first (b-flx-score b
-                                                                                globalff-previous-input)))))
-                                   "\n")))
-        (insert sort-str)
-        (print (length sort-str))
+      (defun mem-score (n)
+        (let ((r (first (b-flx-score n
+                                     globalff-previous-input))))
+          r))
 
-        (if (or globalff-filter-regexps
-                globalff-transform-regexps)
-            ;; current line can be incomplete, so store and remove
-            ;; it before filtering or transforming
-            (let ((line (buffer-substring (point-at-bol)
-                                          (point-at-eol))))
-              (delete-region (point-at-bol) (point-at-eol))
+      (memoize 'mem-score)
 
-              ;; filter out unwanted lines
-              (dolist (regexp globalff-filter-regexps)
-                (goto-char begin)
-                (flush-lines regexp))
+      (defun pred1 (x) (string-match "/target/" x))
 
-              ;; transform file names
-              (dolist (rule globalff-transform-regexps)
-                (goto-char begin)
-                (while (re-search-forward (car rule) nil t)
-                  ;; original path is saved in a text property
-                  (let ((orig-path
-                         (or (get-text-property (point-at-bol)
-                                                'globalff-orig-filename)
-                             (buffer-substring-no-properties
-                              (point-at-bol) (point-at-eol)))))
+      (let* ((begin (point-at-bol))
+            (sort-list (sort  (split-string string)
+                                          (lambda (a b) (>= (mem-score a)
+                                                            (mem-score b)))))
+            (filter-list (remove-if #'pred1 sort-list))
+            (final-str (join-string filter-list
+                                    "\n")))
 
-                    (replace-match (cdr rule))
-
-                    (put-text-property (point-at-bol) (point-at-eol)
-                                       'globalff-orig-filename
-                                       orig-path))))
-
-              (goto-char (point-max))
-              (insert line)))))
+        (insert final-str)
+        (insert "\n==end==")))
 
     (if (= (overlay-start globalff-overlay) ; no selection yet
            (overlay-end globalff-overlay))
@@ -428,7 +414,8 @@ MOVEFUNC and MOVEARG."
 
             (setq globalff-adaptive-selection-target (cdr item))))
 
-      (set-process-filter globalff-process 'globalff-output-filter)
+;      (set-process-filter globalff-process 'globalff-output-filter)
+      (set-process-filter globalff-process 'identity-filter)
       (set-process-sentinel globalff-process 'globalff-process-sentinel))))
 
 
@@ -456,7 +443,7 @@ letter."
 
 (defun globalff-wild-generate (string)
   (concat "*"
-          (mapconcat 'identity (str->chrlist string) "*")
+          (replace-regexp-in-string "\s+" "*" string)
           "*"))
 
 (defun globalff-kill-process ()
