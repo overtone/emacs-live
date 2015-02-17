@@ -237,9 +237,21 @@ previously visited file again quickly."
         (insert string)
         (insert "\n===== end ====="))))
 
+(defun dumb-filter (process string)
+  (with-current-buffer globalff-buffer
+      (save-excursion
+        (goto-char (point-max))
+
+        (insert "\n===== end ====="))))
+
+
+
+(setq globalff-output "")
 
 (defun globalff-output-filter (process string)
   "Avoid moving of point if the buffer is empty."
+
+  (setq globalff-output (concat globalff-output string))
 
   (with-current-buffer globalff-buffer
     (save-excursion
@@ -262,7 +274,8 @@ previously visited file again quickly."
             (final-str (join-string filter-list
                                     "\n")))
 
-        (insert final-str)
+                                        ;        (insert final-str)
+        (insert globalff-output)
         (insert "\n==end==")))
 
     (if (= (overlay-start globalff-overlay) ; no selection yet
@@ -365,6 +378,7 @@ MOVEFUNC and MOVEARG."
 
   (let ((input (minibuffer-contents)))
     (setq globalff-previous-input input)
+    (setq globalff-output "")
 
     (globalff-kill-process)
     (with-current-buffer globalff-buffer
@@ -414,8 +428,9 @@ MOVEFUNC and MOVEARG."
 
             (setq globalff-adaptive-selection-target (cdr item))))
 
-;      (set-process-filter globalff-process 'globalff-output-filter)
-      (set-process-filter globalff-process 'identity-filter)
+      (set-process-filter globalff-process 'globalff-output-filter)
+                                        ;      (set-process-filter globalff-process 'identity-filter)
+      ;      (set-process-filter globalff-process 'dumb-filter)
       (set-process-sentinel globalff-process 'globalff-process-sentinel))))
 
 
