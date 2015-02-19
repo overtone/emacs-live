@@ -232,10 +232,7 @@
 
 (global-set-key (kbd  "C-,") 'beginning-of-line-text)
 (global-set-key (kbd  "C-x p") 'ace-jump-mode-pop-mark)
-
-(load-file "/home/bill/.emacs.d/globalff.el")
-(setq globalff-databases "/home/bill/repos/emacs-live/locatedbs/vm.locatedb:/home/bill/repos/emacs-live/locatedbs/repos.locatedb")
-(global-set-key (kbd "C-x SPC") 'globalff)
+(global-set-key (kbd  "C-c C-c C-c") 'rgrep)
 
 (setq frame-title-format
   '("" invocation-name ": "(:eval (if (buffer-file-name)
