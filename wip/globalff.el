@@ -248,63 +248,48 @@ previously visited file again quickly."
 
 (setq globalff-output "")
 
+(setq globalff-score-cache (make-hash-table :test 'equal))
+(setq globalff-result-cache (make-hash-table :test 'equal))
+
 (defun globalff-output-filter (process string)
   "Avoid moving of point if the buffer is empty."
-
+(print "*")
   (setq globalff-output (concat globalff-output string))
 
   (with-current-buffer globalff-buffer
     (save-excursion
-      (goto-char (point-max))
+      (erase-buffer)
 
       (defun mem-score (n)
-        (let ((r (first (b-flx-score n
-                                     globalff-previous-input))))
-          r))
-
-      (memoize 'mem-score)
+        (let ((cached-score (gethash '(n globalff-previous-input) globalff-score-cache)))
+          (if (eql cached-score nil)
+              (puthash '(n globalff-previous-input)
+                       (first (b-flx-score n globalff-previous-input))
+                       globalff-score-cache)
+            cached-score)))
 
       (defun pred1 (x) (string-match "/target/" x))
 
-      (let* ((begin (point-at-bol))
-            (sort-list (sort  (split-string string)
-                                          (lambda (a b) (>= (mem-score a)
-                                                            (mem-score b)))))
-            (filter-list (remove-if #'pred1 sort-list))
-            (final-str (join-string filter-list
-                                    "\n")))
+      (if (< 300 (list-length (split-string globalff-output)))
+          (progn (globalff-kill-process)
+              (globalff-set-state "killed")
+              (insert "too many results!" ))
 
-                                        ;        (insert final-str)
-        (insert globalff-output)
-        (insert "\n==end==")))
+        (let* ((split-list (split-string globalff-output))
+               (filter-list (remove-if #'pred1 split-list))
+               (sort-list (sort filter-list
+                                (lambda (a b) (>= (mem-score a)
+                                                  (mem-score b)))))
+               (final-str (join-string sort-list "\n")))
+
+          (insert final-str)
+;          (insert globalff-output)
+          (insert "\n==end=="))))
 
     (if (= (overlay-start globalff-overlay) ; no selection yet
            (overlay-end globalff-overlay))
         (unless (= (point-at-eol) (point-max)) ; incomplete line
-          (globalff-mark-current-line))
-
-      ;; terminate the search process if there are too many matches
-      (when (and globalff-matching-filename-limit
-                 (>= (count-lines (point-min) (point-max))
-                     globalff-matching-filename-limit))
-        (globalff-kill-process)
-        (globalff-set-state "killed")
-        ;; delete possible incomplete line
-        (save-excursion
-          (goto-char (point-max))
-          (delete-region (point-at-bol) (point-at-eol))))
-
-      ;; try to select previously chosen file if enabled
-      (if (and globalff-adaptive-selection
-               globalff-adaptive-selection-target)
-          (let ((window (get-buffer-window globalff-buffer)))
-            (if (window-live-p window)
-                (save-selected-window
-                  (select-window window)
-
-                  (when (search-forward globalff-adaptive-selection-target nil t)
-                    (setq globalff-adaptive-selection-target nil)
-                    (globalff-mark-current-line)))))))))
+          (globalff-mark-current-line)))))
 
 
 (defun globalff-mark-current-line ()
@@ -387,25 +372,28 @@ MOVEFUNC and MOVEARG."
 
     (unless (or (equal input "")
                 (< (length input) globalff-minimum-input-length))
-      (setq globalff-process
-            (apply 'start-process "globalff-process" nil
-                   "mlocate"
-                   (append
+      (let ((cmd (append
 
-                    (unless globalff-case-sensitive-search
-                      (list "-i"))
+                  (unless globalff-case-sensitive-search
+                    (list "-i"))
 
-                    (if globalff-basename-match
-                        (list "-b"))
+                  (if globalff-basename-match
+                      (list "-b"))
 
-                    (when globalff-databases
-                      (list (concat "--database="
-                                    globalff-databases)))
+                  (when globalff-databases
+                    (list (concat "--database="
+                                  globalff-databases)))
 
-                    (if globalff-regexp-search
-                        (list "-r"))
+                  (if globalff-regexp-search
+                      (list "-r"))
 
-		    (list (globalff-wild-generate input)))))
+                  (list (globalff-wild-generate input)))))
+        (print "command:")
+        (print cmd)
+        (setq globalff-process
+              (apply 'start-process "globalff-process" nil
+                     "mlocate"
+                     cmd)))
 
       (globalff-set-state "searching")
       (move-overlay globalff-overlay (point-min) (point-min))
@@ -426,11 +414,11 @@ MOVEFUNC and MOVEARG."
 
                             globalff-history))))
 
-            (setq globalff-adaptive-selection-target (cdr item))))
+            (setq globalff-adaptive-selection-target (cdr ))))
 
       (set-process-filter globalff-process 'globalff-output-filter)
                                         ;      (set-process-filter globalff-process 'identity-filter)
-      ;      (set-process-filter globalff-process 'dumb-filter)
+                                        ;      (set-process-filter globalff-process 'dumb-filter)
       (set-process-sentinel globalff-process 'globalff-process-sentinel))))
 
 
