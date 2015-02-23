@@ -233,8 +233,10 @@
 (global-set-key (kbd  "C-,") 'beginning-of-line-text)
 
 (load-file "/home/bill/.emacs.d/wip/globalff.el")
-(setq globalff-databases "/home/bill/repos/emacs-live/locatedbs/vm.locatedb:/home/bill/repos/emacs-live/locatedbs/repos.locatedb")
+(setq globalff-databases "/home/bill/repos/emacs-live/locatedbs/repos.locatedb")
 (global-set-key (kbd "C-x SPC") 'globalff)
+(global-set-key (kbd  "C-x p") 'ace-jump-mode-pop-mark)
+(global-set-key (kbd  "C-c C-c C-c") 'rgrep)
 
 (defun refresh-emacs-locatedb ()
   (interactive)
