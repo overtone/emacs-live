@@ -251,16 +251,7 @@ previously visited file again quickly."
 (setq globalff-score-cache (make-hash-table :test 'equal))
 (setq globalff-result-cache (make-hash-table :test 'equal))
 
-(defun globalff-output-filter (process string)
-  "Avoid moving of point if the buffer is empty."
-(print "*")
-  (setq globalff-output (concat globalff-output string))
-
-  (with-current-buffer globalff-buffer
-    (save-excursion
-      (erase-buffer)
-
-      (defun mem-score (n)
+(defun mem-score (n)
         (let ((cached-score (gethash '(n globalff-previous-input) globalff-score-cache)))
           (if (eql cached-score nil)
               (puthash '(n globalff-previous-input)
@@ -268,7 +259,18 @@ previously visited file again quickly."
                        globalff-score-cache)
             cached-score)))
 
-      (defun pred1 (x) (string-match "/target/" x))
+(defun pred1 (x) (string-match "/target/" x))
+
+(defun globalff-output-filter (process string)
+  "Avoid moving of point if the buffer is empty."
+
+  ;;(print (concat "g-o-filter [" globalff-previous-input "]  " (int-to-string (length globalff-output))))
+
+  (setq globalff-output (concat globalff-output string))
+
+  (with-current-buffer globalff-buffer
+    (save-excursion
+      (erase-buffer)
 
       (if (< 300 (list-length (split-string globalff-output)))
           (progn (globalff-kill-process)
