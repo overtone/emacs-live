@@ -282,7 +282,10 @@ previously visited file again quickly."
                (sort-list (sort filter-list
                                 (lambda (a b) (>= (mem-score a)
                                                   (mem-score b)))))
-               (final-str (join-string sort-list "\n")))
+               (dummy (setq original-max-lisp-eval-depth max-lisp-eval-depth))
+               (dummy (setq max-lisp-eval-depth 5000)) ;; keep join-string from hitting max-list-eval-depth
+               (final-str (join-string sort-list "\n"))
+               (dummy (setq max-lisp-eval-depth original-max-lisp-eval-depth)))
 
           (insert final-str)
 ;          (insert globalff-output)
