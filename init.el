@@ -236,6 +236,12 @@
 (setq globalff-databases "/home/bill/repos/emacs-live/locatedbs/vm.locatedb:/home/bill/repos/emacs-live/locatedbs/repos.locatedb")
 (global-set-key (kbd "C-x SPC") 'globalff)
 
+(defun refresh-emacs-locatedb ()
+  (interactive)
+  (shell-command "/home/bill/bin/refresh-emacs-locatedb.sh"))
+
+(global-set-key (kbd "C-c C-c C-r") 'refresh-emacs-locatedb)
+
 (setq frame-title-format
   '("" invocation-name ": "(:eval (if (buffer-file-name)
                 (abbreviate-file-name (buffer-file-name))
