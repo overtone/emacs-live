@@ -274,8 +274,8 @@ previously visited file again quickly."
 
       (if (< 300 (list-length (split-string globalff-output)))
           (progn (globalff-kill-process)
-              (globalff-set-state "killed")
-              (insert "too many results!" ))
+                 (globalff-set-state "killed")
+                 (insert "too many results!" ))
 
         (let* ((split-list (split-string globalff-output))
                (filter-list (remove-if #'pred1 split-list))
@@ -288,7 +288,7 @@ previously visited file again quickly."
                (dummy (setq max-lisp-eval-depth original-max-lisp-eval-depth)))
 
           (insert final-str)
-;          (insert globalff-output)
+                                        ;          (insert globalff-output)
           (insert "\n==end=="))))
 
     (if (= (overlay-start globalff-overlay) ; no selection yet
@@ -599,8 +599,9 @@ of the real path name of the file."
 
 (defun globalff-do ()
   "The guts of globalff.
-
 It expects that `globalff-buffer' is selected already."
+
+;;    (print "==== globalff-do =======")
   (erase-buffer)
   (setq mode-name "GlobalFF")
 
@@ -634,6 +635,8 @@ It expects that `globalff-buffer' is selected already."
 (defun globalff ()
   "Start global find file."
   (interactive)
+;;  (print "==== globalff =======")
+
   (let ((winconfig (current-window-configuration)))
     (pop-to-buffer globalff-buffer)
     (unwind-protect
