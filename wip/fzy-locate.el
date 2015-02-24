@@ -122,8 +122,6 @@ locate command. If nil then the system default database is used."
   :type 'string
   :group 'fzy-locate)
 
-(setq fzloc-filter-regexps '("/target/"))
-
 (defcustom fzloc-filter-regexps nil
  "*List of regular expressions to filter out unwanted files from the
 output."
@@ -280,7 +278,7 @@ previously visited file again quickly."
                        fzloc-score-cache)
             cached-score)))
 
-(defun pred1 (x) (string-match "/target/" x))
+(defun pred1 (x) (string-match fzloc-filter-regexps x))
 
 (defun fzloc-output-filter (process string)
   "Avoid moving of point if the buffer is empty."
