@@ -23,5 +23,6 @@ tramp
 \#*
 tmp/*
 .smex-items
+smex-items
 swank/*
 locatedbs/
