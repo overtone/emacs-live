@@ -1,9 +1,6 @@
-;;; fzy-locate.el --- Global find file
+;;; fzy-locate.el --- Fuzzy file find using "mlocate"
 
-;; Copyright (C) 2006 Tamas Patrovics
-
-;; $Date: 2007/04/03 19:07:40 $
-;; Latest version: http://www.emacswiki.org/cgi-bin/wiki/Fzy-Locate
+;; Copyright (C) 2015 Bill Piel
 
 ;; This file is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -19,33 +16,6 @@
 ;; along with GNU Emacs; see the file COPYING.  If not, write to
 ;; the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;; Boston, MA 02111-1307, USA.
-
-;;; Commentary:
-
-;; Start with M-x globallff and type in any substring of any path on
-;; your system to display the matching files. The displayed list is
-;; updated dynamically as you type more characters or delete some.
-;;
-;; Needs an up-to-date locate database for file name searching.
-;;
-;; Since the search is based on locate you can use any globbing
-;; characters allowed by the locate command.
-;;
-;; You can move up/down the list with the cursor keys (I know these
-;; bindings are not very Emacsian, but I happen to like them) and
-;; select a file to open with Enter.
-;;
-;; You can quit with C-g.
-;;
-;; See the variable `fzloc-map' for further bindings.
-;;
-;;
-;; XEmacs port was done by Stefan Kamphausen.
-;; Customize support contributed by Lennart Borgman and Stefan Kamphausen.
-;; Camel case support added by Eyal Erez.
-;;
-
-;;; Code:
 
 (defun str->chrlist (s)
   (butlast (rest  (split-string s ""))))
