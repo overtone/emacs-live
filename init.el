@@ -238,8 +238,8 @@
 (global-set-key (kbd  "C-,") 'beginning-of-line-text)
 
 (load-file "/home/bill/.emacs.d/wip/fzy-locate.el")
-;(setq globalff-databases "/home/bill/repos/emacs-live/locatedbs/vm.locatedb:/home/bill/repos/emacs-live/locatedbs/repos.locatedb")
-(setq globalff-databases "/home/bill/repos/emacs-live/locatedbs/repos.locatedb")
+(setq fzloc-databases (join-string (file-expand-wildcards "/home/bill/repos/emacs-live/locatedbs/*.locatedb") ":")) ;; load all locatedb files in dir
+
 (global-set-key (kbd "C-x SPC") 'fzy-locate)
 (global-set-key (kbd  "C-x p") 'ace-jump-mode-pop-mark)
 (global-set-key (kbd  "C-x x") 'rgrep)
