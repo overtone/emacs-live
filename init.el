@@ -227,6 +227,10 @@
 ;; Bill's stuff
 (message "\n\n Doing Bill's stuff \n\n")
 
+(global-unset-key (kbd "C-z")) ;; get rid of "suspend frame"
+(cua-mode 0) ;; kill CUA
+
+(git-gutter:linum-setup) ;; git gutter linum compatibility
 (global-linum-mode t)
 (add-to-list 'package-archives
              '("melpa" . "http://melpa.org/packages/") t)
