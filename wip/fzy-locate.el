@@ -223,6 +223,7 @@ previously visited file again quickly."
     ;; transpose-chars can be useful during pattern editing
     (define-key map (kbd "C-r") 'fzloc-toggle-regexp-search)
     (define-key map (kbd "<RET>") 'fzloc-exit-minibuffer)
+    (define-key map (kbd "C-l") 'fzloc-insert-last-search)
     map)
   "Keymap for fzy-locate.")
 
@@ -526,6 +527,12 @@ of the real path name of the file."
         (buffer-substring-no-properties (overlay-start fzloc-overlay)
                                         (overlay-end fzloc-overlay)))))
 
+(defun fzloc-insert-last-search ()
+  (interactive)
+  (save-excursion
+    (insert fzloc-most-recent-input))
+      (end-of-line))
+
 (defun fzloc-do ()
   "The guts of fzy-locate.
 It expects that `fzloc-buffer' is selected already."
@@ -553,6 +560,8 @@ It expects that `fzloc-buffer' is selected already."
   (unwind-protect
       (let ((minibuffer-local-map fzloc-map))
         (read-string "locate: "))
+
+    (setq fzloc-most-recent-input fzloc-previous-input)
 
     (remove-hook 'post-command-hook 'fzloc-check-input)
     (fzloc-kill-process)
