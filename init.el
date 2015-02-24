@@ -225,6 +225,7 @@
   (load custom-file))
 
 ;; Bill's stuff
+(message "\n\n Doing Bill's stuff \n\n")
 
 (global-linum-mode t)
 (add-to-list 'package-archives
@@ -232,7 +233,7 @@
 
 (global-set-key (kbd  "C-,") 'beginning-of-line-text)
 (global-set-key (kbd  "C-x p") 'ace-jump-mode-pop-mark)
-(global-set-key (kbd  "C-c C-c C-c") 'rgrep)
+(global-set-key (kbd  "C-x x") 'rgrep)
 
 (setq frame-title-format
   '("" invocation-name ": "(:eval (if (buffer-file-name)
