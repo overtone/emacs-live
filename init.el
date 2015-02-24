@@ -244,7 +244,7 @@
   (interactive)
   (shell-command "/home/bill/bin/refresh-emacs-locatedb.sh"))
 
-(global-set-key (kbd "C-c C-c C-r") 'refresh-emacs-locatedb)
+(global-set-key (kbd "C-c r") 'refresh-emacs-locatedb)
 
 (setq frame-title-format
   '("" invocation-name ": "(:eval (if (buffer-file-name)
