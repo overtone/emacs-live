@@ -225,6 +225,7 @@
   (load custom-file))
 
 ;; Bill's stuff
+(message "\n\n Doing Bill's stuff \n\n")
 
 (global-linum-mode t)
 (add-to-list 'package-archives
@@ -237,7 +238,7 @@
 (setq globalff-databases "/home/bill/repos/emacs-live/locatedbs/repos.locatedb")
 (global-set-key (kbd "C-x SPC") 'globalff)
 (global-set-key (kbd  "C-x p") 'ace-jump-mode-pop-mark)
-(global-set-key (kbd  "C-c C-c C-c") 'rgrep)
+(global-set-key (kbd  "C-x x") 'rgrep)
 
 (defun refresh-emacs-locatedb ()
   (interactive)

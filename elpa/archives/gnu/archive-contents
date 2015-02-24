@@ -73,7 +73,7 @@
 	 ((:keywords "games")
 	  (:url . "http://elpa.gnu.org/packages/chess.html"))])
  (cl-generic .
-	     [(0 1)
+	     [(0 2)
 	      nil "Forward cl-generic compatibility for Emacs<25" single
 	      ((:url . "http://elpa.gnu.org/packages/cl-generic.html")
 	       (:keywords))])
@@ -106,7 +106,7 @@
 		      ((:keywords "abbrev" "convenience" "matching")
 		       (:url . "https://github.com/company-mode/company-statistics"))])
  (context-coloring .
-		   [(5 0 0)
+		   [(6 0 0)
 		    ((emacs
 		      (24))
 		     (js2-mode
@@ -277,7 +277,7 @@
 	   ((:url . "http://elpa.gnu.org/packages/javaimp.html")
 	    (:keywords "java" "maven" "programming"))])
  (jgraph-mode .
-	      [(1 0)
+	      [(1 1)
 	       ((cl-lib
 		 (0 5)))
 	       "Major mode for Jgraph files" single
@@ -316,6 +316,11 @@
 	    nil "Load all Emacs Lisp files in a given directory" single
 	    ((:url . "http://elpa.gnu.org/packages/load-dir.html")
 	     (:keywords "lisp" "files" "convenience"))])
+ (load-relative .
+		[(1 1)
+		 nil "relative file load (within a multi-file Emacs package)" single
+		 ((:url . "http://github.com/rocky/emacs-load-relative")
+		  (:keywords "internal"))])
  (markchars .
 	    [(0 2 0)
 	     nil "Mark chars fitting certain characteristics" single
@@ -382,7 +387,7 @@
 	    ((:url . "http://elpa.gnu.org/packages/omn-mode.html")
 	     (:keywords))])
  (org .
-      [(20150209)
+      [(20150223)
        nil "Outline-based notes management and organizer" tar nil])
  (osc .
       [(0 1)
@@ -390,7 +395,7 @@
        ((:url . "http://elpa.gnu.org/packages/osc.html")
 	(:keywords "comm" "processes" "multimedia"))])
  (pabbrev .
-	  [(4 1)
+	  [(4 2)
 	   nil "Predictive abbreviation expansion" single
 	   ((:url . "http://elpa.gnu.org/packages/pabbrev.html")
 	    (:keywords))])
@@ -482,6 +487,16 @@
 		      nil "temp buffer browse mode" single
 		      ((:url . "http://elpa.gnu.org/packages/temp-buffer-browse.html")
 		       (:keywords "convenience"))])
+ (test-simple .
+	      [(1 1)
+	       nil "Simple Unit Test Framework for Emacs Lisp" single
+	       ((:url . "http://github.com/rocky/emacs-test-simple")
+		(:keywords "unit-test"))])
+ (timerfunctions .
+		 [(1 4 2)
+		  nil "Enhanced versions of some timer.el functions" single
+		  ((:url . "http://elpa.gnu.org/packages/timerfunctions.html")
+		   (:keywords))])
  (trie .
        [(0 2 6)
 	((tNFA
