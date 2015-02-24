@@ -242,7 +242,9 @@
 
 (defun refresh-emacs-locatedb ()
   (interactive)
-  (shell-command "/home/bill/bin/refresh-emacs-locatedb.sh"))
+  (message "This may take a bit...")
+  (shell-command "/home/bill/bin/refresh-emacs-locatedb.sh")
+  (message "Refresh completed."))
 
 (global-set-key (kbd "C-c r") 'refresh-emacs-locatedb)
 
