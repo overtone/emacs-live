@@ -261,6 +261,13 @@
                 (abbreviate-file-name (buffer-file-name))
                   "%b"))))
 
+;; Finds the auto-highlight-symbol file and loads it
+;; I have no idea why the next line is necessary, but 'require' wasn't working
+(load-file (first (file-expand-wildcards "/home/bill/.emacs.d/elpa/auto-highlight-symbol-*/auto-highlight-symbol.el" )))
+(add-to-list 'ahs-modes 'clojure-mode)
+(global-auto-highlight-symbol-mode t)
+
+
 ;; END Bill's stuff
 
 (message "\n\n Pack loading completed. Your Emacs is Live...\n\n")
