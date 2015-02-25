@@ -265,6 +265,7 @@
 ;; I have no idea why the next line is necessary, but 'require' wasn't working
 (load-file (first (file-expand-wildcards "/home/bill/.emacs.d/elpa/auto-highlight-symbol-*/auto-highlight-symbol.el" )))
 (add-to-list 'ahs-modes 'clojure-mode)
+(setq ahs-default-range 'ahs-range-whole-buffer)
 (global-auto-highlight-symbol-mode t)
 
 
