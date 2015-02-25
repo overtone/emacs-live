@@ -26,7 +26,7 @@
                     (setq b (cond ((is-sep? c) 3)
                                   ((is-cap? c) 0)
                                   (t (min -1 (- b 1))))))
-               finally return (apply 'vector r)))
+               finally return r))
 
 (str->heatmap f)
 
@@ -37,7 +37,7 @@
 
 (is-sep? "-")
 
-(string-match "^[A-Z]$" "d")
+(string-match "[A-Z]" "---d--e")
 
 (str->heatmap f)
 
@@ -108,3 +108,26 @@
 (defvar dummycache nil)
 
 (print  (flx-process-cache "aaab" dummycache))
+
+(setq sss "/home/bill/Service-Broker/core.clj")
+
+(setq hm1 (str->heatmap sss))
+
+(defun find-best-match
+  (query string heatmap offset sofar)
+  (if (> offset (length string))
+      sofar
+    (let* ((sofar1 (or sofar '(0 . -1)))
+           (idx (string-match query string offset))
+           (score (nth idx heatmap))
+           (lscore (+ (length query) score))
+           (newval (if (> lscore (car sofar))
+                       '(lscore . idx)
+                     sofar)))
+      (find-best-match query string heatmap (+ 1 idx) newval))))
+
+(find-best-match "c" sss hm1 0 nil)
+
+(nth 0 hm1)
+
+(or nil '(0 . -1))
