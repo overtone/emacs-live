@@ -129,13 +129,13 @@
             (find-next-match query string heatmap (+ 1 idx) newval)))))))
 
 (defun find-best-match
-  (qlist string heatmap sofar)
+  (qlist string heatmap offset sofar)
   (if (cdr qlist)
       (let* ((sofar1 (or sofar '(0 . ())))
-             (next (find-next-match (car qlist) string heatmap 0 nil))
+             (next (find-next-match (car qlist) string heatmap offset nil))
              (match (cons (+ (car sofar1) (car next))
                           (append (cdr sofar1) (list  (cdr next))))))
-        (find-best-match (cdr qlist) string heatmap match))
+        (find-best-match (cdr qlist) string heatmap (+ 1 (cdr next)) match))
     sofar))
 
 (defun find-bestest
@@ -143,6 +143,7 @@
   (find-best-match (split-string query " ")
                    string
                    (str->heatmap string)
+                   0
                    nil))
 
 (find-bestest "ho S rok clj" sss)
