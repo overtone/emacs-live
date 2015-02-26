@@ -134,13 +134,28 @@
       (let* ((sofar1 (or sofar '(0 . ())))
              (next (find-next-match (car qlist) string heatmap 0 nil))
              (match (cons (+ (car sofar1) (car next))
-                          (append (cdr sofar1) (cdr next)))))
-        (find-best-match ********************))
+                          (append (cdr sofar1) (list  (cdr next))))))
+        (find-best-match (cdr qlist) string heatmap match))
     sofar))
 
+(defun find-bestest
+  (query string)
+  (find-best-match (split-string query " ")
+                   string
+                   (str->heatmap string)
+                   nil))
+
+(find-bestest "ho S rok clj" sss)
 
 (find-best-match '("ho" "S" "rok" "clj") sss hm1 nil)
 
+(find-next-match "ho" sss hm1 0 nil)
+
+(append (list 1) (list  2))
+
+
+
+(append '(1) '(2))
 
 (nth 0 hm1)
 

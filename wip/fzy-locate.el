@@ -41,7 +41,7 @@
                     (setq b (cond ((is-sep? c) 3)
                                   ((is-cap? c) 0)
                                   (t (min -1 (- b 1))))))
-               finally return (apply 'vector r)))
+               finally return r))
 
 (defun b-flx-process-cache (str cache)
   "Get calculated heatmap from cache, add it if necessary."
@@ -271,10 +271,10 @@ previously visited file again quickly."
 (setq fzloc-result-cache (make-hash-table :test 'equal))
 
 (defun mem-score (n)
-        (let ((cached-score (gethash '(n fzloc-previous-input) fzloc-score-cache)))
+        (let ((cached-score (gethash (list n fzloc-previous-input) fzloc-score-cache)))
           (if (eql cached-score nil)
-              (puthash '(n fzloc-previous-input)
-                       (first (b-flx-score n fzloc-previous-input))
+              (puthash (list n fzloc-previous-input)
+                       (first (find-bestest fzloc-previous-input n))
                        fzloc-score-cache)
             cached-score)))
 
