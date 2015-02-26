@@ -113,20 +113,34 @@
 
 (setq hm1 (str->heatmap sss))
 
-(defun find-best-match
+(defun find-next-match
   (query string heatmap offset sofar)
-  (if (> offset (length string))
-      sofar
-    (let* ((sofar1 (or sofar '(0 . -1)))
-           (idx (string-match query string offset))
-           (score (nth idx heatmap))
-           (lscore (+ (length query) score))
-           (newval (if (> lscore (car sofar))
-                       '(lscore . idx)
-                     sofar)))
-      (find-best-match query string heatmap (+ 1 idx) newval))))
+  (let ((sofar1 (or sofar '(-100 . -1))))
+    (if (> offset (length string))
+        sofar1
+      (let ((idx (string-match query string offset)))
+        (if (not idx)
+            sofar1
+          (let* ((score (nth idx heatmap))
+                 (lscore (+ (length query) score))
+                 (newval (if (> lscore (car sofar1))
+                             (cons lscore idx)
+                           sofar1)))
+            (find-next-match query string heatmap (+ 1 idx) newval)))))))
 
-(find-best-match "c" sss hm1 0 nil)
+(defun find-best-match
+  (qlist string heatmap sofar)
+  (if (cdr qlist)
+      (let* ((sofar1 (or sofar '(0 . ())))
+             (next (find-next-match (car qlist) string heatmap 0 nil))
+             (match (cons (+ (car sofar1) (car next))
+                          (append (cdr sofar1) (cdr next)))))
+        (find-best-match ********************))
+    sofar))
+
+
+(find-best-match '("ho" "S" "rok" "clj") sss hm1 nil)
+
 
 (nth 0 hm1)
 
