@@ -21,7 +21,7 @@
   (butlast (rest  (split-string s ""))))
 
 (defun is-sep? (c)
-  (eq 0 (string-match-p "^[\\/.-]$" c)))
+  (eq 0 (string-match-p "^[_\\/.-]$" c)))
 
 (defun is-cap? (c)
   (eq 0 (let ((case-fold-search nil))
@@ -43,54 +43,38 @@
                                   (t (min -1 (- b 1))))))
                finally return r))
 
-(defun b-flx-process-cache (str cache)
-  "Get calculated heatmap from cache, add it if necessary."
-  (let ((res (when cache
-               (gethash str cache))))
-    (or res
-        (progn
-          (setq res (flx-get-hash-for-string
-                     str
-                     (or (and cache (gethash 'heatmap-func cache))
-                         'str->heatmap)))
-          (when cache
-            (puthash str res cache))
-          res))))
+(defun fzloc-find-next-query-match
+  (query string heatmap offset sofar)
+  (let ((sofar1 (or sofar '(-1000 . -1))))
+    (if (> offset (length string))
+        sofar1
+      (let ((idx (string-match query string offset)))
+        (if (not idx)
+            sofar1
+          (let* ((score (nth idx heatmap))
+                 (lscore (+ (length query) score))
+                 (newval (if (> lscore (car sofar1))
+                             (cons lscore idx)
+                           sofar1)))
+            (fzloc-find-next-query-match query string heatmap (+ 1 idx) newval)))))))
 
-(defun b-flx-score (str query &optional cache)
-  "return best score matching QUERY against STR"
-  (let ((query (replace-regexp-in-string "\s+" "" query)))
-    (let ((result (or (unless (or (zerop (length query))
-                                  (zerop (length str)))
-                        (let* ((info-hash (b-flx-process-cache str cache))
-                               (heatmap (gethash 'heatmap info-hash))
-                               (matches (flx-get-matches info-hash query))
-                               (best-score nil))
-                          (mapc (lambda (match-positions)
-                                  (let ((score 0)
-                                        (contiguous-count 0)
-                                        last-match)
-                                    (cl-loop for index in match-positions
-                                             do (progn
-                                                  (if (and last-match
-                                                           (= (1+ last-match) index))
-                                                      (cl-incf contiguous-count)
-                                                    (setq contiguous-count 0))
+(defun fzloc-find-best-query-list-score
+  (qlist string heatmap offset sofar)
+  (if qlist
+      (let* ((sofar1 (or sofar '(0 . ())))
+             (next (fzloc-find-next-query-match (car qlist) string heatmap offset nil))
+             (match (cons (+ (car sofar1) (car next))
+                          (append (cdr sofar1) (list  (cdr next))))))
+        (fzloc-find-best-query-list-score (cdr qlist) string heatmap (+ 1 (cdr next)) match))
+    sofar))
 
-                                                  (if (> contiguous-count 0)
-                                                      (cl-incf score (+ 1 (* 2 (min contiguous-count 4))))
-                                                    (cl-incf score (aref heatmap index)))
-
-                                                  (if (< score -1)
-                                                      (cl-return score))
-
-                                                  (setq last-match index)))
-                                    (if (or (null best-score)
-                                            (> score (car best-score)))
-                                        (setq best-score (cons score match-positions)))))
-                                matches)
-                          best-score)) (list 0))))
-      result)))
+(defun fzloc-find-best-query-score
+  (query string)
+  (fzloc-find-best-query-list-score (split-string query)
+                   string
+                   (str->heatmap string)
+                   0
+                   nil))
 
 (eval-when-compile (require 'cl))
 
@@ -274,7 +258,7 @@ previously visited file again quickly."
         (let ((cached-score (gethash (list n fzloc-previous-input) fzloc-score-cache)))
           (if (eql cached-score nil)
               (puthash (list n fzloc-previous-input)
-                       (first (find-bestest fzloc-previous-input n))
+                       (first (fzloc-find-best-query-score fzloc-previous-input n))
                        fzloc-score-cache)
             cached-score)))
 

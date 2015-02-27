@@ -113,7 +113,7 @@
 
 (setq hm1 (str->heatmap sss))
 
-(defun find-next-match
+(defun fzloc-find-next-query-match
   (query string heatmap offset sofar)
   (let ((sofar1 (or sofar '(-100 . -1))))
     (if (> offset (length string))
@@ -126,27 +126,27 @@
                  (newval (if (> lscore (car sofar1))
                              (cons lscore idx)
                            sofar1)))
-            (find-next-match query string heatmap (+ 1 idx) newval)))))))
+            (fzloc-find-next-query-match query string heatmap (+ 1 idx) newval)))))))
 
-(defun find-best-match
+(defun fzloc-find-best-query-list-score
   (qlist string heatmap offset sofar)
   (if (cdr qlist)
       (let* ((sofar1 (or sofar '(0 . ())))
-             (next (find-next-match (car qlist) string heatmap offset nil))
+             (next (fzloc-find-next-query-match (car qlist) string heatmap offset nil))
              (match (cons (+ (car sofar1) (car next))
                           (append (cdr sofar1) (list  (cdr next))))))
-        (find-best-match (cdr qlist) string heatmap (+ 1 (cdr next)) match))
+        (fzloc-find-best-query-list-score (cdr qlist) string heatmap (+ 1 (cdr next)) match))
     sofar))
 
-(defun find-bestest
+(defun fzloc-find-best-query-score
   (query string)
-  (find-best-match (split-string query " ")
+  (fzloc-find-best-query-list-score (split-string query " ")
                    string
                    (str->heatmap string)
                    0
                    nil))
 
-(find-bestest "ho S rok clj" sss)
+(fzloc-find-best-query-score "ho S rok clj" sss)
 
 (find-best-match '("ho" "S" "rok" "clj") sss hm1 nil)
 
@@ -154,6 +154,7 @@
 
 (append (list 1) (list  2))
 
+fzloc-score-cache
 
 
 (append '(1) '(2))
