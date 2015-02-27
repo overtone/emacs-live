@@ -238,7 +238,7 @@
 (global-set-key (kbd  "C-,") 'beginning-of-line-text)
 
 (load-file "/home/bill/.emacs.d/wip/fzy-locate.el")
-(setq fzloc-databases (join-string (file-expand-wildcards "/home/bill/repos/emacs-live/locatedbs/*.locatedb") ":")) ;; load all locatedb files in dir
+(fzloc-load-dbs-from-path "/home/bill/repos/emacs-live/locatedbs/*.locatedb")
 (setq fzloc-filter-regexps '("/target/" "/.git/"))
 
 (global-set-key (kbd "C-x SPC") 'fzy-locate)

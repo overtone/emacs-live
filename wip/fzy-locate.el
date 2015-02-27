@@ -230,21 +230,11 @@ previously visited file again quickly."
   "The search output filter looks for this file name in the output if
 `fzloc-adaptive-selection' is enabled.")
 
-(defun identity-filter (process string)
-  (with-current-buffer fzloc-buffer
-      (save-excursion
-        (goto-char (point-max))
-        (insert string)
-        (insert "\n===== end ====="))))
-
-(defun dumb-filter (process string)
-  (with-current-buffer fzloc-buffer
-      (save-excursion
-        (goto-char (point-max))
-
-        (insert "\n===== end ====="))))
-
-
+(defun fzloc-load-dbs-from-path
+  (path)
+  (setq fzloc-databases
+        (join-string (file-expand-wildcards path)
+                     ":"))) ;; load all locatedb files in dir
 
 (setq fzloc-output "")
 (setq fzloc-score-cache (make-hash-table :test 'equal))
