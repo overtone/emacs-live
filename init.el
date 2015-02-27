@@ -239,10 +239,7 @@
 
 (load-file "/home/bill/.emacs.d/wip/fzy-locate.el")
 (setq fzloc-databases (join-string (file-expand-wildcards "/home/bill/repos/emacs-live/locatedbs/*.locatedb") ":")) ;; load all locatedb files in dir
-(setq fzloc-filter-regexps "/target/")
-
-
-
+(setq fzloc-filter-regexps '("/target/" "/.git/"))
 
 (global-set-key (kbd "C-x SPC") 'fzy-locate)
 (global-set-key (kbd  "C-x p") 'ace-jump-mode-pop-mark)

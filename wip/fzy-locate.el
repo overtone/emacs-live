@@ -142,9 +142,6 @@ will display file names under \"projectx\" like this:
   :type 'number
   :group 'fzy-locate)
 
-;(setq fzloc-matching-filename-limit 100)
-
-
 (defcustom fzloc-matching-filename-limit 500
   "*If there are more matching file names than the given limit the
 search is terminated automatically. This is useful if a too broad
@@ -250,7 +247,6 @@ previously visited file again quickly."
 
 
 (setq fzloc-output "")
-
 (setq fzloc-score-cache (make-hash-table :test 'equal))
 (setq fzloc-result-cache (make-hash-table :test 'equal))
 
@@ -262,12 +258,15 @@ previously visited file again quickly."
                        fzloc-score-cache)
             cached-score)))
 
-(defun pred1 (x) (string-match fzloc-filter-regexps x))
+(defun fzloc-filter-pred
+  (s)
+  (some #'identity
+        (map 'list
+             (lambda (r) (string-match r s))
+             fzloc-filter-regexps)))
 
 (defun fzloc-output-filter (process string)
   "Avoid moving of point if the buffer is empty."
-
-  ;;(print (concat "g-o-filter [" fzloc-previous-input "]  " (int-to-string (length fzloc-output))))
 
   (setq fzloc-output (concat fzloc-output string))
 
@@ -278,10 +277,10 @@ previously visited file again quickly."
       (if (< 300 (list-length (split-string fzloc-output)))
           (progn (fzloc-kill-process)
                  (fzloc-set-state "killed")
-                 (insert "too many results!" ))
+                 (insert "** too many results! **" ))
 
         (let* ((split-list (split-string fzloc-output))
-               (filter-list (remove-if #'pred1 split-list))
+               (filter-list (remove-if #'fzloc-filter-pred split-list))
                (sort-list (sort filter-list
                                 (lambda (a b) (>= (mem-score a)
                                                   (mem-score b)))))
@@ -289,10 +288,7 @@ previously visited file again quickly."
                (dummy (setq max-lisp-eval-depth 5000)) ;; keep join-string from hitting max-list-eval-depth
                (final-str (join-string sort-list "\n"))
                (dummy (setq max-lisp-eval-depth original-max-lisp-eval-depth)))
-
-          (insert final-str)
-                                        ;          (insert fzloc-output)
-          (insert "\n==end=="))))
+          (insert final-str))))
 
     (if (= (overlay-start fzloc-overlay) ; no selection yet
            (overlay-end fzloc-overlay))
@@ -358,13 +354,11 @@ MOVEFUNC and MOVEARG."
   (unless (eq 'run (process-status process))
     (fzloc-set-state "finished")))
 
-
 (defun fzloc-check-input ()
   "Check input string and start/stop search if necessary."
   (if (sit-for fzloc-search-delay)
       (unless (equal (minibuffer-contents) fzloc-previous-input)
         (fzloc-restart-search))))
-
 
 (defun fzloc-restart-search ()
   "Stop the current search if any and start a new one if needed."
@@ -519,7 +513,6 @@ of the real path name of the file."
   "The guts of fzy-locate.
 It expects that `fzloc-buffer' is selected already."
 
-;;    (print "==== fzloc-do =======")
   (erase-buffer)
   (setq mode-name "Fzy-Locate")
 
@@ -554,7 +547,6 @@ It expects that `fzloc-buffer' is selected already."
 (defun fzy-locate ()
   "Start global find file."
   (interactive)
-;;  (print "==== fzy-locate =======")
 
   (let ((winconfig (current-window-configuration)))
     (pop-to-buffer fzloc-buffer)
