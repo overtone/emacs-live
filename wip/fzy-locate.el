@@ -17,6 +17,24 @@
 ;; the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;; Boston, MA 02111-1307, USA.
 
+;; NOTE
+;; This library is heavily based on globalff.el and would not have
+;; been possible without it. Globalff.el is primarily
+;; authored by [...]. The source can be found here: [...]
+;; At the time of writing, about [...]% of the code below comes
+;; directly from globalff. Thank you, [...].
+
+;; fzy-locate makes a few significant changes to globalff:
+;; - adds fuzzy sorting
+;; - also searches recent file list
+;; - moves filtering & sorting operations from buffer to lists
+;; - uses spaces as wildcards in input
+
+;; SETUP
+;; Fzy-locate.el relies on the `mlocate` command for file search.
+;; mlocate requires that you have a pre-built a database. It is possible
+;; to build
+
 (defun str->chrlist (s)
   (butlast (rest  (split-string s ""))))
 
