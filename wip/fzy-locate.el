@@ -221,6 +221,7 @@ previously visited file again quickly."
     (define-key map (kbd "C-r") 'fzloc-toggle-regexp-search)
     (define-key map (kbd "<RET>") 'fzloc-exit-minibuffer)
     (define-key map (kbd "C-l") 'fzloc-insert-last-search)
+    (define-key map (kbd "C-;") 'fzloc-insert-file-name)
     map)
   "Keymap for fzy-locate.")
 
@@ -533,6 +534,13 @@ of the real path name of the file."
     (insert fzloc-most-recent-input))
       (end-of-line))
 
+(defun fzloc-insert-file-name ()
+  (interactive)
+
+  (save-excursion
+    (insert fzloc-last-file-name))
+  (end-of-line))
+
 (defun fzloc-do ()
   "The guts of fzy-locate.
 It expects that `fzloc-buffer' is selected already."
@@ -571,6 +579,8 @@ It expects that `fzloc-buffer' is selected already."
 (defun fzy-locate ()
   "Start global find file."
   (interactive)
+
+  (setq fzloc-last-file-name buffer-file-name)
 
   (let ((winconfig (current-window-configuration)))
     (pop-to-buffer fzloc-buffer)
