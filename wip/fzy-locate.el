@@ -45,7 +45,7 @@
 
 (defun fzloc-find-next-query-match
   (query string heatmap offset sofar)
-  (let ((sofar1 (or sofar '(-1000 . -1))))
+  (let ((sofar1 (or sofar '(-100 . -1))))
     (if (> offset (length string))
         sofar1
       (let ((idx (string-match query string offset)))
@@ -239,6 +239,13 @@ previously visited file again quickly."
 (setq fzloc-output "")
 (setq fzloc-score-cache (make-hash-table :test 'equal))
 (setq fzloc-result-cache (make-hash-table :test 'equal))
+(setq fzloc-last nil)
+
+(defun fzloc-same-as-last?
+  (s)
+  (let ((r (equal fzloc-last s)))
+    (setq fzloc-last s)
+    r))
 
 (defun mem-score (n)
         (let ((cached-score (gethash (list n fzloc-previous-input) fzloc-score-cache)))
@@ -255,6 +262,10 @@ previously visited file again quickly."
              (lambda (r) (string-match r s))
              fzloc-filter-regexps)))
 
+(defun fzloc-filter-min-score
+  (s)
+  (> -30 (mem-score s)))
+
 (defun fzloc-output-filter (process string)
   "Avoid moving of point if the buffer is empty."
 
@@ -269,16 +280,21 @@ previously visited file again quickly."
                  (fzloc-set-state "killed")
                  (insert "** too many results! **" ))
 
+        (setq fzloc-last nil)
         (let* ((split-list (split-string fzloc-output))
-               (filter-list (remove-if #'fzloc-filter-pred split-list))
-               (sort-list (sort filter-list
+               (append-recentf (append split-list recentf-list))
+               (filter-list-rgx (remove-if #'fzloc-filter-pred append-recentf ))
+               (filter-list-min (remove-if #'fzloc-filter-min-score filter-list-rgx))
+               (sort-list (sort filter-list-min
                                 (lambda (a b) (>= (mem-score a)
                                                   (mem-score b)))))
+               (nodups (remove-if #'fzloc-same-as-last? sort-list))
                (dummy (setq original-max-lisp-eval-depth max-lisp-eval-depth))
                (dummy (setq max-lisp-eval-depth 5000)) ;; keep join-string from hitting max-list-eval-depth
-               (final-str (join-string sort-list "\n"))
+               (final-str (join-string nodups "\n"))
                (dummy (setq max-lisp-eval-depth original-max-lisp-eval-depth)))
-          (insert final-str))))
+          (insert final-str)
+          (insert "\n"))))
 
     (if (= (overlay-start fzloc-overlay) ; no selection yet
            (overlay-end fzloc-overlay))
