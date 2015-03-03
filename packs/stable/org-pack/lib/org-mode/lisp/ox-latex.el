@@ -1809,7 +1809,7 @@ INFO is a plist holding contextual information.  See
      ;; description.
      ((string= type "radio")
       (let ((destination (org-export-resolve-radio-link link info)))
-	(when destination
+	(if (not destination) desc
 	  (format "\\hyperref[%s]{%s}"
 		  (org-export-solidify-link-text
 		   (org-element-property :value destination))
@@ -1842,7 +1842,8 @@ INFO is a plist holding contextual information.  See
 			   'number-to-string
 			   (org-export-get-headline-number destination info)
 			   "-"))))
-	     (if (and (plist-get info :section-numbers) (not desc))
+	     (if (and (not desc)
+		      (org-export-numbered-headline-p destination info))
 		 (format "\\ref{%s}" label)
 	       (format "\\hyperref[%s]{%s}" label
 		       (or desc

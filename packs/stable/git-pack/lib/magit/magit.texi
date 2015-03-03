@@ -339,8 +339,8 @@ messages. This is particularly useful if you have a hook that
 occasionally causes git to refuse your commit.
 
 To abort a commit use @kbd{C-c C-k}.  The commit message is saved and
-can later be retrieved in the commit message buffer using @kbd{M-p}
-and @kbd{M-a}.
+can later be retrieved in the commit message buffer using @kbd{M-n}
+and @kbd{M-p}.
 
 Typing @kbd{C} will also pop up the change description buffer, but in
 addition, it will try to insert a ChangeLog-style entry for the change
@@ -609,7 +609,7 @@ Typing @kbd{M r} will let you rename a remote.
 @section Branches in the Branch Manager
 
 In the branch manager, each branch is displayed on a separate line.  The
-current local branch is marked by a ``#'' in front of the name.  Remote
+current local branch is marked by a ``*'' in front of the name.  Remote
 branches are grouped by the remote they come from.
 
 If a local branch tracks a remote branch some extra information is

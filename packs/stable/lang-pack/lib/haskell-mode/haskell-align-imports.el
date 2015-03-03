@@ -95,7 +95,7 @@
 
 ;;; Code:
 
-(with-no-warnings (require 'cl))
+(require 'cl-lib)
 
 (defvar haskell-align-imports-regexp
   (concat "^\\(import[ ]+\\)"
@@ -147,8 +147,8 @@
         (when line
           (let ((match
                  (haskell-align-imports-merge-parts
-                  (loop for i from 1 to 8
-                        collect (haskell-align-imports-chomp (match-string i line))))))
+                  (cl-loop for i from 1 to 8
+                           collect (haskell-align-imports-chomp (match-string i line))))))
             (setq imports (cons (cons match (line-beginning-position))
                                 imports)))))
       (forward-line))
@@ -158,14 +158,14 @@
   "Merge together parts of an import statement that shouldn't be separated."
   (let ((parts (apply #'vector l))
         (join (lambda (ls)
-                (reduce (lambda (a b)
-                          (concat a
-                                  (if (and (> (length a) 0)
-                                           (> (length b) 0))
-                                      " "
-                                    "")
-                                  b))
-                        ls))))
+                (cl-reduce (lambda (a b)
+                             (concat a
+                                     (if (and (> (length a) 0)
+                                              (> (length b) 0))
+                                         " "
+                                       "")
+                                     b))
+                           ls))))
     (if haskell-align-imports-pad-after-name
         (list (funcall join (list (aref parts 0)
                                   (aref parts 1)
@@ -195,19 +195,19 @@
   "Find the padding for each part of the import statements."
   (if (null imports)
       imports
-    (reduce (lambda (a b) (mapcar* #'max a b))
-            (mapcar (lambda (x) (mapcar #'length (car x)))
-                    imports))))
+    (cl-reduce (lambda (a b) (cl-mapcar #'max a b))
+               (mapcar (lambda (x) (mapcar #'length (car x)))
+                       imports))))
 
 (defun haskell-align-imports-fill (padding line)
   "Fill an import line using the padding worked out from all statements."
   (mapconcat #'identity
-             (mapcar* (lambda (pad part)
-                        (if (> (length part) 0)
-                            (concat part (make-string (- pad (length part)) ? ))
-                          (make-string pad ? )))
-                      padding
-                      line)
+             (cl-mapcar (lambda (pad part)
+                          (if (> (length part) 0)
+                              (concat part (make-string (- pad (length part)) ? ))
+                            (make-string pad ? )))
+                        padding
+                        line)
              " "))
 
 (defun haskell-align-imports-line-match-it ()
@@ -226,9 +226,5 @@
                                      (line-end-position) t 1)))))
 
 (provide 'haskell-align-imports)
-
-;; Local Variables:
-;; byte-compile-warnings: (not cl-functions)
-;; End:
 
 ;;; haskell-align-imports.el ends here

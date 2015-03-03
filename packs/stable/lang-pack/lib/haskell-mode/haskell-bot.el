@@ -70,6 +70,8 @@
 
 ;;; Code:
 
+(require 'comint)
+
 (defgroup haskell-bot nil
   "Major mode for interacting with an inferior Bot session."
   :group 'haskell

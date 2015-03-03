@@ -1,10 +1,10 @@
 ;;; glsl-mode.el --- major mode for Open GLSL shader files
 
 ;; Copyright (C) 1999, 2000, 2001 Free Software Foundation, Inc.
-;; Copyright (C) 2011 Jim Hourihan
+;; Copyright (C) 2011, 2014 Jim Hourihan
 ;;
 ;; Authors: Xavier.Decoret@imag.fr, 
-;;          Jim Hourihan <jimhourihan ~at~ gmail.com> (updated for 4.3, etc)
+;;          Jim Hourihan <jimhourihan ~at~ gmail.com> (updated for 4.5, etc)
 ;; Keywords: languages
 ;; Version: 2.0
 ;; X-URL: http://artis.inrialpes.fr/~Xavier.Decoret/resources/glsl-mode/
@@ -29,14 +29,14 @@
 ;;    replaced with keyword lists for easier maintenance
 ;;  * Added customization group and faces
 ;;  * Preprocessor faces
-;;  * Updated to GLSL 4.3
+;;  * Updated to GLSL 4.5
 ;;  * Separate deprecated symbols
 ;;  * Made _ part of a word
 ;;  * man page lookup at opengl.org
 
 ;; This package provides the following features:
 ;;  * Syntax coloring (via font-lock) for grammar symbols and
-;;    builtin functions and variables for up to GLSL version 4.3
+;;    builtin functions and variables for up to GLSL version 4.5
 ;;  * Indentation for the current line (TAB) and selected region (C-M-\).
 ;;  * Switching between file.vert and file.frag
 ;;    with S-lefttab (via ff-find-other-file)
@@ -69,10 +69,10 @@
   "OpenGL Shading Language Major Mode"
   :group 'languages)
 
-(defconst glsl-language-version "4.3"
+(defconst glsl-language-version "4.5"
   "GLSL language version number.")
 
-(defconst gl-version "4.3"
+(defconst gl-version "4.5"
   "OpenGL major mode version number.")
 
 (defvar glsl-type-face 'glsl-type-face)
@@ -188,6 +188,8 @@
       "atomicCounter" "atomicCounterDecrement" "atomicCounterIncrement"
       "barrier" "bitCount" "bitfieldExtract" "bitfieldInsert" "bitfieldReverse"
       "ceil" "clamp" "cos" "cosh" "cross" "degrees" "determinant" "dFdx" "dFdy"
+      "dFdyFine" "dFdxFine" "dFdyCoarse" "dFdxCourse" 
+      "fwidthFine" "fwidthCoarse"
       "distance" "dot" "EmitStreamVertex" "EmitVertex" "EndPrimitive"
       "EndStreamPrimitive" "equal" "exp" "exp2" "faceforward" "findLSB"
       "findMSB" "floatBitsToInt" "floatBitsToUint" "floor" "fma" "fract"
@@ -195,6 +197,7 @@
       "imageAtomicAnd" "imageAtomicCompSwap" "imageAtomicExchange"
       "imageAtomicMax" "imageAtomicMin" "imageAtomicOr" "imageAtomicXor"
       "imageLoad" "imageSize" "imageStore" "imulExtended" "intBitsToFloat"
+      "imageSamples"
       "interpolateAtCentroid" "interpolateAtOffset" "interpolateAtSample"
       "inverse" "inversesqrt" "isinf" "isnan" "ldexp" "length" "lessThan"
       "lessThanEqual" "log" "log2" "matrixCompMult" "max" "memoryBarrier" "min"

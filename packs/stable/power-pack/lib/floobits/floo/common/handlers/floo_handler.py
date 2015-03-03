@@ -717,6 +717,7 @@ class FlooHandler(base.BaseHandler):
                     'md5': existing_buf['md5'],
                     'encoding': encoding,
                 })
+                self.send({'name': 'saved', 'id': existing_buf['id']})
                 return size
 
             try:

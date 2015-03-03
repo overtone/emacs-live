@@ -127,44 +127,15 @@
   (let ((map (make-sparse-keymap)))
     (define-key map "q" 'cider-popup-buffer-quit-function)
     (define-key map "j" 'cider-docview-javadoc)
+    (define-key map "s" 'cider-docview-source)
     (define-key map (kbd "<backtab>") 'backward-button)
     (define-key map (kbd "TAB") 'forward-button)
-
-    ;; VS[04-08-2014]: proposed keybindings for the docview mode
-    ;; (define-key map (kbd "<backtab>") 'backward-button)
-    ;; (define-key map (kbd "TAB") 'forward-button)
-    ;; (define-key map (kbd "k") 'kill-this-buffer)
-
-    ;; (define-key map (kbd "C-c C-d") 'cider-doc-map)
-    ;; (define-key map (kbd "a") 'cider-apropos)
-    ;; (define-key map (kbd "A") 'cider-apropos-documentation)
-    ;; (define-key map (kbd "d") 'cider-doc)
-    ;; (define-key map (kbd "g") 'cider-grimoire)
-    ;; (define-key map (kbd "h") 'cider-grimoire-web)
-    ;; (define-key map (kbd "j") 'cider-javadoc)
-    ;; (define-key map (kbd "J") 'cider-doc-javadoc)
-
-    ;; (define-key map (kbd "M-.") 'cider-jump-to-var)
-    ;; (define-key map (kbd "M-,") 'cider-jump-back)
-    ;; (define-key map (kbd "C-c M-.") 'cider-jump-to-resource)
-    ;; (define-key map (kbd "i") 'cider-inspect)
-    ;; (define-key map (kbd "C-c M-i") 'cider-inspect)
-    ;; (define-key map (kbd "C-c C-z") 'cider-switch-to-repl-buffer)
-
     (easy-menu-define cider-docview-mode-menu map
       "Menu for CIDER's doc mode"
       `("CiderDoc"
-        ;; ,cider-doc-menu
-        ;; "--"
-        ;; ["Jump to source" cider-jump-to-var]
-        ;; ["Jump to resource" cider-jump-to-resource]
-        ;; ["Jump back" cider-jump-back]
-        ;; "--"
-        ;; ["Switch to REPL" cider-switch-to-repl-buffer]
-        ;; "--"
-        ;; ["Kill" kill-this-buffer]
-        ;; ["Quit" quit-window]
         ["JavaDoc in browser" cider-docview-javadoc]
+        ["Jump to source" cider-docview-source]
+        "--"
         ["Quit" cider-popup-buffer-quit-function]
         ))
     map))
@@ -177,7 +148,9 @@
   (setq-local truncate-lines t)
   (setq-local electric-indent-chars nil)
   (setq-local cider-docview-symbol nil)
-  (setq-local cider-docview-javadoc-url nil))
+  (setq-local cider-docview-javadoc-url nil)
+  (setq-local cider-docview-file nil)
+  (setq-local cider-docview-line nil))
 
 
 ;;; Interactive functions
@@ -188,6 +161,16 @@
   (if cider-docview-javadoc-url
       (browse-url cider-docview-javadoc-url)
     (message "No Javadoc available for %s" cider-docview-symbol)))
+
+(defun cider-docview-source ()
+  "Open the source for the current symbol, if available."
+  (interactive)
+  (if cider-docview-file
+      (let ((buffer (and cider-docview-file
+                         (not (cider--tooling-file-p cider-docview-file))
+                         (cider-find-file cider-docview-file))))
+        (cider-jump-to buffer (cons cider-docview-line nil) nil))
+    (message "No source location for %s" cider-docview-symbol)))
 
 
 ;;; Font Lock and Formatting
@@ -206,7 +189,7 @@ and line wrap."
           (when (search-forward-regexp "```\n" nil t)
             (replace-match "")
             (cider-font-lock-region-as mode beg (point))
-            (overlay-put (make-overlay beg (point)) 'face bg)
+            (overlay-put (make-overlay beg (point)) 'font-lock-face bg)
             (put-text-property beg (point) 'block 'code)))))))
 
 (defun cider-docview-fontify-literals (buffer)
@@ -222,7 +205,7 @@ Preformatted code text blocks are ignored."
             (let ((beg (point)))
               (when (search-forward "`" (line-end-position) t)
                 (replace-match "")
-                (put-text-property beg (point) 'face 'cider-docview-literal-face)))))))))
+                (put-text-property beg (point) 'font-lock-face 'cider-docview-literal-face)))))))))
 
 (defun cider-docview-fontify-emphasis (buffer)
   "Font lock BUFFER emphasized text and remove markdown characters.
@@ -241,7 +224,7 @@ Preformatted code text blocks are ignored."
                           'cider-docview-emphasis-face)))
               (when (search-forward-regexp "\\(\\w\\)\\*+" (line-end-position) t)
                 (replace-match "\\1")
-                (put-text-property beg (point) 'face face)))))))))
+                (put-text-property beg (point) 'font-lock-face face)))))))))
 
 (defun cider-docview-format-tables (buffer)
   "Align BUFFER tables and dim borders.
@@ -255,7 +238,7 @@ Tables are marked to be ignored by line wrap."
            (org-table-align)
            (goto-char (org-table-begin))
            (while (search-forward-regexp "[+|-]" (org-table-end) t)
-             (put-text-property (match-beginning 0) (match-end 0) 'face border))
+             (put-text-property (match-beginning 0) (match-end 0) 'font-lock-face border))
            (put-text-property (org-table-begin) (org-table-end) 'block 'table)))))))
 
 (defun cider-docview-wrap-text (buffer)
@@ -285,21 +268,21 @@ Tables are marked to be ignored by line wrap."
 
 (defun cider-docview-render-info (buffer info)
   "Emit into BUFFER formatted INFO for the Clojure or Java symbol."
-  (let* ((ns      (cadr (assoc "ns" info)))
-         (name    (cadr (assoc "name" info)))
-         (added   (cadr (assoc "added" info)))
-         (depr    (cadr (assoc "deprecated" info)))
-         (macro   (cadr (assoc "macro" info)))
-         (special (cadr (assoc "special-form" info)))
-         (forms   (cadr (assoc "forms-str" info)))
-         (args    (cadr (assoc "arglists-str" info)))
-         (doc     (cadr (assoc "doc" info)))
-         (url     (cadr (assoc "url" info)))
-         (class   (cadr (assoc "class" info)))
-         (member  (cadr (assoc "member" info)))
-         (javadoc (cadr (assoc "javadoc" info)))
-         (super   (cadr (assoc "super" info)))
-         (ifaces  (cadr (assoc "interfaces" info)))
+  (let* ((ns      (nrepl-dict-get info "ns"))
+         (name    (nrepl-dict-get info "name"))
+         (added   (nrepl-dict-get info "added"))
+         (depr    (nrepl-dict-get info "deprecated"))
+         (macro   (nrepl-dict-get info "macro"))
+         (special (nrepl-dict-get info "special-form"))
+         (forms   (nrepl-dict-get info "forms-str"))
+         (args    (nrepl-dict-get info "arglists-str"))
+         (doc     (nrepl-dict-get info "doc"))
+         (url     (nrepl-dict-get info "url"))
+         (class   (nrepl-dict-get info "class"))
+         (member  (nrepl-dict-get info "member"))
+         (javadoc (nrepl-dict-get info "javadoc"))
+         (super   (nrepl-dict-get info "super"))
+         (ifaces  (nrepl-dict-get info "interfaces"))
          (clj-name  (if ns (concat ns "/" name) name))
          (java-name (if member (concat class "/" member) class)))
     (with-current-buffer buffer
@@ -351,19 +334,24 @@ Tables are marked to be ignored by line wrap."
           (newline))
         (let ((beg (point-min))
               (end (point-max)))
-          (dolist (x info)
-            (put-text-property beg end (car x) (cadr x)))))
+          (nrepl-dict-map (lambda (k v)
+                            (put-text-property beg end k v))
+                          info)))
       (current-buffer))))
 
 (defun cider-docview-render (buffer symbol info)
   "Emit into BUFFER formatted documentation for SYMBOL's INFO."
   (with-current-buffer buffer
-    (let ((javadoc (cadr (assoc "javadoc" info)))
+    (let ((javadoc (nrepl-dict-get info "javadoc"))
+          (file (nrepl-dict-get info "file"))
+          (line (nrepl-dict-get info "line"))
           (inhibit-read-only t))
       (cider-docview-mode)
 
       (setq-local cider-docview-symbol symbol)
       (setq-local cider-docview-javadoc-url javadoc)
+      (setq-local cider-docview-file file)
+      (setq-local cider-docview-line line)
 
       (remove-overlays)
       (cider-docview-render-info buffer info)

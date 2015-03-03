@@ -55,7 +55,7 @@ if __name__ == "__main__":
             assert isinstance(stre, str)
             print(stre)
 
-    tests = [Exception("asdf"),  Exception(u"aß∂ƒ"),  Exception(u"asdf"),  Exception(b"asdf1234")]
+    tests = [Exception("asdf"), Exception(u"aß∂ƒ"), Exception(u"asdf"), Exception(b"asdf1234")]
     for t in tests:
         test(t)
         if getattr(sys, "exc_clear", None):

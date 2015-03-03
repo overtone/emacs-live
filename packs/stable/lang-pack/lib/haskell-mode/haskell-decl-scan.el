@@ -100,9 +100,9 @@
 
 ;;; Code:
 
+(require 'cl-lib)
 (require 'haskell-mode)
 (require 'syntax)
-(with-no-warnings (require 'cl))
 (require 'imenu)
 
 (defgroup haskell-decl-scan nil
@@ -195,7 +195,7 @@ current line that starts with REGEXP and is not in `font-lock-comment-face'."
   "Like haskell-ds-move-to-start-regexp, but uses syntax-ppss to
   skip comments"
   (let (p)
-    (loop
+    (cl-loop
      do (setq p (point))
      (haskell-ds-move-to-start-regexp inc regexp)
      while (and (nth 4 (syntax-ppss))
@@ -258,8 +258,7 @@ then point does not move if already at the start of a declaration."
                      ;; here seems to be the only addition to make this
                      ;; module support LaTeX-style literate scripts.
                      (if (and (looking-at start-decl-re)
-                              (not (eq (get-text-property (point) 'face)
-                                       'font-lock-comment-face)))
+                              (not (elt (syntax-ppss) 4)))
                          (match-beginning 1)))))
         (if (and start
                  ;; This complicated boolean determines whether we
@@ -601,9 +600,5 @@ Invokes `haskell-decl-scan-mode-hook' on activation."
 ;; Provide ourselves:
 
 (provide 'haskell-decl-scan)
-
-;; Local Variables:
-;; byte-compile-warnings: (not cl-functions)
-;; End:
 
 ;;; haskell-decl-scan.el ends here

@@ -1472,6 +1472,7 @@ symbols specifying conditions when the grid should be displayed:
  weekly        if the agenda shows an entire week
  today         show grid on current date, independent of daily/weekly display
  require-timed show grid only if at least one item has a time specification
+ remove-match  skip grid times already present in an entry
 
 The second item is a string which will be placed behind the grid time.
 
@@ -3352,7 +3353,7 @@ If AGENDA-BUFFER-NAME, use this as the buffer name for the agenda to write."
 			   content)))
 		 (find-file file)
 		 (erase-buffer)
-		 (mapcar (lambda (s) (org-paste-subtree 1 s)) (reverse content))
+		 (dolist (s content) (org-paste-subtree 1 s))
 		 (write-file file)
 		 (kill-buffer (current-buffer))
 		 (message "Org file written to %s" file)))
@@ -5088,8 +5089,7 @@ of what a project is and how to check if it stuck, customize the variable
   "Get the (Emacs Calendar) diary entries for DATE."
   (require 'diary-lib)
   (let* ((diary-fancy-buffer "*temporary-fancy-diary-buffer*")
-	 (diary-display-hook '(fancy-diary-display))
-	 (diary-display-function 'fancy-diary-display)
+	 (diary-display-function 'diary-fancy-display)
 	 (pop-up-frames nil)
 	 (diary-list-entries-hook
 	  (cons 'org-diary-default-entry diary-list-entries-hook))
@@ -9627,7 +9627,7 @@ This is a command that has to be installed in `calendar-mode-map'."
 	  (overlay-put ov 'type 'org-marked-entry-overlay))
 	(end-of-line 1)
 	(or (ignore-errors
-	      (goto-char (next-single-property-change (point) 'txt)))
+	      (goto-char (next-single-property-change (point) 'org-hd-marker)))
 	    (beginning-of-line 2))
 	(while (and (get-char-property (point) 'invisible) (not (eobp)))
 	  (beginning-of-line 2))
@@ -9645,7 +9645,7 @@ This is a command that has to be installed in `calendar-mode-map'."
   (let ((entries-marked 0) txt-at-point)
     (save-excursion
       (goto-char (point-min))
-      (goto-char (next-single-property-change (point) 'txt))
+      (goto-char (next-single-property-change (point) 'org-hd-marker))
       (while (and (re-search-forward regexp nil t)
 		  (setq txt-at-point (get-text-property (point) 'txt)))
 	(when (string-match regexp txt-at-point)
@@ -9681,7 +9681,7 @@ This is a command that has to be installed in `calendar-mode-map'."
   (save-excursion
     (goto-char (point-min))
     (while (ignore-errors
-	     (goto-char (next-single-property-change (point) 'txt)))
+	     (goto-char (next-single-property-change (point) 'org-hd-marker)))
       (org-agenda-bulk-toggle))))
 
 (defun org-agenda-bulk-toggle ()

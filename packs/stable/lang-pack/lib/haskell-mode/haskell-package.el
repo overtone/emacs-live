@@ -27,7 +27,7 @@
 
 ;;; Code:
 
-(with-no-warnings (require 'cl))
+(require 'cl-lib)
 
 ;; Dynamically scoped variables.
 ;; TODO What actually sets this?
@@ -72,7 +72,7 @@
             name
             version))))
 
-(defstruct haskell-package "Haskell package object.")
+(cl-defstruct haskell-package "Haskell package object.")
 
 (defun haskell-package-parse (text)
   "Parse a package into a package object."
@@ -147,15 +147,11 @@
      (lambda (line)
        (string-match "^{?\\([a-zA-Z0-9-_]+\\)-\\([0-9.]+\\)}?$" line)
        (cons (match-string 1 line) (match-string 2 line)))
-     (delete-if
+     (cl-delete-if
       (lambda (line)
         (not (string-match "^{?[a-zA-Z0-9-_]+-[0-9.]+}?$" line)))
       lines))))
 
 (provide 'haskell-package)
-
-;; Local Variables:
-;; byte-compile-warnings: (not cl-functions)
-;; End:
 
 ;;; haskell-package.el ends here

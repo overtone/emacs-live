@@ -3,7 +3,7 @@
 ;; Copyright (C) 2012-2014  Jonas Bernoulli
 
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
-;; Homepage: http://tarsius.github.com/packed
+;; Homepage: https://github.com/tarsius/packed
 ;; Keywords: compile, convenience, lisp, package, library
 
 ;; Package: packed
@@ -145,10 +145,10 @@ and the file name is displayed in the echo area."
   (let ((file (locate-file (substitute-in-file-name library)
                            (or path load-path)
                            (packed-el-suffixes nosuffix))))
-    (if interactive-call
-        (if file
-            (message "Library is file %s" (abbreviate-file-name file))
-          (message "No library %s in search path" library)))
+    (when interactive-call
+      (if file
+          (message "Library is file %s" (abbreviate-file-name file))
+        (message "No library %s in search path" library)))
     file))
 
 (defconst packed-ignore-library-regexp
@@ -160,8 +160,8 @@ and the file name is displayed in the echo area."
 (defun packed-ignore-directory-p (directory package)
   "Return t if DIRECTORY should be ignored when searching for libraries.
 DIRECTORY and all libraries it and its subdirectories contain
-should be ignored if it contains a file named \".nosearch\", is
-a hidden directory, or its filename matches
+should be ignored if it contains a file named \".nosearch\",
+is a hidden directory, or its filename matches
 `packed-ignore-directory-regexp'.
 
 If PACKAGE also matches that regular expression then don't ignore
@@ -198,7 +198,7 @@ FILE should be an Emacs lisp source file."
                ,@body)))))))
 
 (defun packed-library-p (file &optional package)
-  "Return non-nil if FILE is an Emacs source library and part of package.
+  "Return non-nil if FILE is an Emacs source library and part of PACKAGE.
 Actually return the feature provided by FILE.  For anything else
 including bundled libraries return nil.
 
@@ -398,12 +398,11 @@ Elements of `load-path' which no longer exist are not removed."
     (dolist (f (directory-files directory t "^[^.]"))
       (cond ((file-regular-p f)
              (and (not in-lp)
-                  (packed-library-p
-                   f (or package (packed-filename directory)))
+                  (packed-library-p f (or package (packed-filename directory)))
                   (add-to-list 'lp (directory-file-name directory))
                   (setq in-lp t)))
             ((file-directory-p f)
-             (unless (packed-ignore-directory-p directory package)
+             (unless (packed-ignore-directory-p f package)
                (setq lp (nconc (packed-load-path f package) lp))))))
     lp))
 

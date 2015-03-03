@@ -5,8 +5,9 @@
 (require 'dircolors)
 (require 'smooth-scrolling)
 (require 'buffer-move)
-(require 'find-file-in-project)
 
+(live-add-pack-lib "find-file-in-project")
+(require 'find-file-in-project)
 (live-add-pack-lib "dash")
 (require 'dash)
 (live-add-pack-lib "s")

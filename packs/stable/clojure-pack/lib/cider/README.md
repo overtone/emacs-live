@@ -1,6 +1,9 @@
 [![License GPL 3][badge-license]](http://www.gnu.org/licenses/gpl-3.0.txt)
+[![MELPA](http://melpa.org/packages/cider-badge.svg)](http://melpa.org/#/cider)
+[![MELPA Stable](http://stable.melpa.org/packages/cider-badge.svg)](http://stable.melpa.org/#/cider)
 [![Build Status](https://travis-ci.org/clojure-emacs/cider.png?branch=master)](https://travis-ci.org/clojure-emacs/cider)
-[![Gittip](http://img.shields.io/gittip/bbatsov.svg)](https://www.gittip.com/bbatsov/)
+[![Gratipay](http://img.shields.io/gratipay/bbatsov.svg)](https://www.gratipay.com/bbatsov/)
+[![Paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=GRQKNBM6P8VRQ)
 
 <p align="center">
   <img src="https://raw.github.com/clojure-emacs/cider/master/logo/cider-logo-w640.png" alt="CIDER Logo"/>
@@ -11,15 +14,36 @@
 REPL server. It's a great alternative to the now deprecated combination
 of SLIME + [swank-clojure](https://github.com/technomancy/swank-clojure).
 
+CIDER packs plenty of features. Here are some of them (in no particular order):
+
+* Powerful REPL
+* Interactive code evaluation
+* Compilation notes (error and warning highlighting)
+* Human-friendly stacktraces
+* Smart code completion
+* Definition lookup
+* Documentation lookup
+* Resource lookup
+* Apropos
+* Value inspector
+* Function tracing
+* Interactive macroexpansion
+* [Grimoire](http://grimoire.arrdem.com/) integration
+* `clojure.test` integration
+* Classpath browser
+* Namespace browser
+* nREPL session management
+* Scratchpad
+* Minibuffer code evaluation
+* Integration with [company-mode](http://company-mode.github.io/) and [auto-complete-mode](https://github.com/clojure-emacs/ac-cider)
+
+![CIDER Screenshot](https://github.com/clojure-emacs/cider/raw/master/screenshots/cider-overview.png)
+
 ***
 
 - [Installation](#installation)
 	- [Prerequisites](#prerequisites)
-	- [Via package.el](#via-packageel)
-	- [Via el-get](#via-el-get)
-	- [Manual](#manual)
-	- [Emacs Prelude](#emacs-prelude)
-	- [Emacs Live](#emacs-live)
+	- [Installation via package.el](#installation-via-packageel)
 - [Configuration](#configuration)
 - [Basic Usage](#basic-usage)
 	- [Setting up a Leiningen project (optional)](#setting-up-a-leiningen-project-optional)
@@ -36,12 +60,15 @@ of SLIME + [swank-clojure](https://github.com/technomancy/swank-clojure).
 	- [Managing multiple sessions](#managing-multiple-sessions)
 - [Requirements](#requirements)
 - [Caveats](#caveats)
+- [Documentation](#documentation)
 - [Changelog](#changelog)
 - [Team](#team)
 - [Contributing](#contributing)
 - [License](#license)
 
 ## Installation
+
+The canonical way to install cider is using `package.el`, but you can choose other possibilities available for your emacs/operating system (see [wiki](https://github.com/clojure-emacs/cider/wiki/Installation)).
 
 ### Prerequisites
 
@@ -65,20 +92,20 @@ CIDER 0.7 ships a replacement for the deprecated `clojure-test-mode` called `cid
 Please, make sure you've uninstalled `clojure-test-mode` if you're using CIDER 0.7 as `clojure-test-mode`
 sometimes interferes with CIDER's REPL initialization.
 
-### Via package.el
+### Installation via package.el
 
 `package.el` is the built-in package manager in Emacs.
 
 `CIDER` is available on two major `package.el` community
 maintained repos -
-[MELPA Stable](http://melpa-stable.milkbox.net) and
-[MELPA](http://melpa.milkbox.net).
+[MELPA Stable](http://stable.melpa.org) and
+[MELPA](http://melpa.org).
 
 You can install `CIDER` with the following command:
 
 <kbd>M-x package-install [RET] cider [RET]</kbd>
 
-or by adding this bit of Emacs Lisp code to your Emacs initialization file(`.emacs` or `init.el`):
+or by adding this bit of Emacs Lisp code to your Emacs initialization file (`.emacs` or `init.el`):
 
 ```el
 (unless (package-installed-p 'cider)
@@ -95,35 +122,16 @@ time. Never-the-less, installing from MELPA is the recommended way of
 obtaining CIDER, as the `master` branch is normally quite stable and
 "stable" (tagged) builds are released somewhat infrequently.
 
-### Via el-get
-
-[el-get](https://github.com/dimitri/el-get) is another popular package manager for Emacs.
-If you're an el-get user just do <kbd>M-x el-get-install</kbd>.
-
-### Manual
-
-You can install `CIDER` manually by placing `CIDER` on your `load-path`
-and `require`ing it. Many people favour the folder `~/.emacs.d/vendor`:
+With the most recent builds of Emacs, you can pin CIDER to always
+use MELPA Stable by adding this to your Emacs initialization:
 
 ```el
-(add-to-list 'load-path "~/emacs.d/vendor")
-(require 'cider)
+(add-to-list 'package-pinned-packages '(cider . "melpa-stable") t)
 ```
 
-Keep in mind that `CIDER` depends on `clojure-mode`, `dash.el` and
-`pkg-info` so you'll have to install them as well.
-
-### Emacs Prelude
-
-`CIDER` comes bundled in
-[Emacs Prelude](https://github.com/bbatsov/prelude). If you're a
-Prelude user you can start using it right away.
-
-### Emacs Live
-
-`CIDER` comes bundled in
-[Emacs Live](https://github.com/overtone/emacs-live). If you're using
-Emacs Live you're already good to go.
+**CIDER has deps (e.g. `queue`) that are only available in the
+  [GNU ELPA repository](https://elpa.gnu.org/). It's the only repository enabled
+  by default and you should not disable it!**
 
 ## CIDER nREPL middleware
 
@@ -142,7 +150,7 @@ Use the convenient plugin for defaults, either in your project's
 A minimal `profiles.clj` for CIDER would be:
 
 ```clojure
-{:user {:plugins [[cider/cider-nrepl "0.7.0-SNAPSHOT"]]}}
+{:user {:plugins [[cider/cider-nrepl "0.8.1"]]}}
 ```
 
 ### Using embedded nREPL server
@@ -169,7 +177,7 @@ For snapshot releases of CIDER you should use the snapshot of the plugin as well
 (say `0.7.1-SNAPSHOT`).
 
 **Note that you need to use at least CIDER 0.7 for the nREPL middleware to work
-properly.  Don't use cider-nrepl with CIDER 0.6**
+properly.  Don't use cider-nrepl with CIDER 0.6.**
 
 ## Configuration
 
@@ -184,6 +192,14 @@ experience.
 ```el
 (add-hook 'cider-mode-hook 'cider-turn-on-eldoc-mode)
 ```
+
+* Log communication with the nREPL server (**extremely useful for debugging CIDER problems**):
+
+```el
+(setq nrepl-log-messages t)
+```
+
+The log will go to the buffer `*nrepl-messages*`.
 
 * You can hide the `*nrepl-connection*` and `*nrepl-server*` buffers
 from appearing in some buffer switching commands like
@@ -227,9 +243,9 @@ following snippet:
 
   - Don't show on error:
 
-```el
+    ```el
     (setq cider-show-error-buffer nil)
-```
+    ```
 
    Independently of the value of `cider-show-error-buffer`, the error buffer is
    always generated in the background. Use `cider-visit-error-buffer` to visit
@@ -237,11 +253,10 @@ following snippet:
 
   - Selective strategies:
 
-```el
+    ```el
     (setq cider-show-error-buffer 'except-in-repl) ; or
     (setq cider-show-error-buffer 'only-in-repl)
-```
-
+    ```
 
 * To disable auto-selection of the error buffer when it's displayed:
 
@@ -343,6 +358,20 @@ helpful for identifying each host.
 (setq cider-known-endpoints '(("host-a" "10.10.10.1" "7888") ("host-b" "7888")))
 ```
 
+### Running tests
+
+* If your tests are not following the `some.ns-test` naming convention you can
+customize the variable `cider-test-infer-test-ns`. It should be bound to a
+function that takes the current ns and returns the matching test ns (which may
+be the same as the current ns).
+
+* If you want to view the test report regardless of whether the tests have
+passed or failed:
+
+```el
+(setq cider-test-show-report-on-success t)
+```
+
 ### REPL History
 
 * To make the REPL history wrap around when its end is reached:
@@ -387,6 +416,31 @@ If you are using `ido`, be sure to use both `ido-everywhere`
 and [`ido-ubiquitous`](https://github.com/DarwinAwardWinner/ido-ubiquitous).
 You might also want to install [`ido-flex`](https://github.com/lewang/flx).
 
+### Auto-completion
+
+`CIDER` users are advised to use [`company-mode`](http://company-mode.github.io/) to enable auto-completion
+inside of source code and REPL buffers. This can be done globally, like so --
+
+```el
+(global-company-mode)
+```
+
+-- or through mode-specific hooks:
+
+```el
+(add-hook 'cider-repl-mode-hook 'company-mode)
+(add-hook 'cider-mode-hook 'company-mode)
+```
+
+When `company-mode` is thus enabled, it will receive completion information
+from `cider-complete-at-point`, and requires no additional setup or plugins.
+
+#### Migrating from `auto-complete-mode`
+
+* Disable `ac-cider-setup` or `ac-nrepl-setup` from running on `CIDER` hooks
+
+* Remove `cider-mode` and `cider-repl-mode` from the `ac-modes` list
+
 ### Integration with other modes
 
 * Enabling `CamelCase` support for editing commands(like
@@ -429,17 +483,10 @@ enable `paredit` in the REPL buffer as well:
 (add-hook 'cider-repl-mode-hook 'rainbow-delimiters-mode)
 ```
 
-* [company-mode](http://company-mode.github.io/) provides in-buffer completion
-  framework. When `company-mode` is enabled, it will retrieve completion
-  information from `cider-complete-at-point`, requiring no additional setup (and
-  no `company-mode` plugins). `CIDER` users are advised to use `company-mode`
-  instead of `auto-complete-mode` for optimal results.
-
-* [ac-cider](https://github.com/clojure-emacs/ac-cider) provides
-  completion source for the popular Emacs interactive auto-completion
-  framework [auto-complete](http://cx4a.org/software/auto-complete/).
-  Where CIDER provides it, pop-up documentation for completed symbols
-  will be displayed.
+* [auto-complete](http://cx4a.org/software/auto-complete/) is a popular Emacs
+  interactive auto-completion framework. [ac-cider](https://github.com/clojure-emacs/ac-cider)
+  provides a completion source for auto-complete-mode, including, where CIDER provides it,
+  pop-up documentation for completed symbols.
 
 ## Basic Usage
 
@@ -456,10 +503,10 @@ the Maven build tool favoured by Java developers (Leiningen actually
 reuses many things from the Maven ecosystem).
 
 CIDER features a command called `cider-jack-in` that will start an nREPL server
-for a particular Leiningen project and connect to it automatically.
-This functionality depends on Leiningen 2. Older versions are not supported. Follow
-the installation instructions on Leiningen's web site to get it up and running and afterwards
-create a project like this:
+for a particular Leiningen project and connect to it automatically.  This
+functionality depends on Leiningen 2.x (preferably 2.5+). Older versions are not
+supported. Follow the installation instructions on Leiningen's web site to get
+it up and running and afterwards create a project like this:
 
 ```
 $ lein new demo
@@ -552,12 +599,13 @@ Keyboard shortcut                    | Description
 <kbd>C-c M-d</kbd>                   | Display default REPL connection details, including project directory name, buffer namespace, host and port.
 <kbd>C-c M-r</kbd>                   | Rotate and display the default nREPL connection.
 <kbd>C-c M-o</kbd>                   | Clear the entire REPL buffer, leaving only a prompt. Useful if you're running the REPL buffer in a side by side buffer.
-<kbd>C-c C-k</kbd>                   | Load the current buffer.
-<kbd>C-c C-l</kbd>                   | Load a file.
+<kbd>C-c C-k</kbd>                   | Load (eval) the current buffer.
+<kbd>C-c C-l</kbd>                   | Load (eval) a Clojure file.
 <kbd>C-c C-d d</kbd>                   | Display doc string for the symbol at point.  If invoked with a prefix argument, or no symbol is found at point, prompt for a symbol.
 <kbd>C-c C-d j</kbd>                   | Display JavaDoc (in your default browser) for the symbol at point.  If invoked with a prefix argument, or no symbol is found at point, prompt for a symbol.
 <kbd>C-c M-i</kbd>                   | Inspect expression. Will act on expression at point if present.
 <kbd>C-c M-t</kbd>                   | Toggle var tracing.
+<kbd>C-c C-u</kbd>                   | Undefine a symbol. If invoked with a prefix argument, or no symbol is found at point, prompt for a symbol.
 <kbd>C-c ,</kbd>                     | Run tests for namespace.
 <kbd>C-c C-,</kbd>                   | Re-run test failures/errors for namespace.
 <kbd>C-c M-,</kbd>                   | Run test at point.
@@ -737,6 +785,10 @@ loaded. As a workaround remove
 
 from your Emacs config.
 
+## Documentation
+
+A single-page quick reference PDF for CIDER commands is available [here](doc/cider-refcard.pdf). This PDF can be created manually by running `pdflatex` on [the CIDER refcard LaTeX file](doc/cider-refcard.tex).
+
 ## Changelog
 
 An extensive changelog is available [here](CHANGELOG.md).
@@ -749,6 +801,23 @@ An extensive changelog is available [here](CHANGELOG.md).
 * [Hugo Duncan](https://github.com/hugoduncan)
 * [Steve Purcell](https://github.com/purcell)
 * [Jeff Valk](https://github.com/jeffvalk)
+
+## Release policy
+
+We’re following [SemVer](http://semver.org/) (as much as one can be
+following it when the major version is 0). At this point bumps of the
+minor (second) version number are considered major releases and always
+include new features or significant changes to existing features. API
+compatibility between major releases is not a (big) concern (although we try
+to break the API rarely and only for a good reason).
+
+The development cycle for the next major
+release starts immediately after the previous one has been
+shipped. Bugfix/point releases (if any) address only serious bugs and
+never contain new features.
+
+The versions of CIDER and `cider-nrepl` are always kept in sync. If you're tracking the
+`master` branch of CIDER, you should also be tracking the `master` branch of `cider-nrepl`.
 
 ## Logo
 
@@ -785,11 +854,13 @@ guidelines](CONTRIBUTING.md).
 
 Consider improving and extending the [community wiki](https://github.com/clojure-emacs/cider/wiki).
 
-### Gittip
+### Donations
 
-I'm also accepting financial contributions via [gittip](https://www.gittip.com/bbatsov).
+You can support my work on CIDER, clojure-mode and [all my other projects](https://github.com/bbatsov) via [gratipay](https://www.gratipay.com/bbatsov) and PayPal.
 
-[![Support via Gittip](https://rawgithub.com/twolfson/gittip-badge/0.2.0/dist/gittip.png)](https://www.gittip.com/bbatsov)
+[![Support via Gratipay](https://cdn.rawgit.com/gratipay/gratipay-badge/2.1.3/dist/gratipay.png)](https://gratipay.com/bbatsov)
+
+[![Paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=GRQKNBM6P8VRQ)
 
 ### Running the tests in batch mode
 

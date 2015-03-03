@@ -144,7 +144,7 @@ See documentation for logic."
                ;; ++++ -45 penalize extension
                (when (eq last-char penalty-lead)
                  (cl-incf (aref scores index) -45))
-               (when (eq group-separator char )
+               (when (eq group-separator char)
                  (setcar (cdar groups-alist) group-word-count)
                  (setq group-word-count 0)
                  (push (nconc (list index group-word-count)) groups-alist))

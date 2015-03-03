@@ -1,10 +1,10 @@
 glsl-mode.el --- major mode for Open GLSL shader files
 
 Copyright (C) 1999, 2000, 2001 Free Software Foundation, Inc.
-Copyright (C) 2011 Jim Hourihan
+Copyright (C) 2011, 2014 Jim Hourihan
 
 Authors: Xavier.Decoret@imag.fr, 
-         Jim Hourihan <jimhourihan ~at~ gmail.com> (updated for 4.3, etc)
+         Jim Hourihan <jimhourihan ~at~ gmail.com> (updated for 4.5, etc)
 Keywords: languages
 Version: 2.0
 X-URL: http://artis.inrialpes.fr/~Xavier.Decoret/resources/glsl-mode/
@@ -29,7 +29,7 @@ Modifications from the 1.0 version of glsl-mode (jimhourihan):
    replaced with keyword lists for easier maintenance
  * Added customization group and faces
  * Preprocessor faces
- * Updated to GLSL 4.3
+ * Updated to GLSL 4.5
  * Separate deprecated symbols
  * Made _ part of a word
  * man page lookup at opengl.org

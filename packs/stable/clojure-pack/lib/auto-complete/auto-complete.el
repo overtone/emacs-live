@@ -200,7 +200,7 @@
     perl-mode cperl-mode python-mode ruby-mode lua-mode tcl-mode
     ecmascript-mode javascript-mode js-mode js2-mode php-mode css-mode less-css-mode
     makefile-mode sh-mode fortran-mode f90-mode ada-mode
-    xml-mode sgml-mode
+    xml-mode sgml-mode web-mode
     ts-mode
     sclang-mode
     verilog-mode
@@ -278,7 +278,7 @@ If you specify `nil', never be started automatically."
 (defcustom ac-ignore-case 'smart
   "Non-nil means auto-complete ignores case.
 If this value is `smart', auto-complete ignores case only when
-a prefix doen't contain any upper case letters."
+a prefix doesn't contain any upper case letters."
   :type '(choice (const :tag "Yes" t)
                  (const :tag "Smart" smart)
                  (const :tag "No" nil))

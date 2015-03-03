@@ -3,6 +3,23 @@ Feature: nxml-mode expansions
   As an Emacs user
   I want to expand to them
 
+  Scenario: Mark xml attribute inside quotes
+    Given I turn on nxml-mode
+    And there is no region selected
+    When I insert "<tag id="myAttr">"
+    And I place the cursor after "my"
+    And I press "C-@"
+    Then the region should be "myAttr"
+
+  Scenario: Mark xml attribute with quotes
+    Given I turn on nxml-mode
+    And there is no region selected
+    When I insert "<tag id="myAttr">"
+    And I place the cursor after "my"
+    And I press "C-@"
+    And I press "C-@"
+    Then the region should be ""myAttr""
+    
   Scenario: Mark xml attribute from start
     Given I turn on nxml-mode
     And there is no region selected

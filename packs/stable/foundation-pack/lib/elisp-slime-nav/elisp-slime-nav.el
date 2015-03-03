@@ -66,7 +66,7 @@ If `current-prefix-arg' is not nil, the user is prompted for the symbol."
     (if (or current-prefix-arg (null at-point))
         (completing-read "Symbol: "
                          (elisp-slime-nav--all-navigable-symbol-names)
-                         nil t at-point)
+                         nil t nil nil at-point)
       at-point)))
 
 ;;;###autoload

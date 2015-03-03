@@ -1,5 +1,7 @@
 (live-add-pack-lib "cider")
 (require 'cider)
+(require 'cider-apropos)
+(require 'cider-macroexpansion)
 
 (defun live-windows-hide-eol ()
  "Do not show ^M in files containing mixed UNIX and DOS line endings."
@@ -25,11 +27,11 @@
 (add-to-list 'same-window-buffer-names "*cider*")
 
 ;;Auto Complete
-(live-add-pack-lib "ac-nrepl")
-(require 'ac-nrepl )
+(live-add-pack-lib "ac-cider")
+(require 'ac-cider )
 
-(add-hook 'cider-mode-hook 'ac-nrepl-setup)
-(add-hook 'cider-repl-mode-hook 'ac-nrepl-setup)
+(add-hook 'cider-mode-hook 'ac-cider-setup)
+(add-hook 'cider-repl-mode-hook 'ac-cider-setup)
 
 (eval-after-load "auto-complete"
   '(add-to-list 'ac-modes 'cider-mode))
@@ -43,3 +45,14 @@
 (add-hook 'nrepl-connected-hook 'live-nrepl-set-print-length)
 
 (setq nrepl-port "4555")
+
+
+;; Pull in the awesome clj-refactor lib by magnars
+(live-add-pack-lib "clj-refactor")
+(require 'clj-refactor)
+(add-hook 'clojure-mode-hook (lambda ()
+                               (clj-refactor-mode 1)
+                               (cljr-add-keybindings-with-prefix "C-c C-m")))
+
+(define-key clojure-mode-map (kbd "C-:") 'cljr-cycle-stringlike)
+(define-key clojure-mode-map (kbd "C->") 'cljr-cycle-coll)

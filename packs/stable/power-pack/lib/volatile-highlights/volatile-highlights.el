@@ -6,10 +6,10 @@
 ;; Created: 03 October 2001. (as utility functions in my `.emacs' file.)
 ;;          14 March   2010. (re-written as library `volatile-highlights.el')
 ;; Keywords: emulations convenience wp
-;; Revision: $Id: cc2db782832821a23f8e04a54f87df9caa506ba0 $
+;; Revision: $Id: 33de1bedfdf66672608de0f2b6c88655e15a5cd7 $
 ;; URL: http://www.emacswiki.org/emacs/download/volatile-highlights.el
 ;; GitHub: http://github.com/k-talo/volatile-highlights.el
-;; Version: 1.10
+;; Version: 1.11
 ;; Contributed by: Ryan Thompson and Le Wang.
 
 ;; This file is not part of GNU Emacs.
@@ -100,6 +100,10 @@
 
 ;;; Change Log:
 
+;; v1.11  Sun Oct  5 13:05:38 2014 JST
+;;   - Fixed an error "Symbol's function definition is void: return",
+;;     that occurs when highlight being created with `hideshow' commands.
+;;
 ;; v1.10  Thu Mar 21 22:37:27 2013 JST
 ;;   - Use inherit in face definition when detected.
 ;;   - Suppress compiler warnings regarding to emacs/xemacs private
@@ -761,9 +765,11 @@ extensions."
   (defadvice hs-show-block (around vhl/ext/hideshow/vhl/around-hook (&optional end))
     (let* ((bol (save-excursion (progn (beginning-of-line) (point))))
            (eol (save-excursion (progn (end-of-line) (point))))
-           (ov-folded (dolist (ov (overlays-in bol (1+ eol)))
-                        (when (overlay-get ov 'hs)
-                          (return ov))))
+           (ov-folded (car (delq nil 
+                                 (mapcar #'(lambda (ov)
+                                             (and (overlay-get ov 'hs)
+                                                  ov))
+                                         (overlays-in bol (1+ eol))))))
            (boov (and ov-folded (overlay-start ov-folded)))
            (eoov (and ov-folded (overlay-end ov-folded))))
     

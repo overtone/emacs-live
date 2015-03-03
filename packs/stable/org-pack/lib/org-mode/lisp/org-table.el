@@ -436,11 +436,15 @@ available parameters."
 					   "[ \t]*|[ \t]*")))))))
 
 (defvar org-table-clean-did-remove-column nil) ; dynamically scoped
-(defun org-table-clean-before-export (lines)
+(defun org-table-clean-before-export (lines &optional maybe-quoted)
   "Check if the table has a marking column.
 If yes remove the column and the special lines."
-  (let ((special "^[ \t]*| *[#!$*_^/] *|")
-	(ignore "^[ \t]*| *[!$_^/] *|"))
+  (let ((special (if maybe-quoted
+		     "^[ \t]*| *\\\\?[\#!$*_^/ ] *|"
+		   "^[ \t]*| *[\#!$*_^/ ] *|"))
+	(ignore  (if maybe-quoted
+		     "^[ \t]*| *\\\\?[!$_^/] *|"
+		   "^[ \t]*| *[!$_^/] *|")))
     (setq org-table-clean-did-remove-column
 	  (not (memq nil
 		     (mapcar

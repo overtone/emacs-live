@@ -361,7 +361,12 @@
   (defexamples s-count-matches
     (s-count-matches "a" "aba") => 2
     (s-count-matches "a" "aba" 0 2) => 1
-    (s-count-matches "\\w\\{2\\}[0-9]+" "ab1bab2frobinator") => 2))
+    (s-count-matches "\\w\\{2\\}[0-9]+" "ab1bab2frobinator") => 2)
+
+  (defexamples s-wrap
+    (s-wrap "foo" "\"") => "\"foo\""
+    (s-wrap "foo" "(" ")") => "(foo)"
+    (s-wrap "foo" "bar") => "barfoobar"))
 
 (def-example-group "Pertaining to words"
   (defexamples s-split-words

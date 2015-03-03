@@ -34,6 +34,10 @@
 ;; Inspector Key Map and Derived Mode
 ;; ===================================
 
+(defconst cider-inspector-buffer "*cider inspect*")
+
+(push cider-inspector-buffer cider-ancillary-buffers)
+
 (defvar cider-inspector-mode-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map cider-popup-buffer-mode-map)
@@ -61,7 +65,7 @@
 (defun cider-inspect (expression)
   "Eval the string EXPRESSION and inspect the result."
   (interactive
-   (list (cider-read-from-minibuffer "Inspect value (evaluated): "
+   (list (cider-read-from-minibuffer "Inspect value: "
                                      (cider-sexp-at-point))))
   (cider-ensure-op-supported "inspect-start")
   (cider-inspect-sym expression (cider-current-ns)))
@@ -78,24 +82,24 @@
    '()))
 
 (defun cider-inspect-sym (sym ns)
-  (let ((buffer (cider-popup-buffer "*cider inspect*" t)))
+  (let ((buffer (cider-popup-buffer cider-inspector-buffer t)))
     (nrepl-send-request (list "op" "inspect-start" "sym" sym "ns" ns)
                         (cider-render-response buffer))))
 
 (defun cider-inspector-pop ()
   (interactive)
-  (let ((buffer (cider-popup-buffer "*cider inspect*" t)))
+  (let ((buffer (cider-popup-buffer cider-inspector-buffer t)))
     (nrepl-send-request (list "op" "inspect-pop")
                         (cider-render-response buffer))))
 
 (defun cider-inspector-push (idx)
-  (let ((buffer (cider-popup-buffer "*cider inspect*" t)))
+  (let ((buffer (cider-popup-buffer cider-inspector-buffer t)))
     (nrepl-send-request (list "op" "inspect-push" "idx" (number-to-string idx))
                         (cider-render-response buffer))))
 
 (defun cider-inspector-refresh ()
   (interactive)
-  (let ((buffer (cider-popup-buffer "*cider inspect*" t)))
+  (let ((buffer (cider-popup-buffer cider-inspector-buffer t)))
     (nrepl-send-request (list "op" "inspect-refresh")
                         (cider-render-response buffer))))
 
@@ -115,7 +119,7 @@
 
 (defun cider-irender-el* (el)
   (cond ((symbolp el) (insert (symbol-name el)))
-        ((stringp el) (insert el))
+        ((stringp el) (insert (propertize el 'font-lock-face 'font-lock-keyword-face)))
         ((and (consp el) (eq (car el) :newline))
          (newline))
         ((and (consp el) (eq (car el) :value))
@@ -125,9 +129,8 @@
 (defun cider-irender-value (value idx)
   (cider-propertize-region
       (list 'cider-value-idx idx
-            'mouse-face 'highlight
-            'face 'font-lock-keyword-face)
-    (cider-irender-el* value)))
+            'mouse-face 'highlight)
+    (cider-irender-el* (cider-font-lock-as-clojure value))))
 
 
 ;; ===================================================
