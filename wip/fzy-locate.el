@@ -307,9 +307,9 @@ previously visited file again quickly."
 `fzloc-adaptive-selection' is enabled.")
 
 (defun fzloc-load-dbs-from-path
+  (path)
   "Set `fzloc-databases` to include all files that match a
 path. For example, '/home/user/.emacs.d/locatedbs/*.locatedb'."
-  (path)
   (setq fzloc-databases
         (join-string (file-expand-wildcards path)
                      ":"))) ;; load all locatedb files in dir
