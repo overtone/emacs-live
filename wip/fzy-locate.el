@@ -17,23 +17,80 @@
 ;; the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;; Boston, MA 02111-1307, USA.
 
-;; NOTE
-;; This library is heavily based on globalff.el and would not have
-;; been possible without it. Globalff.el is primarily
-;; authored by [...]. The source can be found here: [...]
-;; At the time of writing, about [...]% of the code below comes
-;; directly from globalff. Thank you, [...].
-
+;; NOTE This library is heavily based on globalff.el and would not have
+;; been possible without it. Globalff.el is primarily authored by Tamas
+;; Patrovics. The source can be found here:
+;; http://emacswiki.org/emacs/globalff.el At the time of writing, about
+;; 65% of the code below comes directly from globalff. Thank you, Tamas.
+;;
 ;; fzy-locate makes a few significant changes to globalff:
 ;; - adds fuzzy sorting
 ;; - also searches recent file list
-;; - moves filtering & sorting operations from buffer to lists
-;; - uses spaces as wildcards in input
+;; - moves filtering & sorting operations from buffer to lists (seems faster)
+;; - uses spaces as wildcards in search string
+
+;; USAGE
+;; Load `fzy-locate.el` (this file). Now, calling `fzy-locate`
+;; will start an interactive prompt in the mini-buffer. Type in a search
+;; string for the file, or files, you are looking for. fzy-locate will
+;; attempt to sort the results with the most relevant going to the
+;; top. Spaces act as wildcards. For example, typing:
+;;
+;; emacs.d .el
+;;
+;; might return all the *.el files under your .emacs.d dir (and anything
+;; else that happens to match).
+;;
+;; There are a few useful keybinding you can use from the mini-buffer:
+;;
+;; Return : opens the currently highlighted file
+;; C-p and C-n : move the results cursor up and down, respectively
+;; C-l :  populates the mini-buffer with the last search
+;; C-; : populates the mini-buffer with the path of the current buffer
 
 ;; SETUP
 ;; Fzy-locate.el relies on the `mlocate` command for file search.
-;; mlocate requires that you have a pre-built a database. It is possible
-;; to build
+;; mlocate requires that you have a pre-built a database file. A
+;; database file can be generated using `updatedb`. By default,
+;; `updatedb` will maintain a database file at
+;; `/var/lib/mlocate/mlocate.db` which will index the entire file
+;; system.
+
+;; `updatedb` can also generate separate database files and index only
+;; specific directory trees. For the purpose of this utility, this has
+;; the advantage of faster searches and more targetted results.  Setting
+;; `fzloc-databases` instructs fzy-locate to have `mlocate` use one or
+;; more alternate database files, instead of the default. You can use
+;; `fzloc-load-dbs-from-path` to populate this setting for you based on
+;; a path string.
+
+;; For example, my personal setup is described below.
+;;
+;; I have a script, `~/bin/refresh-emacs-locatedb.sh` with the following
+;; line:
+;;
+;; updatedb -l 0 -U /home/bill/repos/ -o /home/bill/.emacs.d/locatedbs/repos.locatedb
+;;
+;; Calling this script, refreshes (or builds if missing) a db file that
+;; indexes only my repos. This is where I keep source code, which is
+;; generally the only files I'm searching for.
+;;
+;; In my init.el, I have the following:
+;;
+;; ;; Filters fzy-locate results by regex
+;; (setq fzloc-filter-regexps '("/target/" "/.git/"))
+;;
+;; (global-set-key (kbd "C-x SPC") 'fzy-locate)
+;;
+;; Function for refreshing db files from emacs
+;; (defun refresh-emacs-locatedb ()
+;;   (interactive)
+;;   (message "This may take a bit...")
+;;   (shell-command "/home/bill/bin/refresh-emacs-locatedb.sh")
+;;   (message "Refresh completed."))
+;;
+;; (global-set-key (kbd "C-c r") 'refresh-emacs-locatedb)
+
 
 (defun str->chrlist (s)
   (butlast (rest  (split-string s ""))))
@@ -249,6 +306,8 @@ previously visited file again quickly."
 `fzloc-adaptive-selection' is enabled.")
 
 (defun fzloc-load-dbs-from-path
+  "Set `fzloc-databases` to include all files that match a
+path. For example, '/home/user/.emacs.d/locatedbs/*.locatedb'."
   (path)
   (setq fzloc-databases
         (join-string (file-expand-wildcards path)
