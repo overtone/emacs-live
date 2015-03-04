@@ -356,7 +356,7 @@ path. For example, '/home/user/.emacs.d/locatedbs/*.locatedb'."
       (if (< 300 (list-length (split-string fzloc-output)))
           (progn (fzloc-kill-process)
                  (fzloc-set-state "killed")
-                 (insert "** too many results! **" ))
+                 (insert "** Too many results were returned. Narrow your search. **" ))
 
         (setq fzloc-last nil)
         (let* ((split-list (split-string fzloc-output))
