@@ -460,6 +460,8 @@ MOVEFUNC and MOVEARG."
                 (< (length input) fzloc-minimum-input-length))
       (let ((cmd (append
 
+                  (list "-i") ;; case insensitive
+
                   (when fzloc-databases
                     (list (concat "--database="
                                   fzloc-databases)))
