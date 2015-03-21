@@ -24,3 +24,6 @@ tramp
 tmp/*
 .smex-items
 swank/*
+elpa
+etc/custom/custom-configuration.el
+projectile-bookmarks.eld
