@@ -75,9 +75,15 @@
 
      (magit-diff-add ((t (:foreground "green"))))
      (magit-diff-del ((t (:foreground "red"))))
-     (magit-item-highlight ((t (:background "gray15"))))
+     (magit-item-highlight ((t (:background "grey15"))))
+     (magit-log-sha1 ((t (:foreground "#8B8989"))))
+     (magit-log-author ((t (:foreground "#4c83ff"))))
      (magit-section-title ((t (:foreground "deep pink"))))
      (magit-diff-hunk-header ((t (:foreground "orange"))))
+     (magit-log-head-label-tags ((t (:background "deep pink" :foreground "black"))))
+     (magit-log-head-label-local ((t (:background "#FF6400" :foreground "black"))))
+     (magit-log-head-label-remote ((t (:background "#61CE3C" :foreground "black"))))
+     (magit-log-head-label-head ((t (:background "yellow" :foreground "black"))))
      (magit-branch ((t (:foreground "gold"))))
 
      (eval-sexp-fu-flash ((t (:background "grey15" :foreground "DeepPink3"))))
