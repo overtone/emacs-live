@@ -1,5 +1,6 @@
 (live-add-pack-lib "cider")
 (require 'cider)
+(require 'cider-macroexpansion)
 
 (defun live-windows-hide-eol ()
  "Do not show ^M in files containing mixed UNIX and DOS line endings."
