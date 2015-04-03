@@ -1,3 +1,6 @@
+(live-add-pack-lib "dash")
+(require 'dash)
+
 (when (not (or (eq 'ms-dos system-type)
                (eq 'windows-nt system-type)))
   (live-load-config-file "auto-compile-conf.el"))
@@ -8,8 +11,6 @@
 
 (live-add-pack-lib "find-file-in-project")
 (require 'find-file-in-project)
-(live-add-pack-lib "dash")
-(require 'dash)
 (live-add-pack-lib "s")
 (require 's)
 (live-add-pack-lib "epl")
