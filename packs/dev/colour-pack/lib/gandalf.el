@@ -70,12 +70,19 @@
      (flx-highlight-face ((t (:foreground "black" :background "deep pink"))))
 
      ;; magit
-     (magit-item-highlight ((t (:background "gray15"))))
+     (magit-item-highlight ((t (:background "gray95"))))
+     (diff-file-header ((t (:background "gray90"))))
      (magit-diff-add ((t (:foreground "chartreuse3"))))
      (magit-diff-del ((t (:foreground "violet red"))))
      (magit-section-type ((t (:foreground "deep pink"))))
      (magit-diff-hunk-header ((t (:foreground "orange"))))
      (magit-branch ((t (:foreground "DarkGoldenRod"))))
+
+     (git-commit-summary-face ((t (:foreground "black" :background nil))))
+     (git-commit-comment-heading-face ((t (:background nil :foreground "deep pink"))))
+     (git-commit-summary-face ((t (:background nil :foreground "white"))))
+     (git-commit-branch-face ((t (:background nil :foreground "#FF6400"))))
+     (git-commit-nonempty-second-line-face ((t (:background nil :foreground "#FBDE2D"))))
 
      (eval-sexp-fu-flash ((t (:background "DeepPink3" :foreground "black"))))
      (cider-error-highlight-face ((t (:background "color-52"))))
