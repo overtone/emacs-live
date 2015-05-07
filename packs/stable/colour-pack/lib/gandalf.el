@@ -70,7 +70,8 @@
      (flx-highlight-face ((t (:foreground "black" :background "deep pink"))))
 
      ;; magit
-     (magit-item-highlight ((t (:background "gray15"))))
+     (magit-item-highlight ((t (:background "gray95"))))
+     (diff-file-header ((t (:background "gray90"))))
      (magit-diff-add ((t (:foreground "chartreuse3"))))
      (magit-diff-del ((t (:foreground "violet red"))))
      (magit-section-type ((t (:foreground "deep pink"))))
