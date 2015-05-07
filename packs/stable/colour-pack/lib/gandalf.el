@@ -78,6 +78,12 @@
      (magit-diff-hunk-header ((t (:foreground "orange"))))
      (magit-branch ((t (:foreground "DarkGoldenRod"))))
 
+     (git-commit-summary-face ((t (:foreground "black" :background nil))))
+     (git-commit-comment-heading-face ((t (:background nil :foreground "deep pink"))))
+     (git-commit-summary-face ((t (:background nil :foreground "white"))))
+     (git-commit-branch-face ((t (:background nil :foreground "#FF6400"))))
+     (git-commit-nonempty-second-line-face ((t (:background nil :foreground "#FBDE2D"))))
+
      (eval-sexp-fu-flash ((t (:background "DeepPink3" :foreground "black"))))
      (cider-error-highlight-face ((t (:background "color-52"))))
 
