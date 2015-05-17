@@ -1783,8 +1783,8 @@ The Git version of org-mode.
 
 \(fn)" nil nil)
 
-(defvar org-odt-data-dir "/usr/share/emacs/etc/org" "\
-The location of ODT styles.")
+(defvar org-odt-data-dir (expand-file-name "./org-mode/etc" (live-pack-lib-dir))
+  "The location of ODT styles.")
 
 ;;;***
 

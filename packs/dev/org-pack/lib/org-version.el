@@ -13,12 +13,9 @@
   Inserted by installing org-mode or when a release is made."
    (let ((org-git-version "release_8.0-1-g5ef07d"))
      org-git-version))
-;;;###autoload
-(defvar org-odt-data-dir "/usr/share/emacs/etc/org"
-  "The location of ODT styles.")
-
+
 (provide 'org-version)
-
+
 ;; Local Variables:
 ;; version-control: never
 ;; no-byte-compile: t
