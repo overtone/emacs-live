@@ -101,5 +101,5 @@ Before and after saving the buffer, this function runs
       (message "(No changes need to be saved)"))))
 
 
-(defalias 'live-mp-orig-basic-save-buffer 'basic-save-buffer)
+(defalias 'live-mp-orig-basic-save-buffer (symbol-function 'basic-save-buffer))
 (defalias 'basic-save-buffer 'live-mp-new-basic-save-buffer)
