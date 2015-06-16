@@ -1,7 +1,10 @@
 ;; highlight expression on eval
 (require 'highlight)
 (live-add-pack-lib "eval-sexp-fu")
+(live-add-pack-lib "cider-eval-sexp-fu")
 (require 'eval-sexp-fu)
+(require 'cider-eval-sexp-fu)
+
 (setq eval-sexp-fu-flash-duration 0.5)
 
 (defun live-bounds-of-preceding-sexp ()
