@@ -237,7 +237,7 @@
 
 (global-set-key (kbd  "C-,") 'beginning-of-line-text)
 
-(load-file "/home/bill/.emacs.d/wip/fzy-locate.el")
+(load-file "/home/bill/.emacs.d/lib/fzy-locate/fzy-locate.el")
 (fzloc-load-dbs-from-path "/home/bill/repos/emacs-live/locatedbs/*.locatedb")
 (setq fzloc-filter-regexps '("/target/" "/.git/"))
 
@@ -247,7 +247,7 @@
 
 (defun refresh-emacs-locatedb ()
   (interactive)
-  (message "This may take a bit...")
+  (message "Refreshing locatedb. This may take a bit...")
   (shell-command "/home/bill/bin/refresh-emacs-locatedb.sh")
   (message "Refresh completed."))
 
