@@ -79,7 +79,7 @@
 		 ((:keywords "extensions")
 		  (:url . "http://www.dr-qubit.org/emacs.php"))])
  (avy .
-      [(0 2 1)
+      [(0 3 0)
        ((emacs
 	 (24 1))
 	(cl-lib
@@ -142,7 +142,7 @@
 		      ((:keywords "abbrev" "convenience" "matching")
 		       (:url . "https://github.com/company-mode/company-statistics"))])
  (context-coloring .
-		   [(6 5 0)
+		   [(7 0 0)
 		    ((emacs
 		      (24 3))
 		     (js2-mode
@@ -447,7 +447,7 @@
 	    ((:url . "http://elpa.gnu.org/packages/omn-mode.html")
 	     (:keywords))])
  (org .
-      [(20150615)
+      [(20150622)
        nil "Outline-based notes management and organizer" tar nil])
  (osc .
       [(0 1)
