@@ -158,3 +158,6 @@
 [submodule "packs/dev/clojure-pack/vendor/submodules/cider-eval-sexp-fu"]
 	path = packs/dev/clojure-pack/vendor/submodules/cider-eval-sexp-fu
 	url = git://github.com/clojure-emacs/cider-eval-sexp-fu.git
+[submodule "packs/dev/clojure-pack/vendor/submodules/rainbow-delimiters"]
+	path = packs/dev/clojure-pack/vendor/submodules/rainbow-delimiters
+	url = https://github.com/Fanael/rainbow-delimiters
