@@ -1,5 +1,5 @@
 ;; Clojure Pack
-
+(live-add-pack-lib "rainbow-delimiters")
 (require 'rainbow-delimiters)
 (require 'paredit)
 
