@@ -158,3 +158,6 @@
 [submodule "packs/dev/clojure-pack/vendor/submodules/rainbow-delimiters"]
 	path = packs/dev/clojure-pack/vendor/submodules/rainbow-delimiters
 	url = https://github.com/Fanael/rainbow-delimiters
+[submodule "packs/dev/clojure-pack/vendor/submodules/edn"]
+	path = packs/dev/clojure-pack/vendor/submodules/edn
+	url = https://github.com/expez/edn.el.git
