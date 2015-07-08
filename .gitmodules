@@ -152,9 +152,6 @@
 [submodule "packs/dev/clojure-pack/vendor/submodules/ac-cider"]
 	path = packs/dev/clojure-pack/vendor/submodules/ac-cider
 	url = git://github.com/clojure-emacs/ac-cider.git
-[submodule "packs/dev/clojure-pack/vendor/submodules/edn"]
-	path = packs/dev/clojure-pack/vendor/submodules/edn
-	url = git://github.com/expez/edn.el.git
 [submodule "packs/dev/clojure-pack/vendor/submodules/cider-eval-sexp-fu"]
 	path = packs/dev/clojure-pack/vendor/submodules/cider-eval-sexp-fu
 	url = git://github.com/clojure-emacs/cider-eval-sexp-fu.git
