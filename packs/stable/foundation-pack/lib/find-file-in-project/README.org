@@ -1,0 +1,43 @@
+* find-file-in-project (v3.5)
+Find files in a project quickly.
+
+This program provides a couple methods for quickly finding any file in a given project. It depends on [[http://www.gnu.org/software/findutils/][GNU find]].
+
+By default, it will *automatically* search file in project managed by [[http://git-scm.com/][Git]]. But you can easily switch to other types of projects.
+
+Features:
+- The only dependency is GNU find
+- Works on *Windows*/Cygwin/Linux/Mac
+- Furthing tweaking of GNU find through flag `ffip-find-options` is possible
+* Install
+Please install through [[http://melpa.org/#/find-file-in-project][melpa]]
+* Setup
+It works out of the box for project using Git.
+
+If your project uses other VCS (subversion, for example), add below line into ~/.emacs:
+#+begin_src elisp
+(setq ffip-project-file ".svn")
+#+end_src
+* Usage
+`M-x find-file-in-project`
+* Tips
+** Per project setup
+#+begin_src elisp
+;; if the full path of current file is under SUBPROJECT1 or SUBPROJECT2
+;; OR if I'm reading my personal issue track document,
+(when (ffip-current-full-filename-match-pattern-p "\\(/SUBPROJECT1\\|/SUBPROJECT2\\|issue-track.org\\)")
+  ;; set the root directory into "~/projs/PROJECT_DIR"
+  (setq-local ffip-project-root ("~/projs/PROJECT_DIR"))
+  ;; well, I'm not interested in concatenated BIG js file
+  (setq-local ffip-find-options "-not -size +64k")
+  ;; for this project, I'm only interested certain types of files
+  (setq-local ffip-patterns '("*.html" "*.js" "*.css" "*.java" "*.xml" "*.js")))
+#+end_src
+** Specify root directory explicitly on BOTH Cygwin and Windows
+#+begin_src elisp
+(if (eq system-type 'windows-nt)
+    (setq ffip-project-root "C:/Users/myname/projs/myproj1")
+  (setq ffip-project-root "~/projs/myprojs1"))
+#+end_src
+* Bug Report
+Check [[https://github.com/technomancy/find-file-in-project]]

@@ -2,29 +2,41 @@ language: emacs-lisp
 
 env:
   matrix:
-    - EMACS=emacs24
-    - EMACS=emacs-snapshot
+    - EMACS=emacs23           TARGET=check
+    - EMACS=emacs24           TARGET=check
+    - EMACS=emacs-snapshot    TARGET=check
+    - TARGET=deploy-manual
+  global:
+    - secure: "ejv1+ub/v+Hm/23fhp4zLAHT3HiCG+YdDHai57LDe4LfEZCeGz4i/6LazbPbwm58v2YuKvMcdNshebc1s4A293ARJryPyFfW/8kEe+3hQ+cDxunNdHfqcS8SyhcDG0mrv7dqiVAtMJqB8qZb0c161KeEM8nyhC0wyQ+EZ5qJnzM="
 
 matrix:
   allow_failures:
     - env:
-        - EMACS=emacs-snapshot
+        - EMACS=emacs-snapshot    TARGET=check
 
 install:
+  - if [ "$EMACS" = "emacs23" ]; then
+        sudo apt-get update -qq &&
+        sudo apt-get install -qq emacs23-gtk emacs23-el;
+    fi
   - if [ "$EMACS" = "emacs24" ]; then
         sudo add-apt-repository -y ppa:cassou/emacs &&
         sudo apt-get update -qq &&
         sudo apt-get install -qq emacs24 emacs24-el;
     fi
   - if [ "$EMACS" = "emacs-snapshot" ]; then
-        sudo add-apt-repository -y ppa:cassou/emacs &&
+        sudo add-apt-repository -y ppa:ubuntu-elisp/ppa &&
         sudo apt-get update -qq &&
-        sudo apt-get install -qq emacs-snapshot &&
-        sudo apt-get install -qq emacs-snapshot-el emacs-snapshot-gtk;
+        sudo apt-get install -qq emacs-snapshot emacs-snapshot-el;
+    fi
+  - if [ "$TARGET" = "deploy-manual" ]; then
+        sudo add-apt-repository -y ppa:gracjanpolak/ppa &&
+        sudo apt-get update -qq &&
+        sudo apt-get install -qq texinfo;
     fi
 
 script:
-  lsb_release -a && $EMACS --version && make EMACS=$EMACS check
+  make $TARGET
 
 notifications:
   email: false

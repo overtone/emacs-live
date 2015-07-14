@@ -62,7 +62,7 @@ This function is called by `org-babel-execute-src-block'."
 
 (defun org-babel-prep-session:tcl (session params)
   "Prepare SESSION according to the header arguments in PARAMS."
-  (error "Sessions are not supported for Tcl."))
+  (error "Sessions are not supported for Tcl"))
 
 (defun org-babel-variable-assignments:tcl (params)
   "Return list of tcl statements assigning the block's variables."
@@ -111,7 +111,7 @@ close $o
 If RESULT-TYPE equals 'output then return a list of the outputs
 of the statements in BODY, if RESULT-TYPE equals 'value then
 return the value of the last statement in BODY, as elisp."
-  (when session (error "Sessions are not supported for Tcl."))
+  (when session (error "Sessions are not supported for Tcl"))
   (case result-type
     (output (org-babel-eval org-babel-tcl-command body))
     (value (let ((tmp-file (org-babel-temp-file "tcl-")))

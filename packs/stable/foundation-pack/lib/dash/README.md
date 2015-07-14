@@ -34,6 +34,31 @@ Include this in your emacs settings to get syntax highlighting:
 
 ## Functions
 
+All functions and constructs in the library are prefixed with a dash (-).
+
+There are also anaphoric versions of functions where that makes sense,
+prefixed with two dashes instead of one.
+
+While `-map` takes a function to map over the list, you can also use
+the anaphoric form with double dashes - which will then be executed
+with `it` exposed as the list item. Here's an example:
+
+```el
+(-map (lambda (n) (* n n)) '(1 2 3 4)) ;; normal version
+
+(--map (* it it) '(1 2 3 4)) ;; anaphoric version
+```
+
+of course the original can also be written like
+
+```el
+(defun square (n) (* n n))
+
+(-map 'square '(1 2 3 4))
+```
+
+which demonstrates the usefulness of both versions.
+
 
 ### Maps
 
@@ -45,6 +70,8 @@ new list.
 
 * [-map](#-map-fn-list) `(fn list)`
 * [-map-when](#-map-when-pred-rep-list) `(pred rep list)`
+* [-map-first](#-map-first-pred-rep-list) `(pred rep list)`
+* [-map-last](#-map-last-pred-rep-list) `(pred rep list)`
 * [-map-indexed](#-map-indexed-fn-list) `(fn list)`
 * [-annotate](#-annotate-fn-list) `(fn list)`
 * [-splice](#-splice-pred-fun-list) `(pred fun list)`
@@ -59,6 +86,9 @@ Functions returning a sublist of the original list.
 
 * [-filter](#-filter-pred-list) `(pred list)`
 * [-remove](#-remove-pred-list) `(pred list)`
+* [-remove-first](#-remove-first-pred-list) `(pred list)`
+* [-remove-last](#-remove-last-pred-list) `(pred list)`
+* [-remove-item](#-remove-item-item-list) `(item list)`
 * [-non-nil](#-non-nil-list) `(list)`
 * [-slice](#-slice-list-from-optional-to-step) `(list from &optional to step)`
 * [-take](#-take-n-list) `(n list)`
@@ -77,6 +107,8 @@ Bag of various functions which modify input list.
 * [-flatten](#-flatten-l) `(l)`
 * [-flatten-n](#-flatten-n-num-list) `(num list)`
 * [-replace](#-replace-old-new-list) `(old new list)`
+* [-replace-first](#-replace-first-old-new-list) `(old new list)`
+* [-replace-last](#-replace-last-old-new-list) `(old new list)`
 * [-insert-at](#-insert-at-n-x-list) `(n x list)`
 * [-replace-at](#-replace-at-n-x-list) `(n x list)`
 * [-update-at](#-update-at-n-func-list) `(n func list)`
@@ -180,6 +212,7 @@ Other list functions not fit to be classified elsewhere.
 * [-table](#-table-fn-rest-lists) `(fn &rest lists)`
 * [-table-flat](#-table-flat-fn-rest-lists) `(fn &rest lists)`
 * [-first](#-first-pred-list) `(pred list)`
+* [-some](#-some-pred-list) `(pred list)`
 * [-last](#-last-pred-list) `(pred list)`
 * [-first-item](#-first-item-list) `(list)`
 * [-last-item](#-last-item-list) `(list)`
@@ -253,33 +286,8 @@ These combinators require Emacs 24 for its lexical scope. So they are offered in
 * [-orfn](#-orfn-rest-preds) `(&rest preds)`
 * [-andfn](#-andfn-rest-preds) `(&rest preds)`
 * [-iteratefn](#-iteratefn-fn-n) `(fn n)`
-* [-fixfn](#-fixfn-fn) `(fn)`
+* [-fixfn](#-fixfn-fn-optional-equal-test-halt-test) `(fn &optional equal-test halt-test)`
 * [-prodfn](#-prodfn-rest-fns) `(&rest fns)`
-
-## Anaphoric functions
-
-There are also anaphoric versions of functions where that makes sense,
-prefixed with two dashes instead of one.
-
-While `-map` takes a function to map over the list, you can also use
-the anaphoric form with double dashes - which will then be executed
-with `it` exposed as the list item. Here's an example:
-
-```el
-(-map (lambda (n) (* n n)) '(1 2 3 4)) ;; normal version
-
-(--map (* it it) '(1 2 3 4)) ;; anaphoric version
-```
-
-of course the original can also be written like
-
-```el
-(defun square (n) (* n n))
-
-(-map 'square '(1 2 3 4))
-```
-
-which demonstrates the usefulness of both versions.
 
 
 ## Maps
@@ -314,6 +322,30 @@ See also: [`-update-at`](#-update-at-n-func-list)
 (-map-when 'even? 'square '(1 2 3 4)) ;; => '(1 4 3 16)
 (--map-when (> it 2) (* it it) '(1 2 3 4)) ;; => '(1 2 9 16)
 (--map-when (= it 2) 17 '(1 2 3 4)) ;; => '(1 17 3 4)
+```
+
+#### -map-first `(pred rep list)`
+
+Replace first item in `list` satisfying `pred` with result of `rep` called on this item.
+
+See also: [`-map-when`](#-map-when-pred-rep-list), [`-replace-first`](#-replace-first-old-new-list)
+
+```el
+(-map-first 'even? 'square '(1 2 3 4)) ;; => '(1 4 3 4)
+(--map-first (> it 2) (* it it) '(1 2 3 4)) ;; => '(1 2 9 4)
+(--map-first (= it 2) 17 '(1 2 3 2)) ;; => '(1 17 3 2)
+```
+
+#### -map-last `(pred rep list)`
+
+Replace last item in `list` satisfying `pred` with result of `rep` called on this item.
+
+See also: [`-map-when`](#-map-when-pred-rep-list), [`-replace-last`](#-replace-last-old-new-list)
+
+```el
+(-map-last 'even? 'square '(1 2 3 4)) ;; => '(1 2 3 16)
+(--map-last (> it 2) (* it it) '(1 2 3 4)) ;; => '(1 2 3 16)
+(--map-last (= it 2) 17 '(1 2 3 2)) ;; => '(1 2 3 17)
 ```
 
 #### -map-indexed `(fn list)`
@@ -417,6 +449,46 @@ Alias: `-reject`
 (--remove (= 0 (% it 2)) '(1 2 3 4)) ;; => '(1 3)
 ```
 
+#### -remove-first `(pred list)`
+
+Return a new list with the first item matching `pred` removed.
+
+Alias: `-reject-first`
+
+See also: [`-remove`](#-remove-pred-list), [`-map-first`](#-map-first-pred-rep-list)
+
+```el
+(-remove-first 'even? '(1 3 5 4 7 8 10)) ;; => '(1 3 5 7 8 10)
+(-remove-first 'stringp '(1 2 "first" "second" "third")) ;; => '(1 2 "second" "third")
+(--remove-first (> it 3) '(1 2 3 4 5 6 7 8 9 10)) ;; => '(1 2 3 5 6 7 8 9 10)
+```
+
+#### -remove-last `(pred list)`
+
+Return a new list with the last item matching `pred` removed.
+
+Alias: `-reject-last`
+
+See also: [`-remove`](#-remove-pred-list), [`-map-last`](#-map-last-pred-rep-list)
+
+```el
+(-remove-last 'even? '(1 3 5 4 7 8 10 11)) ;; => '(1 3 5 4 7 8 11)
+(-remove-last 'stringp '(1 2 "last" "second" "third")) ;; => '(1 2 "last" "second")
+(--remove-last (> it 3) '(1 2 3 4 5 6 7 8 9 10)) ;; => '(1 2 3 4 5 6 7 8 9)
+```
+
+#### -remove-item `(item list)`
+
+Remove all occurences of `item` from `list`.
+
+Comparison is done with `equal`.
+
+```el
+(-remove-item 3 '(1 2 3 2 3 4 5 3)) ;; => '(1 2 2 4 5)
+(-remove-item 'foo '(foo bar baz foo)) ;; => '(bar baz)
+(-remove-item "bob" '("alice" "bob" "eve" "bob" "dave")) ;; => '("alice" "eve" "dave")
+```
+
 #### -non-nil `(list)`
 
 Return all non-nil elements of `list`.
@@ -500,6 +572,8 @@ Bag of various functions which modify input list.
 
 Return a new list of the non-nil results of applying `fn` to the items in `list`.
 
+If you want to select the original items satisfying a predicate use [`-filter`](#-filter-pred-list).
+
 ```el
 (-keep 'cdr '((1 2 3) (4 5) (6))) ;; => '((2 3) (5))
 (-keep (lambda (num) (when (> num 3) (* 10 num))) '(1 2 3 4 5 6)) ;; => '(40 50 60)
@@ -552,6 +626,34 @@ See also: [`-replace-at`](#-replace-at-n-x-list)
 (-replace 1 "1" '(1 2 3 4 3 2 1)) ;; => '("1" 2 3 4 3 2 "1")
 (-replace "foo" "bar" '("a" "nice" "foo" "sentence" "about" "foo")) ;; => '("a" "nice" "bar" "sentence" "about" "bar")
 (-replace 1 2 nil) ;; => nil
+```
+
+#### -replace-first `(old new list)`
+
+Replace the first occurence of `old` with `new` in `list`.
+
+Elements are compared using `equal`.
+
+See also: [`-map-first`](#-map-first-pred-rep-list)
+
+```el
+(-replace-first 1 "1" '(1 2 3 4 3 2 1)) ;; => '("1" 2 3 4 3 2 1)
+(-replace-first "foo" "bar" '("a" "nice" "foo" "sentence" "about" "foo")) ;; => '("a" "nice" "bar" "sentence" "about" "foo")
+(-replace-first 1 2 nil) ;; => nil
+```
+
+#### -replace-last `(old new list)`
+
+Replace the last occurence of `old` with `new` in `list`.
+
+Elements are compared using `equal`.
+
+See also: [`-map-last`](#-map-last-pred-rep-list)
+
+```el
+(-replace-last 1 "1" '(1 2 3 4 3 2 1)) ;; => '(1 2 3 4 3 2 "1")
+(-replace-last "foo" "bar" '("a" "nice" "foo" "sentence" "about" "foo")) ;; => '("a" "nice" "foo" "sentence" "about" "bar")
+(-replace-last 1 2 nil) ;; => nil
 ```
 
 #### -insert-at `(n x list)`
@@ -1409,6 +1511,18 @@ Alias: `-find`
 (--first (> it 2) '(1 2 3)) ;; => 3
 ```
 
+#### -some `(pred list)`
+
+Return (`pred` x) for the first `list` item where (`pred` x) is non-nil, else nil.
+
+Alias: `-any`
+
+```el
+(-some 'even? '(1 2 3)) ;; => t
+(--some (member 'foo it) '((foo bar) (baz))) ;; => '(foo bar)
+(--some (plist-get it :bar) '((:foo 1 :bar 2) (:baz 3))) ;; => 2
+```
+
 #### -last `(pred list)`
 
 Return the last x in `list` where (`pred` x) is non-nil, else nil.
@@ -1470,6 +1584,7 @@ not, return a list with `args` as elements.
 ```el
 (-list 1) ;; => '(1)
 (-list 1 2 3) ;; => '(1 2 3)
+(-list '(1 2 3)) ;; => '(1 2 3)
 ```
 
 #### -fix `(fn list)`
@@ -1677,7 +1792,7 @@ If all `vals` evaluate to true, bind them to their corresponding
 `vars` and execute body. `vars-vals` should be a list of (`var` `val`)
 pairs.
 
-Note: binding is done according to [`-let`](#-let-varlist-rest-body).
+Note: binding is done according to [`-let*`](#-let-varlist-rest-body).
 
 ```el
 (-when-let* ((x 5) (y 3) (z (+ y 4))) (+ x y z)) ;; => 15
@@ -1702,7 +1817,7 @@ If all `vals` evaluate to true, bind them to their corresponding
 `vars` and do `then`, otherwise do `else`. `vars-vals` should be a list
 of (`var` `val`) pairs.
 
-Note: binding is done according to [`-let`](#-let-varlist-rest-body).
+Note: binding is done according to [`-let*`](#-let-varlist-rest-body).
 
 ```el
 (-if-let* ((x 5) (y 3) (z 7)) (+ x y z) "foo") ;; => 15
@@ -1799,6 +1914,46 @@ plist-like key-value pairs, similarly to &keys keyword of
 
 This binds `n` values from the list to a1 ... aN, then interprets
 the cdr as a plist (see key/value matching above).
+
+You can name the source using the syntax `symbol` &as `pattern`.
+This syntax works with lists (proper or improper), vectors and
+all types of maps.
+
+    (list &as a b c) (list 1 2 3)
+
+binds `a` to 1, `b` to 2, `c` to 3 and `list` to (1 2 3).
+
+Similarly:
+
+    (bounds &as beg . end) (cons 1 2)
+
+binds `beg` to 1, `end` to 2 and `bounds` to (1 . 2).
+
+    (items &as first . rest) (list 1 2 3)
+
+binds `first` to 1, `rest` to (2 3) and `items` to (1 2 3)
+
+    [vect &as _ b c] [1 2 3]
+
+binds `b` to 2, `c` to 3 and `vect` to [1 2 3] (_ avoids binding as usual).
+
+    (plist &as &plist :b b) (list :a 1 :b 2 :c 3)
+
+binds `b` to 2 and `plist` to (:a 1 :b 2 :c 3).  Same for &alist and &hash.
+
+This is especially useful when we want to capture the result of a
+computation and destructure at the same time.  Consider the
+form (function-returning-complex-structure) returning a list of
+two vectors with two items each.  We want to capture this entire
+result and pass it to another computation, but at the same time
+we want to get the second item from each vector.  We can achieve
+it with pattern
+
+    (result &as [_ a] [_ b]) (function-returning-complex-structure)
+
+Note: Clojure programmers may know this feature as the ":as
+binding".  The difference is that we put the &as at the front
+because we need to support improper list binding.
 
 ```el
 (-let (([a (b c) d] [1 (2 3) 4])) (list a b c d)) ;; => '(1 2 3 4)
@@ -2081,17 +2236,38 @@ This function satisfies the following law:
 (funcall (-iteratefn 'cdr 3) '(1 2 3 4 5)) ;; => '(4 5)
 ```
 
-#### -fixfn `(fn)`
+#### -fixfn `(fn &optional equal-test halt-test)`
 
 Return a function that computes the (least) fixpoint of `fn`.
 
-`fn` is a unary function, results are compared with `equal`.
+`fn` must be a unary function. The returned lambda takes a single
+argument, `x`, the initial value for the fixpoint iteration. The
+iteration halts when either of the following conditions is satisified:
+
+ 1. Iteration converges to the fixpoint, with equality being
+      tested using `equal-test`. If `equal-test` is not specified,
+      `equal` is used. For functions over the floating point
+      numbers, it may be necessary to provide an appropriate
+      appoximate comparsion test.
+
+ 2. `halt-test` returns a non-nil value. `halt-test` defaults to a
+      simple counter that returns t after `-fixfn-max-iterations`,
+      to guard against infinite iteration. Otherwise, `halt-test`
+      must be a function that accepts a single argument, the
+      current value of `x`, and returns non-nil as long as iteration
+      should continue. In this way, a more sophisticated
+      convergence test may be supplied by the caller.
+
+The return value of the lambda is either the fixpoint or, if
+iteration halted before converging, a cons with car `halted` and
+cdr the final output from `halt-test`.
 
 In types: (a -> a) -> a -> a.
 
 ```el
-(funcall (-fixfn 'cos) 0.7) ;; => 0.7390851332151607
+(funcall (-fixfn 'cos 'approx-equal) 0.7) ;; ~> 0.7390851332151607
 (funcall (-fixfn (lambda (x) (expt (+ x 10) 0.25))) 2.0) ;; => 1.8555845286409378
+(funcall (-fixfn 'sin 'approx-equal) 0.1) ;; => '(halted . t)
 ```
 
 #### -prodfn `(&rest fns)`
@@ -2256,7 +2432,10 @@ Change `readme-template.md` or `examples-to-docs.el` instead.
  - [Johan Andersson](https://github.com/rejeep) contributed `-sum`, `-product` and `-same-items?`
  - [Christina Whyte](https://github.com/kurisuwhyte) contributed `-compose`
  - [Steve Lamb](https://github.com/steventlamb) contributed `-cycle`, `-pad`, `-annotate`, `-zip-fill` and an n-ary version of `-zip`.
- - [Fredrik Bergroth](https://github.com/fbergroth) made the `-if-let` family use `-let` desctructuring and improved script for generating documentation.
+ - [Fredrik Bergroth](https://github.com/fbergroth) made the `-if-let` family use `-let` destructuring and improved script for generating documentation.
+ - [Mark Oteiza](https://github.com/holomorph) contributed the script to create an info manual.
+ - [Vasilij Schneidermann](https://github.com/wasamasa) contributed `-some`.
+ - [William West](https://github.com/occidens) made `-fixfn` more robust at handling floats.
 
 Thanks!
 

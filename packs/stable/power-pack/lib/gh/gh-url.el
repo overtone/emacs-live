@@ -42,6 +42,7 @@
    (data :initarg :data :initform "" :type string)
    (async :initarg :async :initform nil)
    (num-retries :initarg :num-retries :initform 0)
+   (install-callbacks :initarg :install-callbacks :initform nil)
 
    (default-response-cls :allocation :class :initform gh-url-response)))
 
@@ -158,7 +159,9 @@
   (concat "?" (gh-url-form-encode form)))
 
 (defmethod gh-url-run-request ((req gh-url-request) &optional resp)
-  (let ((url-privacy-level 'high)
+  (let ((url-registered-auth-schemes
+         '(("basic" ignore . 4))) ;; don't let default handlers kick in
+        (url-privacy-level 'high)
         (url-request-method (oref req :method))
         (url-request-data (oref req :data))
         (url-request-extra-headers (oref req :headers))
@@ -170,13 +173,18 @@
     (if (oref req :async)
         (let* ((resp (or resp (make-instance (oref req default-response-cls))))
                (req-resp (list req resp)))
-          (url-retrieve url 'gh-url-set-response (list req-resp))
-          resp)
+          (with-current-buffer
+              (url-retrieve url 'gh-url-set-response (list req-resp))
+            (set (make-local-variable 'url-registered-auth-schemes)
+                 url-registered-auth-schemes)))
       (let* ((resp (or resp (make-instance (oref req default-response-cls))))
              (req-resp (list req resp)))
         (with-current-buffer (url-retrieve-synchronously url)
-          (gh-url-set-response nil req-resp))
-        resp))))
+          (gh-url-set-response nil req-resp)))))
+  (mapc (lambda (cb)
+          (gh-url-add-response-callback resp cb))
+        (oref req :install-callbacks))
+  resp)
 
 (provide 'gh-url)
 ;;; gh-url.el ends here

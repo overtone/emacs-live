@@ -36,6 +36,9 @@
                 (string (buffer-substring-no-properties
                          haskell-interactive-mode-result-end
                          (point))))
+            ;; here we need to go to end of line again as evil-mode
+            ;; might hae managed to put us one char back
+            (goto-char (point-max))
             (insert "\n")
             ;; Bring the marker forward
             (setq haskell-interactive-mode-result-end

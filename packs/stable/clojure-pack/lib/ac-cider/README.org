@@ -1,0 +1,54 @@
+* ac-cider
+
+  ac-cider is a completion source for Emacs auto-complete package that uses
+  [[https://github.com/clojure-emacs/cider][CIDER]] (and [[https://github.com/alexander-yakushev/compliment][Compliment]]) as candidates provider.
+
+  ac-cider's goal is to eventually replace now deprecated [[https://github.com/clojure-emacs/ac-nrepl][ac-nrepl]] which uses
+  [[https://github.com/ninjudd/clojure-complete][clojure-complete]] as backend.
+
+** Installation
+
+   ac-cider is available as a package in [[http://melpa.org][MELPA]] repository. You can install it
+   from there like:
+
+   : M-x package-install ac-cider
+
+   ac-cider depends on =auto-complete= and =cider= which will be downloaded
+   automatically.
+
+   =ac-cider= provides a CIDER-specific completion source, so =auto-complete=
+   needs to be told to use it when =cider-mode= is active. To do this, put the
+   following code in your Emacs init file:
+
+#+begin_src el
+(require 'ac-cider)
+(add-hook 'cider-mode-hook 'ac-flyspell-workaround)
+(add-hook 'cider-mode-hook 'ac-cider-setup)
+(add-hook 'cider-repl-mode-hook 'ac-cider-setup)
+(eval-after-load "auto-complete"
+  '(progn
+     (add-to-list 'ac-modes 'cider-mode)
+     (add-to-list 'ac-modes 'cider-repl-mode)))
+#+end_src
+
+   If you want to trigger auto-complete using TAB in CIDER buffers, add this to
+   your configuration file (but note that it is incompatible with =(setq
+   tab-always-indent 'complete)=):
+
+#+begin_src el
+(defun set-auto-complete-as-completion-at-point-function ()
+  (setq completion-at-point-functions '(auto-complete)))
+
+(add-hook 'auto-complete-mode-hook 'set-auto-complete-as-completion-at-point-function)
+(add-hook 'cider-mode-hook 'set-auto-complete-as-completion-at-point-function)
+#+end_src
+
+** Usage
+
+   =ac-cider= should now automatically be enabled when you visit a buffer in
+   which =cider-mode= is active and =auto-complete= is enabled. (The symbols
+   "cider" and "AC" should appear in the modeline.)
+
+   Simply trigger auto-completion, and completion candidates supplied by CIDER
+   should be displayed. After a short delay, popup documentation for the
+   completed symbol should also be displayed.

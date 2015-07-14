@@ -21,7 +21,7 @@ Contents:
    :maxdepth: 2
 
    intro
-
+   issues
 
 Indices and tables
 ==================

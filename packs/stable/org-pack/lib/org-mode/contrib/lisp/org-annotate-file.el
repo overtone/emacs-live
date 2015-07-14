@@ -25,7 +25,7 @@
 ;;; Commentary:
 
 ;; This is yet another implementation to allow the annotation of a
-;; file without modification of the file itself. The annotation is in
+;; file without modification of the file itself.  The annotation is in
 ;; org syntax so you can use all of the org features you are used to.
 
 ;; To use you might put the following in your .emacs:
@@ -47,30 +47,41 @@
 ;; and next time you hit C-c C-l you will hit those notes again.
 ;;
 ;; To put a subheading with a text search for the current line set
-;; `org-annotate-file-add-search` to non-nil value. Then when you hit
+;; `org-annotate-file-add-search` to non-nil value.  Then when you hit
 ;; C-c C-l (on the above line for example) you will get:
 
 ;; * ~/org-annotate-file.el
-;; ** `org-annotate-file-add-search` to non-nil value. Then whe...
+;; ** `org-annotate-file-add-search` to non-nil value.  Then whe...
 
 ;; Note that both of the above will be links.
 
+;;; Code:
+
 (require 'org)
 
-(defvar org-annotate-file-storage-file "~/.org-annotate-file.org"
-  "File in which to keep annotations.")
+(defgroup org-annotate-file nil
+  "Org Annotate"
+  :group 'org)
 
-(defvar org-annotate-file-add-search nil
-  "If non-nil then add a link as a second level to the actual
-location in the file")
+(defcustom org-annotate-file-storage-file "~/.org-annotate-file.org"
+  "File in which to keep annotations."
+  :group 'org-annotate-file
+  :type 'file)
 
-(defvar org-annotate-file-always-open t
-  "non-nil means always expand the full tree when you visit
-`org-annotate-file-storage-file'.")
+(defcustom org-annotate-file-add-search nil
+  "If non-nil, add a link as a second level to the actual file location."
+  :group 'org-annotate-file
+  :type 'boolean)
 
-(defun org-annotate-file-elipsify-desc (string &optional after)
-  "Strip starting and ending whitespace and replace any chars
-that appear after the value in `after' with '...'"
+(defcustom org-annotate-file-always-open t
+  "If non-nil, always expand the full tree when visiting the annotation file."
+  :group 'org-annotate-file
+  :type 'boolean)
+
+(defun org-annotate-file-ellipsify-desc (string &optional after)
+  "Return shortened STRING with appended ellipsis.
+Trim whitespace at beginning and end of STRING and replace any
+  characters that appear after the occurrence of AFTER with '...'"
   (let* ((after (number-to-string (or after 30)))
          (replace-map (list (cons "^[ \t]*" "")
                             (cons "[ \t]*$" "")
@@ -82,46 +93,61 @@ that appear after the value in `after' with '...'"
           replace-map)
     string))
 
+;;;###autoload
 (defun org-annotate-file ()
-  "Put a section for the current file into your annotation file"
+  "Visit `org-annotate-file-storage-file` and add a new annotation section.
+The annotation is opened at the new section which will be referencing
+the point in the current file."
   (interactive)
   (unless (buffer-file-name)
-    (error "This buffer has no associated file"))
-  (org-annotate-file-show-section))
+    (error "This buffer has no associated file!"))
+  (switch-to-buffer
+   (org-annotate-file-show-section org-annotate-file-storage-file)))
 
-(defun org-annotate-file-show-section (&optional buffer)
-  "Visit the buffer named `org-annotate-file-storage-file' and
-show the relevant section"
-  (let* ((filename (abbreviate-file-name (or buffer (buffer-file-name))))
-         (line (buffer-substring-no-properties (point-at-bol) (point-at-eol)))
-         (link (org-make-link-string (concat "file:" filename) filename))
+;;;###autoload
+(defun org-annotate-file-show-section (storage-file &optional annotated-buffer)
+  "Add or show annotation entry in STORAGE-FILE and return the buffer.
+The annotation will link to ANNOTATED-BUFFER if specified,
+  otherwise the current buffer is used."
+  (let ((filename (abbreviate-file-name (or annotated-buffer
+					    (buffer-file-name))))
+        (line (buffer-substring-no-properties (point-at-bol) (point-at-eol)))
+        (annotation-buffer (find-file-noselect storage-file)))
+    (with-current-buffer annotation-buffer
+      (org-annotate-file-annotate filename line))
+    annotation-buffer))
+
+(defun org-annotate-file-annotate (filename line)
+  "Add annotation for FILENAME at LINE using current buffer."
+  (let* ((link (org-make-link-string (concat "file:" filename) filename))
          (search-link (org-make-link-string
                        (concat "file:" filename "::" line)
-                               (org-annotate-file-elipsify-desc line))))
-    (with-current-buffer (find-file org-annotate-file-storage-file)
-      (unless (eq major-mode 'org-mode)
-        (org-mode))
-      (goto-char (point-min))
-      (widen)
-      (when org-annotate-file-always-open
-        (show-all))
+		       (org-annotate-file-ellipsify-desc line))))
+    (unless (eq major-mode 'org-mode)
+      (org-mode))
+    (goto-char (point-min))
+    (widen)
+    (when org-annotate-file-always-open
+      (show-all))
+    (unless (search-forward-regexp
+	     (concat "^* " (regexp-quote link)) nil t)
+      (org-annotate-file-add-upper-level link))
+    (beginning-of-line)
+    (org-narrow-to-subtree)
+    ;; deal with a '::' search if need be
+    (when org-annotate-file-add-search
       (unless (search-forward-regexp
-               (concat "^* " (regexp-quote link)) nil t)
-        (org-annotate-file-add-upper-level link))
-      (beginning-of-line)
-      (org-narrow-to-subtree)
-      ;; deal with a '::' search if need be
-      (when org-annotate-file-add-search
-        (unless (search-forward-regexp
-                 (concat "^** " (regexp-quote search-link)) nil t)
-          (org-annotate-file-add-second-level search-link))))))
+	       (concat "^** " (regexp-quote search-link)) nil t)
+	(org-annotate-file-add-second-level search-link)))))
 
 (defun org-annotate-file-add-upper-level (link)
+  "Add and link heading to LINK."
   (goto-char (point-min))
   (call-interactively 'org-insert-heading)
   (insert link))
 
 (defun org-annotate-file-add-second-level (link)
+  "Add and link subheading to LINK."
   (goto-char (point-at-eol))
   (call-interactively 'org-insert-subheading)
   (insert link))

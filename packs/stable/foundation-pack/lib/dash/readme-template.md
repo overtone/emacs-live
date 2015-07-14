@@ -34,9 +34,7 @@ Include this in your emacs settings to get syntax highlighting:
 
 ## Functions
 
-[[ function-list ]]
-
-## Anaphoric functions
+All functions and constructs in the library are prefixed with a dash (-).
 
 There are also anaphoric versions of functions where that makes sense,
 prefixed with two dashes instead of one.
@@ -60,6 +58,8 @@ of course the original can also be written like
 ```
 
 which demonstrates the usefulness of both versions.
+
+[[ function-list ]]
 
 [[ function-docs ]]
 
@@ -204,6 +204,9 @@ Change `readme-template.md` or `examples-to-docs.el` instead.
  - [Christina Whyte](https://github.com/kurisuwhyte) contributed `-compose`
  - [Steve Lamb](https://github.com/steventlamb) contributed `-cycle`, `-pad`, `-annotate`, `-zip-fill` and an n-ary version of `-zip`.
  - [Fredrik Bergroth](https://github.com/fbergroth) made the `-if-let` family use `-let` destructuring and improved script for generating documentation.
+ - [Mark Oteiza](https://github.com/holomorph) contributed the script to create an info manual.
+ - [Vasilij Schneidermann](https://github.com/wasamasa) contributed `-some`.
+ - [William West](https://github.com/occidens) made `-fixfn` more robust at handling floats.
 
 Thanks!
 

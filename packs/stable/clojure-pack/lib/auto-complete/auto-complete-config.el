@@ -4,7 +4,7 @@
 
 ;; Author: Tomohiro Matsuyama <m2ym.pub@gmail.com>
 ;; Keywords: convenience
-;; Version: 1.4
+;; Version: 1.5.0
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -25,9 +25,7 @@
 
 ;;; Code:
 
-(eval-when-compile
-  (require 'cl))
-
+(require 'cl-lib)
 (require 'auto-complete)
 
 
@@ -41,35 +39,35 @@
 (ac-clear-variable-every-10-minutes 'ac-imenu-index)
 
 (defun ac-imenu-candidates ()
-  (loop with i = 0
-        with stack = (progn
-                       (unless (local-variable-p 'ac-imenu-index)
-                         (make-local-variable 'ac-imenu-index))
-                       (or ac-imenu-index
-                           (setq ac-imenu-index
-                                 (ignore-errors
-                                   (with-no-warnings
-                                     (imenu--make-index-alist))))))
-        with result
-        while (and stack (or (not (integerp ac-limit))
-                             (< i ac-limit)))
-        for node = (pop stack)
-        if (consp node)
-        do
-        (let ((car (car node))
-              (cdr (cdr node)))
-          (if (consp cdr)
-              (mapc (lambda (child)
-                      (push child stack))
-                    cdr)
-            (when (and (stringp car)
-                       (string-match (concat "^" (regexp-quote ac-prefix)) car))
-              ;; Remove extra characters
-              (if (string-match "^.*\\(()\\|=\\|<>\\)$" car)
-                  (setq car (substring car 0 (match-beginning 1))))
-              (push car result)
-              (incf i))))
-        finally return (nreverse result)))
+  (cl-loop with i = 0
+           with stack = (progn
+                          (unless (local-variable-p 'ac-imenu-index)
+                            (make-local-variable 'ac-imenu-index))
+                          (or ac-imenu-index
+                              (setq ac-imenu-index
+                                    (ignore-errors
+                                      (with-no-warnings
+                                        (imenu--make-index-alist))))))
+           with result
+           while (and stack (or (not (integerp ac-limit))
+                                (< i ac-limit)))
+           for node = (pop stack)
+           if (consp node)
+           do
+           (let ((car (car node))
+                 (cdr (cdr node)))
+             (if (consp cdr)
+                 (mapc (lambda (child)
+                         (push child stack))
+                       cdr)
+               (when (and (stringp car)
+                          (string-match (concat "^" (regexp-quote ac-prefix)) car))
+                 ;; Remove extra characters
+                 (if (string-match "^.*\\(()\\|=\\|<>\\)$" car)
+                     (setq car (substring car 0 (match-beginning 1))))
+                 (push car result)
+                 (cl-incf i))))
+           finally return (nreverse result)))
 
 (ac-define-source imenu
   '((depends imenu)
@@ -193,11 +191,34 @@
         (setq res (concat res "\n\n" doc)))
       res)))
 
+(defun ac-semantic-action ()
+  (when (and (boundp 'yas-minor-mode) yas-minor-mode)
+    (let* ((tag (car (last (oref (semantic-analyze-current-context) prefix))))
+           (class (semantic-tag-class tag))
+           (args))
+      (when (eq class 'function)
+        (setq args (semantic-tag-function-arguments tag))
+        (yas-expand-snippet
+         (concat "("
+                 (mapconcat
+                  (lambda (arg)
+                    (let ((arg-type (semantic-format-tag-type arg nil))
+                          (arg-name (semantic-format-tag-name arg nil)))
+                      (concat "${"
+                              (if (string= arg-name "")
+                                  arg-type
+                                (concat arg-type " " arg-name))
+                              "}")))
+                  args
+                  ", ")
+                 ")$0"))))))
+
 (ac-define-source semantic
   '((available . (or (require 'semantic-ia nil t)
                      (require 'semantic/ia nil t)))
     (candidates . (ac-semantic-candidates ac-prefix))
     (document . ac-semantic-doc)
+    (action . ac-semantic-action)
     (prefix . cc-member)
     (requires . 0)
     (symbol . "m")))
@@ -207,14 +228,15 @@
                      (require 'semantic/ia nil t)))
     (candidates . (ac-semantic-candidates ac-prefix))
     (document . ac-semantic-doc)
+    (action . ac-semantic-action)
     (symbol . "s")))
 
 ;; eclim
 
 (defun ac-eclim-candidates ()
   (with-no-warnings
-    (loop for c in (eclim/java-complete)
-          collect (nth 1 c))))
+    (cl-loop for c in (eclim/java-complete)
+             collect (nth 1 c))))
 
 (ac-define-source eclim
   '((candidates . ac-eclim-candidates)
@@ -398,17 +420,17 @@
 (defun ac-css-property-candidates ()
   (let ((list (assoc-default ac-css-property ac-css-property-alist)))
     (if list
-        (loop with seen
-              with value
-              while (setq value (pop list))
-              if (symbolp value)
-              do (unless (memq value seen)
-                   (push value seen)
-                   (setq list
-                         (append list
-                                 (or (assoc-default value ac-css-value-classes)
-                                     (assoc-default (symbol-name value) ac-css-property-alist)))))
-              else collect value)
+        (cl-loop with seen
+                 with value
+                 while (setq value (pop list))
+                 if (symbolp value)
+                 do (unless (memq value seen)
+                      (push value seen)
+                      (setq list
+                            (append list
+                                    (or (assoc-default value ac-css-value-classes)
+                                        (assoc-default (symbol-name value) ac-css-property-alist)))))
+                 else collect value)
       ac-css-pseudo-classes)))
 
 (ac-define-source css-property

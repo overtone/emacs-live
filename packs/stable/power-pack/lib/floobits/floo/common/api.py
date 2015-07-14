@@ -53,22 +53,30 @@ def get_basic_auth(host):
 class APIResponse():
     def __init__(self, r):
         self.body = None
+
         if isinstance(r, bytes):
             r = r.decode('utf-8')
+
         if isinstance(r, str_instances):
             lines = r.split('\n')
             self.code = int(lines[0])
             if self.code != 204:
                 self.body = json.loads('\n'.join(lines[1:]))
-        elif isinstance(r, URLError):
-            # horrible hack, but lots of other stuff checks the response code :/
-            self.code = 500
-            self.body = r
-        else:
+        elif hasattr(r, 'code'):
             # Hopefully this is an HTTPError
             self.code = r.code
             if self.code != 204:
                 self.body = json.loads(r.read().decode("utf-8"))
+        elif hasattr(r, 'reason'):
+            # Hopefully this is a URLError
+            # horrible hack, but lots of other stuff checks the response code :/
+            self.code = 500
+            self.body = r.reason
+        else:
+            # WFIO
+            self.code = 500
+            self.body = r
+        msg.debug('code: %s' % self.code)
 
 
 def proxy_api_request(host, url, data, method):
@@ -178,9 +186,6 @@ def get_orgs_can_admin(host):
 
 def send_error(description=None, exception=None):
     G.ERROR_COUNT += 1
-    if G.ERRORS_SENT >= G.MAX_ERROR_REPORTS:
-        msg.warn('Already sent ', G.ERRORS_SENT, ' errors this session. Not sending any more.\n', description, exception)
-        return
     data = {
         'jsondump': {
             'error_count': G.ERROR_COUNT
@@ -188,18 +193,31 @@ def send_error(description=None, exception=None):
         'message': {},
         'dir': G.COLAB_DIR,
     }
+    stack = ''
     if G.AGENT:
         data['owner'] = getattr(G.AGENT, "owner", None)
         data['username'] = getattr(G.AGENT, "username", None)
         data['workspace'] = getattr(G.AGENT, "workspace", None)
     if exception:
+        try:
+            stack = traceback.format_exc(exception)
+        except Exception:
+            stack = "Python is rtardd"
+        try:
+            description = str(exception)
+        except Exception:
+            description = "Python is rtadd"
+
         data['message'] = {
-            'description': str(exception),
-            'stack': traceback.format_exc(exception)
+            'description': description,
+            'stack': stack
         }
     msg.log('Floobits plugin error! Sending exception report: ', data['message'])
     if description:
         data['message']['description'] = description
+    if G.ERRORS_SENT >= G.MAX_ERROR_REPORTS:
+        msg.warn('Already sent ', G.ERRORS_SENT, ' errors this session. Not sending any more.\n', description, exception, stack)
+        return
     try:
         # TODO: use G.AGENT.proto.host?
         api_url = 'https://%s/api/log' % (G.DEFAULT_HOST)

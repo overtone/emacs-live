@@ -812,7 +812,8 @@ already gone.  Any prefix argument will be passed to the refile command."
   "Go to the location where the last capture note was stored."
   (interactive)
   (org-goto-marker-or-bmk org-capture-last-stored-marker
-			  "org-capture-last-stored")
+			  (plist-get org-bookmark-names-plist
+				 :last-capture))
   (message "This is the last note stored by a capture process"))
 
 ;;; Supporting functions for handling the process
@@ -822,7 +823,7 @@ already gone.  Any prefix argument will be passed to the refile command."
   (org-capture-put
    :initial-target-region
    ;; Check if the buffer is currently narrowed
-   (when (/= (buffer-size) (- (point-max) (point-min)))
+   (when (org-buffer-narrowed-p)
      (cons (point-min) (point-max))))
   ;; store the current point
   (org-capture-put :initial-target-position (point)))
@@ -965,12 +966,15 @@ Store them in the capture property list."
 (defun org-capture-expand-file (file)
   "Expand functions and symbols for FILE.
 When FILE is a function, call it.  When it is a form, evaluate
-it.  When it is a variable, retrieve the value.  Return whatever we get."
+it.  When it is a variable, retrieve the value.  When it is
+a string, return it.  However, if it is the empty string, return
+`org-default-notes-file' instead."
   (cond
+   ((equal file "") org-default-notes-file)
    ((org-string-nw-p file) file)
    ((functionp file) (funcall file))
    ((and (symbolp file) (boundp file)) (symbol-value file))
-   ((and file (consp file)) (eval file))
+   ((consp file) (eval file))
    (t file)))
 
 (defun org-capture-target-buffer (file)
@@ -1022,9 +1026,9 @@ may have been stored before."
 	 (target-entry-p (org-capture-get :target-entry-p))
 	 level beg end file)
 
+    (and (org-capture-get :exact-position)
+	 (goto-char (org-capture-get :exact-position)))
     (cond
-     ((org-capture-get :exact-position)
-      (goto-char (org-capture-get :exact-position)))
      ((not target-entry-p)
       ;; Insert as top-level entry, either at beginning or at end of file
       (setq level 1)
@@ -1074,21 +1078,18 @@ may have been stored before."
        (t
 	(setq beg (1+ (point-at-eol))
 	      end (save-excursion (outline-next-heading) (point)))))
+      (setq ind nil)
       (if (org-capture-get :prepend)
 	  (progn
 	    (goto-char beg)
-	    (if (org-list-search-forward (org-item-beginning-re) end t)
-		(progn
-		  (goto-char (match-beginning 0))
-		  (setq ind (org-get-indentation)))
-	      (goto-char end)
-	      (setq ind 0)))
+	    (when (org-list-search-forward (org-item-beginning-re) end t)
+	      (goto-char (match-beginning 0))
+	      (setq ind (org-get-indentation))))
 	(goto-char end)
-	(if (org-list-search-backward (org-item-beginning-re) beg t)
-	    (progn
-	      (setq ind (org-get-indentation))
-	      (org-end-of-item))
-	  (setq ind 0))))
+	(when (org-list-search-backward (org-item-beginning-re) beg t)
+	  (setq ind (org-get-indentation))
+	  (org-end-of-item)))
+      (unless ind (goto-char end)))
     ;; Remove common indentation
     (setq txt (org-remove-indentation txt))
     ;; Make sure this is indeed an item
@@ -1096,17 +1097,22 @@ may have been stored before."
       (setq txt (concat "- "
 			(mapconcat 'identity (split-string txt "\n")
 				   "\n  "))))
+    ;; Prepare surrounding empty lines.
+    (org-capture-empty-lines-before)
+    (setq beg (point))
+    (unless (eolp) (save-excursion (insert "\n")))
+    (unless ind
+      (org-indent-line)
+      (setq ind (org-get-indentation))
+      (delete-region beg (point)))
     ;; Set the correct indentation, depending on context
     (setq ind (make-string ind ?\ ))
     (setq txt (concat ind
 		      (mapconcat 'identity (split-string txt "\n")
 				 (concat "\n" ind))
 		      "\n"))
-    ;; Insert, with surrounding empty lines
-    (org-capture-empty-lines-before)
-    (setq beg (point))
+    ;; Insert item.
     (insert txt)
-    (or (bolp) (insert "\n"))
     (org-capture-empty-lines-after 1)
     (org-capture-position-for-last-stored beg)
     (forward-char 1)
@@ -1148,6 +1154,9 @@ may have been stored before."
     ;; Check if the template is good
     (if (not (string-match org-table-dataline-regexp txt))
 	(setq txt "| %?Bad template |\n"))
+    (if (functionp table-line-pos)
+	(setq table-line-pos (funcall table-line-pos))
+      (setq table-line-pos (eval table-line-pos)))
     (cond
      ((and table-line-pos
 	   (string-match "\\(I+\\)\\([-+][0-9]\\)" table-line-pos))
@@ -1215,7 +1224,7 @@ Of course, if exact position has been required, just put it there."
       ;; we should place the text into this entry
       (if (org-capture-get :prepend)
 	  ;; Skip meta data and drawers
-	  (org-end-of-meta-data-and-drawers)
+	  (org-end-of-meta-data t)
 	;; go to ent of the entry text, before the next headline
 	(outline-next-heading)))
      (t
@@ -1602,8 +1611,6 @@ The template may still contain \"%?\" for cursor positioning."
 		(insert-file-contents filename)
 	      (error (insert (format "%%![Couldn't insert %s: %s]"
 				     filename error)))))))
-      ;; %() embedded elisp
-      (org-capture-expand-embedded-elisp)
 
       ;; The current time
       (goto-char (point-min))
@@ -1632,6 +1639,10 @@ The template may still contain \"%?\" for cursor positioning."
 	    (and (setq x (or (plist-get org-store-link-plist
 					(intern (match-string 1))) ""))
 		 (replace-match x t t)))))
+
+      ;; %() embedded elisp
+      (goto-char (point-min))
+      (org-capture-expand-embedded-elisp)
 
       ;; Turn on org-mode in temp buffer, set local variables
       ;; This is to support completion in interactive prompts

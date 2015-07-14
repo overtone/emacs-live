@@ -80,3 +80,6 @@
 (When "^I set \\(.+\\) to \\(.+\\)$"
       (lambda (var val)
         (set (intern var) (read val))))
+;; Local Variables:
+;; no-byte-compile: t
+;; End:

@@ -6,6 +6,36 @@ This file uses Org mode. Some useful (default) key-bindings:
  - Use "<backtab>" to cycle visibility of all nodes
  - Use "C-c C-o" to open links
 
+* Changes in 13.12
+
+- Added haskell-bot.el
+
+- Added support for cabal repl build targets
+
+- Automatically add import lines via Hoogle
+
+- Automatically add package to cabal file
+
+- Added w3m-haddock.el
+
+- Added debugger mode
+
+- Added preliminary :present support
+
+- Added haskell-sort-imports
+
+- Added haskell-complete-module
+
+- Support if and multi-way if in indentation
+
+- Add support to generate tags on windows
+
+- Add haskell-language-extensions variable
+
+- Improve haskell-simple-indent mode
+
+- Improve test cases
+
 * Changes in 13.10
 
 - Small fix for haskell-simple-indent: Certain indentation situations

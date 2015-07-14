@@ -29,65 +29,26 @@
 
 (require 'multiple-cursors-core)
 
-(defcustom mc/edit-lines-empty-lines nil
-  "What should be done by `mc/edit-lines' when a line is not long enough."
-  :type '(radio (const :tag "Pad the line with spaces." pad)
-                (const :tag "Ignore the line." ignore)
-                (const :tag "Signal an error." error)
-                (const :tag "Nothing.  Cursor is at end of line." nil))
-  :group 'multiple-cursors)
-
 ;;;###autoload
-(defun mc/edit-lines (&optional arg)
+(defun mc/edit-lines ()
   "Add one cursor to each line of the active region.
 Starts from mark and moves in straight down or up towards the
-line point is on.
-
-What is done with lines which are not long enough is governed by
-`mc/edit-lines-empty-lines'.  The prefix argument ARG can be used
-to override this.  If ARG is a symbol (when called from Lisp),
-that symbol is used instead of `mc/edit-lines-empty-lines'.
-Otherwise, if ARG negative, short lines will be ignored.  Any
-other non-nil value will cause short lines to be padded."
-  (interactive "P")
+line point is on."
+  (interactive)
   (when (not (and mark-active (/= (point) (mark))))
-    (error "Mark a set of lines first"))
+    (error "Mark a set of lines first."))
   (mc/remove-fake-cursors)
   (let* ((col (current-column))
          (point-line (line-number-at-pos))
          (mark-line (progn (exchange-point-and-mark) (line-number-at-pos)))
-         (direction (if (< point-line mark-line) :up :down))
-         (style (cond
-                 ;; called from lisp
-                 ((and arg (symbolp arg))
-                  arg)
-                 ;; negative argument
-                 ((< (prefix-numeric-value arg) 0)
-                  'ignore)
-                 (arg 'pad)
-                 (t mc/edit-lines-empty-lines))))
+         (direction (if (< point-line mark-line) :up :down)))
     (deactivate-mark)
     (when (and (eq direction :up) (bolp))
-      (previous-logical-line 1 nil)
+      (forward-line -1)
       (move-to-column col))
-    ;; Add the cursors
     (while (not (eq (line-number-at-pos) point-line))
-      ;; Pad the line
-      (when (eq style 'pad)
-        (while (< (current-column) col)
-          (insert " ")))
-      ;; Error
-      (when (and (eq style 'error)
-                 (not (equal col (current-column))))
-        (error "Short line encountered in `mc/edit-lines'"))
-      ;; create the cursor
-      (unless (and (eq style 'ignore)
-                   (not (equal col (current-column))))
-        (mc/create-fake-cursor-at-point))
-      ;; proceed to next
-      (if (eq direction :up)
-          (previous-logical-line 1 nil)
-        (next-logical-line 1 nil))
+      (mc/create-fake-cursor-at-point)
+      (if (eq direction :up) (forward-line -1) (forward-line 1))
       (move-to-column col))
     (multiple-cursors-mode)))
 

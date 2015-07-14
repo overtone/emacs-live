@@ -1,6 +1,6 @@
 ;;; test-helper.el --- Clojure Mode: Non-interactive unit-test setup  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2014  Bozhidar Batsov <bozhidar@batsov.com>
+;; Copyright (C) 2014-2015 Bozhidar Batsov <bozhidar@batsov.com>
 
 ;; This file is not part of GNU Emacs.
 

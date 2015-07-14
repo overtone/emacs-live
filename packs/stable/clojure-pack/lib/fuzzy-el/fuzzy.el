@@ -1,8 +1,8 @@
 ;;; fuzzy.el --- Fuzzy Matching
 
-;; Copyright (C) 2010, 2011, 2012  Tomohiro Matsuyama
+;; Copyright (C) 2010-2015  Tomohiro Matsuyama
 
-;; Author: Tomohiro Matsuyama <tomo@cx4a.org>
+;; Author: Tomohiro Matsuyama <m2ym.pub@gmail.com>
 ;; Keywords: convenience
 ;; Version: 0.2
 

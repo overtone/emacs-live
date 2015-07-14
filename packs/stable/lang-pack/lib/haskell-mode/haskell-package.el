@@ -29,23 +29,6 @@
 
 (require 'cl-lib)
 
-;; Dynamically scoped variables.
-;; TODO What actually sets this?
-(defvar haskell-config-use-cabal-dev)
-
-;; (defun haskell-package-conf-path-get (&optional project)
-;;   "Gets the user conf or the cabal-dev conf. Get the global conf elsewhere."
-;;   (if haskell-config-use-cabal-dev
-;;       (if project
-;;           (let* ((cabal-path (haskell-project-cabal-dir project)))
-;;             (format "%scabal-dev/packages-%s.conf/"
-;;                     (if (string-match "/$" cabal-path)
-;;                         cabal-path
-;;                       (concat cabal-path "/"))
-;;                     (haskell-ghc-version)))
-;;         (haskell-package-conf-user-path-get))
-;;     (haskell-package-conf-user-path-get)))
-
 (defun haskell-package-conf-user-path-get ()
   "Get the user conf path."
   (let ((out (shell-command-to-string "ghc-pkg --user list no-results-please")))

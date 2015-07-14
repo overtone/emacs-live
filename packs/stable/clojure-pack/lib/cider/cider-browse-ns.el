@@ -1,6 +1,6 @@
 ;;; cider-browse-ns.el --- CIDER namespace browser
 
-;; Copyright © 2014 John Andrews
+;; Copyright © 2014-2015 John Andrews
 
 ;; Author: John Andrews <john.m.andrews@gmail.com>
 
@@ -37,28 +37,25 @@
 (require 'cider-client)
 (require 'cider-interaction)
 
-(defvar cider-browse-ns-buffer "*Browse NS*")
+(defconst cider-browse-ns-buffer "*Browse NS*")
 (defvar-local cider-browse-ns-current-ns nil)
-
-;; Utility Functions
-
-(defun cider-browse-ns-properties (text)
-  "Decorate TEXT with a clickable keymap and function face."
-  (propertize text
-              'font-lock-face 'font-lock-function-name-face
-              'mouse-face 'highlight
-              'keymap cider-browse-ns-mouse-map))
-
 
 ;; Mode Definition
 
 (defvar cider-browse-ns-mode-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map cider-popup-buffer-mode-map)
-    (define-key map [return] 'cider-browse-ns-operate-on-point)
-    (define-key map "^" 'cider-browse-ns-all)
-    (define-key map "n" 'next-line)
-    (define-key map "p" 'previous-line)
+    (define-key map "d" #'cider-browse-ns--doc-at-point)
+    (define-key map "s" #'cider-browse-ns--find-at-point)
+    (define-key map [return] #'cider-browse-ns--doc-at-point)
+    (define-key map "^" #'cider-browse-ns-all)
+    (define-key map "n" #'next-line)
+    (define-key map "p" #'previous-line)
+    map))
+
+(defvar cider-browse-ns-mouse-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map [mouse-1] #'cider-browse-ns--handle-mouse)
     map))
 
 (define-derived-mode cider-browse-ns-mode special-mode "browse-ns"
@@ -71,22 +68,25 @@
   (setq-local truncate-lines t)
   (setq-local cider-browse-ns-current-ns nil))
 
-(defun cider-browse-ns-list (buffer title items)
+(defun cider-browse-ns--properties (text)
+  "Decorate TEXT with a clickable keymap and function face."
+  (propertize text
+              'font-lock-face 'font-lock-function-name-face
+              'mouse-face 'highlight
+              'keymap cider-browse-ns-mouse-map))
+
+(defun cider-browse-ns--list (buffer title items)
   "Reset contents of BUFFER.  Then display TITLE at the top and ITEMS are indented underneath."
   (with-current-buffer buffer
     (cider-browse-ns-mode)
     (let ((inhibit-read-only t))
       (erase-buffer)
-      (insert (propertize title 'font-lock-face 'cider-doc-strong-face))
+      (insert (propertize title 'font-lock-face 'font-lock-type-face))
       (newline)
       (dolist (item items)
         (insert "  " item)
         (newline))
       (goto-char (point-min)))))
-
-(defvar cider-browse-ns-mouse-map (make-sparse-keymap))
-(define-key cider-browse-ns-mouse-map [mouse-1] 'cider-browse-ns-handle-mouse)
-
 
 ;; Interactive Functions
 
@@ -96,11 +96,11 @@
   (interactive (list (completing-read "Browse namespace: " (cider-sync-request:ns-list))))
   (with-current-buffer (cider-popup-buffer cider-browse-ns-buffer t)
     (let ((vars (cider-sync-request:ns-vars namespace)))
-      (cider-browse-ns-list (current-buffer)
+      (cider-browse-ns--list (current-buffer)
                             namespace
                             (mapcar (lambda (var)
-                                      (format "/%s"
-                                              (cider-browse-ns-properties var)))
+                                      (format "%s"
+                                              (cider-browse-ns--properties var)))
                                     vars))
       (setq-local cider-browse-ns-current-ns namespace))))
 
@@ -110,29 +110,33 @@
   (interactive)
   (with-current-buffer (cider-popup-buffer cider-browse-ns-buffer t)
     (let ((names (cider-sync-request:ns-list)))
-      (cider-browse-ns-list (current-buffer)
-                            "All loaded namespaces"
-                            (mapcar (lambda (name)
-                                      (cider-browse-ns-properties name))
-                                    names))
+      (cider-browse-ns--list (current-buffer)
+                             "All loaded namespaces"
+                             (mapcar (lambda (name)
+                                       (cider-browse-ns--properties name))
+                                     names))
       (setq-local cider-browse-ns-current-ns nil))))
 
-(defun cider-browse-ns-operate-on-point ()
+(defun cider-browse-ns--var-at-point ()
+  (let ((line (buffer-substring-no-properties (line-beginning-position) (line-end-position))))
+    (when (string-match " +\\(.+\\)" line)
+      (format "%s/%s" cider-browse-ns-current-ns (match-string 1 line)))))
+
+(defun cider-browse-ns--doc-at-point ()
   "Expand browser according to thing at current point."
   (interactive)
-  (let ((line (buffer-substring-no-properties (line-beginning-position) (line-end-position))))
-    (cond
-     ((= 1 (line-number-at-pos))
-      'nothing-to-do)
-     ((string-match " +/\\(.+\\)" line)
-      (cider-doc-lookup (format "%s/%s" cider-browse-ns-current-ns (match-string 1 line))))
-     ('else
-      (cider-browse-ns (replace-regexp-in-string " " "" line))))))
+  (-when-let (var (cider-browse-ns--var-at-point))
+    ((cider-doc-lookup var))))
 
-(defun cider-browse-ns-handle-mouse (event)
+(defun cider-browse-ns--find-at-point ()
+  (interactive)
+  (when-let (var (cider-browse-ns--var-at-point))
+    (cider-find-var current-prefix-arg var)))
+
+(defun cider-browse-ns--handle-mouse (event)
   "Handle mouse click EVENT."
   (interactive "e")
-  (cider-browse-ns-operate-on-point))
+  (cider-browse-ns--doc-at-point))
 
 (provide 'cider-browse-ns)
 

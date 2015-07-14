@@ -17,6 +17,8 @@
 
 ;;; Code:
 
+(require 'cl-lib)
+
 (defvar highlight-uses-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "TAB") 'highlight-uses-mode-next)
@@ -41,6 +43,26 @@
       (goto-char highlight-uses-mode-point)))
   (remove-overlays (point-min) (point-max) 'highlight-uses-mode-highlight t))
 
+(defun highlight-uses-mode-replace ()
+  "Replace all highlighted instances in the buffer with something
+  else."
+  (interactive)
+  (save-excursion
+    (goto-char (point-min))
+    (let ((o (highlight-uses-mode-next)))
+      (when o
+        (let ((replacement (read-from-minibuffer (format "Replace uses %s with: "
+                                                         (buffer-substring
+                                                          (overlay-start o)
+                                                          (overlay-end o))))))
+
+          (while o
+            (goto-char (overlay-start o))
+            (delete-region (overlay-start o)
+                           (overlay-end o))
+            (insert replacement)
+            (setq o (highlight-uses-mode-next))))))))
+
 (defun highlight-uses-mode-stop-here ()
   "Stop at this point."
   (interactive)
@@ -50,24 +72,30 @@
 (defun highlight-uses-mode-next ()
   "Jump to next result."
   (interactive)
-  (let ((os (overlays-in (point) (point-max))))
-    (let ((last-point (point)))
-      (while (car os)
-        (goto-char (overlay-start (car os)))
-        (if (= (point) last-point)
-            (setq os (cdr os))
-          (setq os nil))))))
+  (let ((os (sort (cl-remove-if (lambda (o)
+                                  (or (<= (overlay-start o) (point))
+                                      (not (overlay-get o 'highlight-uses-mode-highlight))))
+                                (overlays-in (point) (point-max)))
+                  (lambda (a b)
+                    (< (overlay-start a)
+                       (overlay-start b))))))
+    (when os
+      (goto-char (overlay-start (car os)))
+      (car os))))
 
 (defun highlight-uses-mode-prev ()
   "Jump to previous result."
   (interactive)
-  (let ((os (overlays-in (point-min) (point))))
-    (let ((last-point (point)))
-      (while (car os)
-        (goto-char (overlay-start (car os)))
-        (if (= (point) last-point)
-            (setq os (cdr os))
-          (setq os nil))))))
+  (let ((os (sort (cl-remove-if (lambda (o)
+                                  (or (>= (overlay-end o) (point))
+                                      (not (overlay-get o 'highlight-uses-mode-highlight))))
+                                (overlays-in (point-min) (point)))
+                  (lambda (a b)
+                    (> (overlay-start a)
+                       (overlay-start b))))))
+    (when os
+      (goto-char (overlay-start (car os)))
+      (car os))))
 
 (defun highlight-uses-mode-highlight (start end)
   "Make a highlight overlay at the given span."

@@ -1,11 +1,12 @@
 ;;; epl.el --- Emacs Package Library -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2013, 2014 Sebastian Wiesner
+;; Copyright (C) 2013-2015 Sebastian Wiesner
+;; Copyright (C) 1985-1986, 1992, 1994-1995, 1999-2015 Free Software
 
-;; Author: Sebastian Wiesner <lunaryorn@gmail.com>
+;; Author: Sebastian Wiesner <swiesner@lunaryorn.com>
 ;; Maintainer: Johan Andersson <johan.rejeep@gmail.com>
-;;     Sebastian Wiesner <lunaryorn@gmail.com>
-;; Version: 0.7
+;;     Sebastian Wiesner <swiesner@lunaryorn.com>
+;; Version: 0.9-cvs
 ;; Package-Requires: ((cl-lib "0.3"))
 ;; Keywords: convenience
 ;; URL: http://github.com/cask/epl
@@ -84,13 +85,19 @@
 
 ;;; Package database access
 
-;; `epl-package-installed-p' determines whether a package is installed.
+;; `epl-package-installed-p' determines whether a package is installed, either
+;; built-in or explicitly installed.
 
-;; `epl-installed-packages' and `epl-available-packages' get all packages
-;; installed and available for installation respectively.
+;; `epl-package-outdated-p' determines whether a package is outdated, that is,
+;; whether a package with a higher version number is available.
 
-;; `epl-find-installed-package' and `epl-find-available-packages' find installed
-;; and available packages by name.
+;; `epl-built-in-packages', `epl-installed-packages', `epl-outdated-packages'
+;; and `epl-available-packages' get all packages built-in, installed, outdated,
+;; or available for installation respectively.
+
+;; `epl-find-built-in-package', `epl-find-installed-packages' and
+;; `epl-find-available-packages' find built-in, installed and available packages
+;; by name.
 
 ;; `epl-find-upgrades' finds all upgradable packages.
 
@@ -111,7 +118,30 @@
 (require 'cl-lib)
 (require 'package)
 
-(defun epl--package-desc-p (package)
+
+(unless (fboundp #'define-error)
+  ;; `define-error' for 24.3 and earlier, copied from subr.el
+  (defun define-error (name message &optional parent)
+    "Define NAME as a new error signal.
+MESSAGE is a string that will be output to the echo area if such an error
+is signaled without being caught by a `condition-case'.
+PARENT is either a signal or a list of signals from which it inherits.
+Defaults to `error'."
+    (unless parent (setq parent 'error))
+    (let ((conditions
+           (if (consp parent)
+               (apply #'append
+                      (mapcar (lambda (parent)
+                                (cons parent
+                                      (or (get parent 'error-conditions)
+                                          (error "Unknown signal `%s'" parent))))
+                              parent))
+             (cons parent (get parent 'error-conditions)))))
+      (put name 'error-conditions
+           (delete-dups (copy-sequence (cons name conditions))))
+      (when message (put name 'error-message message)))))
+
+(defsubst epl--package-desc-p (package)
   "Whether PACKAGE is a `package-desc' object.
 
 Like `package-desc-p', but return nil, if `package-desc-p' is not
@@ -119,7 +149,16 @@ defined as function."
   (and (fboundp 'package-desc-p) (package-desc-p package)))
 
 
-;;;; Package directory
+;;; EPL errors
+(define-error 'epl-error "EPL error")
+
+(define-error 'epl-invalid-package "Invalid EPL package" 'epl-error)
+
+(define-error 'epl-invalid-package-file "Invalid EPL package file"
+  'epl-invalid-package)
+
+
+;;; Package directory
 (defun epl-package-dir ()
   "Get the directory of packages."
   package-user-dir)
@@ -134,7 +173,7 @@ defined as function."
   (epl-initialize))
 
 
-;;;; Package system management
+;;; Package system management
 (defvar epl--load-path-before-initialize nil
   "Remember the load path for `epl-reset'.")
 
@@ -165,7 +204,7 @@ package archives and reset the package directory."
   (epl-change-package-dir (epl-default-package-dir)))
 
 
-;;;; Package structures
+;;; Package structures
 (cl-defstruct (epl-requirement
                (:constructor epl-requirement-create))
   "Structure describing a requirement.
@@ -215,7 +254,7 @@ description to VAR in BODY."
          ,@body)
      (signal 'wrong-type-argument (list #'epl-package-p ,var))))
 
-(defun epl-package--package-desc-p (package)
+(defsubst epl-package--package-desc-p (package)
   "Whether the description of PACKAGE is a `package-desc'."
   (epl--package-desc-p (epl-package-description package)))
 
@@ -242,10 +281,10 @@ description to VAR in BODY."
      ((fboundp 'package-desc-doc) (package-desc-doc package)) ; Legacy
      (:else (error "Cannot get summary from %S" package)))))
 
-(defun epl-requirement--from-req (req)
+(defsubst epl-requirement--from-req (req)
   "Create a `epl-requirement' from a `package-desc' REQ."
-  (cl-destructuring-bind (name version) req
-    (epl-requirement-create :name name
+  (let  ((version (cadr req)))
+    (epl-requirement-create :name (car req)
                             :version (if (listp version) version
                                        (version-to-list version)))))
 
@@ -265,7 +304,7 @@ PACKAGE, or nil, if PACKAGE is not installed."
    ((fboundp 'package-desc-dir)
     (package-desc-dir (epl-package-description package)))
    ((fboundp 'package--dir)
-    (package--dir (epl-package-name package)
+    (package--dir (symbol-name (epl-package-name package))
                   (epl-package-version-string package)))
    (:else (error "Cannot get package directory from %S" package))))
 
@@ -300,9 +339,14 @@ variants."
 (defun epl-package-from-buffer (&optional buffer)
   "Create an `epl-package' object from BUFFER.
 
-BUFFER defaults to the current buffer."
+BUFFER defaults to the current buffer.
+
+Signal `epl-invalid-package' if the buffer does not contain a
+valid package file."
   (let ((info (with-current-buffer (or buffer (current-buffer))
-                (package-buffer-info))))
+                (condition-case err
+                    (package-buffer-info)
+                  (error (signal 'epl-invalid-package (cdr err)))))))
     (epl-package--parse-info info)))
 
 (defun epl-package-from-lisp-file (file-name)
@@ -311,7 +355,13 @@ BUFFER defaults to the current buffer."
 Return an `epl-package' object with the header metadata."
   (with-temp-buffer
     (insert-file-contents file-name)
-    (epl-package-from-buffer (current-buffer))))
+    (condition-case err
+        (epl-package-from-buffer (current-buffer))
+      ;; Attach file names to invalid package errors
+      (epl-invalid-package
+       (signal 'epl-invalid-package-file (cons file-name (cdr err))))
+      ;; Forward other errors
+      (error (signal (car err) (cdr err))))))
 
 (defun epl-package-from-tar-file (file-name)
   "Parse the package tarball at FILE-NAME.
@@ -387,7 +437,7 @@ typically ends with -pkg.el."
                    summary)))))))
 
 
-;;;; Package database access
+;;; Package database access
 (defun epl-package-installed-p (package)
   "Determine whether a PACKAGE is installed.
 
@@ -398,6 +448,60 @@ PACKAGE is either a package name as symbol, or a package object."
         (version (when (epl-package-p package)
                    (epl-package-version package))))
     (package-installed-p name version)))
+
+(defun epl--parse-built-in-entry (entry)
+  "Parse an ENTRY from the list of built-in packages.
+
+Return the corresponding `epl-package' object."
+  (if (fboundp 'package--from-builtin)
+      ;; In package-desc package.el, convert the built-in package to a
+      ;; `package-desc' and convert that to an `epl-package'
+      (epl-package--from-package-desc (package--from-builtin entry))
+    (epl-package-create :name (car entry) :description (cdr entry))))
+
+(defun epl-built-in-packages ()
+  "Get all built-in packages.
+
+Return a list of `epl-package' objects."
+  ;; This looks mighty strange, but it's the only way to force package.el to
+  ;; build the list of built-in packages.  Without this, `package--builtins'
+  ;; might be empty.
+  (package-built-in-p 'foo)
+  (mapcar #'epl--parse-built-in-entry package--builtins))
+
+(defun epl-find-built-in-package (name)
+  "Find a built-in package with NAME.
+
+NAME is a package name, as symbol.
+
+Return the built-in package as `epl-package' object, or nil if
+there is no built-in package with NAME."
+  (when (package-built-in-p name)
+    ;; We must call `package-built-in-p' *before* inspecting
+    ;; `package--builtins', because otherwise `package--builtins' might be
+    ;; empty.
+    (epl--parse-built-in-entry (assq name package--builtins))))
+
+(defun epl-package-outdated-p (package)
+  "Determine whether a PACKAGE is outdated.
+
+A package is outdated, if there is an available package with a
+higher version.
+
+PACKAGE is either a package name as symbol, or a package object.
+In the former case, test the installed or built-in package with
+the highest version number, in the later case, test the package
+object itself.
+
+Return t, if the package is outdated, or nil otherwise."
+  (let* ((package (if (epl-package-p package)
+                      package
+                    (or (car (epl-find-installed-packages package))
+                        (epl-find-built-in-package package))))
+         (available (car (epl-find-available-packages
+                          (epl-package-name package)))))
+    (and package available (version-list-< (epl-package-version package)
+                                           (epl-package-version available)))))
 
 (defun epl--parse-package-list-entry (entry)
   "Parse a list of packages from ENTRY.
@@ -426,7 +530,21 @@ Return a list of `epl-package' objects parsed from ENTRY."
 Return a list of package objects."
   (apply #'append (mapcar #'epl--parse-package-list-entry package-alist)))
 
-(defun epl--find-package-in-list (name list)
+(defsubst epl--filter-outdated-packages (packages)
+  "Filter outdated packages from PACKAGES."
+  (let (res)
+    (dolist (package packages)
+      (when (epl-package-outdated-p package)
+        (push package res)))
+    (nreverse res)))
+
+(defun epl-outdated-packages ()
+  "Get all outdated packages, as in `epl-package-outdated-p'.
+
+Return a list of package objects."
+  (epl--filter-outdated-packages (epl-installed-packages)))
+
+(defsubst epl--find-package-in-list (name list)
   "Find a package by NAME in a package LIST.
 
 Return a list of corresponding `epl-package' objects."
@@ -435,17 +553,28 @@ Return a list of corresponding `epl-package' objects."
       (epl--parse-package-list-entry entry))))
 
 (defun epl-find-installed-package (name)
-  "Find an installed package by NAME.
+  "Find the latest installed package by NAME.
 
 NAME is a package name, as symbol.
 
-Return the installed package as `epl-package' object, or nil, if
-no package with NAME is installed."
-  ;; FIXME: We must return *all* installed packages here
-  (car (epl--find-package-in-list name package-alist)))
+Return the installed package with the highest version number as
+`epl-package' object, or nil, if no package with NAME is
+installed."
+  (car (epl-find-installed-packages name)))
+(make-obsolete 'epl-find-installed-package 'epl-find-installed-packages "0.7")
+
+(defun epl-find-installed-packages (name)
+  "Find all installed packages by NAME.
+
+NAME is a package name, as symbol.
+
+Return a list of all installed packages with NAME, sorted by
+version number in descending order.  Return nil, if there are no
+packages with NAME."
+  (epl--find-package-in-list name package-alist))
 
 (defun epl-available-packages ()
-  "Get all packages available for installed.
+  "Get all packages available for installation.
 
 Return a list of package objects."
   (apply #'append (mapcar #'epl--parse-package-list-entry
@@ -498,7 +627,7 @@ packages."
 (defalias 'epl-built-in-p 'package-built-in-p)
 
 
-;;;; Package operations
+;;; Package operations
 
 (defalias 'epl-install-file 'package-install-file)
 

@@ -24,7 +24,7 @@ Also note that many of the current tests uses babel evaluation...
         -l lisp/org-id.el -l testing/org-test.el \
         --eval "(progn (org-reload) (setq org-confirm-babel-evaluate nil) \
         (org-babel-do-load-languages 'org-babel-load-languages \
-        '((emacs-lisp . t) (sh . t) (org . t))))" \
+        '((emacs-lisp . t) (shell . t) (org . t))))" \
         -f org-test-run-batch-tests
 #+END_SRC
 
@@ -47,26 +47,34 @@ load and run the test suite with the following commands.
      (require 'org-test)
    #+END_SRC
 
-2) Disable babel evaluation confirmation
+2) Load required Babel languages
    #+BEGIN_SRC emacs-lisp
-     (setq org-confirm-babel-evaluate)
+     (org-babel-do-load-languages
+      'org-babel-load-languages
+      (and
+       (mapc (lambda (lang) (add-to-list 'org-babel-load-languages (cons lang t)))
+             '(emacs-lisp shell org))
+       org-babel-load-languages))
    #+END_SRC
 
-3) Then run the test suite,
+3) Then run the test suite.  Babel evaluation confirmation is disabled
+   and ~C-c C-c~ is enabled while running the tests.
    #+BEGIN_SRC emacs-lisp
-     (org-test-run-all-tests)
+     (let (org-babel-no-eval-on-ctrl-c-ctrl-c
+           org-confirm-babel-evaluate)
+       (org-test-run-all-tests))
    #+END_SRC
 
-   or when a test fails run it interactively and investigate the
-   problem in the ERT results buffer.
+   When a test fails, run it interactively and investigate the problem
+   in the ERT results buffer.
 
    How to run one test:
    Use this as a demo example of a failing test
    #+BEGIN_SRC emacs-lisp
      (ert-deftest test-org/org-link-escape-ascii-character-demo-of-fail ()
-       (should (string= "%5B"  ;; expected is right
+       (should (string= "%5B"  ;; expecting %5B is right
                         (org-link-escape "[")))
-       (should (string= "%5C"  ;; expected is wrong, "%5D" would be right
+       (should (string= "%5C"  ;; expecting %5C is wrong, %5D right
                         (org-link-escape "]"))))
    #+END_SRC
    or evaluate the ert-deftest form of the test you want to run.  Then

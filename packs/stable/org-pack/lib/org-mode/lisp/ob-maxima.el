@@ -52,7 +52,7 @@
     (mapconcat 'identity
 	       (list
 		;; graphic output
-		(let ((graphic-file (org-babel-maxima-graphical-output-file params)))
+		(let ((graphic-file (ignore-errors (org-babel-graphical-output-file params))))
 		  (if graphic-file
 		      (format
 		       "set_plot_option ([gnuplot_term, png]); set_plot_option ([gnuplot_out_file, %S]);"
@@ -89,7 +89,7 @@ This function is called by `org-babel-execute-src-block'."
                                           (= 0 (length line)))
                                 line))
                             (split-string raw "[\r\n]"))) "\n")))))
-    (if (org-babel-maxima-graphical-output-file params)
+    (if (ignore-errors (org-babel-graphical-output-file params))
 	nil
       (org-babel-result-cond result-params
 	result
@@ -112,11 +112,6 @@ of the same value."
         (setq val (string-to-char val))))
     (format "%S: %s$" var
 	    (org-babel-maxima-elisp-to-maxima val))))
-
-(defun org-babel-maxima-graphical-output-file (params)
-  "Name of file to which maxima should send graphical output."
-  (and (member "graphics" (cdr (assq :result-params params)))
-       (cdr (assq :file params))))
 
 (defun org-babel-maxima-elisp-to-maxima (val)
   "Return a string of maxima code which evaluates to VAL."

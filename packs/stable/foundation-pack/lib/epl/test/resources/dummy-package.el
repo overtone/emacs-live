@@ -2,7 +2,7 @@
 
 ;; Copyright (C) 2013  Sebastian Wiesner
 
-;; Author: Sebastian Wiesner <lunaryorn@gmail.com>
+;; Author: Sebastian Wiesner <swiesner@lunaryorn.com>
 ;; Version: 4.3.1.2-alpha
 ;; Package-Requires: ((foo "1.2") (bar "2.2"))
 

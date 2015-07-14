@@ -24,21 +24,24 @@ org-contacts.el          --- Contacts management
 org-contribdir.el        --- Dummy file to mark the org contrib Lisp directory
 org-depend.el            --- TODO dependencies for Org-mode
 org-drill.el             --- Self-testing with org-learn
+org-effectiveness.el     --- Measuring your personal effectiveness
 org-element.el           --- Parser and applications for Org syntax
+org-eldoc.el             --- Eldoc documentation for SRC blocks
 org-elisp-symbol.el      --- Org links to emacs-lisp symbols
 org-eval-light.el        --- Evaluate in-buffer code on demand
 org-eval.el              --- The <lisp> tag, adapted from Muse
+org-eww.el               --- Support link/copy/paste from eww to Org-mode
 org-expiry.el            --- Expiry mechanism for Org entries
 org-export-generic.el    --- Export framework for configurable backends
-org-favtable.el          --- Lookup table of favorite references and links
 org-git-link.el          --- Provide org links to specific file version
+org-index.el             --- A personal index for org and beyond
 org-interactive-query.el --- Interactive modification of tags query
 org-invoice.el           --- Help manage client invoices in OrgMode
 org-jira.el              --- Add a jira:ticket protocol to Org
 org-learn.el             --- SuperMemo's incremental learning algorithm
+org-license.el		 --- Insert free licenses to your org documents
 org-mac-iCal.el          --- Imports events from iCal.app to the Emacs diary
-org-mac-link-grabber.el  --- Grab links and URLs from various Mac applications
-org-mac-message.el	 --- Links to Apple Mail.app messages from within Org-mode
+org-mac-link.el          --- Grab links and URLs from various Mac applications
 org-mairix.el 	         --- Hook mairix search into Org for different MUAs
 org-man.el 	         --- Support for links to manpages in Org-mode
 org-mew.el		 --- Support for links to Mew messages
@@ -79,6 +82,7 @@ ob-fomus.el        	 --- Org-babel functions for fomus evaluation
 ob-julia.el  	 	 --- Org-babel functions for julia evaluation
 ob-mathomatic.el   	 --- Org-babel functions for mathomatic evaluation
 ob-oz.el           	 --- Org-babel functions for Oz evaluation
+ob-stata.el              --- Org-babel functions for Stata evaluation
 ob-tcl.el 		 --- Org-babel functions for tcl evaluation
 
 External libraries

@@ -1,6 +1,6 @@
 ;;; gitattributes-mode.el --- Major mode for editing .gitattributes files -*- lexical-binding: t -*-
 
-;; Copyright (C) 2013-2014  The Magit Project Developers
+;; Copyright (C) 2013-2015  The Magit Project Developers
 
 ;; Author: Rüdiger Sonderfeld <ruediger@c-plusplus.de>
 ;; Maintainer: Jonas Bernoulli <jonas@bernoul.li>
@@ -141,6 +141,8 @@ If NO-STATE is non-nil then do not print state."
      (let ((old-limit limit))
        (save-excursion
          (beginning-of-line)
+         (while (looking-at "^\\s-*$")
+           (forward-line))
          (when (re-search-forward "[[:space:]]" limit 'noerror)
            (setq limit (point))))
        (unless (< limit (point))

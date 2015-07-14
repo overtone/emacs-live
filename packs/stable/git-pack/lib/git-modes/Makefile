@@ -1,38 +1,46 @@
-EMACS_BIN  ?= emacs
-EFLAGS ?=
-BATCH   = $(EMACS_BIN) $(EFLAGS) -batch -Q -L .
-BATCHE  = $(BATCH) -eval
-BATCHC  = $(BATCH) -f batch-byte-compile
+PREFIX  ?= /usr/local
+LISPDIR ?= $(PREFIX)/share/emacs/site-lisp/git-modes
 
-ELS  = git-commit-mode.el
-ELS += git-rebase-mode.el
-ELS += gitattributes-mode.el
+ELS  = gitattributes-mode.el
 ELS += gitconfig-mode.el
 ELS += gitignore-mode.el
 ELCS = $(ELS:.el=.elc)
+ELMS = $(ELS:%.el=marmalade/%-$(VERSION).el)
 
-.PHONY: lisp
+EMACS_BIN ?= emacs
+
+CP    ?= install -p -m 644
+MKDIR ?= install -p -m 755 -d
+RMDIR ?= rm -rf
+SED   ?= sed
+
+VERSION ?= $(shell test -e .git && git describe --tags --dirty 2> /dev/null)
+ifeq "$(VERSION)" ""
+  VERSION = 1.2.0
+endif
+
+.PHONY: install clean marmalade-upload
+
 lisp: $(ELCS)
 
-.PHONY: clean
+install: lisp
+	@printf "Installing...\n"
+	@$(MKDIR) $(DESTDIR)$(LISPDIR)
+	@$(CP) $(ELS) $(ELCS) $(DESTDIR)$(LISPDIR)
+
 clean:
-	@echo "Cleaning..."
-	@rm -f $(ELCS)
+	@printf "Cleaning...\n"
+	@$(RM) $(ELCS)
+	@$(RMDIR) marmalade
 
 %.elc: %.el
-	@$(BATCHC) $<
+	@$(EMACS_BIN) -batch -Q -f batch-byte-compile $<
 
-.PHONY: test
-test:
-	@$(BATCHE) "(progn\
-	(require 'cl) \
-	(put 'flet 'byte-obsolete-info nil))" \
-	-l tests/git-commit-tests.el -f ert-run-tests-batch-and-exit
-
-.PHONY: test-interactive
-test-interactive:
-	@$(EMACS) $(EFLAGS) -Q -L "." --eval "(progn\
-	(require 'cl)\
-	(put 'flet 'byte-obsolete-info nil)\
-	(load-file \"tests/git-commit-tests.el\")\
-	(ert t))"
+marmalade-upload: marmalade
+	@marmalade-upload $(ELMS)
+	@$(RMDIR) marmalade
+marmalade: $(ELMS)
+$(ELMS): marmalade/%-$(VERSION).el: %.el
+	@$(MKDIR) -p marmalade
+	@$(CP) $< $@
+	@$(SED) -e "/^;; Keywords:/a;; Package-Version: $(VERSION)" -i $@

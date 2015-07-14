@@ -1,6 +1,6 @@
 ;;; cider-client.el --- A layer of abstraction above the actual client code. -*- lexical-binding: t -*-
 
-;; Copyright © 2013-2014 Bozhidar Batsov
+;; Copyright © 2013-2015 Bozhidar Batsov
 ;;
 ;; Author: Bozhidar Batsov <bozhidar@batsov.com>
 
@@ -41,6 +41,7 @@
     "A point of view is worth 80 IQ points. -Alan Kay"
     "Lisp isn't a language, it's a building material. -Alan Kay"
     "Simple things should be simple, complex things should be possible. -Alan Kay"
+    "Everything should be as simple as possible, but not simpler. -Albert Einstein"
     "Measuring programming progress by lines of code is like measuring aircraft building progress by weight. -Bill Gates"
     "Controlling complexity is the essence of computer programming. -Brian Kernighan"
     "The unavoidable price of reliability is simplicity. -C.A.R. Hoare"
@@ -90,22 +91,15 @@
 ;;; Evaluation helpers
 (defun cider-ns-form-p (form)
   "Check if FORM is an ns form."
-  (string-match "^[[:space:]]*\(ns\\([[:space:]]*$\\|[[:space:]]+\\)" form))
+  (string-match-p "^[[:space:]]*\(ns\\([[:space:]]*$\\|[[:space:]]+\\)" form))
 
-(defun cider-eval (input callback &optional ns session)
-  "Send the request INPUT and register the CALLBACK as the response handler.
-NS & SESSION specify the context in which to evaluate the request."
-  ;; namespace forms are always evaluated in the "user" namespace
-  (let ((ns (if (cider-ns-form-p input)
-                "user"
-              (or ns (cider-current-ns)))))
-    (nrepl-request:eval input callback ns session)))
+(define-obsolete-function-alias 'cider-eval 'nrepl-request:eval)
 
 (defun cider-tooling-eval (input callback &optional ns)
   "Send the request INPUT and register the CALLBACK as the response handler.
 NS specifies the namespace in which to evaluate the request."
   ;; namespace forms are always evaluated in the "user" namespace
-  (cider-eval input callback ns (nrepl-current-tooling-session)))
+  (nrepl-request:eval input callback ns (nrepl-current-tooling-session)))
 
 (defun cider-interrupt ()
   "Interrupt any pending evaluations."
@@ -163,11 +157,6 @@ loaded. If CALLBACK is nil, use `cider-load-file-handler'."
 
 
 ;;; Sync Requests
-(defun cider--sync-request-value (request)
-  "Send sync REQUEST and return the \"value\" slot."
-  (cider-ensure-op-supported (lax-plist-get request "op"))
-  (nrepl-dict-get (nrepl-send-sync-request request) "value"))
-
 (defun cider-sync-request:apropos (query &optional search-ns docs-p privates-p case-sensitive-p)
   "Send \"apropos\" op with args SEARCH-NS, DOCS-P, PRIVATES-P, CASE-SENSITIVE-P."
   (-> `("op" "apropos"
@@ -177,26 +166,26 @@ loaded. If CALLBACK is nil, use `cider-load-file-handler'."
         ,@(when docs-p '("docs?" "t"))
         ,@(when privates-p '("privates?" "t"))
         ,@(when case-sensitive-p '("case-sensitive?" "t")))
-    (nrepl-send-sync-request)
-    (nrepl-dict-get "apropos-matches")))
+      (nrepl-send-sync-request)
+      (nrepl-dict-get "apropos-matches")))
 
 (defun cider-sync-request:classpath ()
   "Return a list of classpath entries."
   (cider-ensure-op-supported "classpath")
   (-> (list "op" "classpath"
             "session" (nrepl-current-session))
-    (nrepl-send-sync-request)
-    (nrepl-dict-get "classpath")))
+      (nrepl-send-sync-request)
+      (nrepl-dict-get "classpath")))
 
 (defun cider-sync-request:complete (str context)
   "Return a list of completions for STR using nREPL's \"complete\" op."
-  (-> (list "op" "complete"
-            "session" (nrepl-current-session)
-            "ns" (cider-current-ns)
-            "symbol" str
-            "context" context)
-    (nrepl-send-sync-request)
-    (nrepl-dict-get "completions")))
+  (-when-let (dict (-> (list "op" "complete"
+                             "session" (nrepl-current-session)
+                             "ns" (cider-current-ns)
+                             "symbol" str
+                             "context" context)
+                       (nrepl-send-sync-request 'abort-on-input)))
+    (nrepl-dict-get dict "completions")))
 
 (defun cider-sync-request:info (symbol &optional class member)
   "Send \"info\" op with parameters SYMBOL or CLASS and MEMBER."
@@ -206,56 +195,71 @@ loaded. If CALLBACK is nil, use `cider-load-file-handler'."
                         ,@(when symbol (list "symbol" symbol))
                         ,@(when class (list "class" class))
                         ,@(when member (list "member" member)))
-                    (nrepl-send-sync-request))))
+                      (nrepl-send-sync-request))))
     (if (member "no-info" (nrepl-dict-get var-info "status"))
         nil
       var-info)))
 
 (defun cider-sync-request:eldoc (symbol &optional class member)
   "Send \"eldoc\" op with parameters SYMBOL or CLASS and MEMBER."
-  (let ((eldoc (-> `("op" "eldoc"
-                     "session" ,(nrepl-current-session)
-                     "ns" ,(cider-current-ns)
-                     ,@(when symbol (list "symbol" symbol))
-                     ,@(when class (list "class" class))
-                     ,@(when member (list "member" member)))
-                 (nrepl-send-sync-request))))
+  (-when-let (eldoc (-> `("op" "eldoc"
+                          "session" ,(nrepl-current-session)
+                          "ns" ,(cider-current-ns)
+                          ,@(when symbol (list "symbol" symbol))
+                          ,@(when class (list "class" class))
+                          ,@(when member (list "member" member)))
+                        (nrepl-send-sync-request 'abort-on-input)))
     (if (member "no-eldoc" (nrepl-dict-get eldoc "status"))
         nil
       eldoc)))
 
-(defun cider-sync-request:macroexpand (expander expr &optional display-namespaces)
-  "Macroexpand, using EXPANDER, the given EXPR.
-The default for DISPLAY-NAMESPACES is taken from
-`cider-macroexpansion-display-namespaces'."
-  (cider-ensure-op-supported "macroexpand")
-  (-> (list "op" "macroexpand"
-            "expander" expander
-            "code" expr
-            "ns" (cider-current-ns)
-            "display-namespaces"
-            (or display-namespaces
-                (symbol-name cider-macroexpansion-display-namespaces)))
-    (nrepl-send-sync-request)
-    (nrepl-dict-get "expansion")))
-
 (defun cider-sync-request:ns-list ()
   "Get a list of the available namespaces."
-  (cider--sync-request-value (list "op" "ns-list"
-                                   "session" (nrepl-current-session))))
+  (-> (list "op" "ns-list"
+            "session" (nrepl-current-session))
+      (nrepl-send-sync-request)
+      (nrepl-dict-get "ns-list")))
 
 (defun cider-sync-request:ns-vars (ns)
   "Get a list of the vars in NS."
-  (cider--sync-request-value (list "op" "ns-vars"
-                                   "session" (nrepl-current-session)
-                                   "ns" ns)))
+  (-> (list "op" "ns-vars"
+            "session" (nrepl-current-session)
+            "ns" ns)
+      (nrepl-send-sync-request)
+      (nrepl-dict-get "ns-vars")))
 
 (defun cider-sync-request:resource (name)
   "Perform nREPL \"resource\" op with resource name NAME."
   (-> (list "op" "resource"
             "name" name)
-    (nrepl-send-sync-request)
-    (nrepl-dict-get "resource-path")))
+      (nrepl-send-sync-request)
+      (nrepl-dict-get "resource-path")))
+
+(defun cider-sync-request:resources-list ()
+  "Perform nREPL \"resource\" op with resource name NAME."
+  (-> (list "op" "resources-list")
+      (nrepl-send-sync-request)
+      (nrepl-dict-get "resources-list")))
+
+(defun cider-sync-request:format-code (code)
+  "Perform nREPL \"format-code\" op with CODE."
+  (-> (list "op" "format-code"
+            "code" code)
+      (nrepl-send-sync-request)
+      (nrepl-dict-get "formatted-code")))
+
+(defun cider-sync-request:format-edn (edn &optional right-margin)
+  "Perform \"format-edn\" op with EDN and RIGHT-MARGIN."
+  (let* ((response (-> (list "op" "format-edn"
+                             "edn" edn)
+                       (append (and right-margin (list "right-margin" right-margin)))
+                       (nrepl-send-sync-request)))
+         (err (nrepl-dict-get response "err")))
+    (when err
+      ;; err will be a stacktrace with a first line that looks like:
+      ;; "clojure.lang.ExceptionInfo: Unmatched delimiter ]"
+      (error (car (split-string err "\n"))))
+    (nrepl-dict-get response "formatted-edn")))
 
 (provide 'cider-client)
 

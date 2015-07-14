@@ -50,7 +50,7 @@
 ;;
 ;; add this to .emacs:
 ;;
-;;   (add-hook 'haskell-mode-hook 'turn-on-haskell-bot)
+;;   (add-hook 'haskell-mode-hook 'haskell-bot-mode)
 ;;
 ;;
 ;; Customisation:

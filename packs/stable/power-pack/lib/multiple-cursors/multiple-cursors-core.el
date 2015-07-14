@@ -29,8 +29,6 @@
 
 (require 'rect)
 
-(defvar mc--read-char)
-
 (defface mc/cursor-face
   '((t (:inverse-video t)))
   "The face used for fake cursors"
@@ -51,14 +49,6 @@
            (setq buffer-undo-list (cdr buffer-undo-list)) ;; then pop the cleaner right off again
          (setq buffer-undo-list ;; otherwise add a function to activate this cursor
                (cons (cons 'apply (cons 'activate-cursor-for-undo (list id))) buffer-undo-list))))))
-
-
-(defun mc/get-all-fake-cursors-state ()
-  "Return list of all fake cursor states
-like this: ((CURSOR-POS MARK-POSITION (list of cursor specific variables)) ...)"
-  (mapcar (lambda (cursor)
-            (mc/get-state-from-overlay cursor))
-          (mc/all-fake-cursors)))
 
 (defun mc/all-fake-cursors (&optional start end)
   (remove-if-not 'mc/fake-cursor-p
@@ -140,6 +130,7 @@ highlights the entire width of the window."
                                   mark-ring
                                   mark-active
                                   yank-undo-function
+                                  kill-ring-yank-pointer
                                   autopair-action
                                   autopair-wrap-action
                                   er/history)
@@ -159,23 +150,6 @@ highlights the entire width of the window."
   (set-marker (mark-marker) (overlay-get o 'mark))
   (dolist (var mc/cursor-specific-vars)
     (when (boundp var) (set var (overlay-get o var)))))
-
-(defun mc/get-state-from-overlay (o)
-  "Return list describing state of cursor overlay"
-  (list
-   (marker-position (overlay-get o 'point))
-   (marker-position (overlay-get o 'mark))
-   (mapcar (lambda (var)
-             (when (boundp var) (cons var (overlay-get o var))))
-    mc/cursor-specific-vars)))
-
-(defun mc/create-overlay-from-state (point mark cursor-vars)
-  "Creates cursor overlay according to cursor-info"
-  (goto-char point)
-  (push-mark mark t)
-  (loop for (var . value) in cursor-vars
-        do (setq var value))
-  (mc/create-fake-cursor-at-point))
 
 (defun mc/remove-fake-cursor (o)
   "Delete overlay with state, including dependent overlays and markers."
@@ -257,8 +231,6 @@ cursor with updated info."
 ;; Intercept some reading commands so you won't have to
 ;; answer them for every single cursor
 
-(defvar mc--read-char nil)
-(defvar multiple-cursors-mode nil)
 (defadvice read-char (around mc-support activate)
   (if (not multiple-cursors-mode)
       ad-do-it
@@ -266,7 +238,6 @@ cursor with updated info."
       (setq mc--read-char ad-do-it))
     (setq ad-return-value mc--read-char)))
 
-(defvar mc--read-quoted-char nil)
 (defadvice read-quoted-char (around mc-support activate)
   (if (not multiple-cursors-mode)
       ad-do-it
@@ -453,7 +424,7 @@ So you can paste it in later with `yank-rectangle'."
     (unless (mc--all-equal entries)
       (setq killed-rectangle entries))))
 
-(defvar mc/unsupported-minor-modes '(company-mode auto-complete-mode flyspell-mode jedi-mode)
+(defvar mc/unsupported-minor-modes '(auto-complete-mode flyspell-mode)
   "List of minor-modes that does not play well with multiple-cursors.
 They are temporarily disabled when multiple-cursors are active.")
 
@@ -484,21 +455,6 @@ They are temporarily disabled when multiple-cursors are active.")
   :group 'multiple-cursors)
 (put 'mc/mode-line 'risky-local-variable t)
 
-(defun mc/restore-mode (real-cursor real-mark fake-cursors)
-  "Restore state of mc mode after undo"
-  (save-excursion
-    ;; remove all existing fake cursors
-    (when multiple-cursors-mode
-      (mc/remove-fake-cursors))
-    ;; and create set a new one
-    (mapc #'(lambda (cursor)
-              (apply 'mc/create-overlay-from-state cursor))
-          fake-cursors))
-  (goto-char real-cursor)
-  (push-mark real-mark t)
-  (multiple-cursors-mode t))
-
-;;;###autoload
 (define-minor-mode multiple-cursors-mode
   "Mode while multiple cursors are active."
   nil mc/mode-line mc/keymap
@@ -510,7 +466,6 @@ They are temporarily disabled when multiple-cursors are active.")
         (run-hooks 'multiple-cursors-mode-enabled-hook))
     (remove-hook 'post-command-hook 'mc/execute-this-command-for-all-cursors t)
     (remove-hook 'pre-command-hook 'mc/make-a-note-of-the-command-being-run t)
-    (push `(apply mc/restore-mode . ,(list (point) (mark) (mc/get-all-fake-cursors-state))) buffer-undo-list)
     (setq mc--this-command nil)
     (mc--maybe-set-killed-rectangle)
     (mc/remove-fake-cursors)
@@ -637,9 +592,6 @@ for running commands with multiple cursors.")
                                      mc/skip-to-next-like-this
                                      mc/skip-to-previous-like-this
                                      rrm/switch-to-multiple-cursors
-                                     mc-hide-unmatched-lines-mode
-                                     hum/keyboard-quit
-                                     hum/unhide-invisible-overlays
                                      save-buffer
                                      ido-exit-minibuffer
                                      exit-minibuffer
@@ -727,8 +679,6 @@ for running commands with multiple cursors.")
                                         py-electric-backspace
                                         c-electric-backspace
                                         org-delete-backward-char
-                                        cperl-electric-backspace
-                                        python-indent-dedent-line-backspace
                                         paredit-backward-delete
                                         autopair-backspace
                                         just-one-space

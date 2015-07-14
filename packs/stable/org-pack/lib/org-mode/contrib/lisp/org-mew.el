@@ -308,7 +308,7 @@ the subject and the group number to extract.  You can get rid of
 		org-mew-subject-alist))
 	(setq id-list (cons subject id-list)))
       (cond ((null id-list)
-	     (error "No message ID to search."))
+	     (error "No message ID to search"))
 	    ((equal (length id-list) 1)
 	     (org-search-view nil (car id-list)))
 	    (t
@@ -342,7 +342,7 @@ asks you to select the capture template."
 	    (mew-message-goto-summary))
 	(let ((mew-mark-afterstep-spec '((?o 0 0 0 0 0 0 0))))
 	  (mew-summary-refile)))
-      (error "No refile folder selected."))
+      (error "No refile folder selected"))
   (let* ((org-mew-link-to-refile-destination t)
 	 (folder-name (org-mew-folder-name))
 	 (keys (if arg

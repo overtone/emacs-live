@@ -8,40 +8,20 @@
 Provides Emacs font-lock, indentation, and navigation for the
 [Clojure programming language](http://clojure.org).
 
-A more thorough walkthrough is available at [clojure-doc.org](http://clojure-doc.org/articles/tutorials/emacs.html).
+More thorough walkthroughs are available at
+[clojure-doc.org](http://clojure-doc.org/articles/tutorials/emacs.html)
+and [Clojure for the Brave and the True](http://www.braveclojure.com/basic-emacs/).
 
 ## Installation
 
-Available on both [MELPA Stable][] and
-[MELPA][] repos.
+Available on all major `package.el` community maintained repos -  [MELPA Stable][],
+[MELPA][] and [Marmalade][] repos.
 
-MELPA Stable is recommended as it has the latest stable version, but
+MELPA Stable and Marmalade are recommended as they have the latest stable version.
 MELPA has a development snapshot for users who don't mind breakage but
 don't want to run from a git checkout.
 
-If you're not already using MELPA Stable, add this to your
-`~/.emacs.d/init.el` and load it with <kbd>M-x eval-buffer</kbd>.
-
-```el
-(require 'package)
-(add-to-list 'package-archives
-             '("melpa-stable" . "http://stable.melpa.org/packages/"))
-(package-initialize)
-```
-
-If you're feeling adventurous and you'd like to use MELPA add this bit
-of code instead:
-
-```el
-(require 'package)
-(add-to-list 'package-archives
-             '("melpa" . "http://melpa.org/packages/") t)
-(package-initialize)
-```
-
-And then you can install:
-
-<kbd>M-x package-refresh-contents</kbd>
+You can install `clojure-mode` using the following command:
 
 <kbd>M-x package-install [RET] clojure-mode [RET]</kbd>
 
@@ -49,9 +29,12 @@ or if you'd rather keep it in your dotfiles:
 
 ```el
 (unless (package-installed-p 'clojure-mode)
-  (package-refresh-contents)
   (package-install 'clojure-mode))
 ```
+
+If the installation doesn't work try refreshing the package list:
+
+<kbd>M-x package-refresh-contents</kbd>
 
 ### Extra font-locking
 
@@ -66,36 +49,80 @@ To see a list of available configuration options do `M-x customize-group RET clo
 
 ### Indentation options
 
-Characterizing the default indentation rules of clojure-mode is difficult to do
-in summary; this is one attempt:
+The default indentation rules in `clojure-mode` are derived from the
+[community Clojure Style Guide](https://github.com/bbatsov/clojure-style-guide).
+Please, refer to the guide for the general Clojure indentation rules.
 
-1. Bodies of parenthesized forms are indented such that arguments are aligned to
-  the start column of the first argument, _except_ for a class of forms
-  identified by the symbol in function position, the bodies of which are
-  indented two spaces, regardless of the position of their first argument (this
-  is called "defun" indentation, for historical reasons):
-  1. Known special forms (e.g. `case`, `try`, etc)
-  2. Nearly all "core" macros that ship as part of Clojure itself
-  3. Userland macros (and any other form?) that are locally registered via
-  `put-clojure-indent`, `define-clojure-indent` (helpers for adding mappings to
-  `clojure-indent-function`).
-2. The bodies of certain more complicated macros and special forms
-  (e.g. `letfn`, `deftype`, `extend-protocol`, etc) are indented using a
-  contextual backtracking indentation method, controlled by
-  `clojure-backtracking-indent`.
-3. The bodies of other forms (e.g. vector, map, and set literals) are indented
-  such that each new line within the form is set just inside of the opening
-  delimiter of the form.
+The indentation of special forms and macros with bodies is controlled via
+`put-clojure-indent`, `define-clojure-indent` and `clojure-backtracking-indent`.
+Nearly all special forms and built-in macros with bodies have special indentation
+settings in `clojure-mode`. You can add/alter the indentation settings in your
+personal config. Let's assume you want to indent `->>` and `->` like this:
 
-Please see the docstrings of the Emacs Lisp functions/vars noted above for
-information about customizing this indentation behaviour.
+```clojure
+(->> something
+  ala
+  bala
+  portokala)
+```
+
+You can do so by putting the following in your config:
+
+```el
+(put-clojure-indent '-> 1)
+(put-clojure-indent '->> 1)
+```
+
+You can also specify different indentation settings for symbols
+prefixed with some ns (or ns alias):
+
+```el
+(put-clojure-indent 'do 0)
+(put-clojure-indent 'my-ns/do 1)
+```
+
+This means that the body of the `->/->>` is after the first argument.
+
+A more compact way to do the same thing is:
+
+```el
+(define-clojure-indent
+  (-> 1)
+  (->> 1))
+```
+
+The bodies of certain more complicated macros and special forms
+(e.g. `letfn`, `deftype`, `extend-protocol`, etc) are indented using
+a contextual backtracking indentation method, controlled by
+`clojure-backtracking-indent`. Here's some example config code:
+
+```el
+(put 'implement 'clojure-backtracking-indent '(4 (2)))
+(put 'letfn 'clojure-backtracking-indent '((2) 2))
+(put 'proxy 'clojure-backtracking-indent '(4 4 (2)))
+(put 'reify 'clojure-backtracking-indent '((2)))
+(put 'deftype 'clojure-backtracking-indent '(4 4 (2)))
+(put 'defrecord 'clojure-backtracking-indent '(4 4 (2)))
+(put 'defprotocol 'clojure-backtracking-indent '(4 (2)))
+(put 'extend-type 'clojure-backtracking-indent '(4 (2)))
+(put 'extend-protocol 'clojure-backtracking-indent '(4 (2)))
+(put 'specify 'clojure-backtracking-indent '(4 (2)))
+(put 'specify! 'clojure-backtracking-indent '(4 (2)))
+```
+
+Don't use special indentation settings for forms with names that are not unique,
+as `clojure-mode`'s indentation engine is not namespace-aware and you might
+end up getting strange indentation in unexpected places.
+
+Please, see the docstrings of the Emacs Lisp functions/vars noted above for
+information about customizing this indentation behavior.
 
 ## Related packages
 
 * [clojure-mode-extra-font-locking][] provides additional font-locking
 for built-in methods and macros.  The font-locking is pretty
 imprecise, because it doesn't take namespaces into account and it
-won't font-lock a functions at all possible positions in a sexp, but
+won't font-lock a function at all possible positions in a sexp, but
 if you don't mind its imperfections you can easily enable it:
 
 ```el
@@ -105,7 +132,13 @@ if you don't mind its imperfections you can easily enable it:
 The code in `clojure-mode-font-locking` used to be bundled with
 `clojure-mode` before version 3.0.
 
-* [clj-refactor][] provides simple refactoring support.
+You can also use the code in this package as a basis for extending the
+font-locking further (e.g. functions/macros from more
+namespaces). Generally you should avoid adding special font-locking
+for things that don't have fairly unique names, as this will result in
+plenty of incorrect font-locking.
+
+* [clj-refactor][] provides refactoring support.
 
 * Enabling `CamelCase` support for editing commands(like
 `forward-word`, `backward-word`, etc) in `clojure-mode` is quite
@@ -114,7 +147,7 @@ names. The built-in Emacs minor mode `subword-mode` provides such
 functionality:
 
 ```el
-(add-hook 'clojure-mode-hook 'subword-mode)
+(add-hook 'clojure-mode-hook #'subword-mode)
 ```
 
 * The use of [paredit][] when editing Clojure (or any other Lisp) code
@@ -124,7 +157,7 @@ structure at a higher level than just characters and words. To enable
 it for Clojure buffers:
 
 ```el
-(add-hook 'clojure-mode-hook 'paredit-mode)
+(add-hook 'clojure-mode-hook #'paredit-mode)
 ```
 
 * [smartparens][] is an excellent
@@ -133,7 +166,7 @@ it for Clojure buffers:
   `smartparens` use the following code:
 
 ```el
-(add-hook 'clojure-mode-hook 'smartparens-strict-mode)
+(add-hook 'clojure-mode-hook #'smartparens-strict-mode)
 ```
 
 * [RainbowDelimiters][] is a
@@ -145,7 +178,7 @@ it for Clojure buffers:
   enable it like this:
 
 ```el
-(add-hook 'clojure-mode-hook 'rainbow-delimiters-mode)
+(add-hook 'clojure-mode-hook #'rainbow-delimiters-mode)
 ```
 
 ## REPL Interaction
@@ -155,43 +188,12 @@ and evaluating code interactively.
 
 ### Basic REPL
 
-Use <kbd>M-x run-lisp</kbd> to open a simple REPL subprocess using
-[Leiningen][]. Once that has
-opened, you can use <kbd>C-c C-r</kbd> to evaluate the region or
-<kbd>C-c C-l</kbd> to load the whole file.
-
-If you don't use Leiningen, you can set `inferior-lisp-program` to
-a different REPL command.
+Install [inf-clojure][] for basic interaction with a REPL process.
 
 ### CIDER
 
 You can also use [Leiningen][] to start an
 enhanced REPL via [CIDER][].
-
-### Swank Clojure
-
-SLIME is available via
-[swank-clojure][] in `clojure-mode` 1.x.
-SLIME support was removed in version 2.x in favor of `CIDER`.
-
-## Clojure Test Mode
-
-**Deprecated**
-
-This source repository also includes `clojure-test-mode.el`, which
-provides support for running Clojure tests (using the `clojure.test`
-framework) via CIDER and seeing feedback in the test buffer about
-which tests failed or errored. The installation instructions above
-should work for clojure-test-mode as well.
-
-Once you have a repl session active, you can run the tests in the
-current buffer with <kbd>C-c C-,</kbd>. Failing tests and errors will be
-highlighted using overlays. To clear the overlays, use <kbd>C-c k</kbd>.
-
-The mode is **deprecated** (more details
-[here](https://github.com/clojure-emacs/clojure-mode/issues/214)) and
-will not be improved/maintained anymore. All `clojure-test-mode` users
-should start using CIDER 0.7+, which features built-in support for `clojure.test`.
 
 ## Changelog
 
@@ -199,7 +201,7 @@ An extensive changelog is available [here](CHANGELOG.md).
 
 ## License
 
-Copyright © 2007-2014 Jeffrey Chu, Lennart Staflin, Phil Hagelberg, Bozhidar Batsov
+Copyright © 2007-2015 Jeffrey Chu, Lennart Staflin, Phil Hagelberg, Bozhidar Batsov
 and [contributors][].
 
 Distributed under the GNU General Public License; type <kbd>C-h C-c</kbd> to view it.
@@ -209,11 +211,12 @@ Distributed under the GNU General Public License; type <kbd>C-h C-c</kbd> to vie
 [melpa-stable-badge]: http://stable.melpa.org/packages/clojure-mode-badge.svg
 [melpa-package]: http://melpa.org/#/clojure-mode
 [melpa-stable-package]: http://stable.melpa.org/#/clojure-mode
+[marmalade]: https://marmalade-repo.org
 [COPYING]: http://www.gnu.org/copyleft/gpl.html
 [badge-travis]: https://travis-ci.org/clojure-emacs/clojure-mode.svg?branch=master
 [travis]: https://travis-ci.org/clojure-emacs/clojure-mode
-[swank-clojure]: http://github.com/technomancy/swank-clojure
 [CIDER]: https://github.com/clojure-emacs/cider
+[inf-clojure]: https://github.com/clojure-emacs/inf-clojure
 [Leiningen]: http://leiningen.org
 [contributors]: https://github.com/clojure-emacs/clojure-mode/contributors
 [melpa]: http://melpa.org
@@ -222,4 +225,4 @@ Distributed under the GNU General Public License; type <kbd>C-h C-c</kbd> to vie
 [clj-refactor]: https://github.com/clojure-emacs/clj-refactor.el
 [paredit]: http://mumble.net/~campbell/emacs/paredit.html
 [smartparens]: https://github.com/Fuco1/smartparens
-[RainbowDelimiters]: https://github.com/jlr/rainbow-delimiters
+[RainbowDelimiters]: https://github.com/Fanael/rainbow-delimiters

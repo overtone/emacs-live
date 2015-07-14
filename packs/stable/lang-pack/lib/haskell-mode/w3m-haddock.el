@@ -29,7 +29,6 @@
 (declare-function w3m-browse-url "w3m")
 (defvar w3m-current-url)
 
-
 (add-hook 'w3m-display-hook 'w3m-haddock-display)
 
 (defface w3m-haddock-heading-face
@@ -68,11 +67,14 @@ You can rebind this if you're using hsenv by adding it to your
                        entries)))
     (cond
      ((member package-dir entries)
-      (cl-loop for dir in haskell-w3m-haddock-dirs
-               when (w3m-haddock-find-index dir package-dir)
-               do (progn (w3m-browse-url (w3m-haddock-find-index dir package-dir)
-                                         t)
-                         (cl-return))))
+      (unless (cl-loop for dir in haskell-w3m-haddock-dirs
+                       when (w3m-haddock-find-index dir package-dir)
+                       do (progn (w3m-browse-url (w3m-haddock-find-index dir package-dir)
+                                                 t)
+                                 (cl-return t)))
+        (w3m-browse-url (concat "http://hackage.haskell.org/package/"
+                                package-dir)
+                        t)))
      (t
       (w3m-browse-url (concat "http://hackage.haskell.org/package/"
                               package-dir)

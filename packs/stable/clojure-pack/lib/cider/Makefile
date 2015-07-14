@@ -22,18 +22,6 @@ elpa:
 	$(CASK) update
 	touch $@
 
-package:
-	$(CASK) package
-	mkdir -p packages/$(PACKAGE_NAME)
-	cp cider-pkg.el packages/$(PACKAGE_NAME)
-	cp $(ELS) packages/$(PACKAGE_NAME)
-	tar cf packages/$(PACKAGE_NAME).tar -C packages $(PACKAGE_NAME)
-
-packageclean:
-	rm cider-pkg.el
-	rm -rf packages/$(PACKAGE_NAME)
-	rm packages/$(PACKAGE_NAME).tar
-
 .PHONY: build
 build : elpa $(OBJECTS)
 
@@ -58,6 +46,7 @@ elpaclean : clean
 	rm -rf .cask # Clean packages installed for development
 
 %.elc : %.el
-	$(CASK) exec $(EMACS) --no-site-file --no-site-lisp --batch \
-	$(EMACSFLAGS) \
-	-f batch-byte-compile $<
+	$(CASK) build
+
+run-cider: elpa
+	cask exec emacs -Q -L . --eval "(require 'cider)"

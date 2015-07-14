@@ -1,6 +1,6 @@
 ;;; test-org-src.el --- tests for org-src.el
 
-;; Copyright (C) 2012, 2013, 2014  Le Wang
+;; Copyright (C) 2012-2015  Le Wang
 
 ;; Author: Le Wang <l26wang at gmail dot com>
 
@@ -26,26 +26,24 @@
 
 
 (ert-deftest test-org-src/basic ()
-  "Editing regular block works. with point on
-
-#+begin_src line
-"
+  "Editing regular block works, with point on source block."
   (org-test-with-temp-text
       "
-#+begin_src emacs-lisp
+<point>#+begin_src emacs-lisp
   (message hello)
 #+end_src
 "
-    (goto-line 2)
-    (org-edit-special)
-    (insert "blah")
-    (org-edit-src-exit)
-    (should (equal (buffer-string) "
+    (let ((org-edit-src-content-indentation 2)
+	  (org-src-preserve-indentation nil))
+      (org-edit-special)
+      (insert "blah")
+      (org-edit-src-exit)
+      (should (equal (buffer-string) "
 #+begin_src emacs-lisp
   blah(message hello)
 #+end_src
 "))
-    (should (equal (word-at-point) "blah"))))
+      (should (org-looking-at-p "(message hello)")))))
 
 (ert-deftest test-org-src/point-outside-block ()
   "Editing with point before/after block signals expected error."
@@ -64,19 +62,21 @@
   "Editing empty block."
   (org-test-with-temp-text
       "
-#+begin_src emacs-lisp
+<point>#+begin_src emacs-lisp
 #+end_src
 "
-    (goto-line 2)
-    (org-edit-special)
-    (insert "blah")
-    (org-edit-src-exit)
-    (should (equal (buffer-string) "
+    (let ((org-edit-src-content-indentation 0)
+	  (org-src-preserve-indentation nil))
+      (org-edit-special)
+      (insert "blah")
+      (org-edit-src-exit)
+      (should (equal (buffer-string) "
 #+begin_src emacs-lisp
-  blah
+blah
 #+end_src
 "))
-    (should (equal (word-at-point) "blah"))))
+      (should
+       (equal (buffer-substring (line-beginning-position) (point)) "blah")))))
 
 (ert-deftest test-org-src/blank-line-block ()
   "Editing block with just a blank line."
@@ -86,15 +86,17 @@
 
 #+end_src
 "
-    (goto-line 2)
-    (org-edit-special)
-    (insert "blah")
-    (org-edit-src-exit)
-    (should (equal (buffer-string) "
+    (let ((org-edit-src-content-indentation 2)
+	  (org-src-preserve-indentation nil))
+      (goto-line 2)
+      (org-edit-special)
+      (insert "blah")
+      (org-edit-src-exit)
+      (should (equal (buffer-string) "
 #+begin_src emacs-lisp
   blah
 #+end_src
-"))))
+")))))
 
 (provide 'test-org-src)
 ;;; test-org-src.el ends here

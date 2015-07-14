@@ -111,6 +111,7 @@ in the current buffer."
 
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.hcr\\'" . ghc-core-mode))
+;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.dump-simpl\\'" . ghc-core-mode))
 
 ;;;###autoload

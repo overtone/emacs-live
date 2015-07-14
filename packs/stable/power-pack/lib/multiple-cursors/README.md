@@ -4,15 +4,6 @@ Multiple cursors for Emacs. This is some pretty crazy functionality, so yes,
 there are kinks. Don't be afraid tho, I've been using it since 2011 with
 great success and much merriment.
 
-## Installation
-
-I highly recommend installing multiple-cursors through elpa.
-
-It's available on [marmalade](http://marmalade-repo.org/) and
-[melpa](http://melpa.milkbox.net/):
-
-    M-x package-install multiple-cursors
-
 ## Basic usage
 
 Start out with:
@@ -56,7 +47,7 @@ You can [watch an intro to multiple-cursors at Emacs Rocks](http://emacsrocks.co
  - `mc/mark-previous-symbol-like-this`: Like `mc/mark-previous-like-this` but only for whole symbols.
  - `mc/mark-more-like-this-extended`: Use arrow keys to quickly mark/skip next/previous occurances.
  - `mc/add-cursor-on-click`: Bind to a mouse event to add cursors by clicking. See tips-section.
- - `mc/mark-pop`: Set a cursor at the current point and move to the next (different) position on the mark stack.  This allows for fine grained control over the placement of cursors.
+ - `mc/pop-mark`: Set a cursor at the current point and move to the next (different) position on the mark stack.  This allows for fine grained control over the placement of cursors.
 
 ### Juggle around with the current cursors
 
@@ -95,8 +86,7 @@ You can [watch an intro to multiple-cursors at Emacs Rocks](http://emacsrocks.co
   insert a newline in multiple-cursors-mode, use `C-j`.
 
 - Sometimes you end up with cursors outside of your view. You can
-  scroll the screen to center on each cursor with `C-v` and `M-v` or you can
-  press `C-'` to hide all lines without a cursor, press `C-'` again to unhide.
+  scroll the screen to center on each cursor with `C-v` and `M-v`.
 
 - Try pressing `mc/mark-next-like-this` with no region selected. It
   will just add a cursor on the next line.
@@ -111,9 +101,6 @@ You can [watch an intro to multiple-cursors at Emacs Rocks](http://emacsrocks.co
 
 - You can use `mc/reverse-regions` with nothing selected and just one cursor.
   It will then flip the sexp at point and the one below it.
-
-- When you use `mc/edit-lines`, you can give it a positive or negative
-  prefix to change how it behaves on too short lines.
 
 - If you would like to keep the global bindings clean, and get custom keybindings
   when the region is active, you can try [region-bindings-mode](https://github.com/fgallina/region-bindings-mode).
@@ -145,7 +132,6 @@ the location with:
 
     (setq mc/list-file "/my/preferred/file")
 
-NB! Make sure to do so before requiring multiple-cursors.
 
 ## Known limitations
 
@@ -180,12 +166,11 @@ Run the tests with:
 ## Contributors
 
 * [Takafumi Arakaki](https://github.com/tkf) has contributed several small improvements
-* [Marco Baringer](https://github.com/segv) contributed looping to `mc/cycle` and adding cursors without region for mark-more.
-* [Ivan Andrus](https://github.com/gvol) added showing number of cursors in mode-line, and different options for how to handle short lines in `mc/edit-lines`.
+* [Marco Baringer](https://github.com/segv) contributed looping to mc/cycle and adding cursors without region for mark-more.
+* [Ivan Andrus](https://github.com/gvol) added showing number of cursors in mode-line
 * [Fuco](https://github.com/Fuco1) added the first version of `mc/mark-all-like-this-dwim`
 * [Zach Kost-Smith](https://github.com/smithzvk) added `mc/mark-pop`
 * [Maciej Katafiasz](https://github.com/mathrick) added `mc/mark-all-dwim`
-* [Aleksey Fedotov](https://github.com/lexa) added `mc-hide-unmatched-lines-mode` and made undo restore your cursors after leaving mc-mode.
 
 Thanks!
 

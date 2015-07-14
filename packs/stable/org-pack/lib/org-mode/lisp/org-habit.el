@@ -1,6 +1,6 @@
 ;;; org-habit.el --- The habit tracking code for Org-mode
 
-;; Copyright (C) 2009-2014 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2015 Free Software Foundation, Inc.
 
 ;; Author: John Wiegley <johnw at gnu dot org>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -165,6 +165,7 @@ Returns a list with the following elements:
   2: Optional deadline (nil if not present)
   3: If deadline, the repeater for the deadline, otherwise nil
   4: A list of all the past dates this todo was mark closed
+  5: Repeater type as a string
 
 This list represents a \"habit\" for the rest of this module."
   (save-excursion
@@ -174,7 +175,7 @@ This list represents a \"habit\" for the rest of this module."
 	   (scheduled-repeat (org-get-repeat org-scheduled-string))
 	   (end (org-entry-end-position))
 	   (habit-entry (org-no-properties (nth 4 (org-heading-components))))
-	   closed-dates deadline dr-days sr-days)
+	   closed-dates deadline dr-days sr-days sr-type)
       (if scheduled
 	  (setq scheduled (time-to-days scheduled))
 	(error "Habit %s has no scheduled date" habit-entry))
@@ -182,7 +183,9 @@ This list represents a \"habit\" for the rest of this module."
 	(error
 	 "Habit '%s' has no scheduled repeat period or has an incorrect one"
 	 habit-entry))
-      (setq sr-days (org-habit-duration-to-days scheduled-repeat))
+      (setq sr-days (org-habit-duration-to-days scheduled-repeat)
+	    sr-type (progn (string-match "[\\.+]?\\+" scheduled-repeat)
+			   (org-match-string-no-properties 0 scheduled-repeat)))
       (unless (> sr-days 0)
 	(error "Habit %s scheduled repeat period is less than 1d" habit-entry))
       (when (string-match "/\\([0-9]+[dwmy]\\)" scheduled-repeat)
@@ -197,17 +200,33 @@ This list represents a \"habit\" for the rest of this module."
 	     (reversed org-log-states-order-reversed)
 	     (search (if reversed 're-search-forward 're-search-backward))
 	     (limit (if reversed end (point)))
-	     (count 0))
+	     (count 0)
+	     (re (format
+		  "^[ \t]*-[ \t]+\\(?:State \"%s\".*%s%s\\)"
+		  (regexp-opt org-done-keywords)
+		  org-ts-regexp-inactive
+		  (let ((value (cdr (assq 'done org-log-note-headings))))
+		    (if (not value) ""
+		      (concat "\\|"
+			      (org-replace-escapes
+			       (regexp-quote value)
+			       `(("%d" . ,org-ts-regexp-inactive)
+				 ("%D" . ,org-ts-regexp)
+				 ("%s" . "\"\\S-+\"")
+				 ("%S" . "\"\\S-+\"")
+				 ("%t" . ,org-ts-regexp-inactive)
+				 ("%T" . ,org-ts-regexp)
+				 ("%u" . ".*?")
+				 ("%U" . ".*?")))))))))
 	(unless reversed (goto-char end))
-	(while (and (< count maxdays)
-		    (funcall search (format "- State \"%s\".*\\[\\([^]]+\\)\\]"
-					    (regexp-opt org-done-keywords))
-			     limit t))
+	(while (and (< count maxdays) (funcall search re limit t))
 	  (push (time-to-days
-		 (org-time-string-to-time (match-string-no-properties 1)))
+		 (org-time-string-to-time
+		  (or (org-match-string-no-properties 1)
+		      (org-match-string-no-properties 2))))
 		closed-dates)
 	  (setq count (1+ count))))
-      (list scheduled sr-days deadline dr-days closed-dates))))
+      (list scheduled sr-days deadline dr-days closed-dates sr-type))))
 
 (defsubst org-habit-scheduled (habit)
   (nth 0 habit))
@@ -225,6 +244,8 @@ This list represents a \"habit\" for the rest of this module."
       (org-habit-scheduled-repeat habit)))
 (defsubst org-habit-done-dates (habit)
   (nth 4 habit))
+(defsubst org-habit-repeat-type (habit)
+  (nth 5 habit))
 
 (defsubst org-habit-get-priority (habit &optional moment)
   "Determine the relative priority of a habit.
@@ -311,10 +332,27 @@ current time."
 			     (not (< scheduled now)))
 			'(org-habit-clear-face . org-habit-clear-future-face)
 		      (org-habit-get-faces
-		       habit start (and in-the-past-p
-					(if last-done-date
-					    (+ last-done-date s-repeat)
-					  scheduled))
+		       habit start
+		       (and in-the-past-p last-done-date
+			    ;; Compute scheduled time for habit at the
+			    ;; time START was current.
+			    (let ((type (org-habit-repeat-type habit)))
+			      (cond
+			       ((equal type ".+")
+				(+ last-done-date s-repeat))
+			       ((equal type "+")
+				;; Since LAST-DONE-DATE, each done
+				;; mark shifted scheduled date by
+				;; S-REPEAT.
+				(- scheduled (* (length done-dates) s-repeat)))
+			       (t
+				;; Scheduled time was the first time
+				;; past LAST-DONE-STATE which can jump
+				;; to current SCHEDULED time by
+				;; S-REPEAT hops.
+				(- scheduled
+				   (* (/ (- scheduled last-done-date) s-repeat)
+				      s-repeat))))))
 		       donep)))
 	     markedp face)
 	(if donep

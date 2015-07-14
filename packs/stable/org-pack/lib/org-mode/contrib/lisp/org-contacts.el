@@ -155,6 +155,11 @@ The following replacements are available:
   :type 'string
   :group 'org-contacts)
 
+(defcustom org-contacts-tags-props-prefix "#"
+  "Tags and properties prefix."
+  :type 'string
+  :group 'org-contacts)
+
 (defcustom org-contacts-matcher
   (mapconcat 'identity (list org-contacts-email-property
 			     org-contacts-alias-property
@@ -182,6 +187,12 @@ This overrides `org-email-link-description-format' if set."
   "Enable or not the completion in `message-mode' with `org-contacts'."
   :group 'org-contacts
   :type 'boolean)
+
+(defcustom org-contacts-complete-functions
+  '(org-contacts-complete-group org-contacts-complete-tags-props org-contacts-complete-name)
+  "List of functions used to complete contacts in `message-mode'."
+  :group 'org-contacts
+  :type 'hook)
 
 ;; Decalre external functions and variables
 (declare-function org-reverse-string "org")
@@ -244,7 +255,7 @@ to dead or no buffer."
   (let* (todo-only
 	 (contacts-matcher
 	  (cdr (org-make-tags-matcher org-contacts-matcher)))
-	 markers result)
+	 result)
     (when (org-contacts-db-need-update-p)
       (let ((progress-reporter
 	     (make-progress-reporter "Updating Org Contacts Database..." 0 (length org-contacts-files)))
@@ -253,20 +264,25 @@ to dead or no buffer."
 	  (org-check-agenda-file file)
 	  (with-current-buffer (org-get-agenda-file-buffer file)
 	    (unless (eq major-mode 'org-mode)
-	      (error "File %s is no in `org-mode'" file))
-	    (org-scan-tags
-	     '(add-to-list 'markers (set-marker (make-marker) (point)))
-	     contacts-matcher
-	     todo-only))
+	      (error "File %s is not in `org-mode'" file))
+	    (setf result
+		  (append result
+			  (org-scan-tags
+			   'org-contacts-at-point
+			   contacts-matcher
+			   todo-only))))
 	  (progress-reporter-update progress-reporter (setq i (1+ i))))
-	(dolist (marker markers result)
-	  (org-with-point-at marker
-	    (add-to-list 'result
-			 (list (org-get-heading t) marker (org-entry-properties marker 'all)))))
 	(setf org-contacts-db result
 	      org-contacts-last-update (current-time))
-      (progress-reporter-done progress-reporter)))
+	(progress-reporter-done progress-reporter)))
     org-contacts-db))
+
+(defun org-contacts-at-point (&optional pom)
+  "Return the contacts at point-or-marker POM or current position
+if nil."
+  (setq pom (or pom (point)))
+  (org-with-point-at pom
+    (list (org-get-heading t) (set-marker (make-marker) pom) (org-entry-properties pom 'all))))
 
 (defun org-contacts-filter (&optional name-match tags-match prop-match)
   "Search for a contact matching any of NAME-MATCH, TAGS-MATCH, PROP-MATCH.
@@ -500,11 +516,12 @@ A group FOO is composed of contacts with the tag FOO."
 				       ;; returned by `org-contacts-filter'.
 				       for contact-name = (car contact)
 				       ;; Grab the first email of the contact
-				       for email = (org-contacts-strip-link (car (org-contacts-split-property
-							 (or
-							  (cdr (assoc-string org-contacts-email-property
-									     (caddr contact)))
-							  ""))))
+				       for email = (org-contacts-strip-link
+						    (or (car (org-contacts-split-property
+							      (or
+							       (cdr (assoc-string org-contacts-email-property
+										  (caddr contact)))
+							       ""))) ""))
 				       ;; If the user has an email address, append USER <EMAIL>.
 				       if email collect (org-contacts-format-email contact-name email))
 				 ", ")))
@@ -512,6 +529,45 @@ A group FOO is composed of contacts with the tag FOO."
 		(completion-table-case-fold completion-list
 					    (not org-contacts-completion-ignore-case))))))))
 
+(defun org-contacts-complete-tags-props (start end string)
+  "Insert emails that match the tags expression.
+
+For example: FOO-BAR will match entries tagged with FOO but not
+with BAR.
+
+See (org) Matching tags and properties for a complete
+description."
+  (let* ((completion-ignore-case org-contacts-completion-ignore-case)
+	 (completion-p (org-string-match-p
+			(concat "^" org-contacts-tags-props-prefix) string)))
+    (when completion-p
+      (let ((result
+	     (mapconcat
+	      'identity
+	      (loop for contact in (org-contacts-db)
+		    for contact-name = (car contact)
+		    for email = (org-contacts-strip-link (or (car (org-contacts-split-property
+							       (or
+								(cdr (assoc-string org-contacts-email-property
+										   (caddr contact)))
+								""))) ""))
+		    for tags = (cdr (assoc "TAGS" (nth 2 contact)))
+		    for tags-list = (if tags
+					(split-string (substring (cdr (assoc "TAGS" (nth 2 contact))) 1 -1) ":")
+				      '())
+		    for marker = (second contact)
+		    if (with-current-buffer (marker-buffer marker)
+			 (save-excursion
+			   (goto-char marker)
+			   (let (todo-only)
+			     (eval (cdr (org-make-tags-matcher (subseq string 1)))))))
+		    collect (org-contacts-format-email contact-name email))
+	      ",")))
+	(when (not (string= "" result))
+	  ;; return (start end function)
+	  (lexical-let* ((to-return result))
+	    (list start end
+		  (lambda (string pred &optional to-ignore) to-return))))))))
 
 (defun org-contacts-remove-ignored-property-values (ignore-list list)
   "Remove all ignore-list's elements from list and you can use
@@ -570,8 +626,8 @@ A group FOO is composed of contacts with the tag FOO."
 			(goto-char (match-end 0))
 			(point))))
 	   (string (buffer-substring start end)))
-	(or (org-contacts-complete-group start end string)
-	    (org-contacts-complete-name start end string))))))
+	(run-hook-with-args-until-success
+	 'org-contacts-complete-functions start end string)))))
 
 (defun org-contacts-gnus-get-name-email ()
   "Get name and email address from Gnus message."
@@ -826,7 +882,7 @@ address."
 		  (setq email (org-contacts-strip-link email))
                   (org-contacts-check-mail-address email)
                   (compose-mail (org-contacts-format-email (org-get-heading t) email)))))
-          (error (format "This contact has no mail address set (no %s property)."
+          (error (format "This contact has no mail address set (no %s property)"
                          org-contacts-email-property)))))))
 
 (defun org-contacts-get-icon (&optional pom)
@@ -946,7 +1002,7 @@ to do our best."
 			(setq phones-list (org-contacts-remove-ignored-property-values ignore-list (org-contacts-split-property tel)))
 			(setq result "")
 			(while phones-list
-			  (setq result (concat result  "TEL:" (org-contacts-strip-link (car phones-list)) "\n"))
+			  (setq result (concat result  "TEL:" (org-link-unescape (org-contacts-strip-link (car phones-list))) "\n"))
 			  (setq phones-list (cdr phones-list)))
 			result))
 	    (when bday
@@ -960,11 +1016,39 @@ to do our best."
 	    "END:VCARD\n\n")))
 
 (defun org-contacts-export-as-vcard (&optional name file to-buffer)
+  "Export org contacts to V-Card 3.0.
+
+By default, all contacts are exported to `org-contacts-vcard-file'.
+
+When NAME is \\[universal-argument], prompts for a contact name.
+
+When NAME is \\[universal-argument] \\[universal-argument],
+prompts for a contact name and a file name where to export.
+
+When NAME is \\[universal-argument] \\[universal-argument]
+\\[universal-argument], prompts for a contact name and a buffer where to export.
+
+If the function is not called interactively, all parameters are
+passed to `org-contacts-export-as-vcard-internal'."
+  (interactive "P")
+  (when (called-interactively-p 'any)
+    (cl-psetf name
+	     (when name
+	       (read-string "Contact name: "
+			    (first (org-contacts-at-point))))
+	     file
+	     (when (equal name '(16))
+	       (read-file-name "File: " nil org-contacts-vcard-file))
+	     to-buffer
+	     (when (equal name '(64))
+	       (read-buffer "Buffer: "))))
+  (org-contacts-export-as-vcard-internal name file to-buffer))
+
+(defun org-contacts-export-as-vcard-internal (&optional name file to-buffer)
   "Export all contacts matching NAME as VCard 3.0.
 If TO-BUFFER is nil, the content is written to FILE or
 `org-contacts-vcard-file'.  If TO-BUFFER is non-nil, the buffer
 is created and the VCard is written into that buffer."
-  (interactive) ; TODO ask for name?
   (let* ((filename (or file org-contacts-vcard-file))
 	 (buffer (if to-buffer
 		     (get-buffer-create to-buffer)

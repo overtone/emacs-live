@@ -1,6 +1,6 @@
 ;;; org-docview.el --- support for links to doc-view-mode buffers
 
-;; Copyright (C) 2009-2014 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2015 Free Software Foundation, Inc.
 
 ;; Author: Jan Böcker <jan.boecker at jboecker dot de>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -54,8 +54,8 @@
 
 (defun org-docview-export (link description format)
   "Export a docview link from Org files."
-  (let* ((path (when (string-match "\\(.+\\)::.+" link)
-		 (match-string 1 link)))
+  (let* ((path (if (string-match "\\(.+\\)::.+" link) (match-string 1 link)
+		 link))
          (desc (or description link)))
     (when (stringp path)
       (setq path (org-link-escape (expand-file-name path)))
@@ -66,13 +66,14 @@
        (t path)))))
 
 (defun org-docview-open (link)
-  (when (string-match "\\(.*\\)::\\([0-9]+\\)$"  link)
-    (let* ((path (match-string 1 link))
-	   (page (string-to-number (match-string 2 link))))
-      (org-open-file path 1) ;; let org-mode open the file (in-emacs = 1)
-      ;; to ensure org-link-frame-setup is respected
-      (doc-view-goto-page page)
-      )))
+  (string-match "\\(.*?\\)\\(?:::\\([0-9]+\\)\\)?$" link)
+  (let ((path (match-string 1 link))
+	(page (and (match-beginning 2)
+		   (string-to-number (match-string 2 link)))))
+    ;; Let Org mode open the file (in-emacs = 1) to ensure
+    ;; org-link-frame-setup is respected.
+    (org-open-file path 1)
+    (when page (doc-view-goto-page page))))
 
 (defun org-docview-store-link ()
   "Store a link to a docview buffer."

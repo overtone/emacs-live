@@ -8,6 +8,7 @@ AUTH = {}
 
 DEBUG = False
 SOCK_DEBUG = False
+SOCK_SINGLE_READ = False
 
 EXPERT_MODE = False
 

@@ -26,3 +26,6 @@
  (deactivate-mark))
 
 (After)
+;; Local Variables:
+;; no-byte-compile: t
+;; End:

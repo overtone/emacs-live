@@ -338,7 +338,7 @@ If DELETE is non-nil, delete other windows when in the Org buffer."
   (interactive)
   (condition-case nil
       (outline-forward-same-level 1)
-    (error (message "No next headline at this level.")))
+    (error (message "No next headline at this level")))
   (if org-toc-info-mode (org-toc-info))
   (if org-toc-follow-mode (org-toc-goto)))
 
@@ -347,7 +347,7 @@ If DELETE is non-nil, delete other windows when in the Org buffer."
   (interactive)
   (condition-case nil
       (outline-backward-same-level 1)
-    (error (message "No previous headline at this level.")))
+    (error (message "No previous headline at this level")))
   (if org-toc-info-mode (org-toc-info))
   (if org-toc-follow-mode (org-toc-goto)))
 

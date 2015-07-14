@@ -1,7 +1,7 @@
 ;;; org.el --- Outline-based notes management and organizer
 
 ;; Carstens outline-mode for keeping track of everything.
-;; Copyright (C) 2004-2014 Free Software Foundation, Inc.
+;; Copyright (C) 2004-2015 Free Software Foundation, Inc.
 ;;
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;; Maintainer: Carsten Dominik <carsten at orgmode dot org>
@@ -77,7 +77,16 @@
 (require 'find-func)
 (require 'format-spec)
 
-(load "org-loaddefs.el" t t t)
+(or (equal this-command 'eval-buffer)
+    (condition-case nil
+	(load (concat (file-name-directory load-file-name)
+		      "org-loaddefs.el")
+	      nil t t t)
+      (error
+       (message "WARNING: No org-loaddefs.el file could be found from where org.el is loaded.")
+       (sit-for 3)
+       (message "You need to run \"make\" or \"make autoloads\" from Org lisp directory")
+       (sit-for 3))))
 
 (require 'org-macs)
 (require 'org-compat)
@@ -111,63 +120,76 @@ Stars are put in group 1 and the trimmed body in group 2.")
 (unless (boundp 'diary-fancy-buffer)
   (org-defvaralias 'diary-fancy-buffer 'fancy-diary-buffer))
 
+(declare-function cdlatex-environment "ext:cdlatex" (environment item))
 (declare-function org-add-archive-files "org-archive" (files))
-
+(declare-function org-agenda-entry-get-agenda-timestamp "org-agenda" (pom))
+(declare-function org-agenda-list "org-agenda" (&optional arg start-day span))
+(declare-function org-agenda-redo "org-agenda" (&optional all))
+(declare-function org-babel-do-in-edit-buffer "ob-core" (&rest body))
+(declare-function org-babel-tangle-file "ob-tangle" (file &optional target-file lang))
+(declare-function org-beamer-mode "ox-beamer" ())
+(declare-function org-clock-get-last-clock-out-time "org-clock" ())
+(declare-function org-clock-out "org-clock" (&optional switch-to-state fail-quietly at-time))
+(declare-function org-clock-remove-overlays "org-clock" (&optional beg end noremove))
+(declare-function org-clock-sum "org-clock" (&optional tstart tend headline-filter propname))
+(declare-function org-clock-sum-current-item "org-clock" (&optional tstart))
+(declare-function org-clock-timestamps-down "org-clock" (&optional n))
+(declare-function org-clock-timestamps-up "org-clock" (&optional n))
+(declare-function org-clock-update-time-maybe "org-clock" ())
+(declare-function org-clocktable-shift "org-clock" (dir n))
+(declare-function org-element-at-point "org-element" ())
+(declare-function org-element-cache-refresh "org-element" (pos))
+(declare-function org-element-cache-reset "org-element" (&optional all))
+(declare-function org-element-contents "org-element" (element))
+(declare-function org-element-context "org-element" (&optional element))
+(declare-function org-element-copy "org-element" (datum))
+(declare-function org-element-interpret-data "org-element" (data &optional parent))
+(declare-function org-element-lineage "org-element" (blob &optional types with-self))
+(declare-function org-element-nested-p "org-element" (elem-a elem-b))
+(declare-function org-element-parse-buffer "org-element" (&optional granularity visible-only))
+(declare-function org-element-property "org-element" (property element))
+(declare-function org-element-put-property "org-element" (element property value))
+(declare-function org-element-swap-A-B "org-element" (elem-a elem-b))
+(declare-function org-element-type "org-element" (element))
+(declare-function org-element-update-syntax "org-element" ())
+(declare-function org-id-find-id-file "org-id" (id))
+(declare-function org-id-get-create "org-id" (&optional force))
 (declare-function org-inlinetask-at-task-p "org-inlinetask" ())
 (declare-function org-inlinetask-outline-regexp "org-inlinetask" ())
 (declare-function org-inlinetask-toggle-visibility "org-inlinetask" ())
+(declare-function org-plot/gnuplot "org-plot" (&optional params))
 (declare-function org-pop-to-buffer-same-window "org-compat" (&optional buffer-or-name norecord label))
-(declare-function org-clock-get-last-clock-out-time "org-clock" ())
-(declare-function org-clock-timestamps-up "org-clock" (&optional n))
-(declare-function org-clock-timestamps-down "org-clock" (&optional n))
-(declare-function org-clock-remove-overlays "org-clock" (&optional beg end noremove))
-(declare-function org-clock-sum-current-item "org-clock" (&optional tstart))
-(declare-function org-clock-update-time-maybe "org-clock" ())
-(declare-function org-clocktable-shift "org-clock" (dir n))
-
-(declare-function orgtbl-mode "org-table" (&optional arg))
-(declare-function org-clock-out "org-clock" (&optional switch-to-state fail-quietly at-time))
-(declare-function org-beamer-mode "ox-beamer" ())
-(declare-function org-table-edit-field "org-table" (arg))
-(declare-function org-table-justify-field-maybe "org-table" (&optional new))
-(declare-function org-table-set-constants "org-table" ())
-(declare-function org-table-calc-current-TBLFM "org-table" (&optional arg))
-(declare-function org-id-get-create "org-id" (&optional force))
-(declare-function org-id-find-id-file "org-id" (id))
-(declare-function org-tags-view "org-agenda" (&optional todo-only match))
-(declare-function org-agenda-list "org-agenda" (&optional arg start-day span))
-(declare-function org-agenda-redo "org-agenda" (&optional all))
 (declare-function org-table-align "org-table" ())
 (declare-function org-table-begin "org-table" (&optional table-type))
+(declare-function org-table-beginning-of-field "org-table" (&optional n))
 (declare-function org-table-blank-field "org-table" ())
+(declare-function org-table-calc-current-TBLFM "org-table" (&optional arg))
+(declare-function org-table-edit-field "org-table" (arg))
 (declare-function org-table-end "org-table" (&optional table-type))
+(declare-function org-table-end-of-field "org-table" (&optional n))
 (declare-function org-table-insert-row "org-table" (&optional arg))
-(declare-function org-table-paste-rectangle "org-table" ())
+(declare-function org-table-justify-field-maybe "org-table" (&optional new))
 (declare-function org-table-maybe-eval-formula "org-table" ())
 (declare-function org-table-maybe-recalculate-line "org-table" ())
+(declare-function org-table-next-row "org-table" ())
+(declare-function org-table-paste-rectangle "org-table" ())
+(declare-function org-tags-view "org-agenda" (&optional todo-only match))
+(declare-function orgtbl-ascii-plot "org-table" (&optional ask))
+(declare-function orgtbl-mode "org-table" (&optional arg))
 
-(declare-function org-element--parse-objects "org-element"
-		  (beg end acc restriction))
-(declare-function org-element-at-point "org-element" (&optional keep-trail))
-(declare-function org-element-contents "org-element" (element))
-(declare-function org-element-context "org-element" (&optional element))
-(declare-function org-element-interpret-data "org-element"
-		  (data &optional parent))
-(declare-function org-element-map "org-element"
-		  (data types fun &optional info first-match no-recursion))
-(declare-function org-element-nested-p "org-element" (elem-a elem-b))
-(declare-function org-element-parse-buffer "org-element"
-		  (&optional granularity visible-only))
-(declare-function org-element-property "org-element" (property element))
-(declare-function org-element-put-property "org-element"
-		  (element property value))
-(declare-function org-element-swap-A-B "org-element" (elem-a elem-b))
-(declare-function org-element--parse-objects "org-element"
-		  (beg end acc restriction))
-(declare-function org-element-parse-buffer "org-element"
-		  (&optional granularity visible-only))
-(declare-function org-element-restriction "org-element" (element))
-(declare-function org-element-type "org-element" (element))
+(defsubst org-uniquify (list)
+  "Non-destructively remove duplicate elements from LIST."
+  (let ((res (copy-sequence list))) (delete-dups res)))
+
+(defsubst org-get-at-bol (property)
+  "Get text property PROPERTY at the beginning of line."
+  (get-text-property (point-at-bol) property))
+
+(defsubst org-trim (s)
+  "Remove whitespace at the beginning and the end of string S."
+  (replace-regexp-in-string
+   "\\`[ \t\n\r]+" ""
+   (replace-regexp-in-string "[ \t\n\r]+\\'" "" s)))
 
 ;; load languages based on value of `org-babel-load-languages'
 (defvar org-babel-load-languages)
@@ -197,7 +219,6 @@ and then loads the resulting file using `load-file'.  With prefix
 arg (noninteractively: 2nd arg) COMPILE the tangled Emacs Lisp
 file to byte-code before it is loaded."
   (interactive "fFile to load: \nP")
-  (require 'ob-core)
   (let* ((age (lambda (file)
 		(float-time
 		 (time-subtract (current-time)
@@ -208,8 +229,10 @@ file to byte-code before it is loaded."
     ;; tangle if the org-mode file is newer than the elisp file
     (unless (and (file-exists-p exported-file)
 		 (> (funcall age file) (funcall age exported-file)))
+      ;; Tangle-file traversal returns reversed list of tangled files
+      ;; and we want to evaluate the first target.
       (setq exported-file
-	    (car (org-babel-tangle-file file exported-file "emacs-lisp"))))
+	    (car (last (org-babel-tangle-file file exported-file "emacs-lisp")))))
     (message "%s %s"
 	     (if compile
 		 (progn (byte-compile-file exported-file 'load)
@@ -244,10 +267,12 @@ requirements) is loaded."
 		 (const :tag "Ditaa" ditaa)
 		 (const :tag "Dot" dot)
 		 (const :tag "Emacs Lisp" emacs-lisp)
+		 (const :tag "Forth" forth)
 		 (const :tag "Fortran" fortran)
 		 (const :tag "Gnuplot" gnuplot)
 		 (const :tag "Haskell" haskell)
 		 (const :tag "IO" io)
+		 (const :tag "J" J)
 		 (const :tag "Java" java)
 		 (const :tag "Javascript" js)
 		 (const :tag "LaTeX" latex)
@@ -270,10 +295,11 @@ requirements) is loaded."
 		 (const :tag "Scala" scala)
 		 (const :tag "Scheme" scheme)
 		 (const :tag "Screen" screen)
-		 (const :tag "Shell Script" sh)
+		 (const :tag "Shell Script" shell)
 		 (const :tag "Shen" shen)
 		 (const :tag "Sql" sql)
-		 (const :tag "Sqlite" sqlite))
+		 (const :tag "Sqlite" sqlite)
+		 (const :tag "ebnf2ps" ebnf2ps))
 		:value-type (boolean :tag "Activate" :value t)))
 
 ;;;; Customization variables
@@ -291,11 +317,12 @@ identifier."
 
 ;;;###autoload
 (defun org-version (&optional here full message)
-  "Show the org-mode version in the echo area.
-With prefix argument HERE, insert it at point.
-When FULL is non-nil, use a verbose version string.
-When MESSAGE is non-nil, display a message with the version."
-  (interactive "P")
+  "Show the org-mode version.
+Interactively, or when MESSAGE is non-nil, show it in echo area.
+With prefix argument, or when HERE is non-nil, insert it at point.
+In non-interactive uses, a reduced version string is output unless
+FULL is given."
+  (interactive (list current-prefix-arg t (not current-prefix-arg)))
   (let* ((org-dir         (ignore-errors (org-find-library-dir "org")))
 	 (save-load-suffixes (when (boundp 'load-suffixes) load-suffixes))
 	 (load-suffixes (list ".el"))
@@ -315,17 +342,287 @@ When MESSAGE is non-nil, display a message with the version."
 				(concat "mixed installation! " org-install-dir " and " org-dir))
 			    "org-loaddefs.el can not be found!")))
 	 (version1 (if full version org-version)))
-    (if (org-called-interactively-p 'interactive)
-	(if here
-	    (insert version)
-	  (message version))
-      (if message (message version1))
-      version1)))
+    (when here (insert version1))
+    (when message (message "%s" version1))
+    version1))
 
 (defconst org-version (org-version))
 
-;;; Compatibility constants
+
+;;; Syntax Constants
 
+;;;; Block
+
+(defconst org-block-regexp
+  "^[ \t]*#\\+begin_?\\([^ \n]+\\)\\(\\([^\n]+\\)\\)?\n\\([^\000]+?\\)#\\+end_?\\1[ \t]*$"
+  "Regular expression for hiding blocks.")
+
+(defconst org-dblock-start-re
+  "^[ \t]*#\\+\\(?:BEGIN\\|begin\\):[ \t]+\\(\\S-+\\)\\([ \t]+\\(.*\\)\\)?"
+  "Matches the start line of a dynamic block, with parameters.")
+
+(defconst org-dblock-end-re "^[ \t]*#\\+\\(?:END\\|end\\)\\([: \t\r\n]\\|$\\)"
+  "Matches the end of a dynamic block.")
+
+;;;; Clock and Planning
+
+(defconst org-clock-string "CLOCK:"
+  "String used as prefix for timestamps clocking work hours on an item.")
+
+(defvar org-closed-string "CLOSED:"
+  "String used as the prefix for timestamps logging closing a TODO entry.")
+
+(defvar org-deadline-string "DEADLINE:"
+  "String to mark deadline entries.
+A deadline is this string, followed by a time stamp.  Should be a word,
+terminated by a colon.  You can insert a schedule keyword and
+a timestamp with \\[org-deadline].")
+
+(defvar org-scheduled-string "SCHEDULED:"
+  "String to mark scheduled TODO entries.
+A schedule is this string, followed by a time stamp.  Should be a word,
+terminated by a colon.  You can insert a schedule keyword and
+a timestamp with \\[org-schedule].")
+
+(defconst org-ds-keyword-length
+  (+ 2
+     (apply #'max
+	    (mapcar #'length
+		    (list org-deadline-string org-scheduled-string
+			  org-clock-string org-closed-string))))
+  "Maximum length of the DEADLINE and SCHEDULED keywords.")
+
+(defconst org-planning-line-re
+  (concat "^[ \t]*"
+	  (regexp-opt
+	   (list org-closed-string org-deadline-string org-scheduled-string)
+	   t))
+  "Matches a line with planning info.
+Matched keyword is in group 1.")
+
+(defconst org-clock-line-re
+  (concat "^[ \t]*" org-clock-string)
+  "Matches a line with clock info.")
+
+(defconst org-deadline-regexp (concat "\\<" org-deadline-string)
+  "Matches the DEADLINE keyword.")
+
+(defconst org-deadline-time-regexp
+  (concat "\\<" org-deadline-string " *<\\([^>]+\\)>")
+  "Matches the DEADLINE keyword together with a time stamp.")
+
+(defconst org-deadline-time-hour-regexp
+  (concat "\\<" org-deadline-string
+	  " *<\\([^>]+[0-9]\\{1,2\\}:[0-9]\\{2\\}[0-9-+:hdwmy \t.]*\\)>")
+  "Matches the DEADLINE keyword together with a time-and-hour stamp.")
+
+(defconst org-deadline-line-regexp
+  (concat "\\<\\(" org-deadline-string "\\).*")
+  "Matches the DEADLINE keyword and the rest of the line.")
+
+(defconst org-scheduled-regexp (concat "\\<" org-scheduled-string)
+  "Matches the SCHEDULED keyword.")
+
+(defconst org-scheduled-time-regexp
+  (concat "\\<" org-scheduled-string " *<\\([^>]+\\)>")
+  "Matches the SCHEDULED keyword together with a time stamp.")
+
+(defconst org-scheduled-time-hour-regexp
+  (concat "\\<" org-scheduled-string
+	  " *<\\([^>]+[0-9]\\{1,2\\}:[0-9]\\{2\\}[0-9-+:hdwmy \t.]*\\)>")
+  "Matches the SCHEDULED keyword together with a time-and-hour stamp.")
+
+(defconst org-closed-time-regexp
+  (concat "\\<" org-closed-string " *\\[\\([^]]+\\)\\]")
+  "Matches the CLOSED keyword together with a time stamp.")
+
+(defconst org-keyword-time-regexp
+  (concat "\\<"
+	  (regexp-opt
+	   (list org-scheduled-string org-deadline-string org-closed-string
+		 org-clock-string)
+	   t)
+	  " *[[<]\\([^]>]+\\)[]>]")
+  "Matches any of the 4 keywords, together with the time stamp.")
+
+(defconst org-keyword-time-not-clock-regexp
+  (concat
+   "\\<"
+   (regexp-opt
+    (list org-scheduled-string org-deadline-string org-closed-string) t)
+   " *[[<]\\([^]>]+\\)[]>]")
+  "Matches any of the 3 keywords, together with the time stamp.")
+
+(defconst org-maybe-keyword-time-regexp
+  (concat "\\(\\<"
+	  (regexp-opt
+	   (list org-scheduled-string org-deadline-string org-closed-string
+		 org-clock-string)
+	   t)
+	  "\\)?"
+	  " *\\([[<][0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\} ?[^]\r\n>]*?[]>]"
+	  "\\|"
+	  "<%%([^\r\n>]*>\\)")
+  "Matches a timestamp, possibly preceded by a keyword.")
+
+(defconst org-all-time-keywords
+  (mapcar (lambda (w) (substring w 0 -1))
+	  (list org-scheduled-string org-deadline-string
+		org-clock-string org-closed-string))
+  "List of time keywords.")
+
+;;;; Drawer
+
+(defconst org-drawer-regexp "^[ \t]*:\\(\\(?:\\w\\|[-_]\\)+\\):[ \t]*$"
+  "Matches first or last line of a hidden block.
+Group 1 contains drawer's name or \"END\".")
+
+(defconst org-property-start-re "^[ \t]*:PROPERTIES:[ \t]*$"
+  "Regular expression matching the first line of a property drawer.")
+
+(defconst org-property-end-re "^[ \t]*:END:[ \t]*$"
+  "Regular expression matching the last line of a property drawer.")
+
+(defconst org-clock-drawer-start-re "^[ \t]*:CLOCK:[ \t]*$"
+  "Regular expression matching the first line of a clock drawer.")
+
+(defconst org-clock-drawer-end-re "^[ \t]*:END:[ \t]*$"
+  "Regular expression matching the last line of a clock drawer.")
+
+(defconst org-property-drawer-re
+  (concat "^[ \t]*:PROPERTIES:[ \t]*\n"
+	  "\\(?:[ \t]*:\\S-+:\\(?: .*\\)?[ \t]*\n\\)*"
+	  "[ \t]*:END:[ \t]*$")
+  "Matches an entire property drawer.")
+
+(defconst org-clock-drawer-re
+  (concat "\\(" org-clock-drawer-start-re "\\)[^\000]*?\\("
+	  org-clock-drawer-end-re "\\)\n?")
+  "Matches an entire clock drawer.")
+
+;;;; Headline
+
+(defconst org-heading-keyword-regexp-format
+  "^\\(\\*+\\)\\(?: +%s\\)\\(?: +\\(.*?\\)\\)?[ \t]*$"
+  "Printf format for a regexp matching a headline with some keyword.
+This regexp will match the headline of any node which has the
+exact keyword that is put into the format.  The keyword isn't in
+any group by default, but the stars and the body are.")
+
+(defconst org-heading-keyword-maybe-regexp-format
+  "^\\(\\*+\\)\\(?: +%s\\)?\\(?: +\\(.*?\\)\\)?[ \t]*$"
+  "Printf format for a regexp matching a headline, possibly with some keyword.
+This regexp can match any headline with the specified keyword, or
+without a keyword.  The keyword isn't in any group by default,
+but the stars and the body are.")
+
+(defconst org-archive-tag "ARCHIVE"
+  "The tag that marks a subtree as archived.
+An archived subtree does not open during visibility cycling, and does
+not contribute to the agenda listings.")
+
+(defconst org-comment-string "COMMENT"
+  "Entries starting with this keyword will never be exported.
+An entry can be toggled between COMMENT and normal with
+\\[org-toggle-comment].")
+
+
+;;;; LaTeX Environments and Fragments
+
+(defconst org-latex-regexps
+  '(("begin" "^[ \t]*\\(\\\\begin{\\([a-zA-Z0-9\\*]+\\)[^\000]+?\\\\end{\\2}\\)" 1 t)
+    ;; ("$" "\\([ 	(]\\|^\\)\\(\\(\\([$]\\)\\([^ 	\r\n,.$].*?\\(\n.*?\\)\\{0,5\\}[^ 	\r\n,.$]\\)\\4\\)\\)\\([ 	.,?;:'\")]\\|$\\)" 2 nil)
+    ;; \000 in the following regex is needed for org-inside-LaTeX-fragment-p
+    ("$1" "\\([^$]\\|^\\)\\(\\$[^ 	\r\n,;.$]\\$\\)\\(\\s.\\|\\s-\\|\\s(\\|\\s)\\|\\s\"\\|\000\\|$\\)" 2 nil)
+    ("$"  "\\([^$]\\|^\\)\\(\\(\\$\\([^ 	\r\n,;.$][^$\n\r]*?\\(\n[^$\n\r]*?\\)\\{0,2\\}[^ 	\r\n,.$]\\)\\$\\)\\)\\(\\s.\\|\\s-\\|\\s(\\|\\s)\\|\\s\"\\|\000\\|$\\)" 2 nil)
+    ("\\(" "\\\\([^\000]*?\\\\)" 0 nil)
+    ("\\[" "\\\\\\[[^\000]*?\\\\\\]" 0 nil)
+    ("$$" "\\$\\$[^\000]*?\\$\\$" 0 nil))
+  "Regular expressions for matching embedded LaTeX.")
+
+;;;; Node Property
+
+(defconst org-effort-property "Effort"
+  "The property that is being used to keep track of effort estimates.
+Effort estimates given in this property need to have the format H:MM.")
+
+;;;; Table
+
+(defconst org-table-any-line-regexp "^[ \t]*\\(|\\|\\+-[-+]\\)"
+  "Detect an org-type or table-type table.")
+
+(defconst org-table-line-regexp "^[ \t]*|"
+  "Detect an org-type table line.")
+
+(defconst org-table-dataline-regexp "^[ \t]*|[^-]"
+  "Detect an org-type table line.")
+
+(defconst org-table-hline-regexp "^[ \t]*|-"
+  "Detect an org-type table hline.")
+
+(defconst org-table1-hline-regexp "^[ \t]*\\+-[-+]"
+  "Detect a table-type table hline.")
+
+(defconst org-table-any-border-regexp "^[ \t]*[^|+ \t]"
+  "Detect the first line outside a table when searching from within it.
+This works for both table types.")
+
+(defconst org-TBLFM-regexp "^[ \t]*#\\+TBLFM: "
+  "Detect a #+TBLFM line.")
+
+;;;; Timestamp
+
+(defconst org-ts-regexp "<\\([0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\} ?[^\r\n>]*?\\)>"
+  "Regular expression for fast time stamp matching.")
+
+(defconst org-ts-regexp-inactive
+  "\\[\\([0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\} ?[^\r\n>]*?\\)\\]"
+  "Regular expression for fast inactive time stamp matching.")
+
+(defconst org-ts-regexp-both "[[<]\\([0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\} ?[^]\r\n>]*?\\)[]>]"
+  "Regular expression for fast time stamp matching.")
+
+(defconst org-ts-regexp0
+  "\\(\\([0-9]\\{4\\}\\)-\\([0-9]\\{2\\}\\)-\\([0-9]\\{2\\}\\)\\( +[^]+0-9>\r\n -]+\\)?\\( +\\([0-9]\\{1,2\\}\\):\\([0-9]\\{2\\}\\)\\)?\\)"
+  "Regular expression matching time strings for analysis.
+This one does not require the space after the date, so it can be used
+on a string that terminates immediately after the date.")
+
+(defconst org-ts-regexp1 "\\(\\([0-9]\\{4\\}\\)-\\([0-9]\\{2\\}\\)-\\([0-9]\\{2\\}\\) *\\([^]+0-9>\r\n -]*\\)\\( \\([0-9]\\{1,2\\}\\):\\([0-9]\\{2\\}\\)\\)?\\)"
+  "Regular expression matching time strings for analysis.")
+
+(defconst org-ts-regexp2 (concat "<" org-ts-regexp1 "[^>\n]\\{0,16\\}>")
+  "Regular expression matching time stamps, with groups.")
+
+(defconst org-ts-regexp3 (concat "[[<]" org-ts-regexp1 "[^]>\n]\\{0,16\\}[]>]")
+  "Regular expression matching time stamps (also [..]), with groups.")
+
+(defconst org-tr-regexp (concat org-ts-regexp "--?-?" org-ts-regexp)
+  "Regular expression matching a time stamp range.")
+
+(defconst org-tr-regexp-both
+  (concat org-ts-regexp-both "--?-?" org-ts-regexp-both)
+  "Regular expression matching a time stamp range.")
+
+(defconst org-tsr-regexp (concat org-ts-regexp "\\(--?-?"
+				 org-ts-regexp "\\)?")
+  "Regular expression matching a time stamp or time stamp range.")
+
+(defconst org-tsr-regexp-both
+  (concat org-ts-regexp-both "\\(--?-?"
+	  org-ts-regexp-both "\\)?")
+  "Regular expression matching a time stamp or time stamp range.
+The time stamps may be either active or inactive.")
+
+(defconst org-repeat-re
+  "<[0-9]\\{4\\}-[0-9][0-9]-[0-9][0-9] [^>\n]*?\\([.+]?\\+[0-9]+[hdwmy]\\(/[0-9]+[hdwmy]\\)?\\)"
+  "Regular expression for specifying repeated events.
+After a match, group 1 contains the repeat expression.")
+
+(defconst org-time-stamp-formats '("<%Y-%m-%d %a>" . "<%Y-%m-%d %a %H:%M>")
+  "Formats for `format-time-string' which are used for time stamps.")
+
+
 ;;; The custom variables
 
 (defgroup org nil
@@ -367,7 +664,8 @@ When MESSAGE is non-nil, display a message with the version."
   "Set VAR to VALUE and call `org-load-modules-maybe' with the force flag."
   (set var value)
   (when (featurep 'org)
-    (org-load-modules-maybe 'force)))
+    (org-load-modules-maybe 'force)
+    (org-element-cache-reset 'all)))
 
 (defcustom org-modules '(org-w3m org-bbdb org-bibtex org-docview org-gnus org-info org-irc org-mhe org-rmail)
   "Modules that should always be loaded together with org.el.
@@ -419,6 +717,7 @@ For export specific modules, see also `org-export-backends'."
 	(const :tag "C  eshell             Support for links to working directories in eshell" org-eshell)
 	(const :tag "C  eval-light:        Evaluate inbuffer-code on demand" org-eval-light)
 	(const :tag "C  eval:              Include command output as text" org-eval)
+	(const :tag "C  eww:               Store link to url of eww" org-eww)
 	(const :tag "C  expiry:            Expiry mechanism for Org-mode entries" org-expiry)
 	(const :tag "C  favtable:          Lookup table of favorite references and links" org-favtable)
 	(const :tag "C  git-link:          Provide org links to specific file version" org-git-link)
@@ -446,7 +745,7 @@ For export specific modules, see also `org-export-backends'."
 	(const :tag "C  wl:                Links to Wanderlust folders/messages" org-wl)
 	(repeat :tag "External packages" :inline t (symbol :tag "Package"))))
 
-(defvar org-export--registered-backends) ; From ox.el.
+(defvar org-export-registered-backends) ; From ox.el.
 (declare-function org-export-derived-backend-p "ox" (backend &rest backends))
 (declare-function org-export-backend-name "ox" (backend))
 (defcustom org-export-backends '(ascii html icalendar latex)
@@ -466,7 +765,7 @@ interface or run the following code, where VAL stands for the new
 value of the variable, after updating it:
 
   \(progn
-    \(setq org-export--registered-backends
+    \(setq org-export-registered-backends
           \(org-remove-if-not
            \(lambda (backend)
              \(let ((name (org-export-backend-name backend)))
@@ -475,9 +774,9 @@ value of the variable, after updating it:
                      \(dolist (b val)
                        \(and (org-export-derived-backend-p b name)
                             \(throw 'parentp t)))))))
-           org-export--registered-backends))
-    \(let ((new-list (mapcar 'org-export-backend-name
-                            org-export--registered-backends)))
+           org-export-registered-backends))
+    \(let ((new-list (mapcar #'org-export-backend-name
+                            org-export-registered-backends)))
       \(dolist (backend val)
         \(cond
          \((not (load (format \"ox-%s\" backend) t t))
@@ -498,7 +797,7 @@ depends on, if any."
 	   ;; Any back-end not required anymore (not present in VAL and not
 	   ;; a parent of any back-end in the new value) is removed from the
 	   ;; list of registered back-ends.
-	   (setq org-export--registered-backends
+	   (setq org-export-registered-backends
 		 (org-remove-if-not
 		  (lambda (backend)
 		    (let ((name (org-export-backend-name backend)))
@@ -507,11 +806,11 @@ depends on, if any."
 			    (dolist (b val)
 			      (and (org-export-derived-backend-p b name)
 				   (throw 'parentp t)))))))
-		  org-export--registered-backends))
+		  org-export-registered-backends))
 	   ;; Now build NEW-LIST of both new back-ends and required
 	   ;; parents.
-	   (let ((new-list (mapcar 'org-export-backend-name
-				   org-export--registered-backends)))
+	   (let ((new-list (mapcar #'org-export-backend-name
+				   org-export-registered-backends)))
 	     (dolist (backend val)
 	       (cond
 		((not (load (format "ox-%s" backend) t t))
@@ -827,7 +1126,7 @@ When nil, just use the standard three dots.
 When a string, use that string instead.
 When a face, use the standard 3 dots, but with the specified face.
 The change affects only Org-mode (which will then use its own display table).
-Changing this requires executing `M-x org-mode RET' in a buffer to become
+Changing this requires executing \\[org-mode] in a buffer to become
 effective."
   :group 'org-startup
   :type '(choice (const :tag "Default" nil)
@@ -842,34 +1141,6 @@ effective."
   :tag "Org Keywords"
   :group 'org)
 
-(defcustom org-deadline-string "DEADLINE:"
-  "String to mark deadline entries.
-A deadline is this string, followed by a time stamp.  Should be a word,
-terminated by a colon.  You can insert a schedule keyword and
-a timestamp with \\[org-deadline].
-Changes become only effective after restarting Emacs."
-  :group 'org-keywords
-  :type 'string)
-
-(defcustom org-scheduled-string "SCHEDULED:"
-  "String to mark scheduled TODO entries.
-A schedule is this string, followed by a time stamp.  Should be a word,
-terminated by a colon.  You can insert a schedule keyword and
-a timestamp with \\[org-schedule].
-Changes become only effective after restarting Emacs."
-  :group 'org-keywords
-  :type 'string)
-
-(defcustom org-closed-string "CLOSED:"
-  "String used as the prefix for timestamps logging closing a TODO entry."
-  :group 'org-keywords
-  :type 'string)
-
-(defcustom org-clock-string "CLOCK:"
-  "String used as prefix for timestamps clocking work hours on an item."
-  :group 'org-keywords
-  :type 'string)
-
 (defcustom org-closed-keep-when-no-todo nil
   "Remove CLOSED: time-stamp when switching back to a non-todo state?"
   :group 'org-todo
@@ -877,35 +1148,6 @@ Changes become only effective after restarting Emacs."
   :version "24.4"
   :package-version '(Org . "8.0")
   :type 'boolean)
-
-(defconst org-planning-or-clock-line-re (concat "^[ \t]*\\("
-						org-scheduled-string "\\|"
-						org-deadline-string "\\|"
-						org-closed-string "\\|"
-						org-clock-string "\\)")
-  "Matches a line with planning or clock info.")
-
-(defcustom org-comment-string "COMMENT"
-  "Entries starting with this keyword will never be exported.
-An entry can be toggled between COMMENT and normal with
-\\[org-toggle-comment].
-Changes become only effective after restarting Emacs."
-  :group 'org-keywords
-  :type 'string)
-
-(defcustom org-quote-string "QUOTE"
-  "Entries starting with this keyword will be exported in fixed-width font.
-Quoting applies only to the text in the entry following the headline, and does
-not extend beyond the next headline, even if that is lower level.
-An entry can be toggled between QUOTE and normal with
-\\[org-toggle-fixed-width-section]."
-  :group 'org-keywords
-  :type 'string)
-
-(defconst org-repeat-re
-  "<[0-9]\\{4\\}-[0-9][0-9]-[0-9][0-9] [^>\n]*?\\([.+]?\\+[0-9]+[hdwmy]\\(/[0-9]+[hdwmy]\\)?\\)"
-  "Regular expression for specifying repeated events.
-After a match, group 1 contains the repeat expression.")
 
 (defgroup org-structure nil
   "Options concerning the general structure of Org-mode files."
@@ -917,87 +1159,80 @@ After a match, group 1 contains the repeat expression.")
   :tag "Org Reveal Location"
   :group 'org-structure)
 
-(defconst org-context-choice
-  '(choice
-    (const :tag "Always" t)
-    (const :tag "Never" nil)
-    (repeat :greedy t :tag "Individual contexts"
-	    (cons
-	     (choice :tag "Context"
-		     (const agenda)
-		     (const org-goto)
-		     (const occur-tree)
-		     (const tags-tree)
-		     (const link-search)
-		     (const mark-goto)
-		     (const bookmark-jump)
-		     (const isearch)
-		     (const default))
-	     (boolean))))
-  "Contexts for the reveal options.")
+(defcustom org-show-context-detail '((isearch . lineage)
+				     (bookmark-jump . lineage)
+				     (default . ancestors))
+  "Alist between context and visibility span when revealing a location.
 
-(defcustom org-show-hierarchy-above '((default . t))
-  "Non-nil means show full hierarchy when revealing a location.
-Org-mode often shows locations in an org-mode file which might have
-been invisible before.  When this is set, the hierarchy of headings
-above the exposed location is shown.
-Turning this off for example for sparse trees makes them very compact.
-Instead of t, this can also be an alist specifying this option for different
-contexts.  Valid contexts are
+\\<org-mode-map>Some actions may move point into invisible
+locations.  As a consequence, Org always expose a neighborhood
+around point.  How much is shown depends on the initial action,
+or context.  Valid contexts are
+
   agenda         when exposing an entry from the agenda
-  org-goto       when using the command `org-goto' on key C-c C-j
-  occur-tree     when using the command `org-occur' on key C-c /
+  org-goto       when using the command `org-goto' (\\[org-goto])
+  occur-tree     when using the command `org-occur' (\\[org-sparse-tree] /)
   tags-tree      when constructing a sparse tree based on tags matches
   link-search    when exposing search matches associated with a link
   mark-goto      when exposing the jump goal of a mark
   bookmark-jump  when exposing a bookmark location
   isearch        when exiting from an incremental search
-  default        default for all contexts not set explicitly"
+  default        default for all contexts not set explicitly
+
+Allowed visibility spans are
+
+  minimal        show current headline; if point is not on headline,
+                 also show entry
+
+  local          show current headline, entry and next headline
+
+  ancestors      show current headline and its direct ancestors; if
+                 point is not on headline, also show entry
+
+  lineage        show current headline, its direct ancestors and all
+                 their children; if point is not on headline, also show
+                 entry and first child
+
+  tree           show current headline, its direct ancestors and all
+                 their children; if point is not on headline, also show
+                 entry and all children
+
+  canonical      show current headline, its direct ancestors along with
+                 their entries and children; if point is not located on
+                 the headline, also show current entry and all children
+
+As special cases, a nil or t value means show all contexts in
+`minimal' or `canonical' view, respectively.
+
+Some views can make displayed information very compact, but also
+make it harder to edit the location of the match.  In such
+a case, use the command `org-reveal' (\\[org-reveal]) to show
+more context."
   :group 'org-reveal-location
-  :type org-context-choice)
-
-(defcustom org-show-following-heading '((default . nil))
-  "Non-nil means show following heading when revealing a location.
-Org-mode often shows locations in an org-mode file which might have
-been invisible before.  When this is set, the heading following the
-match is shown.
-Turning this off for example for sparse trees makes them very compact,
-but makes it harder to edit the location of the match.  In such a case,
-use the command \\[org-reveal] to show more context.
-Instead of t, this can also be an alist specifying this option for different
-contexts.  See `org-show-hierarchy-above' for valid contexts."
-  :group 'org-reveal-location
-  :type org-context-choice)
-
-(defcustom org-show-siblings '((default . nil) (isearch t) (bookmark-jump t))
-  "Non-nil means show all sibling heading when revealing a location.
-Org-mode often shows locations in an org-mode file which might have
-been invisible before.  When this is set, the sibling of the current entry
-heading are all made visible.  If `org-show-hierarchy-above' is t,
-the same happens on each level of the hierarchy above the current entry.
-
-By default this is on for the isearch context, off for all other contexts.
-Turning this off for example for sparse trees makes them very compact,
-but makes it harder to edit the location of the match.  In such a case,
-use the command \\[org-reveal] to show more context.
-Instead of t, this can also be an alist specifying this option for different
-contexts.  See `org-show-hierarchy-above' for valid contexts."
-  :group 'org-reveal-location
-  :type org-context-choice
-  :version "24.4"
-  :package-version '(Org . "8.0"))
-
-(defcustom org-show-entry-below '((default . nil))
-  "Non-nil means show the entry below a headline when revealing a location.
-Org-mode often shows locations in an org-mode file which might have
-been invisible before.  When this is set, the text below the headline that is
-exposed is also shown.
-
-By default this is off for all contexts.
-Instead of t, this can also be an alist specifying this option for different
-contexts.  See `org-show-hierarchy-above' for valid contexts."
-  :group 'org-reveal-location
-  :type org-context-choice)
+  :version "25.1"
+  :package-version '(Org . "8.3")
+  :type '(choice
+	  (const :tag "Canonical" t)
+	  (const :tag "Minimal" nil)
+	  (repeat :greedy t :tag "Individual contexts"
+		  (cons
+		   (choice :tag "Context"
+			   (const agenda)
+			   (const org-goto)
+			   (const occur-tree)
+			   (const tags-tree)
+			   (const link-search)
+			   (const mark-goto)
+			   (const bookmark-jump)
+			   (const isearch)
+			   (const default))
+		   (choice :tag "Detail level"
+			   (const minimal)
+			   (const local)
+			   (const ancestors)
+			   (const lineage)
+			   (const tree)
+			   (const canonical))))))
 
 (defcustom org-indirect-buffer-display 'other-window
   "How should indirect tree buffers be displayed?
@@ -1021,7 +1256,13 @@ new-frame        Make a new frame each time.  Note that in this case
 (defcustom org-use-speed-commands nil
   "Non-nil means activate single letter commands at beginning of a headline.
 This may also be a function to test for appropriate locations where speed
-commands should be active."
+commands should be active.
+
+For example, to activate speed commands when the point is on any
+star at the beginning of the headline, you can do this:
+
+  (setq org-use-speed-commands
+      (lambda () (and (looking-at org-outline-regexp) (looking-back \"^\\**\"))))"
   :group 'org-structure
   :type '(choice
 	  (const :tag "Never" nil)
@@ -1051,10 +1292,10 @@ commands in the Help buffer using the `?' speed command."
 				(sexp))))))
 
 (defcustom org-bookmark-names-plist
-   '(:last-capture "org-capture-last-stored"
-     :last-refile "org-refile-last-stored"
-     :last-capture-marker "org-capture-last-stored-marker")
-   "Names for bookmarks automatically set by some Org commands.
+  '(:last-capture "org-capture-last-stored"
+		  :last-refile "org-refile-last-stored"
+		  :last-capture-marker "org-capture-last-stored-marker")
+  "Names for bookmarks automatically set by some Org commands.
 This can provide strings as names for a number of bookmarks Org sets
 automatically.  The following keys are currently implemented:
   :last-capture
@@ -1062,8 +1303,8 @@ automatically.  The following keys are currently implemented:
   :last-refile
 When a key does not show up in the property list, the corresponding bookmark
 is not set."
-   :group 'org-structure
-   :type 'plist)
+  :group 'org-structure
+  :type 'plist)
 
 (defgroup org-cycle nil
   "Options concerning visibility cycling in Org-mode."
@@ -1089,23 +1330,6 @@ than its value."
   :type '(choice
 	  (const :tag "No limit" nil)
 	  (integer :tag "Maximum level")))
-
-(defcustom org-drawers '("PROPERTIES" "CLOCK" "LOGBOOK" "RESULTS")
-  "Names of drawers.  Drawers are not opened by cycling on the headline above.
-Drawers only open with a TAB on the drawer line itself.  A drawer looks like
-this:
-   :DRAWERNAME:
-   .....
-   :END:
-The drawer \"PROPERTIES\" is special for capturing properties through
-the property API.
-
-Drawers can be defined on the per-file basis with a line like:
-
-#+DRAWERS: HIDDEN STATE PROPERTIES"
-  :group 'org-structure
-  :group 'org-cycle
-  :type '(repeat (string :tag "Drawer Name")))
 
 (defcustom org-hide-block-startup nil
   "Non-nil means entering Org-mode will fold all blocks.
@@ -1189,7 +1413,6 @@ the values `folded', `children', or `subtree'."
 
 (defcustom org-cycle-hook '(org-cycle-hide-archived-subtrees
 			    org-cycle-hide-drawers
-			    org-cycle-hide-inline-tasks
 			    org-cycle-show-empty-lines
 			    org-optimize-window-after-visibility-change)
   "Hook that is run after `org-cycle' has changed the buffer visibility.
@@ -1199,7 +1422,9 @@ argument is a symbol.  After a global state change, it can have the values
 `overview', `contents', or `all'.  After a local state change, it can have
 the values `folded', `children', or `subtree'."
   :group 'org-cycle
-  :type 'hook)
+  :type 'hook
+  :version "25.1"
+  :package-version '(Org . "8.3"))
 
 (defgroup org-edit-structure nil
   "Options concerning structure editing in Org-mode."
@@ -1226,23 +1451,25 @@ lines to the buffer:
   "Non-nil means adapt indentation to outline node level.
 
 When this variable is set, Org assumes that you write outlines by
-indenting text in each node to align with the headline (after the stars).
-The following issues are influenced by this variable:
+indenting text in each node to align with the headline (after the
+stars).  The following issues are influenced by this variable:
 
-- When this is set and the *entire* text in an entry is indented, the
-  indentation is increased by one space in a demotion command, and
-  decreased by one in a promotion command.  If any line in the entry
-  body starts with text at column 0, indentation is not changed at all.
+- The indentation is increased by one space in a demotion
+  command, and decreased by one in a promotion command.  However,
+  in the latter case, if shifting some line in the entry body
+  would alter document structure (e.g., insert a new headline),
+  indentation is not changed at all.
 
-- Property drawers and planning information is inserted indented when
-  this variable s set.  When nil, they will not be indented.
+- Property drawers and planning information is inserted indented
+  when this variable is set.  When nil, they will not be indented.
 
-- TAB indents a line relative to context.  The lines below a headline
-  will be indented when this variable is set.
+- TAB indents a line relative to current level.  The lines below
+  a headline will be indented when this variable is set.
 
-Note that this is all about true indentation, by adding and removing
-space characters.  See also `org-indent.el' which does level-dependent
-indentation in a virtual way, i.e. at display time in Emacs."
+Note that this is all about true indentation, by adding and
+removing space characters.  See also `org-indent.el' which does
+level-dependent indentation in a virtual way, i.e. at display
+time in Emacs."
   :group 'org-edit-structure
   :type 'boolean)
 
@@ -1419,8 +1646,7 @@ the list structure."
 (defcustom org-enable-fixed-width-editor t
   "Non-nil means lines starting with \":\" are treated as fixed-width.
 This currently only means they are never auto-wrapped.
-When nil, such lines will be treated like ordinary lines.
-See also the QUOTE keyword."
+When nil, such lines will be treated like ordinary lines."
   :group 'org-edit-structure
   :type 'boolean)
 
@@ -1452,9 +1678,9 @@ changed by an edit command."
 (defcustom org-remove-highlights-with-change t
   "Non-nil means any change to the buffer will remove temporary highlights.
 Such highlights are created by `org-occur' and `org-clock-display'.
-When nil, `C-c C-c needs to be used to get rid of the highlights.
-The highlights created by `org-preview-latex-fragment' always need
-`C-c C-c' to be removed."
+When nil, `C-c C-c' needs to be used to get rid of the highlights.
+The highlights created by `org-toggle-latex-fragment' always need
+`C-c C-x C-l' to be removed."
   :group 'org-sparse-trees
   :group 'org-time
   :type 'boolean)
@@ -1600,11 +1826,18 @@ adaptive  Use relative path for files in the current directory and sub-
 	  (const noabbrev)
 	  (const adaptive)))
 
-(defcustom org-activate-links '(bracket angle plain radio tag date footnote)
-  "Types of links that should be activated in Org-mode files.
-This is a list of symbols, each leading to the activation of a certain link
-type.  In principle, it does not hurt to turn on most link types - there may
-be a small gain when turning off unused link types.  The types are:
+(defvaralias 'org-activate-links 'org-highlight-links)
+(defcustom org-highlight-links '(bracket angle plain radio tag date footnote)
+  "Types of links that should be highlighted in Org-mode files.
+
+This is a list of symbols, each one of them leading to the
+highlighting of a certain link type.
+
+You can still open links that are not highlighted.
+
+In principle, it does not hurt to turn on highlighting for all
+link types.  There may be a small gain when turning off unused
+link types.  The types are:
 
 bracket   The recommended [[link][description]] or [[link]] links with hiding.
 angle     Links in angular brackets that may contain whitespace like
@@ -1615,8 +1848,10 @@ tag       Tag settings in a headline (link to tag search).
 date      Time stamps (link to calendar).
 footnote  Footnote labels.
 
-Changing this variable requires a restart of Emacs to become effective."
+If you set this variable during an Emacs session, use `org-mode-restart'
+in the Org buffer so that the change takes effect."
   :group 'org-link
+  :group 'org-appearance
   :type '(set :greedy t
 	      (const :tag "Double bracket links" bracket)
 	      (const :tag "Angular bracket links" angle)
@@ -1857,19 +2092,6 @@ window on that directory."
   :group 'org-link-follow
   :type 'boolean)
 
-(defcustom org-link-mailto-program '(browse-url "mailto:%a?subject=%s")
-  "Function and arguments to call for following mailto links.
-This is a list with the first element being a Lisp function, and the
-remaining elements being arguments to the function.  In string arguments,
-%a will be replaced by the address, and %s will be replaced by the subject
-if one was given like in <mailto:arthur@galaxy.org::this subject>."
-  :group 'org-link-follow
-  :type '(choice
-	  (const :tag "browse-url" (browse-url-mail "mailto:%a?subject=%s"))
-	  (const :tag "compose-mail" (compose-mail "%a" "%s"))
-	  (const :tag "message-mail" (message-mail "%a" "%s"))
-	  (cons :tag "other" (function) (repeat :tag "argument" sexp))))
-
 (defcustom org-confirm-shell-link-function 'yes-or-no-p
   "Non-nil means ask for confirmation before executing shell links.
 Shell links can be dangerous: just think about a link
@@ -1888,7 +2110,7 @@ single keystroke rather than having to type \"yes\"."
 	  (const :tag "no confirmation (dangerous)" nil)))
 (put 'org-confirm-shell-link-function
      'safe-local-variable
-     #'(lambda (x) (member x '(yes-or-no-p y-or-n-p))))
+     (lambda (x) (member x '(yes-or-no-p y-or-n-p))))
 
 (defcustom org-confirm-shell-link-not-regexp ""
   "A regexp to skip confirmation for shell links."
@@ -1914,7 +2136,7 @@ single keystroke rather than having to type \"yes\"."
 	  (const :tag "no confirmation (dangerous)" nil)))
 (put 'org-confirm-shell-link-function
      'safe-local-variable
-     #'(lambda (x) (member x '(yes-or-no-p y-or-n-p))))
+     (lambda (x) (member x '(yes-or-no-p y-or-n-p))))
 
 (defcustom org-confirm-elisp-link-not-regexp ""
   "A regexp to skip confirmation for Elisp links."
@@ -2086,9 +2308,7 @@ Used as a fall back file for org-capture.el, for templates that
 do not specify a target file."
   :group 'org-refile
   :group 'org-capture
-  :type '(choice
-	  (const :tag "Default from remember-data-file" nil)
-	  file))
+  :type 'file)
 
 (defcustom org-goto-interface 'outline
   "The default interface to be used for `org-goto'.
@@ -2245,7 +2465,7 @@ When `full-file-path', include the full file path."
   "Non-nil means complete the outline path in hierarchical steps.
 When Org-mode uses the refile interface to select an outline path
 \(see variable `org-refile-use-outline-path'), the completion of
-the path can be done is a single go, or if can be done in steps down
+the path can be done in a single go, or it can be done in steps down
 the headline hierarchy.  Going in steps is probably the best if you
 do not use a special completion package like `ido' or `icicles'.
 However, when using these packages, going in one step can be very
@@ -2353,9 +2573,9 @@ taken from the (otherwise obsolete) variable `org-todo-interpretation'."
 		    (lambda (widget)
 		      (widget-put widget
 				  :args (mapcar
-					 #'(lambda (x)
-					     (widget-convert
-					      (cons 'const x)))
+					 (lambda (x)
+					   (widget-convert
+					    (cons 'const x)))
 					 org-todo-interpretation-widgets))
 		      widget))
 		   (repeat
@@ -2366,7 +2586,6 @@ taken from the (otherwise obsolete) variable `org-todo-interpretation'."
 (make-variable-buffer-local 'org-todo-keywords-1)
 (defvar org-todo-keywords-for-agenda nil)
 (defvar org-done-keywords-for-agenda nil)
-(defvar org-drawers-for-agenda nil)
 (defvar org-todo-keyword-alist-for-agenda nil)
 (defvar org-tag-alist-for-agenda nil
   "Alist of all tags from all agenda files.")
@@ -2433,6 +2652,9 @@ ALL-HEADLINES means update todo statistics by including headlines
 with no TODO keyword as well, counting them as not done.
 A list of TODO keywords means the same, but skip keywords that are
 not in this list.
+When set to a list of two lists, the first list contains keywords
+to consider as TODO keywords, the second list contains keywords
+to consider as DONE keywords.
 
 When this is set, todo statistics is updated in the parent of the
 current entry each time a todo state is changed."
@@ -2442,6 +2664,9 @@ current entry each time a todo state is changed."
 	  (const :tag "Yes, including all entries" all-headlines)
 	  (repeat :tag "Yes, for TODOs in this list"
 		  (string :tag "TODO keyword"))
+	  (list :tag "Yes, for TODOs and DONEs in these lists"
+		(repeat (string :tag "TODO keyword"))
+		(repeat (string :tag "DONE keyword")))
 	  (other :tag "No TODO statistics" nil)))
 
 (defcustom org-hierarchical-todo-statistics t
@@ -2716,7 +2941,10 @@ If this variable is set, `org-log-state-notes-insert-after-drawers'
 will be ignored.
 
 You can set the property LOG_INTO_DRAWER to overrule this setting for
-a subtree."
+a subtree.
+
+Do not check directly this variable in a Lisp program.  Call
+function `org-log-into-drawer' instead."
   :group 'org-todo
   :group 'org-progress
   :type '(choice
@@ -2727,15 +2955,17 @@ a subtree."
 (org-defvaralias 'org-log-state-notes-into-drawer 'org-log-into-drawer)
 
 (defun org-log-into-drawer ()
-  "Return the value of `org-log-into-drawer', but let properties overrule.
-If the current entry has or inherits a LOG_INTO_DRAWER property, it will be
-used instead of the default value."
+  "Name of the log drawer, as a string, or nil.
+This is the value of `org-log-into-drawer'.  However, if the
+current entry has or inherits a LOG_INTO_DRAWER property, it will
+be used instead of the default value."
   (let ((p (org-entry-get nil "LOG_INTO_DRAWER" 'inherit t)))
-    (cond
-     ((not p) org-log-into-drawer)
-     ((equal p "nil") nil)
-     ((equal p "t") "LOGBOOK")
-     (t p))))
+    (cond ((equal p "nil") nil)
+	  ((equal p "t") "LOGBOOK")
+	  ((stringp p) p)
+	  (p "LOGBOOK")
+	  ((stringp org-log-into-drawer) org-log-into-drawer)
+	  (org-log-into-drawer "LOGBOOK"))))
 
 (defcustom org-log-state-notes-insert-after-drawers nil
   "Non-nil means insert state change notes after any drawers in entry.
@@ -2863,18 +3093,6 @@ as an argument and return the numeric priority."
   :tag "Org Time"
   :group 'org)
 
-(defcustom org-insert-labeled-timestamps-at-point nil
-  "Non-nil means SCHEDULED and DEADLINE timestamps are inserted at point.
-When nil, these labeled time stamps are forces into the second line of an
-entry, just after the headline.  When scheduling from the global TODO list,
-the time stamp will always be forced into the second line."
-  :group 'org-time
-  :type 'boolean)
-
-(defconst org-time-stamp-formats '("<%Y-%m-%d %a>" . "<%Y-%m-%d %a %H:%M>")
-  "Formats for `format-time-string' which are used for time stamps.
-It is not recommended to change this constant.")
-
 (defcustom org-time-stamp-rounding-minutes '(0 5)
   "Number of minutes to round time stamps to.
 These are two values, the first applies when first creating a time stamp.
@@ -2890,10 +3108,10 @@ a double prefix argument to a time stamp command like `C-c .' or `C-c !',
 and by using a prefix arg to `S-up/down' to specify the exact number
 of minutes to shift."
   :group 'org-time
-  :get #'(lambda (var) ; Make sure both elements are there
-	   (if (integerp (default-value var))
-	       (list (default-value var) 5)
-	     (default-value var)))
+  :get (lambda (var) ; Make sure both elements are there
+	 (if (integerp (default-value var))
+	     (list (default-value var) 5)
+	   (default-value var)))
   :type '(list
 	  (integer :tag "when inserting times")
 	  (integer :tag "when modifying times")))
@@ -3049,9 +3267,9 @@ is used."
   :group 'org-time
   :type '(choice (string :tag "Format string")
 		 (set (group :inline t (const :tag "Years" :years)
-			    (string :tag "Format string"))
+			     (string :tag "Format string"))
 		      (group :inline t (const :tag "Months" :months)
-			    (string :tag "Format string"))
+			     (string :tag "Format string"))
 		      (group :inline t (const :tag "Weeks" :weeks)
 			     (string :tag "Format string"))
 		      (group :inline t (const :tag "Days" :days)
@@ -3257,10 +3475,16 @@ See the manual for details."
 	   (list :tag "Start radio group"
 		 (const :startgroup)
 		 (option (string :tag "Group description")))
+	   (list :tag "Start tag group, non distinct"
+		 (const :startgrouptag)
+		 (option (string :tag "Group description")))
 	   (list :tag "Group tags delimiter"
 		 (const :grouptags))
 	   (list :tag "End radio group"
 		 (const :endgroup)
+		 (option (string :tag "Group description")))
+	   (list :tag "End tag group, non distinct"
+		 (const :endgrouptag)
 		 (option (string :tag "Group description")))
 	   (const :tag "New line" (:newline)))))
 
@@ -3542,13 +3766,6 @@ or nil if the normal value should be used."
   :group 'org-properties
   :type '(choice (const nil) (function)))
 
-(defcustom org-effort-property "Effort"
-  "The property that is being used to keep track of effort estimates.
-Effort estimates given in this property need to have the format H:MM."
-  :group 'org-properties
-  :group 'org-progress
-  :type '(string :tag "Property"))
-
 (defconst org-global-properties-fixed
   '(("VISIBILITY_ALL" . "folded children content all")
     ("CLOCK_MODELINE_TOTAL_ALL" . "current today repeat all auto"))
@@ -3603,7 +3820,7 @@ or contain a special line
 If the file does not specify a category, then file's base name
 is used instead.")
 (make-variable-buffer-local 'org-category)
-(put 'org-category 'safe-local-variable #'(lambda (x) (or (symbolp x) (stringp x))))
+(put 'org-category 'safe-local-variable (lambda (x) (or (symbolp x) (stringp x))))
 
 (defcustom org-agenda-files nil
   "The files to be used for agenda display.
@@ -3752,12 +3969,16 @@ Replace format-specifiers in the command as noted below and use
 `shell-command' to convert LaTeX to MathML.
 %j:     Executable file in fully expanded form as specified by
         `org-latex-to-mathml-jar-file'.
-%I:     Input LaTeX file in fully expanded form
-%o:     Output MathML file
+%I:     Input LaTeX file in fully expanded form.
+%i:     The latex fragment to be converted.
+%o:     Output MathML file.
 This command is used by `org-create-math-formula'.
 
 When using MathToWeb as the converter, set this to
-\"java -jar %j -unicode -force -df %o %I\"."
+\"java -jar %j -unicode -force -df %o %I\".
+
+When using  LaTeXML set this to
+\"latexmlmath \"%i\" --presentationmathml=%o\"."
   :group 'org-latex
   :version "24.1"
   :type '(choice
@@ -3848,6 +4069,7 @@ header, or they will be appended."
     ("T1"   "fontenc"   t)
     (""     "fixltx2e"  nil)
     (""     "graphicx"  t)
+    (""     "grffile"   t)
     (""     "longtable" nil)
     (""     "float"     nil)
     (""     "wrapfig"   nil)
@@ -3858,6 +4080,7 @@ header, or they will be appended."
     (""     "marvosym"  t)
     (""     "wasysym"   t)
     (""     "amssymb"   t)
+    (""     "capt-of"   nil)
     (""     "hyperref"  nil)
     "\\tolerance=1000")
   "Alist of default packages to be inserted in the header.
@@ -3871,6 +4094,7 @@ Org mode to function properly:
 - inputenc, fontenc:  for basic font and character selection
 - fixltx2e: Important patches of LaTeX itself
 - graphicx: for including images
+- grffile: allow periods and spaces in graphics file names
 - longtable: For multipage tables
 - float, wrapfig: for figure placement
 - rotating: for sideways figures and tables
@@ -3879,6 +4103,7 @@ Org mode to function properly:
 - textcomp, marvosymb, wasysym, amssymb: for various symbols used
   for interpreting the entities in `org-entities'.  You can skip
   some of these packages if you don't use any of their symbols.
+- capt-of: for captions outside of floats
 - hyperref: for cross references
 
 Therefore you should not modify this variable unless you know
@@ -4035,6 +4260,11 @@ following symbols:
   :group 'org-appearance
   :type 'boolean)
 
+(defcustom org-hide-macro-markers nil
+  "Non-nil mean font-lock should hide the brackets marking macro calls."
+  :group 'org-appearance
+  :type 'boolean)
+
 (defcustom org-pretty-entities nil
   "Non-nil means show entities as UTF8 characters.
 When nil, the \\name form remains in the buffer."
@@ -4121,7 +4351,7 @@ After a match, the match groups contain these elements:
 ;; set this option proved cumbersome.  See this message/thread:
 ;; http://article.gmane.org/gmane.emacs.orgmode/68681
 (defvar org-emphasis-regexp-components
-  '(" \t('\"{" "- \t.,:!?;'\")}\\" " \t\r\n,\"'" "." 1)
+  '(" \t('\"{" "- \t.,:!?;'\")}\\[" " \t\r\n,\"'" "." 1)
   "Components used to build the regular expression for emphasis.
 This is a list with five entries.  Terminology:  In an emphasis string
 like \" *strong word* \", we call the initial space PREMATCH, the final
@@ -4213,7 +4443,7 @@ Normal means, no org-mode-specific context."
 (defvar mark-active)
 
 ;; Various packages
-(declare-function calendar-absolute-from-iso    "cal-iso"    (date))
+(declare-function calendar-iso-to-absolute    "cal-iso"    (date))
 (declare-function calendar-forward-day          "cal-move"   (arg))
 (declare-function calendar-goto-date            "cal-move"   (date))
 (declare-function calendar-goto-today           "cal-move"   ())
@@ -4255,30 +4485,7 @@ Normal means, no org-mode-specific context."
 (defvar texmathp-why)
 (declare-function speedbar-line-directory "speedbar" (&optional depth))
 (declare-function table--at-cell-p "table" (position &optional object at-column))
-
-(defvar org-latex-regexps)
-
-;;; Autoload and prepare some org modules
-
-;; Some table stuff that needs to be defined here, because it is used
-;; by the functions setting up org-mode or checking for table context.
-
-(defconst org-table-any-line-regexp "^[ \t]*\\(|\\|\\+-[-+]\\)"
-  "Detect an org-type or table-type table.")
-(defconst org-table-line-regexp "^[ \t]*|"
-  "Detect an org-type table line.")
-(defconst org-table-dataline-regexp "^[ \t]*|[^-]"
-  "Detect an org-type table line.")
-(defconst org-table-hline-regexp "^[ \t]*|-"
-  "Detect an org-type table hline.")
-(defconst org-table1-hline-regexp "^[ \t]*\\+-[-+]"
-  "Detect a table-type table hline.")
-(defconst org-table-any-border-regexp "^[ \t]*[^|+ \t]"
-  "Detect the first line outside a table when searching from within it.
-This works for both table types.")
-
-(defconst org-TBLFM-regexp "^[ \t]*#\\+TBLFM: "
-  "Detect a #+TBLFM line.")
+(declare-function calc-eval "calc" (str &optional separator &rest args))
 
 ;;;###autoload
 (defun turn-on-orgtbl ()
@@ -4363,12 +4570,12 @@ If TABLE-TYPE is non-nil, also check for table.el-type tables."
 		  (&optional also-non-dangling-p prompt last-valid))
 
 (defun org-at-TBLFM-p (&optional pos)
-  "Return t when point (or POS) is in #+TBLFM line."
+  "Non-nil when point (or POS) is in #+TBLFM line."
   (save-excursion
-    (let ((pos pos)))
     (goto-char (or pos (point)))
-    (beginning-of-line 1)
-    (looking-at org-TBLFM-regexp)))
+    (beginning-of-line)
+    (and (eq (org-element-type (org-element-at-point)) 'table)
+	 (looking-at org-TBLFM-regexp))))
 
 (defvar org-clock-start-time)
 (defvar org-clock-marker (make-marker)
@@ -4468,16 +4675,6 @@ the hierarchy, it will be used."
   :group 'org-archive
   :type 'string)
 
-(defcustom org-archive-tag "ARCHIVE"
-  "The tag that marks a subtree as archived.
-An archived subtree does not open during visibility cycling, and does
-not contribute to the agenda listings.
-After changing this, font-lock must be restarted in the relevant buffers to
-get the proper fontification."
-  :group 'org-archive
-  :group 'org-keywords
-  :type 'string)
-
 (defcustom org-agenda-skip-archived-trees t
   "Non-nil means the agenda will skip any items located in archived trees.
 An archived tree is a tree marked with the tag ARCHIVE.  The use of this
@@ -4510,24 +4707,25 @@ collapsed state."
   :group 'org-sparse-trees
   :type 'boolean)
 
-(defcustom org-sparse-tree-default-date-type 'scheduled-or-deadline
+(defcustom org-sparse-tree-default-date-type nil
   "The default date type when building a sparse tree.
 When this is nil, a date is a scheduled or a deadline timestamp.
 Otherwise, these types are allowed:
 
         all: all timestamps
      active: only active timestamps (<...>)
-   inactive: only inactive timestamps (<...)
+   inactive: only inactive timestamps ([...])
   scheduled: only scheduled timestamps
    deadline: only deadline timestamps"
-  :type '(choice (const :tag "Scheduled or deadline" scheduled-or-deadline)
+  :type '(choice (const :tag "Scheduled or deadline" nil)
 		 (const :tag "All timestamps" all)
 		 (const :tag "Only active timestamps" active)
 		 (const :tag "Only inactive timestamps" inactive)
 		 (const :tag "Only scheduled timestamps" scheduled)
 		 (const :tag "Only deadline timestamps" deadline)
 		 (const :tag "Only closed timestamps" closed))
-  :version "24.3"
+  :version "25.1"
+  :package-version '(Org . "8.3")
   :group 'org-sparse-trees)
 
 (defun org-cycle-hide-archived-subtrees (state)
@@ -4553,13 +4751,14 @@ Otherwise, these types are allowed:
 
 (defun org-hide-archived-subtrees (beg end)
   "Re-hide all archived subtrees after a visibility state change."
-  (save-excursion
-    (let* ((re (concat ":" org-archive-tag ":")))
-      (goto-char beg)
-      (while (re-search-forward re end t)
-	(when (org-at-heading-p)
-	  (org-flag-subtree t)
-	  (org-end-of-subtree t))))))
+  (org-with-wide-buffer
+   (let ((case-fold-search nil)
+	 (re (concat org-outline-regexp-bol ".*:" org-archive-tag ":")))
+     (goto-char beg)
+     (while (and (< (point) end) (re-search-forward re end t))
+       (when (member org-archive-tag (org-get-tags))
+	 (org-flag-subtree t)
+	 (org-end-of-subtree t))))))
 
 (declare-function outline-end-of-heading "outline" ())
 (declare-function outline-flag-region "outline" (from to flag))
@@ -4588,9 +4787,6 @@ Otherwise, these types are allowed:
 
 ;;; Variables for pre-computed regular expressions, all buffer local
 
-(defvar org-drawer-regexp "^[ \t]*:PROPERTIES:[ \t]*$"
-  "Matches first line of a hidden block.")
-(make-variable-buffer-local 'org-drawer-regexp)
 (defvar org-todo-regexp nil
   "Matches any of the TODO state keywords.")
 (make-variable-buffer-local 'org-todo-regexp)
@@ -4599,7 +4795,7 @@ Otherwise, these types are allowed:
 (make-variable-buffer-local 'org-not-done-regexp)
 (defvar org-not-done-heading-regexp nil
   "Matches a TODO headline that is not done.")
-(make-variable-buffer-local 'org-not-done-regexp)
+(make-variable-buffer-local 'org-not-done-heading-regexp)
 (defvar org-todo-line-regexp nil
   "Matches a headline and puts TODO state into group 2 if present.")
 (make-variable-buffer-local 'org-todo-line-regexp)
@@ -4621,46 +4817,6 @@ TODO state, priority and tags.")
   "Matches a headline and puts TODO state into group 2 if present.
 Also put tags into group 4 if tags are present.")
 (make-variable-buffer-local 'org-todo-line-tags-regexp)
-(defvar org-ds-keyword-length 12
-  "Maximum length of the DEADLINE and SCHEDULED keywords.")
-(make-variable-buffer-local 'org-ds-keyword-length)
-(defvar org-deadline-regexp nil
-  "Matches the DEADLINE keyword.")
-(make-variable-buffer-local 'org-deadline-regexp)
-(defvar org-deadline-time-regexp nil
-  "Matches the DEADLINE keyword together with a time stamp.")
-(make-variable-buffer-local 'org-deadline-time-regexp)
-(defvar org-deadline-time-hour-regexp nil
-  "Matches the DEADLINE keyword together with a time-and-hour stamp.")
-(make-variable-buffer-local 'org-deadline-time-hour-regexp)
-(defvar org-deadline-line-regexp nil
-  "Matches the DEADLINE keyword and the rest of the line.")
-(make-variable-buffer-local 'org-deadline-line-regexp)
-(defvar org-scheduled-regexp nil
-  "Matches the SCHEDULED keyword.")
-(make-variable-buffer-local 'org-scheduled-regexp)
-(defvar org-scheduled-time-regexp nil
-  "Matches the SCHEDULED keyword together with a time stamp.")
-(make-variable-buffer-local 'org-scheduled-time-regexp)
-(defvar org-scheduled-time-hour-regexp nil
-  "Matches the SCHEDULED keyword together with a time-and-hour stamp.")
-(make-variable-buffer-local 'org-scheduled-time-hour-regexp)
-(defvar org-closed-time-regexp nil
-  "Matches the CLOSED keyword together with a time stamp.")
-(make-variable-buffer-local 'org-closed-time-regexp)
-
-(defvar org-keyword-time-regexp nil
-  "Matches any of the 4 keywords, together with the time stamp.")
-(make-variable-buffer-local 'org-keyword-time-regexp)
-(defvar org-keyword-time-not-clock-regexp nil
-  "Matches any of the 3 keywords, together with the time stamp.")
-(make-variable-buffer-local 'org-keyword-time-not-clock-regexp)
-(defvar org-maybe-keyword-time-regexp nil
-  "Matches a timestamp, possibly preceded by a keyword.")
-(make-variable-buffer-local 'org-maybe-keyword-time-regexp)
-(defvar org-all-time-keywords nil
-  "List of time keywords.")
-(make-variable-buffer-local 'org-all-time-keywords)
 
 (defconst org-plain-time-of-day-regexp
   (concat
@@ -4766,32 +4922,6 @@ in the #+STARTUP line), the corresponding variable, and the value to set
 this variable to if the option is found.  An optional forth element PUSH
 means to push this value onto the list in the variable.")
 
-(defun org-update-property-plist (key val props)
-  "Update PROPS with KEY and VAL."
-  (let* ((appending (string= "+" (substring key (- (length key) 1))))
-	 (key (if appending (substring key 0 (- (length key) 1)) key))
-	 (remainder (org-remove-if (lambda (p) (string= (car p) key)) props))
-	 (previous (cdr (assoc key props))))
-    (if appending
-	(cons (cons key (if previous (concat previous " " val) val)) remainder)
-      (cons (cons key val) remainder))))
-
-(defconst org-block-regexp
-  "^[ \t]*#\\+begin_?\\([^ \n]+\\)\\(\\([^\n]+\\)\\)?\n\\([^\000]+?\\)#\\+end_?\\1[ \t]*$"
-  "Regular expression for hiding blocks.")
-(defconst org-heading-keyword-regexp-format
-  "^\\(\\*+\\)\\(?: +%s\\)\\(?: +\\(.*?\\)\\)?[ \t]*$"
-  "Printf format for a regexp matching a headline with some keyword.
-This regexp will match the headline of any node which has the
-exact keyword that is put into the format.  The keyword isn't in
-any group by default, but the stars and the body are.")
-(defconst org-heading-keyword-maybe-regexp-format
-  "^\\(\\*+\\)\\(?: +%s\\)?\\(?: +\\(.*?\\)\\)?[ \t]*$"
-  "Printf format for a regexp matching a headline, possibly with some keyword.
-This regexp can match any headline with the specified keyword, or
-without a keyword.  The keyword isn't in any group by default,
-but the stars and the body are.")
-
 (defcustom org-group-tags t
   "When non-nil (the default), use group tags.
 This can be turned on/off through `org-toggle-tags-groups'."
@@ -4815,374 +4945,337 @@ Support for group tags is controlled by the option
   (message "Groups tags support has been turned %s"
 	   (if org-group-tags "on" "off")))
 
-(defun org-set-regexps-and-options-for-tags ()
-  "Precompute variables used for tags."
+(defun org-set-regexps-and-options (&optional tags-only)
+  "Precompute regular expressions used in the current buffer.
+When optional argument TAGS-ONLY is non-nil, only compute tags
+related expressions."
   (when (derived-mode-p 'org-mode)
-    (org-set-local 'org-file-tags nil)
-    (let ((re (org-make-options-regexp '("FILETAGS" "TAGS")))
-	  (splitre "[ \t]+")
-	  (start 0)
-	  tags ftags key value)
-      (save-excursion
-	(save-restriction
-	  (widen)
-	  (goto-char (point-min))
-	  (while (re-search-forward re nil t)
-	    (setq key (upcase (org-match-string-no-properties 1))
-		  value (org-match-string-no-properties 2))
-	    (if (stringp value) (setq value (org-trim value)))
-	    (cond
-	     ((equal key "TAGS")
-	      (setq tags (append tags (if tags '("\\n") nil)
-				 (org-split-string value splitre))))
-	     ((equal key "FILETAGS")
-	      (when (string-match "\\S-" value)
-		(setq ftags
-		      (append
-		       ftags
-		       (apply 'append
-			      (mapcar (lambda (x) (org-split-string x ":"))
-				      (org-split-string value)))))))))))
-      ;; Process the file tags.
-      (and ftags (org-set-local 'org-file-tags
-				(mapcar 'org-add-prop-inherited ftags)))
-      (org-set-local 'org-tag-groups-alist nil)
-      ;; Process the tags.
-      (when (and (not tags) org-tag-alist)
-	(setq tags
-	      (mapcar
-	       (lambda (tg) (cond ((eq (car tg) :startgroup) "{")
-				  ((eq (car tg) :endgroup) "}")
-				  ((eq (car tg) :grouptags) ":")
-				  ((eq (car tg) :newline) "\n")
-				  (t (concat (car tg)
-					     (if (characterp (cdr tg))
-						 (format "(%s)" (char-to-string (cdr tg))) "")))))
-	       org-tag-alist)))
-      (let (e tgs g)
-	(while (setq e (pop tags))
-	  (cond
-	   ((equal e "{")
-	    (progn (push '(:startgroup) tgs)
-		   (when (equal (nth 1 tags) ":")
-		     (push (list (replace-regexp-in-string
-				  "(.+)$" "" (nth 0 tags)))
-			   org-tag-groups-alist)
-		     (setq g 0))))
-	   ((equal e ":") (push '(:grouptags) tgs))
-	   ((equal e "}") (push '(:endgroup) tgs) (if g (setq g nil)))
-	   ((equal e "\\n") (push '(:newline) tgs))
-	   ((string-match (org-re "^\\([[:alnum:]_@#%]+\\)(\\(.\\))$") e)
-	    (push (cons (match-string 1 e)
-			(string-to-char (match-string 2 e))) tgs)
-	    (if (and g (> g 0))
-		(setcar org-tag-groups-alist
-			(append (car org-tag-groups-alist)
-				(list (match-string 1 e)))))
-	    (if g (setq g (1+ g))))
-	   (t (push (list e) tgs)
-	      (if (and g (> g 0))
-		  (setcar org-tag-groups-alist
-			  (append (car org-tag-groups-alist) (list e))))
-	      (if g (setq g (1+ g))))))
-	(org-set-local 'org-tag-alist nil)
-	(while (setq e (pop tgs))
-	  (or (and (stringp (car e))
-		   (assoc (car e) org-tag-alist))
-	      (push e org-tag-alist)))
-	;; Return a list with tag variables
-	(list org-file-tags org-tag-alist org-tag-groups-alist)))))
-
-(defvar org-ota nil)
-(defun org-set-regexps-and-options ()
-  "Precompute regular expressions used in the current buffer."
-  (when (derived-mode-p 'org-mode)
-    (org-set-local 'org-todo-kwd-alist nil)
-    (org-set-local 'org-todo-key-alist nil)
-    (org-set-local 'org-todo-key-trigger nil)
-    (org-set-local 'org-todo-keywords-1 nil)
-    (org-set-local 'org-done-keywords nil)
-    (org-set-local 'org-todo-heads nil)
-    (org-set-local 'org-todo-sets nil)
-    (org-set-local 'org-todo-log-states nil)
-    (org-set-local 'org-file-properties nil)
-    (let ((re (org-make-options-regexp
-	       '("CATEGORY" "TODO" "COLUMNS" "STARTUP" "ARCHIVE"
-		 "LINK" "PRIORITIES" "CONSTANTS" "PROPERTY" "DRAWERS"
-		 "SETUPFILE" "OPTIONS")
-	       "\\(?:[a-zA-Z][0-9a-zA-Z_]*_TODO\\)"))
-	  (splitre "[ \t]+")
-	  (scripts org-use-sub-superscripts)
-	  kwds kws0 kwsa key log value cat arch const links hw dws
-	  tail sep kws1 prio props drawers ext-setup-or-nil setup-contents
-	  (start 0))
-      (save-excursion
-	(save-restriction
-	  (widen)
-	  (goto-char (point-min))
-	  (while
-	      (or (and
-		   ext-setup-or-nil
-		   (not org-ota)
-		   (let (ret)
-		     (with-temp-buffer
-		       (insert ext-setup-or-nil)
-		       (let ((major-mode 'org-mode) org-ota)
-			 (setq ret (save-match-data
-				     (org-set-regexps-and-options-for-tags)))))
-		     ;; Append setupfile tags to existing tags
-		     (setq org-ota t)
-		     (setq org-file-tags
-			   (delq nil (append org-file-tags (nth 0 ret)))
-			   org-tag-alist
-			   (delq nil (append org-tag-alist (nth 1 ret)))
-			   org-tag-groups-alist
-			   (delq nil (append org-tag-groups-alist (nth 2 ret))))))
-		  (and ext-setup-or-nil
-		       (string-match re ext-setup-or-nil start)
-		       (setq start (match-end 0)))
-		  (and (setq ext-setup-or-nil nil start 0)
-		       (re-search-forward re nil t)))
-	    (setq key (upcase (match-string 1 ext-setup-or-nil))
-		  value (org-match-string-no-properties 2 ext-setup-or-nil))
-	    (if (stringp value) (setq value (org-trim value)))
-	    (cond
-	     ((equal key "CATEGORY")
-	      (setq cat value))
-	     ((member key '("SEQ_TODO" "TODO"))
-	      (push (cons 'sequence (org-split-string value splitre)) kwds))
-	     ((equal key "TYP_TODO")
-	      (push (cons 'type (org-split-string value splitre)) kwds))
- 	     ((string-match "\\`\\([a-zA-Z][0-9a-zA-Z_]*\\)_TODO\\'" key)
-	      ;; general TODO-like setup
- 	      (push (cons (intern (downcase (match-string 1 key)))
-			  (org-split-string value splitre)) kwds))
-	     ((equal key "COLUMNS")
-	      (org-set-local 'org-columns-default-format value))
-	     ((equal key "LINK")
-	      (when (string-match "^\\(\\S-+\\)[ \t]+\\(.+\\)" value)
-		(push (cons (match-string 1 value)
-			    (org-trim (match-string 2 value)))
-		      links)))
-	     ((equal key "PRIORITIES")
-	      (setq prio (org-split-string value " +")))
-	     ((equal key "PROPERTY")
-	      (when (string-match "\\(\\S-+\\)\\s-+\\(.*\\)" value)
-		(setq props (org-update-property-plist (match-string 1 value)
-						       (match-string 2 value)
-						       props))))
-	     ((equal key "DRAWERS")
-	      (setq drawers (delete-dups (append org-drawers (org-split-string value splitre)))))
-	     ((equal key "CONSTANTS")
-	      (org-table-set-constants))
-	     ((equal key "STARTUP")
-	      (let ((opts (org-split-string value splitre))
-		    l var val)
-		(while (setq l (pop opts))
-		  (when (setq l (assoc l org-startup-options))
-		    (setq var (nth 1 l) val (nth 2 l))
-		    (if (not (nth 3 l))
-			(set (make-local-variable var) val)
-		      (if (not (listp (symbol-value var)))
-			  (set (make-local-variable var) nil))
-		      (set (make-local-variable var) (symbol-value var))
-		      (add-to-list var val))))))
-	     ((equal key "ARCHIVE")
-	      (setq arch value)
-	      (remove-text-properties 0 (length arch)
-				      '(face t fontified t) arch))
-	     ((equal key "OPTIONS")
-	      (if (string-match "\\([ \t]\\|\\`\\)\\^:\\(t\\|nil\\|{}\\)" value)
-		  (setq scripts (read (match-string 2 value)))))
-	     ((and (equal key "SETUPFILE")
-		   ;; Prevent checking in Gnus messages
-		   (not buffer-read-only))
-	      (setq setup-contents (org-file-contents
-				    (expand-file-name
-				     (org-remove-double-quotes value))
-				    'noerror))
-	      (if (not ext-setup-or-nil)
-		  (setq ext-setup-or-nil setup-contents start 0)
-		(setq ext-setup-or-nil
-		      (concat (substring ext-setup-or-nil 0 start)
-			      "\n" setup-contents "\n"
-			      (substring ext-setup-or-nil start)))))))
-	  ;; search for property blocks
-	  (goto-char (point-min))
-	  (while (re-search-forward org-block-regexp nil t)
-	    (when (equal "PROPERTY" (upcase (match-string 1)))
-	      (setq value (replace-regexp-in-string
-			   "[\n\r]" " " (match-string 4)))
-	      (when (string-match "\\(\\S-+\\)\\s-+\\(.*\\)" value)
-		(setq props (org-update-property-plist (match-string 1 value)
-						       (match-string 2 value)
-						       props)))))))
-      (org-set-local 'org-use-sub-superscripts scripts)
-      (when cat
-	(org-set-local 'org-category (intern cat))
-	(push (cons "CATEGORY" cat) props))
-      (when prio
-	(if (< (length prio) 3) (setq prio '("A" "C" "B")))
-	(setq prio (mapcar 'string-to-char prio))
-	(org-set-local 'org-highest-priority (nth 0 prio))
-	(org-set-local 'org-lowest-priority  (nth 1 prio))
-	(org-set-local 'org-default-priority (nth 2 prio)))
-      (and props (org-set-local 'org-file-properties (nreverse props)))
-      (and drawers (org-set-local 'org-drawers drawers))
-      (and arch (org-set-local 'org-archive-location arch))
-      (and links (setq org-link-abbrev-alist-local (nreverse links)))
-      ;; Process the TODO keywords
-      (unless kwds
-	;; Use the global values as if they had been given locally.
-	(setq kwds (default-value 'org-todo-keywords))
-	(if (stringp (car kwds))
-	    (setq kwds (list (cons org-todo-interpretation
-				   (default-value 'org-todo-keywords)))))
-	(setq kwds (reverse kwds)))
-      (setq kwds (nreverse kwds))
-      (let (inter kws kw)
-	(while (setq kws (pop kwds))
- 	  (let ((kws (or
-		      (run-hook-with-args-until-success
- 		       'org-todo-setup-filter-hook kws)
-		      kws)))
-	    (setq inter (pop kws) sep (member "|" kws)
-		  kws0 (delete "|" (copy-sequence kws))
-		  kwsa nil
-		  kws1 (mapcar
-			(lambda (x)
-			  ;;                     1              2
-			  (if (string-match "^\\(.*?\\)\\(?:(\\([^!@/]\\)?.*?)\\)?$" x)
-			      (progn
-				(setq kw (match-string 1 x)
-				      key (and (match-end 2) (match-string 2 x))
-				      log (org-extract-log-state-settings x))
-				(push (cons kw (and key (string-to-char key))) kwsa)
-				(and log (push log org-todo-log-states))
-				kw)
-			    (error "Invalid TODO keyword %s" x)))
-			kws0)
-		  kwsa (if kwsa (append '((:startgroup))
-					(nreverse kwsa)
-					'((:endgroup))))
-		  hw (car kws1)
-		  dws (if sep (org-remove-keyword-keys (cdr sep)) (last kws1))
-		  tail (list inter hw (car dws) (org-last dws))))
-	  (add-to-list 'org-todo-heads hw 'append)
-	  (push kws1 org-todo-sets)
-	  (setq org-done-keywords (append org-done-keywords dws nil))
-	  (setq org-todo-key-alist (append org-todo-key-alist kwsa))
-	  (mapc (lambda (x) (push (cons x tail) org-todo-kwd-alist)) kws1)
-	  (setq org-todo-keywords-1 (append org-todo-keywords-1 kws1 nil)))
+    (let ((alist (org--setup-collect-keywords
+		  (org-make-options-regexp
+		   (append '("FILETAGS" "TAGS" "SETUPFILE")
+			   (and (not tags-only)
+				'("ARCHIVE" "CATEGORY" "COLUMNS" "CONSTANTS"
+				  "LINK" "OPTIONS" "PRIORITIES" "PROPERTY"
+				  "SEQ_TODO" "STARTUP" "TODO" "TYP_TODO")))))))
+      (org--setup-process-tags
+       (cdr (assq 'tags alist)) (cdr (assq 'filetags alist)))
+      (unless tags-only
+	;; File properties.
+	(org-set-local 'org-file-properties (cdr (assq 'property alist)))
+	;; Archive location.
+	(let ((archive (cdr (assq 'archive alist))))
+	  (when archive (org-set-local 'org-archive-location archive)))
+	;; Category.
+	(let ((cat (org-string-nw-p (cdr (assq 'category alist)))))
+	  (when cat
+	    (org-set-local 'org-category (intern cat))
+	    (org-set-local 'org-file-properties
+			   (org--update-property-plist
+			    "CATEGORY" cat org-file-properties))))
+	;; Columns.
+	(let ((column (cdr (assq 'columns alist))))
+	  (when column (org-set-local 'org-columns-default-format column)))
+	;; Constants.
+	(setq org-table-formula-constants-local (cdr (assq 'constants alist)))
+	;; Link abbreviations.
+	(let ((links (cdr (assq 'link alist))))
+	  (when links (setq org-link-abbrev-alist-local (nreverse links))))
+	;; Priorities.
+	(let ((priorities (cdr (assq 'priorities alist))))
+	  (when priorities
+	    (org-set-local 'org-highest-priority (nth 0 priorities))
+	    (org-set-local 'org-lowest-priority (nth 1 priorities))
+	    (org-set-local 'org-default-priority (nth 2 priorities))))
+	;; Scripts.
+	(let ((scripts (assq 'scripts alist)))
+	  (when scripts
+	    (org-set-local 'org-use-sub-superscripts (cdr scripts))))
+	;; Startup options.
+	(let ((startup (cdr (assq 'startup alist))))
+	  (dolist (option startup)
+	    (let ((entry (assoc-string option org-startup-options t)))
+	      (when entry
+		(let ((var (nth 1 entry))
+		      (val (nth 2 entry)))
+		  (if (not (nth 3 entry)) (org-set-local var val)
+		    (unless (listp (symbol-value var))
+		      (org-set-local var nil))
+		    (add-to-list var val)))))))
+	;; TODO keywords.
+	(org-set-local 'org-todo-kwd-alist nil)
+	(org-set-local 'org-todo-key-alist nil)
+	(org-set-local 'org-todo-key-trigger nil)
+	(org-set-local 'org-todo-keywords-1 nil)
+	(org-set-local 'org-done-keywords nil)
+	(org-set-local 'org-todo-heads nil)
+	(org-set-local 'org-todo-sets nil)
+	(org-set-local 'org-todo-log-states nil)
+	(let ((todo-sequences
+	       (or (nreverse (cdr (assq 'todo alist)))
+		   (let ((d (default-value 'org-todo-keywords)))
+		     (if (not (stringp (car d))) d
+		       ;; XXX: Backward compatibility code.
+		       (list (cons org-todo-interpretation d)))))))
+	  (dolist (sequence todo-sequences)
+	    (let* ((sequence (or (run-hook-with-args-until-success
+				  'org-todo-setup-filter-hook sequence)
+				 sequence))
+		   (sequence-type (car sequence))
+		   (keywords (cdr sequence))
+		   (sep (member "|" keywords))
+		   names alist)
+	      (dolist (k (remove "|" keywords))
+		(unless (string-match "^\\(.*?\\)\\(?:(\\([^!@/]\\)?.*?)\\)?$"
+				      k)
+		  (error "Invalid TODO keyword %s" k))
+		(let ((name (match-string 1 k))
+		      (key (match-string 2 k))
+		      (log (org-extract-log-state-settings k)))
+		  (push name names)
+		  (push (cons name (and key (string-to-char key))) alist)
+		  (when log (push log org-todo-log-states))))
+	      (let* ((names (nreverse names))
+		     (done (if sep (org-remove-keyword-keys (cdr sep))
+			     (last names)))
+		     (head (car names))
+		     (tail (list sequence-type head (car done) (org-last done))))
+		(add-to-list 'org-todo-heads head 'append)
+		(push names org-todo-sets)
+		(setq org-done-keywords (append org-done-keywords done nil))
+		(setq org-todo-keywords-1 (append org-todo-keywords-1 names nil))
+		(setq org-todo-key-alist
+		      (append org-todo-key-alist
+			      (and alist
+				   (append '((:startgroup))
+					   (nreverse alist)
+					   '((:endgroup))))))
+		(dolist (k names) (push (cons k tail) org-todo-kwd-alist))))))
 	(setq org-todo-sets (nreverse org-todo-sets)
 	      org-todo-kwd-alist (nreverse org-todo-kwd-alist)
-	      org-todo-key-trigger (delq nil (mapcar 'cdr org-todo-key-alist))
-	      org-todo-key-alist (org-assign-fast-keys org-todo-key-alist)))
-      ;; Compute the regular expressions and other local variables.
-      ;; Using `org-outline-regexp-bol' would complicate them much,
-      ;; because of the fixed white space at the end of that string.
-      (if (not org-done-keywords)
-	  (setq org-done-keywords (and org-todo-keywords-1
-				       (list (org-last org-todo-keywords-1)))))
-      (setq org-ds-keyword-length (+ 2 (max (length org-deadline-string)
-					    (length org-scheduled-string)
-					    (length org-clock-string)
-					    (length org-closed-string)))
-	    org-drawer-regexp
-	    (concat "^[ \t]*:\\("
-		    (mapconcat 'regexp-quote org-drawers "\\|")
-		    "\\):[ \t]*$")
-	    org-not-done-keywords
-	    (org-delete-all org-done-keywords (copy-sequence org-todo-keywords-1))
-	    org-todo-regexp
-	    (concat "\\("
-		    (mapconcat 'regexp-quote org-todo-keywords-1 "\\|")
-		    "\\)")
-	    org-not-done-regexp
-	    (concat "\\("
-		    (mapconcat 'regexp-quote org-not-done-keywords "\\|")
-		    "\\)")
-	    org-not-done-heading-regexp
-	    (format org-heading-keyword-regexp-format org-not-done-regexp)
-	    org-todo-line-regexp
-	    (format org-heading-keyword-maybe-regexp-format org-todo-regexp)
-	    org-complex-heading-regexp
-	    (concat "^\\(\\*+\\)"
-		    "\\(?: +" org-todo-regexp "\\)?"
-		    "\\(?: +\\(\\[#.\\]\\)\\)?"
-		    "\\(?: +\\(.*?\\)\\)??"
-		    (org-re "\\(?:[ \t]+\\(:[[:alnum:]_@#%:]+:\\)\\)?")
-		    "[ \t]*$")
-	    org-complex-heading-regexp-format
-	    (concat "^\\(\\*+\\)"
-		    "\\(?: +" org-todo-regexp "\\)?"
-		    "\\(?: +\\(\\[#.\\]\\)\\)?"
-		    "\\(?: +"
-		    ;; Stats cookies can be stuck to body.
-		    "\\(?:\\[[0-9%%/]+\\] *\\)*"
-		    "\\(%s\\)"
-		    "\\(?: *\\[[0-9%%/]+\\]\\)*"
-		    "\\)"
-		    (org-re "\\(?:[ \t]+\\(:[[:alnum:]_@#%%:]+:\\)\\)?")
-		    "[ \t]*$")
-	    org-todo-line-tags-regexp
-	    (concat "^\\(\\*+\\)"
-		    "\\(?: +" org-todo-regexp "\\)?"
-		    "\\(?: +\\(.*?\\)\\)??"
-		    (org-re "\\(?:[ \t]+\\(:[[:alnum:]:_@#%]+:\\)\\)?")
-		    "[ \t]*$")
-	    org-deadline-regexp (concat "\\<" org-deadline-string)
-	    org-deadline-time-regexp
-	    (concat "\\<" org-deadline-string " *<\\([^>]+\\)>")
-	    org-deadline-time-hour-regexp
-	    (concat "\\<" org-deadline-string
-		    " *<\\([^>]+[0-9]\\{1,2\\}:[0-9]\\{2\\}[0-9-+:hdwmy \t.]*\\)>")
-	    org-deadline-line-regexp
-	    (concat "\\<\\(" org-deadline-string "\\).*")
-	    org-scheduled-regexp
-	    (concat "\\<" org-scheduled-string)
-	    org-scheduled-time-regexp
-	    (concat "\\<" org-scheduled-string " *<\\([^>]+\\)>")
-	    org-scheduled-time-hour-regexp
-	    (concat "\\<" org-scheduled-string
-		    " *<\\([^>]+[0-9]\\{1,2\\}:[0-9]\\{2\\}[0-9-+:hdwmy \t.]*\\)>")
-	    org-closed-time-regexp
-	    (concat "\\<" org-closed-string " *\\[\\([^]]+\\)\\]")
-	    org-keyword-time-regexp
-	    (concat "\\<\\(" org-scheduled-string
-		    "\\|" org-deadline-string
-		    "\\|" org-closed-string
-		    "\\|" org-clock-string "\\)"
-		    " *[[<]\\([^]>]+\\)[]>]")
-	    org-keyword-time-not-clock-regexp
-	    (concat "\\<\\(" org-scheduled-string
-		    "\\|" org-deadline-string
-		    "\\|" org-closed-string
-		    "\\)"
-		    " *[[<]\\([^]>]+\\)[]>]")
-	    org-maybe-keyword-time-regexp
-	    (concat "\\(\\<\\(" org-scheduled-string
-		    "\\|" org-deadline-string
-		    "\\|" org-closed-string
-		    "\\|" org-clock-string "\\)\\)?"
-		    " *\\([[<][0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\} ?[^]\r\n>]*?[]>]\\|<%%([^\r\n>]*>\\)")
-	    org-all-time-keywords
-	    (mapcar (lambda (w) (substring w 0 -1))
-		    (list org-scheduled-string org-deadline-string
-			  org-clock-string org-closed-string)))
-      (setq org-ota nil)
-      (org-compute-latex-and-related-regexp))))
+	      org-todo-key-trigger (delq nil (mapcar #'cdr org-todo-key-alist))
+	      org-todo-key-alist (org-assign-fast-keys org-todo-key-alist))
+	;; Compute the regular expressions and other local variables.
+	;; Using `org-outline-regexp-bol' would complicate them much,
+	;; because of the fixed white space at the end of that string.
+	(if (not org-done-keywords)
+	    (setq org-done-keywords
+		  (and org-todo-keywords-1 (last org-todo-keywords-1))))
+	(setq org-not-done-keywords
+	      (org-delete-all org-done-keywords
+			      (copy-sequence org-todo-keywords-1))
+	      org-todo-regexp (regexp-opt org-todo-keywords-1 t)
+	      org-not-done-regexp (regexp-opt org-not-done-keywords t)
+	      org-not-done-heading-regexp
+	      (format org-heading-keyword-regexp-format org-not-done-regexp)
+	      org-todo-line-regexp
+	      (format org-heading-keyword-maybe-regexp-format org-todo-regexp)
+	      org-complex-heading-regexp
+	      (concat "^\\(\\*+\\)"
+		      "\\(?: +" org-todo-regexp "\\)?"
+		      "\\(?: +\\(\\[#.\\]\\)\\)?"
+		      "\\(?: +\\(.*?\\)\\)??"
+		      (org-re "\\(?:[ \t]+\\(:[[:alnum:]_@#%:]+:\\)\\)?")
+		      "[ \t]*$")
+	      org-complex-heading-regexp-format
+	      (concat "^\\(\\*+\\)"
+		      "\\(?: +" org-todo-regexp "\\)?"
+		      "\\(?: +\\(\\[#.\\]\\)\\)?"
+		      "\\(?: +"
+		      ;; Stats cookies can be stuck to body.
+		      "\\(?:\\[[0-9%%/]+\\] *\\)*"
+		      "\\(%s\\)"
+		      "\\(?: *\\[[0-9%%/]+\\]\\)*"
+		      "\\)"
+		      (org-re "\\(?:[ \t]+\\(:[[:alnum:]_@#%%:]+:\\)\\)?")
+		      "[ \t]*$")
+	      org-todo-line-tags-regexp
+	      (concat "^\\(\\*+\\)"
+		      "\\(?: +" org-todo-regexp "\\)?"
+		      "\\(?: +\\(.*?\\)\\)??"
+		      (org-re "\\(?:[ \t]+\\(:[[:alnum:]:_@#%]+:\\)\\)?")
+		      "[ \t]*$"))
+	(org-compute-latex-and-related-regexp)))))
+
+(defun org--setup-collect-keywords (regexp &optional files alist)
+  "Return setup keywords values as an alist.
+
+REGEXP matches a subset of setup keywords.  FILES is a list of
+file names already visited.  It is used to avoid circular setup
+files.  ALIST, when non-nil, is the alist computed so far.
+
+Return value contains the following keys: `archive', `category',
+`columns', `constants', `filetags', `link', `priorities',
+`property', `scripts', `startup', `tags' and `todo'."
+  (org-with-wide-buffer
+   (goto-char (point-min))
+   (let ((case-fold-search t))
+     (while (re-search-forward regexp nil t)
+       (let ((element (org-element-at-point)))
+	 (when (eq (org-element-type element) 'keyword)
+	   (let ((key (org-element-property :key element))
+		 (value (org-element-property :value element)))
+	     (cond
+	      ((equal key "ARCHIVE")
+	       (when (org-string-nw-p value)
+		 (push (cons 'archive value) alist)))
+	      ((equal key "CATEGORY") (push (cons 'category value) alist))
+	      ((equal key "COLUMNS") (push (cons 'columns value) alist))
+	      ((equal key "CONSTANTS")
+	       (let* ((constants (assq 'constants alist))
+		      (store (cdr constants)))
+		 (dolist (pair (org-split-string value))
+		   (when (string-match "^\\([a-zA-Z0][_a-zA-Z0-9]*\\)=\\(.*\\)"
+				       pair)
+		     (let* ((name (match-string 1 pair))
+			    (value (match-string 2 pair))
+			    (old (assoc name store)))
+		       (if old (setcdr old value)
+			 (push (cons name value) store)))))
+		 (if constants (setcdr constants store)
+		   (push (cons 'constants store) alist))))
+	      ((equal key "FILETAGS")
+	       (when (org-string-nw-p value)
+		 (let ((old (assq 'filetags alist))
+		       (new (apply #'nconc
+				   (mapcar (lambda (x) (org-split-string x ":"))
+					   (org-split-string value)))))
+		   (if old (setcdr old (append new (cdr old)))
+		     (push (cons 'filetags new) alist)))))
+	      ((equal key "LINK")
+	       (when (string-match "\\`\\(\\S-+\\)[ \t]+\\(.+\\)" value)
+		 (let ((links (assq 'link alist))
+		       (pair (cons (org-match-string-no-properties 1 value)
+				   (org-match-string-no-properties 2 value))))
+		   (if links (push pair (cdr links))
+		     (push (list 'link pair) alist)))))
+	      ((equal key "OPTIONS")
+	       (when (and (org-string-nw-p value)
+			  (string-match "\\^:\\(t\\|nil\\|{}\\)" value))
+		 (push (cons 'scripts (read (match-string 1 value))) alist)))
+	      ((equal key "PRIORITIES")
+	       (push (cons 'priorities
+			   (let ((prio (org-split-string value)))
+			     (if (< (length prio) 3) '(?A ?C ?B)
+			       (mapcar #'string-to-char prio))))
+		     alist))
+	      ((equal key "PROPERTY")
+	       (when (string-match "\\(\\S-+\\)[ \t]+\\(.*\\)" value)
+		 (let* ((property (assq 'property alist))
+			(value (org--update-property-plist
+				(org-match-string-no-properties 1 value)
+				(org-match-string-no-properties 2 value)
+				(cdr property))))
+		   (if property (setcdr property value)
+		     (push (cons 'property value) alist)))))
+	      ((equal key "STARTUP")
+	       (let ((startup (assq 'startup alist)))
+		 (if startup
+		     (setcdr startup
+			     (append (cdr startup) (org-split-string value)))
+		   (push (cons 'startup (org-split-string value)) alist))))
+	      ((equal key "TAGS")
+	       (let ((tag-cell (assq 'tags alist)))
+		 (if tag-cell
+		     (setcdr tag-cell
+			     (append (cdr tag-cell)
+				     '("\\n")
+				     (org-split-string value)))
+		   (push (cons 'tags (org-split-string value)) alist))))
+	      ((member key '("TODO" "SEQ_TODO" "TYP_TODO"))
+	       (let ((todo (assq 'todo alist))
+		     (value (cons (if (equal key "TYP_TODO") 'type 'sequence)
+				  (org-split-string value))))
+		 (if todo (push value (cdr todo))
+		   (push (list 'todo value) alist))))
+	      ((equal key "SETUPFILE")
+	       (unless buffer-read-only ; Do not check in Gnus messages.
+		 (let ((f (and (org-string-nw-p value)
+			       (expand-file-name
+				(org-remove-double-quotes value)))))
+		   (when (and f (file-readable-p f) (not (member f files)))
+		     (with-temp-buffer
+		       (insert-file-contents f)
+		       (setq alist
+			     ;; Fake Org mode to benefit from cache
+			     ;; without recurring needlessly.
+			     (let ((major-mode 'org-mode))
+			       (org--setup-collect-keywords
+				regexp (cons f files) alist)))))))))))))))
+  alist)
+
+(defun org--setup-process-tags (tags filetags)
+  "Precompute variables used for tags.
+TAGS is a list of tags and tag group symbols, as strings.
+FILETAGS is a list of tags, as strings."
+  ;; Process the file tags.
+  (org-set-local 'org-file-tags
+		 (mapcar #'org-add-prop-inherited filetags))
+  ;; Provide default tags if no local tags are found.
+  (when (and (not tags) org-tag-alist)
+    (setq tags
+	  (mapcar (lambda (tag)
+		    (case (car tag)
+		      (:startgroup "{")
+		      (:endgroup "}")
+		      (:startgrouptag "[")
+		      (:endgrouptag "]")
+		      (:grouptags ":")
+		      (:newline "\\n")
+		      (otherwise (concat (car tag)
+					 (and (characterp (cdr tag))
+					      (format "(%c)" (cdr tag)))))))
+		  org-tag-alist)))
+  ;; Process the tags.
+  (org-set-local 'org-tag-groups-alist nil)
+  (org-set-local 'org-tag-alist nil)
+  (let (group-flag)
+    (while tags
+      (let ((e (car tags)))
+	(setq tags (cdr tags))
+	(cond
+	 ((equal e "{")
+	  (push '(:startgroup) org-tag-alist)
+	  (when (equal (nth 1 tags) ":") (setq group-flag t)))
+	 ((equal e "}")
+	  (push '(:endgroup) org-tag-alist)
+	  (setq group-flag nil))
+	 ((equal e "[")
+	  (push '(:startgrouptag) org-tag-alist)
+	  (when (equal (nth 1 tags) ":") (setq group-flag t)))
+	 ((equal e "]")
+	  (push '(:endgrouptag) org-tag-alist)
+	  (setq group-flag nil))
+	 ((equal e ":")
+	  (push '(:grouptags) org-tag-alist)
+	  (setq group-flag 'append))
+	 ((equal e "\\n") (push '(:newline) org-tag-alist))
+	 ((string-match
+	   (org-re (concat "\\`\\([[:alnum:]_@#%]+"
+			   "\\|{.+?}\\)" ; regular expression
+			   "\\(?:(\\(.\\))\\)?\\'")) e)
+	  (let ((tag (match-string 1 e))
+		(key (and (match-beginning 2)
+			  (string-to-char (match-string 2 e)))))
+	    (cond ((eq group-flag 'append)
+		   (setcar org-tag-groups-alist
+			   (append (car org-tag-groups-alist) (list tag))))
+		  (group-flag (push (list tag) org-tag-groups-alist)))
+	    ;; Push all tags in groups, no matter if they already exist.
+	    (unless (and (not group-flag) (assoc tag org-tag-alist))
+	      (push (cons tag key) org-tag-alist))))))))
+  (setq org-tag-alist (nreverse org-tag-alist)))
 
 (defun org-file-contents (file &optional noerror)
   "Return the contents of FILE, as a string."
-  (if (or (not file) (not (file-readable-p file)))
-      (if (not noerror)
-	  (error "Cannot read file \"%s\"" file)
-	(message "Cannot read file \"%s\"" file)
-	"")
-    (with-temp-buffer
-      (insert-file-contents file)
-      (buffer-string))))
+  (if (and file (file-readable-p file))
+      (with-temp-buffer
+	(insert-file-contents file)
+	(buffer-string))
+    (funcall (if noerror 'message 'error)
+	     "Cannot read file \"%s\"%s"
+	     file
+	     (let ((from (buffer-file-name (buffer-base-buffer))))
+	       (if from (concat " (referenced in file \"" from "\")") "")))))
 
 (defun org-extract-log-state-settings (x)
   "Extract the log state setting from a TODO keyword string.
@@ -5279,6 +5372,7 @@ This variable is set by `org-before-change-function'.
 (require 'time-date)
 (unless (fboundp 'time-subtract) (defalias 'time-subtract 'subtract-time))
 (require 'easymenu)
+(autoload 'easy-menu-add "easymenu")
 (require 'overlay)
 
 ;; (require 'org-macs) moved higher up in the file before it is first used
@@ -5349,10 +5443,9 @@ The following commands are available:
      org-display-table 4
      (vconcat (mapcar
 	       (lambda (c) (make-glyph-code c (and (not (stringp org-ellipsis))
-					      org-ellipsis)))
+						   org-ellipsis)))
 	       (if (stringp org-ellipsis) org-ellipsis "..."))))
     (setq buffer-display-table org-display-table))
-  (org-set-regexps-and-options-for-tags)
   (org-set-regexps-and-options)
   (org-set-font-lock-defaults)
   (when (and org-tag-faces (not org-tags-special-faces-re))
@@ -5386,6 +5479,8 @@ The following commands are available:
   (org-setup-filling)
   ;; Comments.
   (org-setup-comments-handling)
+  ;; Initialize cache.
+  (org-element-cache-reset)
   ;; Beginning/end of defun
   (org-set-local 'beginning-of-defun-function 'org-backward-element)
   (org-set-local 'end-of-defun-function
@@ -5413,7 +5508,7 @@ The following commands are available:
   (org-set-local
    'align-mode-rules-list
    '((org-in-buffer-settings
-      (regexp . "^#\\+[A-Z_]+:\\(\\s-*\\)\\S-+")
+      (regexp . "^[ \t]*#\\+[A-Z_]+:\\(\\s-*\\)\\S-+")
       (modes . '(org-mode)))))
 
   ;; Imenu
@@ -5455,9 +5550,10 @@ The following commands are available:
      (when org-startup-with-inline-images
        (org-display-inline-images))
      (when org-startup-with-latex-preview
-       (org-preview-latex-fragment))
+       (org-toggle-latex-fragment))
      (unless org-inhibit-startup-visibility-stuff
-       (org-set-startup-visibility))))
+       (org-set-startup-visibility))
+     (org-refresh-effort-properties)))
   ;; Try to set org-hide correctly
   (let ((foreground (org-find-invisible-foreground)))
     (if foreground
@@ -5467,10 +5563,10 @@ The following commands are available:
 (add-to-list 'customize-package-emacs-version-alist
 	     '(Org ("6.21b" . "23.1")  ("6.33x" . "23.2")
 		   ("7.8.11" . "24.1") ("7.9.4" . "24.3")
-		   ("8.2.6" . "24.4")))
+		   ("8.2.6" . "24.4") ("8.3" . "25.1")))
 
 (defvar org-mode-transpose-word-syntax-table
-  (let ((st (make-syntax-table)))
+  (let ((st (make-syntax-table text-mode-syntax-table)))
     (mapc (lambda(c) (modify-syntax-entry
 		      (string-to-char (car c)) "w p" st))
 	  org-emphasis-alist)
@@ -5479,8 +5575,6 @@ The following commands are available:
 (when (fboundp 'abbrev-table-put)
   (abbrev-table-put org-mode-abbrev-table
 		    :parents (list text-mode-abbrev-table)))
-
-(put 'org-mode 'flyspell-mode-predicate 'org-mode-flyspell-verify)
 
 (defun org-find-invisible-foreground ()
   (let ((candidates (remove
@@ -5534,8 +5628,9 @@ the rounding returns a past time."
 (require 'font-lock)
 
 (defconst org-non-link-chars "]\t\n\r<>")
-(defvar org-link-types '("http" "https" "ftp" "mailto" "file" "news"
-			 "shell" "elisp" "doi" "message"))
+(defvar org-link-types '("http" "https" "ftp" "mailto" "file" "file+emacs"
+			 "file+sys" "news" "shell" "elisp" "doi" "message"
+			 "help"))
 (defvar org-link-types-re nil
   "Matches a link that has a url-like prefix like \"http:\"")
 (defvar org-link-re-with-space nil
@@ -5584,21 +5679,20 @@ stacked delimiters is N.  Escaping delimiters is not possible."
 	    next (concat "\\(?:" nothing left next right "\\)+" nothing)))
     (concat left "\\(" re "\\)" right)))
 
-(defvar org-match-substring-regexp
+(defconst org-match-substring-regexp
   (concat
    "\\(\\S-\\)\\([_^]\\)\\("
-   "\\(" (org-create-multibrace-regexp "{" "}" org-match-sexp-depth) "\\)"
+   "\\(?:" (org-create-multibrace-regexp "{" "}" org-match-sexp-depth) "\\)"
    "\\|"
-   "\\(" (org-create-multibrace-regexp "(" ")" org-match-sexp-depth) "\\)"
+   "\\(?:" (org-create-multibrace-regexp "(" ")" org-match-sexp-depth) "\\)"
    "\\|"
-   "\\(\\(?:\\*\\|[-+]?[^-+*!@#$%^_ \t\r\n,:\"?<>~;./{}=()]+\\)\\)\\)")
+   "\\(?:\\*\\|[+-]?[[:alnum:].,\\]*[[:alnum:]]\\)\\)")
   "The regular expression matching a sub- or superscript.")
 
-(defvar org-match-substring-with-braces-regexp
+(defconst org-match-substring-with-braces-regexp
   (concat
-   "\\(\\S-\\)\\([_^]\\)\\("
-   "\\(" (org-create-multibrace-regexp "{" "}" org-match-sexp-depth) "\\)"
-   "\\)")
+   "\\(\\S-\\)\\([_^]\\)"
+   "\\(" (org-create-multibrace-regexp "{" "}" org-match-sexp-depth) "\\)")
   "The regular expression matching a sub- or superscript, forcing braces.")
 
 (defun org-make-link-regexps ()
@@ -5656,39 +5750,10 @@ This should be called after the variable `org-link-types' has changed."
 
 (org-make-link-regexps)
 
-(defconst org-ts-regexp "<\\([0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\} ?[^\r\n>]*?\\)>"
-  "Regular expression for fast time stamp matching.")
-(defconst org-ts-regexp-both "[[<]\\([0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\} ?[^]\r\n>]*?\\)[]>]"
-  "Regular expression for fast time stamp matching.")
-(defconst org-ts-regexp0
-  "\\(\\([0-9]\\{4\\}\\)-\\([0-9]\\{2\\}\\)-\\([0-9]\\{2\\}\\)\\( +[^]+0-9>\r\n -]+\\)?\\( +\\([0-9]\\{1,2\\}\\):\\([0-9]\\{2\\}\\)\\)?\\)"
-  "Regular expression matching time strings for analysis.
-This one does not require the space after the date, so it can be used
-on a string that terminates immediately after the date.")
-(defconst org-ts-regexp1 "\\(\\([0-9]\\{4\\}\\)-\\([0-9]\\{2\\}\\)-\\([0-9]\\{2\\}\\) *\\([^]+0-9>\r\n -]*\\)\\( \\([0-9]\\{1,2\\}\\):\\([0-9]\\{2\\}\\)\\)?\\)"
-  "Regular expression matching time strings for analysis.")
-(defconst org-ts-regexp2 (concat "<" org-ts-regexp1 "[^>\n]\\{0,16\\}>")
-  "Regular expression matching time stamps, with groups.")
-(defconst org-ts-regexp3 (concat "[[<]" org-ts-regexp1 "[^]>\n]\\{0,16\\}[]>]")
-  "Regular expression matching time stamps (also [..]), with groups.")
-(defconst org-tr-regexp (concat org-ts-regexp "--?-?" org-ts-regexp)
-  "Regular expression matching a time stamp range.")
-(defconst org-tr-regexp-both
-  (concat org-ts-regexp-both "--?-?" org-ts-regexp-both)
-  "Regular expression matching a time stamp range.")
-(defconst org-tsr-regexp (concat org-ts-regexp "\\(--?-?"
-				 org-ts-regexp "\\)?")
-  "Regular expression matching a time stamp or time stamp range.")
-(defconst org-tsr-regexp-both
-  (concat org-ts-regexp-both "\\(--?-?"
-	  org-ts-regexp-both "\\)?")
-  "Regular expression matching a time stamp or time stamp range.
-The time stamps may be either active or inactive.")
-
 (defvar org-emph-face nil)
 
 (defun org-do-emphasis-faces (limit)
-  "Run through the buffer and add overlays to emphasized strings."
+  "Run through the buffer and emphasize strings."
   (let (rtn a)
     (while (and (not rtn) (re-search-forward org-emph-re limit t))
       (let* ((border (char-after (match-beginning 3)))
@@ -5769,9 +5834,11 @@ prompted for."
   (add-text-properties (1- pos) pos (list 'rear-nonsticky org-nonsticky-props)))
 
 (defun org-activate-plain-links (limit)
-  "Run through the buffer and add overlays to links."
+  "Add link properties for plain links."
   (let (f hl)
     (when (and (re-search-forward (concat org-plain-link-re) limit t)
+	       (not (member 'org-tag
+			    (get-text-property (1- (match-beginning 0)) 'face)))
 	       (not (org-in-src-block-p)))
       (org-remove-flyspell-overlays-in (match-beginning 0) (match-end 0))
       (setq f (get-text-property (match-beginning 0) 'face))
@@ -5795,10 +5862,11 @@ prompted for."
 				'(display t invisible t intangible t))
 	t)))
 
-(defcustom org-src-fontify-natively nil
+(defcustom org-src-fontify-natively t
   "When non-nil, fontify code in code blocks."
   :type 'boolean
-  :version "24.1"
+  :version "24.4"
+  :package-version '(Org . "8.3")
   :group 'org-appearance
   :group 'org-babel)
 
@@ -5830,17 +5898,6 @@ by a #."
 	      (dc3 (downcase (match-string 3)))
 	      end end1 quoting block-type ovl)
 	  (cond
-	   ((member dc1 '("+html:" "+ascii:" "+latex:"))
-	    ;; a single line of backend-specific content
-	    (org-remove-flyspell-overlays-in (match-beginning 0) (match-end 0))
-	    (remove-text-properties (match-beginning 0) (match-end 0)
-				    '(display t invisible t intangible t))
-	    (add-text-properties (match-beginning 1) (match-end 3)
-				 '(font-lock-fontified t face org-meta-line))
-	    (add-text-properties (match-beginning 6) (+ (match-end 6) 1)
-				 '(font-lock-fontified t face org-block))
-					; for backend-specific code
-	    t)
 	   ((and (match-end 4) (equal dc3 "+begin"))
 	    ;; Truly a block
 	    (setq block-type (downcase (match-string 5))
@@ -5852,26 +5909,20 @@ by a #."
 		    end1 (min (point-max) (1- (match-beginning 0))))
 	      (setq block-end (match-beginning 0))
 	      (when quoting
+		(org-remove-flyspell-overlays-in beg1 end1)
 		(remove-text-properties beg end
 					'(display t invisible t intangible t)))
 	      (add-text-properties
-	       beg end
-	       '(font-lock-fontified t font-lock-multiline t))
+	       beg end '(font-lock-fontified t font-lock-multiline t))
 	      (add-text-properties beg beg1 '(face org-meta-line))
-	      (add-text-properties end1 (min (point-max) (1+ end))
-				   '(face org-meta-line)) ; for end_src
+	      (org-remove-flyspell-overlays-in beg beg1)
+	      (add-text-properties	; For end_src
+	       end1 (min (point-max) (1+ end)) '(face org-meta-line))
+	      (org-remove-flyspell-overlays-in end1 end)
 	      (cond
 	       ((and lang (not (string= lang "")) org-src-fontify-natively)
 		(org-src-font-lock-fontify-block lang block-start block-end)
-		;; remove old background overlays
-		(mapc (lambda (ov)
-			(if (eq (overlay-get ov 'face) 'org-block-background)
-			    (delete-overlay ov)))
-		      (overlays-at (/ (+ beg1 block-end) 2)))
-		;; add a background overlay
-		(setq ovl (make-overlay beg1 block-end))
-                (overlay-put ovl 'face 'org-block-background)
-                (overlay-put ovl 'evaporate t))  ;; make it go away when empty
+		(add-text-properties beg1 block-end '(src-block t)))
 	       (quoting
 		(add-text-properties beg1 (min (point-max) (1+ end1))
 				     '(face org-block))) ; end of source block
@@ -5880,11 +5931,14 @@ by a #."
 		(add-text-properties beg1 (min (point-max) (1+ end1)) '(face org-quote)))
 	       ((string= block-type "verse")
 		(add-text-properties beg1 (min (point-max) (1+ end1)) '(face org-verse))))
-      	      (add-text-properties beg beg1 '(face org-block-begin-line))
-      	      (add-text-properties (min (point-max) (1+ end)) (min (point-max) (1+ end1))
+	      (add-text-properties beg beg1 '(face org-block-begin-line))
+	      (add-text-properties (min (point-max) (1+ end)) (min (point-max) (1+ end1))
 				   '(face org-block-end-line))
 	      t))
 	   ((member dc1 '("+title:" "+author:" "+email:" "+date:"))
+	    (org-remove-flyspell-overlays-in
+	     (match-beginning 0)
+	     (if (equal "+title:" dc1) (match-end 2) (match-end 0)))
 	    (add-text-properties
 	     beg (match-end 3)
 	     (if (member (intern (substring dc1 1 -1)) org-hidden-keywords)
@@ -5893,31 +5947,55 @@ by a #."
 	    (add-text-properties
 	     (match-beginning 6) (min (point-max) (1+ (match-end 6)))
 	     (if (string-equal dc1 "+title:")
-	    	 '(font-lock-fontified t face org-document-title)
+		 '(font-lock-fontified t face org-document-title)
 	       '(font-lock-fontified t face org-document-info))))
-	   ((or (equal dc1 "+results")
-		(member dc1 '("+begin:" "+end:" "+caption:" "+label:"
-			      "+orgtbl:" "+tblfm:" "+tblname:" "+results:"
-			      "+call:" "+header:" "+headers:" "+name:"))
-		(and (match-end 4) (equal dc3 "+attr")))
-	    (add-text-properties
-	     beg (match-end 0)
-	     '(font-lock-fontified t face org-meta-line))
+	   ((equal dc1 "+caption:")
+	    (org-remove-flyspell-overlays-in (match-end 2) (match-end 0))
+	    (remove-text-properties (match-beginning 0) (match-end 0)
+				    '(display t invisible t intangible t))
+	    (add-text-properties (match-beginning 1) (match-end 3)
+				 '(font-lock-fontified t face org-meta-line))
+	    (add-text-properties (match-beginning 6) (+ (match-end 6) 1)
+				 '(font-lock-fontified t face org-block))
 	    t)
 	   ((member dc3 '(" " ""))
+	    (org-remove-flyspell-overlays-in beg (match-end 0))
 	    (add-text-properties
 	     beg (match-end 0)
 	     '(font-lock-fontified t face font-lock-comment-face)))
-	   ((not (member (char-after beg) '(?\  ?\t)))
-	    ;; just any other in-buffer setting, but not indented
-	    (add-text-properties
-	     beg (match-end 0)
-	     '(font-lock-fontified t face org-meta-line))
-	    t)
-	   (t nil))))))
+	   (t ;; just any other in-buffer setting, but not indented
+	    (org-remove-flyspell-overlays-in (match-beginning 0) (match-end 0))
+	    (remove-text-properties (match-beginning 0) (match-end 0)
+				    '(display t invisible t intangible t))
+	    (add-text-properties beg (match-end 0)
+				 '(font-lock-fontified t face org-meta-line))
+	    t))))))
+
+(defun org-fontify-drawers (limit)
+  "Fontify drawers."
+  (when (re-search-forward org-drawer-regexp limit t)
+    (add-text-properties
+     (match-beginning 0) (match-end 0)
+     '(font-lock-fontified t face org-special-keyword))
+    (org-remove-flyspell-overlays-in (match-beginning 0) (match-end 0))
+    t))
+
+(defun org-fontify-macros (limit)
+  "Fontify macros."
+  (when (re-search-forward "\\({{{\\).+?\\(}}}\\)" limit t)
+    (add-text-properties
+     (match-beginning 0) (match-end 0)
+     '(font-lock-fontified t face org-macro))
+    (when org-hide-macro-markers
+      (add-text-properties (match-end 2) (match-beginning 2)
+			   '(invisible t))
+      (add-text-properties (match-beginning 1) (match-end 1)
+			   '(invisible t)))
+    (org-remove-flyspell-overlays-in (match-beginning 0) (match-end 0))
+    t))
 
 (defun org-activate-angle-links (limit)
-  "Run through the buffer and add overlays to links."
+  "Add text properties for angle links."
   (if (and (re-search-forward org-angle-link-re limit t)
 	   (not (org-in-src-block-p)))
       (progn
@@ -5929,24 +6007,30 @@ by a #."
 	t)))
 
 (defun org-activate-footnote-links (limit)
-  "Run through the buffer and add overlays to footnotes."
+  "Add text properties for footnotes."
   (let ((fn (org-footnote-next-reference-or-definition limit)))
     (when fn
-      (let ((beg (nth 1 fn)) (end (nth 2 fn)))
-	(org-remove-flyspell-overlays-in beg end)
+      (let* ((beg (nth 1 fn))
+	     (end (nth 2 fn))
+	     (label (car fn))
+	     (referencep (/= (line-beginning-position) beg)))
+	(when (and referencep (nth 3 fn))
+	  (save-excursion
+	    (goto-char beg)
+	    (search-forward (or label "fn:"))
+	    (org-remove-flyspell-overlays-in beg (match-end 0))))
 	(add-text-properties beg end
 			     (list 'mouse-face 'highlight
 				   'keymap org-mouse-map
 				   'help-echo
-				   (if (= (point-at-bol) beg)
-				       "Footnote definition"
-				     "Footnote reference")
+				   (if referencep "Footnote reference"
+				     "Footnote definition")
 				   'font-lock-fontified t
 				   'font-lock-multiline t
 				   'face 'org-footnote))))))
 
 (defun org-activate-bracket-links (limit)
-  "Run through the buffer and add overlays to bracketed links."
+  "Add text properties for bracketed links."
   (if (and (re-search-forward org-bracket-link-regexp limit t)
 	   (not (org-in-src-block-p)))
       (let* ((hl (org-match-string-no-properties 1))
@@ -5981,7 +6065,7 @@ by a #."
 	t)))
 
 (defun org-activate-dates (limit)
-  "Run through the buffer and add overlays to dates."
+  "Add text properties for dates."
   (if (and (re-search-forward org-tsr-regexp-both limit t)
 	   (not (equal (char-before (match-beginning 0)) 91)))
       (progn
@@ -5999,35 +6083,82 @@ by a #."
 (defvar org-target-link-regexp nil
   "Regular expression matching radio targets in plain text.")
 (make-variable-buffer-local 'org-target-link-regexp)
-(defvar org-target-regexp "<<\\([^<>\n\r]+\\)>>"
+
+(defconst org-target-regexp (let ((border "[^<>\n\r \t]"))
+			      (format "<<\\(%s\\|%s[^<>\n\r]*%s\\)>>"
+				      border border border))
   "Regular expression matching a link target.")
-(defvar org-radio-target-regexp "<<<\\([^<>\n\r]+\\)>>>"
+
+(defconst org-radio-target-regexp (format "<%s>" org-target-regexp)
   "Regular expression matching a radio target.")
-(defvar org-any-target-regexp "<<<?\\([^<>\n\r]+\\)>>>?" ; FIXME, not exact, would match <<<aaa>>  as a radio target.
+
+(defconst org-any-target-regexp
+  (format "%s\\|%s" org-radio-target-regexp org-target-regexp)
   "Regular expression matching any target.")
 
 (defun org-activate-target-links (limit)
-  "Run through the buffer and add overlays to target matches."
+  "Add text properties for target matches."
   (when org-target-link-regexp
     (let ((case-fold-search t))
       (if (re-search-forward org-target-link-regexp limit t)
 	  (progn
-	    (org-remove-flyspell-overlays-in (match-beginning 0) (match-end 0))
-	    (add-text-properties (match-beginning 0) (match-end 0)
+	    (org-remove-flyspell-overlays-in (match-beginning 1) (match-end 1))
+	    (add-text-properties (match-beginning 1) (match-end 1)
 				 (list 'mouse-face 'highlight
 				       'keymap org-mouse-map
 				       'help-echo "Radio target link"
 				       'org-linked-text t))
-	    (org-rear-nonsticky-at (match-end 0))
+	    (org-rear-nonsticky-at (match-end 1))
 	    t)))))
 
 (defun org-update-radio-target-regexp ()
-  "Find all radio targets in this file and update the regular expression."
+  "Find all radio targets in this file and update the regular expression.
+Also refresh fontification if needed."
   (interactive)
-  (when (memq 'radio org-activate-links)
+  (let ((old-regexp org-target-link-regexp)
+	(before-re "\\(?:^\\|[^[:alnum:]]\\)\\(")
+	(after-re "\\)\\(?:$\\|[^[:alnum:]]\\)")
+	(targets
+	 (org-with-wide-buffer
+	  (goto-char (point-min))
+	  (let (rtn)
+	    (while (re-search-forward org-radio-target-regexp nil t)
+	      ;; Make sure point is really within the object.
+	      (backward-char)
+	      (let ((obj (org-element-context)))
+		(when (eq (org-element-type obj) 'radio-target)
+		  (add-to-list 'rtn (org-element-property :value obj)))))
+	    rtn))))
     (setq org-target-link-regexp
-	  (org-make-target-link-regexp (org-all-targets 'radio)))
-    (org-restart-font-lock)))
+	  (and targets
+	       (concat before-re
+		       (mapconcat
+			(lambda (x)
+			  (replace-regexp-in-string
+			   " +" "\\s-+" (regexp-quote x) t t))
+			targets
+			"\\|")
+		       after-re)))
+    (unless (equal old-regexp org-target-link-regexp)
+      ;; Clean-up cache.
+      (let ((regexp (cond ((not old-regexp) org-target-link-regexp)
+			  ((not org-target-link-regexp) old-regexp)
+			  (t
+			   (concat before-re
+				   (mapconcat
+				    (lambda (re)
+				      (substring re (length before-re)
+						 (- (length after-re))))
+				    (list old-regexp org-target-link-regexp)
+				    "\\|")
+				   after-re)))))
+	(org-with-wide-buffer
+	 (goto-char (point-min))
+	 (while (re-search-forward regexp nil t)
+	   (org-element-cache-refresh (match-beginning 1)))))
+      ;; Re fontify buffer.
+      (when (memq 'radio org-highlight-links)
+	(org-restart-font-lock)))))
 
 (defun org-hide-wide-columns (limit)
   (let (s e)
@@ -6041,8 +6172,6 @@ by a #."
 
 (defvar org-latex-and-related-regexp nil
   "Regular expression for highlighting LaTeX, entities and sub/superscript.")
-(defvar org-match-substring-regexp)
-(defvar org-match-substring-with-braces-regexp)
 
 (defun org-compute-latex-and-related-regexp ()
   "Compute regular expression for LaTeX, entities and sub/superscript.
@@ -6095,38 +6224,6 @@ done, nil otherwise."
     (font-lock-mode -1)
     (font-lock-mode 1)))
 
-(defun org-all-targets (&optional radio)
-  "Return a list of all targets in this file.
-When optional argument RADIO is non-nil, only find radio
-targets."
-  (let ((re (if radio org-radio-target-regexp org-target-regexp)) rtn)
-    (save-excursion
-      (goto-char (point-min))
-      (while (re-search-forward re nil t)
-	;; Make sure point is really within the object.
-	(backward-char)
-	(let ((obj (org-element-context)))
-	  (when (memq (org-element-type obj) '(radio-target target))
-	    (add-to-list 'rtn (downcase (org-element-property :value obj))))))
-      rtn)))
-
-(defun org-make-target-link-regexp (targets)
-  "Make regular expression matching all strings in TARGETS.
-The regular expression finds the targets also if there is a line break
-between words."
-  (and targets
-       (concat
-	"\\_<\\("
-	(mapconcat
-	 (lambda (x)
-	   (setq x (regexp-quote x))
-	   (while (string-match " +" x)
-	     (setq x (replace-match "\\s-+" t t x)))
-	   x)
-	 targets
-	 "\\|")
-	"\\)\\_>")))
-
 (defun org-activate-tags (limit)
   (if (re-search-forward (org-re "^\\*+.*[ \t]\\(:[[:alnum:]_@#%:]+:\\)[ \r\n]") limit t)
       (progn
@@ -6139,19 +6236,20 @@ between words."
 
 (defun org-outline-level ()
   "Compute the outline level of the heading at point.
-If this is called at a normal headline, the level is the number of stars.
-Use `org-reduced-level' to remove the effect of `org-odd-levels'."
-  (save-excursion
-    (if (not (condition-case nil
-		 (org-back-to-heading t)
-	       (error nil)))
-	0
-      (looking-at org-outline-regexp)
-      (1- (- (match-end 0) (match-beginning 0))))))
+
+If this is called at a normal headline, the level is the number
+of stars.  Use `org-reduced-level' to remove the effect of
+`org-odd-levels'.  Unlike to `org-current-level', this function
+takes into consideration inlinetasks."
+  (org-with-wide-buffer
+   (end-of-line)
+   (if (re-search-backward org-outline-regexp-bol nil t)
+       (1- (- (match-end 0) (match-beginning 0)))
+     0)))
 
 (defvar org-font-lock-keywords nil)
 
-(defsubst org-re-property (property &optional literal allow-null)
+(defsubst org-re-property (property &optional literal allow-null value)
   "Return a regexp matching a PROPERTY line.
 
 When optional argument LITERAL is non-nil, do not quote PROPERTY.
@@ -6159,17 +6257,25 @@ This is useful when PROPERTY is a regexp.  When ALLOW-NULL is
 non-nil, match properties even without a value.
 
 Match group 3 is set to the value when it exists.  If there is no
-value and ALLOW-NULL is non-nil, it is set to the empty string."
+value and ALLOW-NULL is non-nil, it is set to the empty string.
+
+With optional argument VALUE, match only property lines with
+that value; in this case, ALLOW-NULL is ignored.  VALUE is quoted
+unless LITERAL is non-nil."
   (concat
    "^\\(?4:[ \t]*\\)"
    (format "\\(?1::\\(?2:%s\\):\\)"
 	   (if literal property (regexp-quote property)))
-   (if allow-null
-       "\\(?:\\(?3:$\\)\\|[ \t]+\\(?3:.*?\\)\\)\\(?5:[ \t]*\\)$"
-     "[ \t]+\\(?3:[^ \r\t\n]+.*?\\)\\(?5:[ \t]*\\)$")))
+   (cond (value
+	  (format "[ \t]+\\(?3:%s\\)\\(?5:[ \t]*\\)$"
+		  (if literal value (regexp-quote value))))
+	 (allow-null
+	  "\\(?:\\(?3:$\\)\\|[ \t]+\\(?3:.*?\\)\\)\\(?5:[ \t]*\\)$")
+	 (t
+	  "[ \t]+\\(?3:[^ \r\t\n]+.*?\\)\\(?5:[ \t]*\\)$"))))
 
 (defconst org-property-re
-  (org-re-property ".*?" 'literal t)
+  (org-re-property "\\S-+" 'literal t)
   "Regular expression matching a property line.
 There are four matching groups:
 1: :PROPKEY: including the leading and trailing colon,
@@ -6194,7 +6300,7 @@ needs to be inserted at a specific position in the font-lock sequence.")
 (defun org-set-font-lock-defaults ()
   "Set font lock defaults for the current buffer."
   (let* ((em org-fontify-emphasized-text)
-	 (lk org-activate-links)
+	 (lk org-highlight-links)
 	 (org-font-lock-extra-keywords
 	  (list
 	   ;; Call the hook
@@ -6215,8 +6321,7 @@ needs to be inserted at a specific position in the font-lock sequence.")
 	   '("^[ \t]*|\\( *\\([$!_^/]\\) *|.*\\)|" (1 'org-formula t))
 	   '("| *\\(<[lrc]?[0-9]*>\\)" (1 'org-formula t))
 	   ;; Drawers
-	   (list org-drawer-regexp '(0 'org-special-keyword t))
-	   (list "^[ \t]*:END:" '(0 'org-special-keyword t))
+	   '(org-fontify-drawers)
 	   ;; Properties
 	   (list org-property-re
 		 '(1 'org-special-keyword t)
@@ -6226,7 +6331,7 @@ needs to be inserted at a specific position in the font-lock sequence.")
 	   (if (memq 'angle lk) '(org-activate-angle-links (0 'org-link t)))
 	   (if (memq 'plain lk) '(org-activate-plain-links (0 'org-link t)))
 	   (if (memq 'bracket lk) '(org-activate-bracket-links (0 'org-link t)))
-	   (if (memq 'radio lk) '(org-activate-target-links (0 'org-link t)))
+	   (if (memq 'radio lk) '(org-activate-target-links (1 'org-link t)))
 	   (if (memq 'date lk) '(org-activate-dates (0 'org-date t)))
 	   (if (memq 'footnote lk) '(org-activate-footnote-links))
            ;; Targets.
@@ -6234,7 +6339,7 @@ needs to be inserted at a specific position in the font-lock sequence.")
 	   ;; Diary sexps.
 	   '("^&?%%(.*\\|<%%([^>\n]*?>" (0 'org-sexp-date t))
 	   ;; Macro
-	   '("{{{.+}}}" (0 'org-macro t))
+	   '(org-fontify-macros)
 	   '(org-hide-wide-columns (0 nil append))
 	   ;; TODO keyword
 	   (list (format org-heading-keyword-regexp-format
@@ -6260,6 +6365,7 @@ needs to be inserted at a specific position in the font-lock sequence.")
 			     ":\\).*$")
 		     '(1 'org-tag-group prepend)))
 	   ;; Special keywords
+	   (list (concat "\\<" org-comment-string) '(0 'org-special-keyword t))
 	   (list (concat "\\<" org-deadline-string) '(0 'org-special-keyword t))
 	   (list (concat "\\<" org-scheduled-string) '(0 'org-special-keyword t))
 	   (list (concat "\\<" org-closed-string) '(0 'org-special-keyword t))
@@ -6290,11 +6396,11 @@ needs to be inserted at a specific position in the font-lock sequence.")
 	   ;; Code
 	   '(org-activate-code (1 'org-code t))
 	   ;; COMMENT
-	   (list (format org-heading-keyword-regexp-format
-			 (concat "\\("
-				 org-comment-string "\\|" org-quote-string
-				 "\\)"))
-		 '(2 'org-special-keyword t))
+	   (list (format
+		  "^\\*\\(?: +%s\\)?\\(?: +\\[#[A-Z0-9]\\]\\)? +\\(?9:%s\\)\\(?: \\|$\\)"
+		  org-todo-regexp
+		  org-comment-string)
+		 '(9 'org-special-keyword t))
 	   ;; Blocks and meta lines
 	   '(org-fontify-meta-lines-and-blocks))))
     (setq org-font-lock-extra-keywords (delq nil org-font-lock-extra-keywords))
@@ -6325,31 +6431,41 @@ needs to be inserted at a specific position in the font-lock sequence.")
   "Display or hide properties in `org-custom-properties'."
   (interactive)
   (if org-custom-properties-overlays
-      (progn (mapc 'delete-overlay org-custom-properties-overlays)
+      (progn (mapc #'delete-overlay org-custom-properties-overlays)
 	     (setq org-custom-properties-overlays nil))
-    (unless (not org-custom-properties)
-      (save-excursion
-	(save-restriction
-	  (widen)
-	  (goto-char (point-min))
-	  (while (re-search-forward org-property-re nil t)
-	    (mapc (lambda(p)
-		    (when (equal p (substring (match-string 1) 1 -1))
-		      (let ((o (make-overlay (match-beginning 0) (1+ (match-end 0)))))
-			(overlay-put o 'invisible t)
-			(overlay-put o 'org-custom-property t)
-			(push o org-custom-properties-overlays))))
-		  org-custom-properties)))))))
+    (when org-custom-properties
+      (org-with-wide-buffer
+       (goto-char (point-min))
+       (let ((regexp (org-re-property (regexp-opt org-custom-properties) t t)))
+	 (while (re-search-forward regexp nil t)
+	   (let ((end (cdr (save-match-data (org-get-property-block)))))
+	     (when (and end (< (point) end))
+	       ;; Hide first custom property in current drawer.
+	       (let ((o (make-overlay (match-beginning 0) (1+ (match-end 0)))))
+		 (overlay-put o 'invisible t)
+		 (overlay-put o 'org-custom-property t)
+		 (push o org-custom-properties-overlays))
+	       ;; Hide additional custom properties in the same drawer.
+	       (while (re-search-forward regexp end t)
+		 (let ((o (make-overlay (match-beginning 0) (1+ (match-end 0)))))
+		   (overlay-put o 'invisible t)
+		   (overlay-put o 'org-custom-property t)
+		   (push o org-custom-properties-overlays)))))
+	   ;; Each entry is limited to a single property drawer.
+	   (outline-next-heading)))))))
 
 (defun org-fontify-entities (limit)
   "Find an entity to fontify."
   (let (ee)
     (when org-pretty-entities
       (catch 'match
+	;; "\_ "-family is left out on purpose.  Only the first one,
+	;; i.e., "\_ ", could be fontified anyway, and it would be
+	;; confusing when adding a second white space character.
 	(while (re-search-forward
 		"\\\\\\(there4\\|sup[123]\\|frac[13][24]\\|[a-zA-Z]+\\)\\($\\|{}\\|[^[:alpha:]\n]\\)"
 		limit t)
-	  (if (and (not (org-in-indented-comment-line))
+	  (if (and (not (org-at-comment-p))
 		   (setq ee (org-entity-get (match-string 1)))
 		   (= (length (nth 6 ee)) 1))
 	      (let*
@@ -6371,7 +6487,7 @@ needs to be inserted at a specific position in the font-lock sequence.")
     (insert s)
     (let ((org-odd-levels-only odd-levels))
       (org-mode)
-      (font-lock-fontify-buffer)
+      (font-lock-ensure)
       (buffer-string))))
 
 (defvar org-m nil)
@@ -6449,7 +6565,7 @@ If KWD is a number, get the corresponding match group."
     (remove-text-properties beg end
 			    '(mouse-face t keymap t org-linked-text t
 					 invisible t intangible t
-					 org-no-flyspell t org-emphasis t))
+					 org-emphasis t))
     (org-remove-font-lock-display-properties beg end)))
 
 (defconst org-script-display  '(((raise -0.3) (height 0.7))
@@ -6637,11 +6753,10 @@ in special contexts.
        ((eq arg t) (org-cycle-internal-global))
 
        ;; Drawers: delegate to `org-flag-drawer'.
-       ((and org-drawers org-drawer-regexp
-	     (save-excursion
-	       (beginning-of-line 1)
-	       (looking-at org-drawer-regexp)))
-	(org-flag-drawer ; toggle block visibility
+       ((save-excursion
+	  (beginning-of-line 1)
+	  (looking-at org-drawer-regexp))
+	(org-flag-drawer		; toggle block visibility
 	 (not (get-char-property (match-end 0) 'invisible))))
 
        ;; Show-subtree, ARG levels up from here.
@@ -6660,7 +6775,7 @@ in special contexts.
 
        ;; At an item/headline: delegate to `org-cycle-internal-local'.
        ((and (or (and org-cycle-include-plain-lists (org-at-item-p))
-		 (save-excursion (beginning-of-line 1)
+		 (save-excursion (move-beginning-of-line 1)
 				 (looking-at org-outline-regexp)))
 	     (or (bolp) (not (eq org-cycle-emulate-tab 'exc-hl-bol))))
 	(org-cycle-internal-local))
@@ -6878,34 +6993,33 @@ With a numeric prefix, show all headlines up to that level."
 (defun org-set-visibility-according-to-property (&optional no-cleanup)
   "Switch subtree visibilities according to :VISIBILITY: property."
   (interactive)
-  (let (org-show-entry-below state)
-    (save-excursion
-      (goto-char (point-min))
-      (while (re-search-forward
-	      "^[ \t]*:VISIBILITY:[ \t]+\\([a-z]+\\)"
-	      nil t)
-	(setq state (match-string 1))
-	(save-excursion
-	  (org-back-to-heading t)
-	  (hide-subtree)
-	  (org-reveal)
-	  (cond
-	   ((equal state '("fold" "folded"))
-	    (hide-subtree))
-	   ((equal state "children")
-	    (org-show-hidden-entry)
-	    (show-children))
-	   ((equal state "content")
-	    (save-excursion
-	      (save-restriction
-		(org-narrow-to-subtree)
-		(org-content))))
-	   ((member state '("all" "showall"))
-	    (show-subtree)))))
-      (unless no-cleanup
-	(org-cycle-hide-archived-subtrees 'all)
-	(org-cycle-hide-drawers 'all)
-	(org-cycle-show-empty-lines 'all)))))
+  (let (org-show-entry-below)
+    (org-with-wide-buffer
+     (goto-char (point-min))
+     (while (re-search-forward "^[ \t]*:VISIBILITY:" nil t)
+       (if (not (org-at-property-p)) (outline-next-heading)
+	 (let ((state (match-string 3)))
+	   (save-excursion
+	     (org-back-to-heading t)
+	     (hide-subtree)
+	     (org-reveal)
+	     (cond
+	      ((equal state "folded")
+	       (hide-subtree))
+	      ((equal state "children")
+	       (org-show-hidden-entry)
+	       (show-children))
+	      ((equal state "content")
+	       (save-excursion
+		 (save-restriction
+		   (org-narrow-to-subtree)
+		   (org-content))))
+	      ((member state '("all" "showall"))
+	       (show-subtree)))))))
+     (unless no-cleanup
+       (org-cycle-hide-archived-subtrees 'all)
+       (org-cycle-hide-drawers 'all)
+       (org-cycle-show-empty-lines 'all)))))
 
 ;; This function uses outline-regexp instead of the more fundamental
 ;; org-outline-regexp so that org-cycle-global works outside of Org
@@ -7005,7 +7119,7 @@ The region to be covered depends on STATE when called through
 `org-cycle-hook'.  Lisp program can use t for STATE to get the
 entire buffer covered.  Note that an empty line is only shown if there
 are at least `org-cycle-separator-lines' empty lines before the headline."
-  (when (not (= org-cycle-separator-lines 0))
+  (when (/= org-cycle-separator-lines 0)
     (save-excursion
       (let* ((n (abs org-cycle-separator-lines))
 	     (re (cond
@@ -7014,30 +7128,26 @@ are at least `org-cycle-separator-lines' empty lines before the headline."
 		  (t (let ((ns (number-to-string (- n 2))))
 		       (concat "^\\(?:[ \t]*\n\\)\\{" ns "," ns "\\}"
 			       "[ \t]*\\(\n[ \t]*\n\\*+\\) ")))))
-	     beg end b e)
+	     beg end)
 	(cond
 	 ((memq state '(overview contents t))
 	  (setq beg (point-min) end (point-max)))
 	 ((memq state '(children folded))
-	  (setq beg (point) end (progn (org-end-of-subtree t t)
-				       (beginning-of-line 2)
-				       (point)))))
+	  (setq beg (point)
+		end (progn (org-end-of-subtree t t)
+			   (line-beginning-position 2)))))
 	(when beg
 	  (goto-char beg)
 	  (while (re-search-forward re end t)
 	    (unless (get-char-property (match-end 1) 'invisible)
-	      (setq e (match-end 1))
-	      (if (< org-cycle-separator-lines 0)
-		  (setq b (save-excursion
-			    (goto-char (match-beginning 0))
-			    (org-back-over-empty-lines)
-			    (if (save-excursion
-				  (goto-char (max (point-min) (1- (point))))
-				  (org-at-heading-p))
-				(1- (point))
-			      (point))))
-		(setq b (match-beginning 1)))
-	      (outline-flag-region b e nil)))))))
+	      (let ((e (match-end 1))
+		    (b (if (>= org-cycle-separator-lines 0)
+			   (match-beginning 1)
+			 (save-excursion
+			   (goto-char (match-beginning 0))
+			   (skip-chars-backward " \t\n")
+			   (line-end-position)))))
+		(outline-flag-region b e nil))))))))
   ;; Never hide empty lines at the end of the file.
   (save-excursion
     (goto-char (point-max))
@@ -7074,8 +7184,10 @@ open and agenda-wise Org files."
   "Return the end position of the current entry."
   (save-excursion (outline-next-heading) (point)))
 
-(defun org-cycle-hide-drawers (state)
-  "Re-hide all drawers after a visibility state change."
+(defun org-cycle-hide-drawers (state &optional exceptions)
+  "Re-hide all drawers after a visibility state change.
+When non-nil, optional argument EXCEPTIONS is a list of strings
+specifying which drawers should not be hidden."
   (when (and (derived-mode-p 'org-mode)
 	     (not (memq state '(overview folded contents))))
     (save-excursion
@@ -7086,36 +7198,38 @@ open and agenda-wise Org files."
 			(save-excursion (outline-next-heading) (point))
 		      (org-end-of-subtree t)))))
 	(goto-char beg)
-	(while (re-search-forward org-drawer-regexp end t)
-	  (org-flag-drawer t))))))
+	(while (re-search-forward org-drawer-regexp (max end (point)) t)
+	  (unless (member-ignore-case (match-string 1) exceptions)
+	    (let ((drawer (org-element-at-point)))
+	      (when (memq (org-element-type drawer) '(drawer property-drawer))
+		(org-flag-drawer t drawer)
+		;; Make sure to skip drawer entirely or we might flag
+		;; it another time when matching its ending line with
+		;; `org-drawer-regexp'.
+		(goto-char (org-element-property :end drawer))))))))))
 
-(defun org-cycle-hide-inline-tasks (state)
-  "Re-hide inline tasks when switching to 'contents or 'children
-visibility state."
-  (case state
-    (contents
-     (when (org-bound-and-true-p org-inlinetask-min-level)
-       (hide-sublevels (1- org-inlinetask-min-level))))
-    (children
-     (when (featurep 'org-inlinetask)
-       (save-excursion
-	 (while (and (outline-next-heading)
-		     (org-inlinetask-at-task-p))
-	   (org-inlinetask-toggle-visibility)
-	   (org-inlinetask-goto-end)))))))
-
-(defun org-flag-drawer (flag)
-  "When FLAG is non-nil, hide the drawer we are within.
-Otherwise make it visible."
-  (save-excursion
-    (beginning-of-line 1)
-    (when (looking-at "^[ \t]*:[a-zA-Z][a-zA-Z0-9]*:")
-      (let ((b (match-end 0)))
-	(if (re-search-forward
-	     "^[ \t]*:END:"
-	     (save-excursion (outline-next-heading) (point)) t)
-	    (outline-flag-region b (point-at-eol) flag)
-	  (user-error ":END: line missing at position %s" b))))))
+(defun org-flag-drawer (flag &optional element)
+  "When FLAG is non-nil, hide the drawer we are at.
+Otherwise make it visible.  When optional argument ELEMENT is
+a parsed drawer, as returned by `org-element-at-point', hide or
+show that drawer instead."
+  (when (save-excursion
+	  (beginning-of-line)
+	  (org-looking-at-p org-drawer-regexp))
+    (let ((drawer (or element (org-element-at-point))))
+      (when (memq (org-element-type drawer) '(drawer property-drawer))
+	(let ((post (org-element-property :post-affiliated drawer)))
+	  (save-excursion
+	    (outline-flag-region
+	     (progn (goto-char post) (line-end-position))
+	     (progn (goto-char (org-element-property :end drawer))
+		    (skip-chars-backward " \r\t\n")
+		    (line-end-position))
+	     flag))
+	  ;; When the drawer is hidden away, make sure point lies in
+	  ;; a visible part of the buffer.
+	  (when (and flag (> (line-beginning-position) post))
+	    (goto-char post)))))))
 
 (defun org-subtree-end-visible-p ()
   "Is the end of the current subtree visible?"
@@ -7147,8 +7261,8 @@ If USE-MARKERS is set, return the positions as markers."
 				end (overlay-end o))
 			  (and beg end (> end beg)
 			       (if use-markers
-				   (cons (move-marker (make-marker) beg)
-					 (move-marker (make-marker) end))
+				   (cons (copy-marker beg)
+					 (copy-marker end t))
 				 (cons beg end)))))
 		      (overlays-in (point-min) (point-max))))))))
 
@@ -7185,13 +7299,13 @@ Optional arguments START and END can be used to limit the range."
 
 (defun org-hide-block-toggle-all ()
   "Toggle the visibility of all blocks in the current buffer."
-  (org-block-map #'org-hide-block-toggle))
+  (org-block-map 'org-hide-block-toggle))
 
 (defun org-hide-block-all ()
   "Fold all blocks in the current buffer."
   (interactive)
   (org-show-block-all)
-  (org-block-map #'org-hide-block-toggle-maybe))
+  (org-block-map 'org-hide-block-toggle-maybe))
 
 (defun org-show-block-all ()
   "Unfold all blocks in the current buffer."
@@ -7200,52 +7314,65 @@ Optional arguments START and END can be used to limit the range."
   (setq org-hide-block-overlays nil))
 
 (defun org-hide-block-toggle-maybe ()
-  "Toggle visibility of block at point."
+  "Toggle visibility of block at point.
+Unlike to `org-hide-block-toggle', this function does not throw
+an error.  Return a non-nil value when toggling is successful."
   (interactive)
-  (let ((case-fold-search t))
-    (if (save-excursion
-          (beginning-of-line 1)
-          (looking-at org-block-regexp))
-        (progn (org-hide-block-toggle)
-               t) ;; to signal that we took action
-      nil))) ;; to signal that we did not
+  (ignore-errors (org-hide-block-toggle)))
 
 (defun org-hide-block-toggle (&optional force)
-  "Toggle the visibility of the current block."
+  "Toggle the visibility of the current block.
+When optional argument FORCE is `off', make block visible.  If it
+is non-nil, hide it unconditionally.  Throw an error when not at
+a block.  Return a non-nil value when toggling is successful."
   (interactive)
-  (save-excursion
-    (beginning-of-line)
-    (if (re-search-forward org-block-regexp nil t)
-        (let ((start (- (match-beginning 4) 1)) ;; beginning of body
-              (end (match-end 0)) ;; end of entire body
-              ov)
-          (if (memq t (mapcar (lambda (overlay)
-                                (eq (overlay-get overlay 'invisible)
-				    'org-hide-block))
-                              (overlays-at start)))
-              (if (or (not force) (eq force 'off))
-                  (mapc (lambda (ov)
-                          (when (member ov org-hide-block-overlays)
-                            (setq org-hide-block-overlays
-                                  (delq ov org-hide-block-overlays)))
-                          (when (eq (overlay-get ov 'invisible)
-                                    'org-hide-block)
-                            (delete-overlay ov)))
-                        (overlays-at start)))
-            (setq ov (make-overlay start end))
-            (overlay-put ov 'invisible 'org-hide-block)
-            ;; make the block accessible to isearch
-            (overlay-put
-             ov 'isearch-open-invisible
-             (lambda (ov)
-               (when (member ov org-hide-block-overlays)
-                 (setq org-hide-block-overlays
-                       (delq ov org-hide-block-overlays)))
-               (when (eq (overlay-get ov 'invisible)
-                         'org-hide-block)
-                 (delete-overlay ov))))
-            (push ov org-hide-block-overlays)))
-      (user-error "Not looking at a source block"))))
+  (let ((element (org-element-at-point)))
+    (unless (memq (org-element-type element)
+		  '(center-block comment-block dynamic-block example-block
+				 export-block quote-block special-block
+				 src-block verse-block))
+      (user-error "Not at a block"))
+    (let* ((start (save-excursion
+		    (goto-char (org-element-property :post-affiliated element))
+		    (line-end-position)))
+	   (end (save-excursion
+		  (goto-char (org-element-property :end element))
+		  (skip-chars-backward " \r\t\n")
+		  (line-end-position)))
+	   (overlays (overlays-at start)))
+      (cond
+       ;; Do nothing when not before or at the block opening line or
+       ;; at the block closing line.
+       ((let ((eol (line-end-position))) (and (> eol start) (/= eol end))) nil)
+       ((and (not (eq force 'off))
+	     (not (memq t (mapcar
+			   (lambda (o)
+			     (eq (overlay-get o 'invisible) 'org-hide-block))
+			   overlays))))
+	(let ((ov (make-overlay start end)))
+	  (overlay-put ov 'invisible 'org-hide-block)
+	  ;; Make the block accessible to `isearch'.
+	  (overlay-put
+	   ov 'isearch-open-invisible
+	   (lambda (ov)
+	     (when (memq ov org-hide-block-overlays)
+	       (setq org-hide-block-overlays (delq ov org-hide-block-overlays)))
+	     (when (eq (overlay-get ov 'invisible) 'org-hide-block)
+	       (delete-overlay ov))))
+	  (push ov org-hide-block-overlays)
+	  ;; When the block is hidden away, make sure point is left in
+	  ;; a visible part of the buffer.
+	  (when (> (line-beginning-position) start)
+	    (goto-char start)
+	    (beginning-of-line))
+	  ;; Signal successful toggling.
+	  t))
+       ((or (not force) (eq force 'off))
+	(dolist (ov overlays t)
+	  (when (memq ov org-hide-block-overlays)
+	    (setq org-hide-block-overlays (delq ov org-hide-block-overlays)))
+	  (when (eq (overlay-get ov 'invisible) 'org-hide-block)
+	    (delete-overlay ov))))))))
 
 ;; org-tab-after-check-for-cycling-hook
 (add-hook 'org-tab-first-hook 'org-hide-block-toggle-maybe)
@@ -7384,11 +7511,9 @@ or nil."
 	 (setq buffer-read-only t)
 	 (if (and (boundp 'org-goto-start-pos)
 		  (integer-or-marker-p org-goto-start-pos))
-	     (let ((org-show-hierarchy-above t)
-		   (org-show-siblings t)
-		   (org-show-following-heading t))
-	       (goto-char org-goto-start-pos)
-	       (and (outline-invisible-p) (org-show-context)))
+	     (progn (goto-char org-goto-start-pos)
+		    (when (outline-invisible-p)
+		      (org-show-set-visibility 'lineage)))
 	   (goto-char (point-min)))
 	 (let (org-special-ctrl-a/e) (org-beginning-of-line))
 	 (message "Select location and press RET")
@@ -7399,8 +7524,14 @@ or nil."
 
 (defvar org-goto-local-auto-isearch-map (make-sparse-keymap))
 (set-keymap-parent org-goto-local-auto-isearch-map isearch-mode-map)
-(define-key org-goto-local-auto-isearch-map "\C-i" 'isearch-other-control-char)
-(define-key org-goto-local-auto-isearch-map "\C-m" 'isearch-other-control-char)
+;; `isearch-other-control-char' was removed in Emacs 24.4.
+(if (fboundp 'isearch-other-control-char)
+    (progn
+      (define-key org-goto-local-auto-isearch-map "\C-i" 'isearch-other-control-char)
+      (define-key org-goto-local-auto-isearch-map "\C-m" 'isearch-other-control-char))
+  (define-key org-goto-local-auto-isearch-map "\C-i" nil)
+  (define-key org-goto-local-auto-isearch-map "\C-m" nil)
+  (define-key org-goto-local-auto-isearch-map [return] nil))
 
 (defun org-goto-local-search-headings (string bound noerror)
   "Search and make sure that any matches are in headlines."
@@ -7499,7 +7630,7 @@ frame is not changed."
 	     (not (eq org-indirect-buffer-display 'new-frame))
 	     (not arg))
 	(kill-buffer org-last-indirect-buffer))
-    (setq ibuf (org-get-indirect-buffer cbuf)
+    (setq ibuf (org-get-indirect-buffer cbuf heading)
 	  org-last-indirect-buffer ibuf)
     (cond
      ((or (eq org-indirect-buffer-display 'new-frame)
@@ -7530,11 +7661,15 @@ frame is not changed."
     (run-hook-with-args 'org-cycle-hook 'all)
     (and (window-live-p cwin) (select-window cwin))))
 
-(defun org-get-indirect-buffer (&optional buffer)
+(defun org-get-indirect-buffer (&optional buffer heading)
   (setq buffer (or buffer (current-buffer)))
   (let ((n 1) (base (buffer-name buffer)) bname)
     (while (buffer-live-p
-	    (get-buffer (setq bname (concat base "-" (number-to-string n)))))
+	    (get-buffer
+	     (setq bname
+		   (concat base "-"
+			   (if heading (concat heading "-" (number-to-string n))
+			     (number-to-string n))))))
       (setq n (1+ n)))
     (condition-case nil
         (make-indirect-buffer buffer bname 'clone)
@@ -7559,7 +7694,7 @@ When NEXT is non-nil, check the next line instead."
 	 (save-match-data
 	   (looking-at "[ \t]*$")))))
 
-(defun org-insert-heading (&optional arg invisible-ok)
+(defun org-insert-heading (&optional arg invisible-ok top-level)
   "Insert a new heading or an item with the same depth at point.
 
 If point is at the beginning of a heading or a list item, insert
@@ -7571,7 +7706,7 @@ headline or the item and create a new headline/item with the text
 in the current line after point \(see `org-M-RET-may-split-line'
 on how to modify this behavior).
 
-With one universal prefirx argument, set the user option
+With one universal prefix argument, set the user option
 `org-insert-heading-respect-content' to t for the duration of
 the command.  This modifies the behavior described above in this
 ways: on list items and at the beginning of normal lines, force
@@ -7582,17 +7717,28 @@ end of the grandparent subtree.  For example, if point is within
 a 2nd-level heading, then it will insert a 2nd-level heading at
 the end of the 1st-level parent heading.
 
+If point is at the beginning of a headline, insert a sibling
+before the current headline.  If point is not at the beginning,
+split the line and create a new headline with the text in the
+current line after point \(see `org-M-RET-may-split-line' on how
+to modify this behavior).
+
+If point is at the beginning of a normal line, turn this line
+into a heading.
+
 When INVISIBLE-OK is set, stop at invisible headlines when going
 back.  This is important for non-interactive uses of the
-command."
+command.
+
+When optional argument TOP-LEVEL is non-nil, insert a level 1
+heading, unconditionally."
   (interactive "P")
   (if (org-called-interactively-p 'any) (org-reveal))
-  (let ((itemp (org-in-item-p))
+  (let ((itemp (and (not top-level) (org-in-item-p)))
 	(may-split (org-get-alist-option org-M-RET-may-split-line 'headline))
 	(respect-content (or org-insert-heading-respect-content
 			     (equal arg '(4))))
-	(initial-content "")
-	(adjust-empty-lines t))
+	(initial-content ""))
 
     (cond
 
@@ -7615,9 +7761,7 @@ command."
 	       (insert "\n* ")))
       (run-hooks 'org-insert-heading-hook))
 
-     ((and itemp (not (member arg '((4) (16)))))
-      ;; Insert an item
-      (org-insert-item))
+     ((and itemp (not (member arg '((4) (16)))) (org-insert-item)))
 
      (t
       ;; Maybe move at the end of the subtree
@@ -7633,7 +7777,7 @@ command."
 				 (org-previous-line-empty-p)
 			       ;; We will decide later
 			       nil))
-	       ;; Get a level string to fall back on
+	       ;; Get a level string to fall back on.
 	       (fix-level
 		(if (org-before-first-heading-p) "*"
 		  (save-excursion
@@ -7644,14 +7788,15 @@ command."
 	       (stars
 		(save-excursion
 		  (condition-case nil
-		      (progn
+		      (if top-level "* "
 			(org-back-to-heading invisible-ok)
 			(when (and (not on-heading)
 				   (featurep 'org-inlinetask)
 				   (integerp org-inlinetask-min-level)
 				   (>= (length (match-string 0))
 				       org-inlinetask-min-level))
-			  ;; Find a heading level before the inline task
+			  ;; Find a heading level before the inline
+			  ;; task.
 			  (while (and (setq level (org-up-heading-safe))
 				      (>= level org-inlinetask-min-level)))
 			  (if (org-at-heading-p)
@@ -7671,27 +7816,30 @@ command."
 	       (blank (if (eq blank-a 'auto) empty-line-p blank-a))
 	       pos hide-previous previous-pos)
 
-	  ;; If we insert after content, move there and clean up whitespace
+	  ;; If we insert after content, move there and clean up
+	  ;; whitespace.
 	  (when (and respect-content
 		     (not (org-looking-at-p org-outline-regexp-bol)))
 	    (if (not (org-before-first-heading-p))
 		(org-end-of-subtree nil t)
 	      (re-search-forward org-outline-regexp-bol)
 	      (beginning-of-line 0))
-	    (skip-chars-backward " \r\n")
-	    (and (not (looking-back "^\*+"))
+	    (skip-chars-backward " \r\t\n")
+	    (and (not (looking-back "^\\*+"))
 		 (looking-at "[ \t]+") (replace-match ""))
 	    (unless (eobp) (forward-char 1))
 	    (when (looking-at "^\\*")
 	      (unless (bobp) (backward-char 1))
 	      (insert "\n")))
 
-	  ;; If we are splitting, grab the text that should be moved to the new headline
+	  ;; If we are splitting, grab the text that should be moved
+	  ;; to the new headline.
 	  (when may-split
 	    (if (org-on-heading-p)
-		;; This is a heading, we split intelligently (keeping tags)
+		;; This is a heading: split intelligently (keeping
+		;; tags).
 		(let ((pos (point)))
-		  (goto-char (point-at-bol))
+		  (beginning-of-line)
 		  (unless (looking-at org-complex-heading-regexp)
 		    (error "This should not happen"))
 		  (when (and (match-beginning 4)
@@ -7702,31 +7850,35 @@ command."
 		    (delete-region (point) (match-end 4))
 		    (if (looking-at "[ \t]*$")
 			(replace-match "")
-		      (insert (make-string (length initial-content) ?\ )))
+		      (insert (make-string (length initial-content) ?\s)))
 		    (setq initial-content (org-trim initial-content)))
 		  (goto-char pos))
-	      ;; a normal line
+	      ;; A normal line.
 	      (setq initial-content
-		    (org-trim (buffer-substring (point) (point-at-eol))))
-	      (delete-region (point) (point-at-eol))))
+		    (org-trim
+		     (delete-and-extract-region (point) (line-end-position))))))
 
-	  ;; If we are at the beginning of the line, insert before it.  Else after
+	  ;; If we are at the beginning of the line, insert before it.
+	  ;; Otherwise, after it.
 	  (cond
 	   ((and (bolp) (looking-at "[ \t]*$")))
-	   ((and (bolp) (not (looking-at "[ \t]*$")))
-	    (open-line 1))
-	   (t
-	    (goto-char (point-at-eol))
-	    (insert "\n")))
+	   ((bolp) (save-excursion (insert "\n")))
+	   (t (end-of-line)
+	      (insert "\n")))
 
 	  ;; Insert the new heading
 	  (insert stars)
 	  (just-one-space)
 	  (insert initial-content)
-	  (when adjust-empty-lines
-	    (if (or (not blank)
-		    (and blank (not (org-previous-line-empty-p))))
-		(org-N-empty-lines-before-current (if blank 1 0))))
+	  (unless (and blank (org-previous-line-empty-p))
+	    (org-N-empty-lines-before-current (if blank 1 0)))
+	  ;; Adjust visibility, which may be messed up if we removed
+	  ;; blank lines while previous entry was hidden.
+	  (let ((bol (line-beginning-position)))
+	    (dolist (o (overlays-at (1- bol)))
+	      (when (and (eq (overlay-get o 'invisible) 'outline)
+			 (eq (overlay-end o) bol))
+		(move-overlay o (overlay-start o) (1- bol)))))
 	  (run-hooks 'org-insert-heading-hook)))))))
 
 (defun org-N-empty-lines-before-current (N)
@@ -7932,11 +8084,12 @@ in the region."
 
 (defun org-current-level ()
   "Return the level of the current entry, or nil if before the first headline.
-The level is the number of stars at the beginning of the headline."
-  (save-excursion
-    (org-with-limited-levels
-     (if (ignore-errors (org-back-to-heading t))
-	 (funcall outline-level)))))
+The level is the number of stars at the beginning of the
+headline.  Use `org-reduced-level' to remove the effect of
+`org-odd-levels'.  Unlike to `org-outline-level', this function
+ignores inlinetasks."
+  (let ((level (org-with-limited-levels (org-outline-level))))
+    (and (> level 0) level)))
 
 (defun org-get-previous-line-level ()
   "Return the outline depth of the last headline before the current line.
@@ -7980,42 +8133,38 @@ even level numbers will become the next higher odd number."
 	'org-get-valid-level "23.1")))
 
 (defun org-promote ()
-  "Promote the current heading higher up the tree.
-If the region is active in `transient-mark-mode', promote all headings
-in the region."
-  (org-back-to-heading t)
-  (let* ((level (save-match-data (funcall outline-level)))
-	 (after-change-functions (remove 'flyspell-after-change-function
-					 after-change-functions))
-	 (up-head (concat (make-string (org-get-valid-level level -1) ?*) " "))
-	 (diff (abs (- level (length up-head) -1))))
-    (cond ((and (= level 1) org-called-with-limited-levels
-		org-allow-promoting-top-level-subtree)
-	   (replace-match "# " nil t))
-	  ((= level 1)
-	   (user-error "Cannot promote to level 0.  UNDO to recover if necessary"))
-	  (t (replace-match up-head nil t)))
-    ;; Fixup tag positioning
-    (unless (= level 1)
-      (and org-auto-align-tags (org-set-tags nil 'ignore-column))
-      (if org-adapt-indentation (org-fixup-indentation (- diff))))
-    (run-hooks 'org-after-promote-entry-hook)))
+  "Promote the current heading higher up the tree."
+  (org-with-wide-buffer
+   (org-back-to-heading t)
+   (let* ((after-change-functions (remq 'flyspell-after-change-function
+					after-change-functions))
+	  (level (save-match-data (funcall outline-level)))
+	  (up-head (concat (make-string (org-get-valid-level level -1) ?*) " "))
+	  (diff (abs (- level (length up-head) -1))))
+     (cond
+      ((and (= level 1) org-allow-promoting-top-level-subtree)
+       (replace-match "# " nil t))
+      ((= level 1)
+       (user-error "Cannot promote to level 0.  UNDO to recover if necessary"))
+      (t (replace-match up-head nil t)))
+     (unless (= level 1)
+       (when org-auto-align-tags (org-set-tags nil 'ignore-column))
+       (when org-adapt-indentation (org-fixup-indentation (- diff))))
+     (run-hooks 'org-after-promote-entry-hook))))
 
 (defun org-demote ()
-  "Demote the current heading lower down the tree.
-If the region is active in `transient-mark-mode', demote all headings
-in the region."
-  (org-back-to-heading t)
-  (let* ((level (save-match-data (funcall outline-level)))
-	 (after-change-functions (remove 'flyspell-after-change-function
-					 after-change-functions))
-	 (down-head (concat (make-string (org-get-valid-level level 1) ?*) " "))
-	 (diff (abs (- level (length down-head) -1))))
-    (replace-match down-head nil t)
-    ;; Fixup tag positioning
-    (and org-auto-align-tags (org-set-tags nil 'ignore-column))
-    (if org-adapt-indentation (org-fixup-indentation diff))
-    (run-hooks 'org-after-demote-entry-hook)))
+  "Demote the current heading lower down the tree."
+  (org-with-wide-buffer
+   (org-back-to-heading t)
+   (let* ((after-change-functions (remq 'flyspell-after-change-function
+					after-change-functions))
+	  (level (save-match-data (funcall outline-level)))
+	  (down-head (concat (make-string (org-get-valid-level level 1) ?*) " "))
+	  (diff (abs (- level (length down-head) -1))))
+     (replace-match down-head nil t)
+     (when org-auto-align-tags (org-set-tags nil 'ignore-column))
+     (when org-adapt-indentation (org-fixup-indentation diff))
+     (run-hooks 'org-after-demote-entry-hook))))
 
 (defun org-cycle-level ()
   "Cycle the level of an empty headline through possible states.
@@ -8080,27 +8229,111 @@ After top level, it switches back to sibling level."
 		  (not (eobp)))
 	(funcall fun)))))
 
-(defvar org-property-end-re) ; silence byte-compiler
 (defun org-fixup-indentation (diff)
   "Change the indentation in the current entry by DIFF.
-However, if any line in the current entry has no indentation, or if it
-would end up with no indentation after the change, nothing at all is done."
-  (save-excursion
-    (let ((end (save-excursion (outline-next-heading)
-			       (point-marker)))
-	  (prohibit (if (> diff 0)
-			"^\\S-"
-		      (concat "^ \\{0," (int-to-string (- diff)) "\\}\\S-")))
-	  col)
-      (unless (save-excursion (end-of-line 1)
-			      (re-search-forward prohibit end t))
-	(while (and (< (point) end)
-		    (re-search-forward "^[ \t]+" end t))
-	  (goto-char (match-end 0))
-	  (setq col (current-column))
-	  (if (< diff 0) (replace-match ""))
-	  (org-indent-to-column (+ diff col))))
-      (move-marker end nil))))
+
+DIFF is an integer.  Indentation is done according to the
+following rules:
+
+  - Planning information and property drawers are always indented
+    according to the new level of the headline;
+
+  - Footnote definitions and their contents are ignored;
+
+  - Inlinetasks' boundaries are not shifted;
+
+  - Empty lines are ignored;
+
+  - Other lines' indentation are shifted by DIFF columns, unless
+    it would introduce a structural change in the document, in
+    which case no shifting is done at all.
+
+Assume point is at a heading or an inlinetask beginning."
+  (org-with-wide-buffer
+   (narrow-to-region (line-beginning-position)
+		     (save-excursion
+		       (if (org-with-limited-levels (org-at-heading-p))
+			   (org-with-limited-levels (outline-next-heading))
+			 (org-inlinetask-goto-end))
+		       (point)))
+   (forward-line)
+   ;; Indent properly planning info and property drawer.
+   (when (org-looking-at-p org-planning-line-re)
+     (org-indent-line)
+     (forward-line))
+   (when (looking-at org-property-drawer-re)
+     (goto-char (match-end 0))
+     (forward-line)
+     (save-excursion (org-indent-region (match-beginning 0) (match-end 0))))
+   (catch 'no-shift
+     (when (zerop diff) (throw 'no-shift nil))
+     ;; If DIFF is negative, first check if a shift is possible at all
+     ;; (e.g., it doesn't break structure).  This can only happen if
+     ;; some contents are not properly indented.
+     (let ((case-fold-search t))
+       (when (< diff 0)
+	 (let ((diff (- diff))
+	       (forbidden-re (concat org-outline-regexp
+				     "\\|"
+				     (substring org-footnote-definition-re 1))))
+	   (save-excursion
+	     (while (not (eobp))
+	       (cond
+		((org-looking-at-p "[ \t]*$") (forward-line))
+		((and (org-looking-at-p org-footnote-definition-re)
+		      (let ((e (org-element-at-point)))
+			(and (eq (org-element-type e) 'footnote-definition)
+			     (goto-char (org-element-property :end e))))))
+		((org-looking-at-p org-outline-regexp) (forward-line))
+		;; Give up if shifting would move before column 0 or
+		;; if it would introduce a headline or a footnote
+		;; definition.
+		(t
+		 (skip-chars-forward " \t")
+		 (let ((ind (current-column)))
+		   (when (or (< ind diff)
+			     (and (= ind diff) (org-looking-at-p forbidden-re)))
+		     (throw 'no-shift nil)))
+		 ;; Ignore contents of example blocks and source
+		 ;; blocks if their indentation is meant to be
+		 ;; preserved.  Jump to block's closing line.
+		 (beginning-of-line)
+		 (or (and (org-looking-at-p "[ \t]*#\\+BEGIN_\\(EXAMPLE\\|SRC\\)")
+			  (let ((e (org-element-at-point)))
+			    (and (memq (org-element-type e)
+				       '(example-block src-block))
+				 (or org-src-preserve-indentation
+				     (org-element-property :preserve-indent e))
+				 (goto-char (org-element-property :end e))
+				 (progn (skip-chars-backward " \r\t\n")
+					(beginning-of-line)
+					t))))
+		     (forward-line))))))))
+       ;; Shift lines but footnote definitions, inlinetasks boundaries
+       ;; by DIFF.  Also skip contents of source or example blocks
+       ;; when indentation is meant to be preserved.
+       (while (not (eobp))
+	 (cond
+	  ((and (org-looking-at-p org-footnote-definition-re)
+		(let ((e (org-element-at-point)))
+		  (and (eq (org-element-type e) 'footnote-definition)
+		       (goto-char (org-element-property :end e))))))
+	  ((org-looking-at-p org-outline-regexp) (forward-line))
+	  ((org-looking-at-p "[ \t]*$") (forward-line))
+	  (t
+	   (org-indent-line-to (+ (org-get-indentation) diff))
+	   (beginning-of-line)
+	   (or (and (org-looking-at-p "[ \t]*#\\+BEGIN_\\(EXAMPLE\\|SRC\\)")
+		    (let ((e (org-element-at-point)))
+		      (and (memq (org-element-type e)
+				 '(example-block src-block))
+			   (or org-src-preserve-indentation
+			       (org-element-property :preserve-indent e))
+			   (goto-char (org-element-property :end e))
+			   (progn (skip-chars-backward " \r\t\n")
+				  (beginning-of-line)
+				  t))))
+	       (forward-line)))))))))
 
 (defun org-convert-to-odd-levels ()
   "Convert an org-mode file with all levels allowed to one with odd levels.
@@ -8128,7 +8361,7 @@ case."
   (goto-char (point-min))
   ;; First check if there are no even levels
   (when (re-search-forward "^\\(\\*\\*\\)+ " nil t)
-    (org-show-context t)
+    (org-show-set-visibility 'canonical)
     (error "Not all levels are odd in this file.  Conversion not possible"))
   (when (yes-or-no-p "Are you sure you want to globally change levels to odd-even? ")
     (let ((outline-regexp org-outline-regexp)
@@ -8268,10 +8501,13 @@ useful if the caller implements cut-and-paste as copy-then-paste-then-cut."
 	  (outline-next-heading)
 	(save-excursion (outline-end-of-heading)
 			(setq folded (outline-invisible-p)))
-	(condition-case nil
-	    (org-forward-heading-same-level (1- n) t)
-	  (error nil))
+	(ignore-errors (org-forward-heading-same-level (1- n) t))
 	(org-end-of-subtree t t)))
+    ;; Include the end of an inlinetask
+    (when (and (featurep 'org-inlinetask)
+	       (looking-at-p (concat (org-inlinetask-outline-regexp)
+				     "END[ \t]*$")))
+      (end-of-line))
     (setq end (point))
     (goto-char beg0)
     (when (> end beg)
@@ -8284,7 +8520,7 @@ useful if the caller implements cut-and-paste as copy-then-paste-then-cut."
 	       (if cut "Cut" "Copied")
 	       (length org-subtree-clip)))))
 
-(defun org-paste-subtree (&optional level tree for-yank)
+(defun org-paste-subtree (&optional level tree for-yank remove)
   "Paste the clipboard as a subtree, with modification of headline level.
 The entire subtree is promoted or demoted in order to match a new headline
 level.
@@ -8307,13 +8543,15 @@ If optional TREE is given, use this text instead of the kill ring.
 
 When FOR-YANK is set, this is called by `org-yank'.  In this case, do not
 move back over whitespace before inserting, and move point to the end of
-the inserted text when done."
+the inserted text when done.
+
+When REMOVE is non-nil, remove the subtree from the clipboard."
   (interactive "P")
   (setq tree (or tree (and kill-ring (current-kill 0))))
   (unless (org-kill-is-subtree-p tree)
     (user-error "%s"
-	   (substitute-command-keys
-	    "The kill is not a (set of) tree(s) - please use \\[yank] to yank anyway")))
+		(substitute-command-keys
+		 "The kill is not a (set of) tree(s) - please use \\[yank] to yank anyway")))
   (org-with-limited-levels
    (let* ((visp (not (outline-invisible-p)))
 	  (txt tree)
@@ -8391,7 +8629,8 @@ the inserted text when done."
 	      org-subtree-clip-folded)
 	 ;; The tree was folded before it was killed/copied
 	 (hide-subtree))
-     (and for-yank (goto-char newend)))))
+     (and for-yank (goto-char newend))
+     (and remove (setq kill-ring (cdr kill-ring))))))
 
 (defun org-kill-is-subtree-p (&optional txt)
   "Check if the current kill is an outline subtree, or a set of trees.
@@ -8474,10 +8713,6 @@ If yes, remember the marker and the distance to BEG."
 	(narrow-to-region (car blockp) (cdr blockp))
       (user-error "Not in a block"))))
 
-(eval-when-compile
-  (defvar org-property-drawer-re))
-
-(defvar org-property-start-re)  ;; defined below
 (defun org-clone-subtree-with-time-shift (n &optional shift)
   "Clone the task (subtree) at point N times.
 The clones will be inserted as siblings.
@@ -8519,14 +8754,15 @@ and still retain the repeater to cover future instances of the task."
 	       ""))) ;; No time shift
 	(n-no-remove -1)
 	(drawer-re org-drawer-regexp)
+	(org-clock-re (format "^[ \t]*%s.*$" org-clock-string))
 	beg end template task idprop
 	shift-n shift-what doshift nmin nmax)
     (if (not (and (integerp n) (> n 0)))
-	(error "Invalid number of replications %s" n))
+	(user-error "Invalid number of replications %s" n))
     (if (and (setq doshift (and (stringp shift) (string-match "\\S-" shift)))
 	     (not (string-match "\\`[ \t]*\\+?\\([0-9]+\\)\\([hdwmy]\\)[ \t]*\\'"
 				shift)))
-	(error "Invalid shift specification %s" shift))
+	(user-error "Invalid shift specification %s" shift))
     (when doshift
       (setq shift-n (string-to-number (match-string 1 shift))
 	    shift-what (cdr (assoc (match-string 2 shift)
@@ -8558,12 +8794,11 @@ and still retain the repeater to cover future instances of the task."
 			    (org-entry-delete nil "ID")
 			  (org-id-get-create t)))
 	    (unless (= n 0)
-	      (while (re-search-forward "^[ \t]*CLOCK:.*$" nil t)
+	      (while (re-search-forward org-clock-re nil t)
 		(kill-whole-line))
 	      (goto-char (point-min))
 	      (while (re-search-forward drawer-re nil t)
-		(mapc (lambda (d)
-			(org-remove-empty-drawer-at d (point))) org-drawers)))
+		(org-remove-empty-drawer-at (point))))
 	    (goto-char (point-min))
 	    (when doshift
 	      (while (re-search-forward org-ts-regexp-both nil t)
@@ -8613,7 +8848,7 @@ hook gets called.  When a region or a plain list is sorted, the cursor
 will be in the first entry of the sorted region/list.")
 
 (defun org-sort-entries
-  (&optional with-case sorting-type getkey-func compare-func property)
+    (&optional with-case sorting-type getkey-func compare-func property)
   "Sort entries on a certain level of an outline tree.
 If there is an active region, the entries in the region are sorted.
 Else, if the cursor is before the first entry, sort the top-level items.
@@ -8624,20 +8859,21 @@ a time stamp, by a property, by priority order, or by a custom function.
 
 The command prompts for the sorting type unless it has been given to the
 function through the SORTING-TYPE argument, which needs to be a character,
-\(?n ?N ?a ?A ?t ?T ?s ?S ?d ?D ?p ?P ?o ?O ?r ?R ?f ?F).  Here is the
-precise meaning of each character:
+\(?n ?N ?a ?A ?t ?T ?s ?S ?d ?D ?p ?P ?o ?O ?r ?R ?f ?F ?k ?K).  Here is
+the precise meaning of each character:
 
-n   Numerically, by converting the beginning of the entry/item to a number.
 a   Alphabetically, ignoring the TODO keyword and the priority, if any.
-o   By order of TODO keywords.
-t   By date/time, either the first active time stamp in the entry, or, if
-    none exist, by the first inactive one.
-s   By the scheduled date/time.
-d   By deadline date/time.
 c   By creation time, which is assumed to be the first inactive time stamp
     at the beginning of a line.
+d   By deadline date/time.
+k   By clocking time.
+n   Numerically, by converting the beginning of the entry/item to a number.
+o   By order of TODO keywords.
 p   By priority according to the cookie.
 r   By the value of a property.
+s   By scheduled date/time.
+t   By date/time, either the first active time stamp in the entry, or, if
+    none exist, by the first inactive one.
 
 Capital letters will reverse the sort order.
 
@@ -8649,7 +8885,9 @@ Comparing entries ignores case by default.  However, with an optional argument
 WITH-CASE, the sorting considers case as well.
 
 Sorting is done against the visible part of the headlines, it ignores hidden
-links."
+links.
+
+When sorting is done, call `org-after-sorting-entries-or-items-hook'."
   (interactive "P")
   (let ((case-func (if with-case 'identity 'downcase))
 	(cmstr
@@ -8671,7 +8909,7 @@ links."
       (if (not (org-at-heading-p)) (outline-next-heading))
       (setq start (point)))
      ((or (org-at-heading-p)
-          (condition-case nil (progn (org-back-to-heading) t) (error nil)))
+          (ignore-errors (progn (org-back-to-heading) t)))
       ;; we will sort the children of the current headline
       (org-back-to-heading)
       (setq start (point)
@@ -8715,8 +8953,8 @@ links."
     (unless sorting-type
       (message
        "Sort %s: [a]lpha  [n]umeric  [p]riority  p[r]operty  todo[o]rder  [f]unc
-               [t]ime [s]cheduled  [d]eadline  [c]reated
-               A/N/P/R/O/F/T/S/D/C means reversed:"
+               [t]ime [s]cheduled  [d]eadline  [c]reated  cloc[k]ing
+               A/N/P/R/O/F/T/S/D/C/K means reversed:"
        what)
       (setq sorting-type (read-char-exclusive))
 
@@ -8734,6 +8972,7 @@ links."
 				       (mapcar 'list (org-buffer-property-keys t))
 				       nil t))))
 
+    (when (member sorting-type '(?k ?K)) (org-clock-sum))
     (message "Sorting entries...")
 
     (save-restriction
@@ -8768,6 +9007,8 @@ links."
 	     (if (looking-at org-complex-heading-regexp)
 		 (funcall case-func (org-sort-remove-invisible (match-string 4)))
 	       nil))
+	    ((= dcst ?k)
+	     (or (get-text-property (point) :org-clock-minutes) 0))
 	    ((= dcst ?t)
 	     (let ((end (save-excursion (outline-next-heading) (point))))
 	       (if (or (re-search-forward org-ts-regexp end t)
@@ -8799,8 +9040,9 @@ links."
 	     (or (org-entry-get nil property) ""))
 	    ((= dcst ?o)
 	     (if (looking-at org-complex-heading-regexp)
-		 (- 9999 (length (member (match-string 2)
-					 org-todo-keywords-1)))))
+		 (let* ((m (match-string 2))
+			(s (if (member m org-done-keywords) '- '+)))
+		   (- 99 (funcall s (length (member m org-todo-keywords-1)))))))
 	    ((= dcst ?f)
 	     (if getkey-func
 		 (progn
@@ -8813,7 +9055,7 @@ links."
          (cond
           ((= dcst ?a) 'string<)
           ((= dcst ?f) compare-func)
-          ((member dcst '(?p ?t ?s ?d ?c)) '<)))))
+          ((member dcst '(?p ?t ?s ?d ?c ?k)) '<)))))
     (run-hooks 'org-after-sorting-entries-or-items-hook)
     ;; Reset the clock marker if needed
     (when cmstr
@@ -8822,48 +9064,6 @@ links."
 	(search-forward cmstr nil t)
 	(move-marker org-clock-marker (point))))
     (message "Sorting entries...done")))
-
-(defun org-do-sort (table what &optional with-case sorting-type)
-  "Sort TABLE of WHAT according to SORTING-TYPE.
-The user will be prompted for the SORTING-TYPE if the call to this
-function does not specify it.  WHAT is only for the prompt, to indicate
-what is being sorted.  The sorting key will be extracted from
-the car of the elements of the table.
-If WITH-CASE is non-nil, the sorting will be case-sensitive."
-  (unless sorting-type
-    (message
-     "Sort %s: [a]lphabetic, [n]umeric, [t]ime.  A/N/T means reversed:"
-     what)
-    (setq sorting-type (read-char-exclusive)))
-  (let ((dcst (downcase sorting-type))
-	extractfun comparefun)
-    ;; Define the appropriate functions
-    (cond
-     ((= dcst ?n)
-      (setq extractfun 'string-to-number
-	    comparefun (if (= dcst sorting-type) '< '>)))
-     ((= dcst ?a)
-      (setq extractfun (if with-case (lambda(x) (org-sort-remove-invisible x))
-			 (lambda(x) (downcase (org-sort-remove-invisible x))))
-	    comparefun (if (= dcst sorting-type)
-			   'string<
-			 (lambda (a b) (and (not (string< a b))
-					    (not (string= a b)))))))
-     ((= dcst ?t)
-      (setq extractfun
-	    (lambda (x)
-	      (if (or (string-match org-ts-regexp x)
-		      (string-match org-ts-regexp-both x))
-		  (org-float-time
-		   (org-time-string-to-time (match-string 0 x)))
-		0))
-	    comparefun (if (= dcst sorting-type) '< '>)))
-     (t (error "Invalid sorting type `%c'" sorting-type)))
-
-    (sort (mapcar (lambda (x) (cons (funcall extractfun (car x)) (cdr x)))
-		  table)
-	  (lambda (a b) (funcall comparefun (car a) (car b))))))
-
 
 ;;; The orgstruct minor mode
 
@@ -9040,11 +9240,11 @@ buffer.  It will also recognize item context in multiline items."
 	  (dolist (binding new-bindings)
 	    (let ((key (lookup-key orgstruct-mode-map binding)))
 	      (when (or (not key) (numberp key))
-		(condition-case nil
-		    (org-defkey orgstruct-mode-map
-				binding
-				(orgstruct-make-binding f binding disable-when-heading-prefix))
-		  (error nil)))))))))
+		(ignore-errors
+		  (org-defkey orgstruct-mode-map
+			      binding
+			      (orgstruct-make-binding
+			       f binding disable-when-heading-prefix))))))))))
   (run-hooks 'orgstruct-setup-hook))
 
 (defun orgstruct-make-binding (fun key disable-when-heading-prefix)
@@ -9187,23 +9387,23 @@ definitions."
       (mapc
        (lambda (rr)
 	 (when
-	  (and (equal key (car r))
-	       (if (functionp rr) (funcall rr)
-		 (or (and (eq (car rr) 'in-file)
-			  (buffer-file-name)
-			  (string-match (cdr rr) (buffer-file-name)))
-		     (and (eq (car rr) 'in-mode)
-			  (string-match (cdr rr) (symbol-name major-mode)))
-		     (and (eq (car rr) 'in-buffer)
-			  (string-match (cdr rr) (buffer-name)))
-		     (when (and (eq (car rr) 'not-in-file)
-				(buffer-file-name))
-		       (not (string-match (cdr rr) (buffer-file-name))))
-		     (when (eq (car rr) 'not-in-mode)
-		       (not (string-match (cdr rr) (symbol-name major-mode))))
-		     (when (eq (car rr) 'not-in-buffer)
-		       (not (string-match (cdr rr) (buffer-name)))))))
-	  (push r res)))
+	     (and (equal key (car r))
+		  (if (functionp rr) (funcall rr)
+		    (or (and (eq (car rr) 'in-file)
+			     (buffer-file-name)
+			     (string-match (cdr rr) (buffer-file-name)))
+			(and (eq (car rr) 'in-mode)
+			     (string-match (cdr rr) (symbol-name major-mode)))
+			(and (eq (car rr) 'in-buffer)
+			     (string-match (cdr rr) (buffer-name)))
+			(when (and (eq (car rr) 'not-in-file)
+				   (buffer-file-name))
+			  (not (string-match (cdr rr) (buffer-file-name))))
+			(when (eq (car rr) 'not-in-mode)
+			  (not (string-match (cdr rr) (symbol-name major-mode))))
+			(when (eq (car rr) 'not-in-buffer)
+			  (not (string-match (cdr rr) (buffer-name)))))))
+	   (push r res)))
        (car (last r))))
     (delete-dups (delq nil res))))
 
@@ -9274,8 +9474,6 @@ call CMD."
     (eval `(let ,binds
 	     (call-interactively (quote ,cmd))))))
 
-;;;; Archiving
-
 (defun org-get-category (&optional pos force-refresh)
   "Get the category applying to position POS."
   (save-match-data
@@ -9285,56 +9483,109 @@ call CMD."
 	  (progn (org-refresh-category-properties)
 		 (get-text-property pos 'org-category))))))
 
-(defun org-refresh-category-properties ()
-  "Refresh category text properties in the buffer."
-  (let ((case-fold-search t)
-	(inhibit-read-only t)
-	(def-cat (cond
-		  ((null org-category)
-		   (if buffer-file-name
-		       (file-name-sans-extension
-			(file-name-nondirectory buffer-file-name))
-		     "???"))
-		  ((symbolp org-category) (symbol-name org-category))
-		  (t org-category)))
-	beg end cat pos optionp)
-    (org-with-silent-modifications
-     (save-excursion
-       (save-restriction
-	 (widen)
-	 (goto-char (point-min))
-	 (put-text-property (point) (point-max) 'org-category def-cat)
-	 (while (re-search-forward
-		 "^\\(#\\+CATEGORY:\\|[ \t]*:CATEGORY:\\)\\(.*\\)" nil t)
-	   (setq pos (match-end 0)
-		 optionp (equal (char-after (match-beginning 0)) ?#)
-		 cat (org-trim (match-string 2)))
-	   (if optionp
-	       (setq beg (point-at-bol) end (point-max))
-	     (org-back-to-heading t)
-	     (setq beg (point) end (org-end-of-subtree t t)))
-	   (put-text-property beg end 'org-category cat)
-	   (put-text-property beg end 'org-category-position beg)
-	   (goto-char pos)))))))
+;;; Refresh properties
 
 (defun org-refresh-properties (dprop tprop)
   "Refresh buffer text properties.
-DPROP is the drawer property and TPROP is the corresponding text
-property to set."
+DPROP is the drawer property and TPROP is either the
+corresponding text property to set, or an alist with each element
+being a text property (as a symbol) and a function to apply to
+the value of the drawer property."
   (let ((case-fold-search t)
-	(inhibit-read-only t) p)
+	(inhibit-read-only t))
     (org-with-silent-modifications
      (save-excursion
        (save-restriction
 	 (widen)
 	 (goto-char (point-min))
 	 (while (re-search-forward (concat "^[ \t]*:" dprop ": +\\(.*\\)[ \t]*$") nil t)
-	   (setq p (org-match-string-no-properties 1))
-	   (save-excursion
-	     (org-back-to-heading t)
-	     (put-text-property
-	      (point-at-bol) (or (outline-next-heading) (point-max)) tprop p))))))))
+	   (org-refresh-property tprop (org-match-string-no-properties 1))))))))
 
+(defun org-refresh-property (tprop p)
+  "Refresh the buffer text property TPROP from the drawer property P.
+The refresh happens only for the current tree (not subtree)."
+  (unless (org-before-first-heading-p)
+    (save-excursion
+      (org-back-to-heading t)
+      (if (symbolp tprop)
+	  ;; TPROP is a text property symbol
+	  (put-text-property
+	   (point) (or (outline-next-heading) (point-max)) tprop p)
+	;; TPROP is an alist with (properties . function) elements
+	(dolist (al tprop)
+	  (save-excursion
+	    (put-text-property
+	     (line-beginning-position) (or (outline-next-heading) (point-max))
+	     (car al)
+	     (funcall (cdr al) p))))))))
+
+(defun org-refresh-category-properties ()
+  "Refresh category text properties in the buffer."
+  (let ((case-fold-search t)
+	(inhibit-read-only t)
+	(default-category
+	  (cond ((null org-category)
+		 (if buffer-file-name
+		     (file-name-sans-extension
+		      (file-name-nondirectory buffer-file-name))
+		   "???"))
+		((symbolp org-category) (symbol-name org-category))
+		(t org-category))))
+    (org-with-silent-modifications
+     (org-with-wide-buffer
+      ;; Set buffer-wide category.  Search last #+CATEGORY keyword.
+      ;; This is the default category for the buffer.  If none is
+      ;; found, fall-back to `org-category' or buffer file name.
+      (put-text-property
+       (point-min) (point-max)
+       'org-category
+       (catch 'buffer-category
+	 (goto-char (point-max))
+	 (while (re-search-backward "^[ \t]*#\\+CATEGORY:" (point-min) t)
+	   (let ((element (org-element-at-point)))
+	     (when (eq (org-element-type element) 'keyword)
+	       (throw 'buffer-category
+		      (org-element-property :value element)))))
+	 default-category))
+      ;; Set sub-tree specific categories.
+      (goto-char (point-min))
+      (let ((regexp (org-re-property "CATEGORY")))
+	(while (re-search-forward regexp nil t)
+	  (let ((value (org-match-string-no-properties 3)))
+	    (when (org-at-property-p)
+	      (put-text-property
+	       (save-excursion (org-back-to-heading t) (point))
+	       (save-excursion (org-end-of-subtree t t) (point))
+	       'org-category
+	       value)))))))))
+
+(defun org-refresh-stats-properties ()
+  "Refresh stats text properties in the buffer."
+  (let (stats)
+    (org-with-silent-modifications
+     (save-excursion
+       (save-restriction
+	 (widen)
+	 (goto-char (point-min))
+	 (while (re-search-forward
+		 (concat org-outline-regexp-bol ".*"
+			 "\\(?:\\[\\([0-9]+\\)%\\|\\([0-9]+\\)/\\([0-9]+\\)\\]\\)")
+		 nil t)
+	   (setq stats (cond ((equal (match-string 3) "0") 0)
+			     ((match-string 2)
+			      (/ (* (string-to-number (match-string 2)) 100)
+				 (string-to-number (match-string 3))))
+			     (t (string-to-number (match-string 1)))))
+	   (org-back-to-heading t)
+	   (put-text-property (point) (progn (org-end-of-subtree t t) (point))
+			      'org-stats stats)))))))
+
+(defun org-refresh-effort-properties ()
+  "Refresh effort properties"
+  (org-refresh-properties
+   org-effort-property
+   '((effort . identity)
+     (effort-minutes . org-duration-string-to-minutes))))
 
 ;;;; Link Stuff
 
@@ -9411,20 +9662,20 @@ EXPORT should format the link path for export to one of the export formats.
 It should be a function accepting three arguments:
 
   path    the path of the link, the text after the prefix (like \"http:\")
-  desc    the description of the link, if any, or a description added by
-          org-export-normalize-links if there is none
-  format  the export format, a symbol like `html' or `latex' or `ascii'..
+  desc    the description of the link, if any
+  format  the export format, a symbol like `html' or `latex' or `ascii'.
 
 The function may use the FORMAT information to return different values
 depending on the format.  The return value will be put literally into
 the exported file.  If the return value is nil, this means Org should
 do what it normally does with links which do not have EXPORT defined.
 
-Org-mode has a built-in default for exporting links.  If you are happy with
+Org mode has a built-in default for exporting links.  If you are happy with
 this default, there is no need to define an export function for the link
 type.  For a simple example of an export function, see `org-bbdb.el'."
   (add-to-list 'org-link-types type t)
   (org-make-link-regexps)
+  (org-element-update-syntax)
   (if (assoc type org-link-protocols)
       (setcdr (assoc type org-link-protocols) (list follow export))
     (push (list type follow export) org-link-protocols)))
@@ -9484,25 +9735,32 @@ active region."
 		    desc (or (plist-get org-store-link-plist
 					:description) link))))
 
-	;; Store a link from a source code buffer
+	;; Store a link from a source code buffer.
 	((org-src-edit-buffer-p)
-	 (let (label gc)
-	   (while (or (not label)
-		      (save-excursion
-			(save-restriction
-			  (widen)
-			  (goto-char (point-min))
-			  (re-search-forward
-			   (regexp-quote (format org-coderef-label-format label))
-			   nil t))))
-	     (when label (message "Label exists already") (sit-for 2))
-	     (setq label (read-string "Code line label: " label)))
-	   (end-of-line 1)
-	   (setq link (format org-coderef-label-format label))
-	   (setq gc (- 79 (length link)))
-	   (if (< (current-column) gc) (org-move-to-column gc t) (insert " "))
-	   (insert link)
-	   (setq link (concat "(" label ")") desc nil)))
+	 (cond
+	  ((save-excursion
+	     (beginning-of-line)
+	     (looking-at (concat (format org-coderef-label-format "\\(.*?\\)")
+				 "[ \t]*$")))
+	   (setq link (format "(%s)" (org-match-string-no-properties 1))))
+	  ((org-called-interactively-p 'any)
+	   (let (label)
+	     (while (or (not label)
+			(org-with-wide-buffer
+			 (goto-char (point-min))
+			 (re-search-forward
+			  (regexp-quote (format org-coderef-label-format label))
+			  nil t)))
+	       (when label (message "Label exists already") (sit-for 2))
+	       (setq label (read-string "Code line label: " label)))
+	     (end-of-line)
+	     (setq link (format org-coderef-label-format label))
+	     (let ((gc (- 79 (length link))))
+	       (if (< (current-column) gc) (org-move-to-column gc t)
+		 (insert " ")))
+	     (insert link)
+	     (setq link (concat "(" label ")") desc nil)))
+	  (t (setq link nil))))
 
 	;; We are in the agenda, link to referenced location
 	((equal (org-bound-and-true-p org-agenda-buffer-name) (buffer-name))
@@ -9547,7 +9805,7 @@ active region."
 	 (org-store-link-props :type "image" :file buffer-file-name))
 
 	;; In dired, store a link to the file of the current line
-	((eq major-mode 'dired-mode)
+	((derived-mode-p 'dired-mode)
 	 (let ((file (dired-get-filename nil t)))
 	   (setq file (if file
 			  (abbreviate-file-name
@@ -9778,14 +10036,19 @@ according to FMT (default from `org-email-link-description-format')."
 	  "]"))
 
 (defconst org-link-escape-chars
-  '(?\ ?\[ ?\] ?\; ?\= ?\+)
-  "List of characters that should be escaped in link.
+  ;;%20 %5B %5D
+  '(?\  ?\[ ?\])
+  "List of characters that should be escaped in a link when stored to Org.
 This is the list that is used for internal purposes.")
 
 (defconst org-link-escape-chars-browser
+  ;;%20 %22
   '(?\  ?\")
-  "List of escapes for characters that are problematic in links.
-This is the list that is used before handing over to the browser.")
+  "List of characters to be escaped before handing over to the browser.
+If you consider using this constant then you probably want to use
+the function `org-link-escape-browser' instead.  See there why
+this constant is a candidate to be removed once Org drops support
+for Emacs 24.1 and 24.2.")
 
 (defun org-link-escape (text &optional table merge)
   "Return percent escaped representation of TEXT.
@@ -9794,24 +10057,51 @@ Optional argument TABLE is a list with characters that should be
 escaped.  When nil, `org-link-escape-chars' is used.
 If optional argument MERGE is set, merge TABLE into
 `org-link-escape-chars'."
-  (cond
-   ((and table merge)
-    (mapc (lambda (defchr)
-	    (unless (member defchr table)
-	      (setq table (cons defchr table)))) org-link-escape-chars))
-   ((null table)
-    (setq table org-link-escape-chars)))
-  (mapconcat
-   (lambda (char)
-     (if (or (member char table)
-	     (and (or (< char 32) (= char 37) (> char 126))
-		  org-url-hexify-p))
-	 (mapconcat (lambda (sequence-element)
-		      (format "%%%.2X" sequence-element))
-		    (or (encode-coding-char char 'utf-8)
-			(error "Unable to percent escape character: %s"
-			       (char-to-string char))) "")
-       (char-to-string char))) text ""))
+  ;; Don't escape chars in internal links
+  (if (string-match "^\\*[[:alnum:]]+" text)
+      text
+    (cond
+     ((and table merge)
+      (mapc (lambda (defchr)
+	      (unless (member defchr table)
+		(setq table (cons defchr table))))
+	    org-link-escape-chars))
+     ((null table)
+      (setq table org-link-escape-chars)))
+    (mapconcat
+     (lambda (char)
+       (if (or (member char table)
+	       (and (or (< char 32) (= char ?\%) (> char 126))
+		    org-url-hexify-p))
+	   (mapconcat (lambda (sequence-element)
+			(format "%%%.2X" sequence-element))
+		      (or (encode-coding-char char 'utf-8)
+			  (error "Unable to percent escape character: %s"
+				 (char-to-string char))) "")
+	 (char-to-string char))) text "")))
+
+(defun org-link-escape-browser (text)
+  "Escape some characters before handing over to the browser.
+This function is a candidate to be removed together with the
+constant `org-link-escape-chars-browser' once Org drops support
+for Emacs 24.1 and 24.2.  All calls to this function will have to
+be replaced with `url-encode-url' which is available since Emacs
+24.3.1."
+  ;; Example with the Org link
+  ;; [[http://lists.gnu.org/archive/cgi-bin/namazu.cgi?idxname=emacs-orgmode&query=%252Bsubject:"Release+8.2"]]
+  ;; to open the browser with +subject:"Release 8.2" filled into the
+  ;; query field: In this case the variable TEXT contains the
+  ;; unescaped [...]=%2Bsubject:"Release+8.2".  Then `url-encode-url'
+  ;; converts correctly to [...]=%2Bsubject:%22Release+8.2%22 or
+  ;; `org-link-escape' with `org-link-escape-chars-browser' converts
+  ;; wrongly to [...]=%252Bsubject:%22Release+8.2%22.
+  (if (fboundp 'url-encode-url)
+      (url-encode-url text)
+    (if (org-string-match-p
+	 (concat "[[:nonascii:]" org-link-escape-chars-browser "]")
+	 text)
+	(org-link-escape text org-link-escape-chars-browser)
+      text)))
 
 (defun org-link-unescape (str)
   "Unhex hexified Unicode strings as returned from the JavaScript function
@@ -9854,9 +10144,8 @@ Note: this function also decodes single byte encodings like
 	    (setq ret (concat ret (org-char-to-string sum)))
 	    (setq sum 0))
 	   ((not bytes)			; single byte(s)
-	    (setq ret (org-link-unescape-single-byte-sequence hex))))
-	  )) ;; end (while bytes
-      ret )))
+	    (setq ret (org-link-unescape-single-byte-sequence hex))))))
+      ret)))
 
 (defun org-link-unescape-single-byte-sequence (hex)
   "Unhexify hex-encoded single byte character sequences."
@@ -9886,8 +10175,8 @@ Note: this function also decodes single byte encodings like
 
 (defun org-link-prettify (link)
   "Return a human-readable representation of LINK.
-The car of LINK must be a raw link the cdr of LINK must be either
-a link description or nil."
+The car of LINK must be a raw link.
+The cdr of LINK must be either a link description or nil."
   (let ((desc (or (cadr link) "<no description>")))
     (concat (format "%-45s" (substring desc 0 (min (length desc) 40)))
 	    "<" (car link) ">")))
@@ -9900,14 +10189,33 @@ This command can be called in any mode to insert a link in Org-mode syntax."
   (org-load-modules-maybe)
   (org-run-like-in-org-mode 'org-insert-link))
 
-(defun org-insert-all-links (&optional keep)
-  "Insert all links in `org-stored-links'."
+(defun org-insert-all-links (arg &optional pre post)
+  "Insert all links in `org-stored-links'.
+When a universal prefix, do not delete the links from `org-stored-links'.
+When `ARG' is a number, insert the last N link(s).
+`PRE' and `POST' are optional arguments to define a string to
+prepend or to append."
   (interactive "P")
-  (let ((links (copy-sequence org-stored-links)) l)
-    (while (setq l (if keep (pop links) (pop org-stored-links)))
-      (insert "- ")
-      (org-insert-link nil (car l) (or (cadr l) "<no description>"))
-      (insert "\n"))))
+  (let ((org-keep-stored-link-after-insertion (equal arg '(4)))
+	(links (copy-seq org-stored-links))
+	(pr (or pre "- "))
+	(po (or post "\n"))
+	(cnt 1) l)
+    (if (null org-stored-links)
+	(message "No link to insert")
+      (while (and (or (listp arg) (>= arg cnt))
+		  (setq l (if (listp arg)
+			      (pop links)
+			    (pop org-stored-links))))
+	(setq cnt (1+ cnt))
+	(insert pr)
+	(org-insert-link nil (car l) (or (cadr l) "<no description>"))
+	(insert po)))))
+
+(defun org-insert-last-stored-link (arg)
+  "Insert the last link stored in `org-stored-links'."
+  (interactive "p")
+  (org-insert-all-links arg "" "\n"))
 
 (defun org-link-fontify-links-to-this-file ()
   "Fontify links to the current file in `org-stored-links'."
@@ -10132,24 +10440,22 @@ Use TAB to complete link prefixes, then RET for type-specific completion support
 
 (defun org-file-complete-link (&optional arg)
   "Create a file link using completion."
-  (let (file link)
-    (setq file (org-iread-file-name "File: "))
-    (let ((pwd (file-name-as-directory (expand-file-name ".")))
-	  (pwd1 (file-name-as-directory (abbreviate-file-name
-					 (expand-file-name ".")))))
-      (cond
-       ((equal arg '(16))
-	(setq link (concat
-		    "file:"
-		    (abbreviate-file-name (expand-file-name file)))))
-       ((string-match (concat "^" (regexp-quote pwd1) "\\(.+\\)") file)
-	(setq link  (concat "file:" (match-string 1 file))))
-       ((string-match (concat "^" (regexp-quote pwd) "\\(.+\\)")
-		      (expand-file-name file))
-	(setq link  (concat
-		     "file:" (match-string 1 (expand-file-name file)))))
-       (t (setq link (concat "file:" file)))))
-    link))
+  (let ((file (org-iread-file-name "File: "))
+	(pwd (file-name-as-directory (expand-file-name ".")))
+	(pwd1 (file-name-as-directory (abbreviate-file-name
+				       (expand-file-name ".")))))
+    (cond ((equal arg '(16))
+	   (concat "file:"
+		   (abbreviate-file-name (expand-file-name file))))
+	  ((string-match
+	    (concat "^" (regexp-quote pwd1) "\\(.+\\)") file)
+	   (concat "file:" (match-string 1 file)))
+	  ((string-match
+	    (concat "^" (regexp-quote pwd) "\\(.+\\)")
+	    (expand-file-name file))
+	   (concat "file:"
+		   (match-string 1 (expand-file-name file))))
+	  (t (concat "file:" file)))))
 
 (defun org-iread-file-name (&rest args)
   "Read-file-name using `ido-mode' speedup if available.
@@ -10158,11 +10464,11 @@ See `read-file-name' for a description of parameters."
   (org-without-partial-completion
    (if (and org-completion-use-ido
             (fboundp 'ido-read-file-name)
-            (boundp 'ido-mode) ido-mode
-            (listp (second args)))
+            (org-bound-and-true-p ido-mode)
+            (listp (nth 1 args)))
        (let ((ido-enter-matching-directory nil))
-         (apply 'ido-read-file-name args))
-     (apply 'read-file-name args))))
+         (apply #'ido-read-file-name args))
+     (apply #'read-file-name args))))
 
 (defun org-completing-read (&rest args)
   "Completing-read with SPACE being a normal character."
@@ -10189,27 +10495,28 @@ from."
     (iswitchb-read-buffer prompt)))
 
 (defun org-icompleting-read (&rest args)
-  "Completing-read using `ido-mode' or `iswitchb' speedups if available."
+  "Completing-read using `ido-mode' or `iswitchb' speedups if available.
+Should be called like `completing-read'."
   (org-without-partial-completion
-   (if (and org-completion-use-ido
-	    (fboundp 'ido-completing-read)
-	    (boundp 'ido-mode) ido-mode
-	    (listp (second args)))
-       (let ((ido-enter-matching-directory nil))
-	 (apply 'ido-completing-read (concat (car args))
-		(if (consp (car (nth 1 args)))
-		    (mapcar 'car (nth 1 args))
-		  (nth 1 args))
-		(cddr args)))
-     (if (and org-completion-use-iswitchb
-	      (boundp 'iswitchb-mode) iswitchb-mode
-	      (listp (second args)))
-	 (apply 'org-iswitchb-completing-read (concat (car args))
-		(if (consp (car (nth 1 args)))
-		    (mapcar 'car (nth 1 args))
-		  (nth 1 args))
-		(cddr args))
-       (apply 'completing-read args)))))
+   (if (not (listp (nth 1 args)))
+       ;; Ido only supports lists as the COLLECTION argument.  Use
+       ;; default completion function when second argument is not
+       ;; a list.
+       (apply #'completing-read args)
+     (let ((ido-enter-matching-directory nil))
+       (apply (cond ((and org-completion-use-ido
+			  (fboundp 'ido-completing-read)
+			  (org-bound-and-true-p ido-mode))
+		     #'ido-completing-read)
+		    ((and org-completion-use-iswitchb
+			  (org-bound-and-true-p iswitchb-mode))
+		     #'org-iswitchb-completing-read)
+		    (t #'completing-read))
+	      (pop args)
+	      (if (org-some #'consp (car args))
+		  (mapcar #'car (pop args))
+		(pop args))
+	      args)))))
 
 (defun org-extract-attributes (s)
   "Extract the attributes cookie from a string and set as text property."
@@ -10363,264 +10670,226 @@ they must return nil.")
 (defvar org-link-search-inhibit-query nil) ;; dynamically scoped
 (defvar clean-buffer-list-kill-buffer-names) ; Defined in midnight.el
 (defun org-open-at-point (&optional arg reference-buffer)
-  "Open link at or after point.
-If there is no link at point, this function will search forward up to
-the end of the current line.
-Normally, files will be opened by an appropriate application.  If the
-optional prefix argument ARG is non-nil, Emacs will visit the file.
-With a double prefix argument, try to open outside of Emacs, in the
-application the system uses for this file type."
+  "Open link, timestamp, footnote or tags at point.
+
+When point is on a link, follow it.  Normally, files will be
+opened by an appropriate application.  If the optional prefix
+argument ARG is non-nil, Emacs will visit the file.  With
+a double prefix argument, try to open outside of Emacs, in the
+application the system uses for this file type.
+
+When point is on a timestamp, open the agenda at the day
+specified.
+
+When point is a footnote definition, move to the first reference
+found.  If it is on a reference, move to the associated
+definition.
+
+When point is on a headline, display a list of every link in the
+entry, so it is possible to pick one, or all, of them.  If point
+is on a tag, call `org-tags-view' instead.
+
+When optional argument REFERENCE-BUFFER is non-nil, it should
+specify a buffer from where the link search should happen.  This
+is used internally by `org-open-link-from-string'.
+
+On top of syntactically correct links, this function will open
+the link at point in comments or comment blocks and the first
+link in a property drawer line."
   (interactive "P")
-  ;; if in a code block, then open the block's results
-  (unless (call-interactively #'org-babel-open-src-block-result)
+  ;; On a code block, open block's results.
+  (unless (call-interactively 'org-babel-open-src-block-result)
     (org-load-modules-maybe)
     (move-marker org-open-link-marker (point))
     (setq org-window-config-before-follow-link (current-window-configuration))
     (org-remove-occur-highlights nil nil t)
-    (cond
-     ((and (org-at-heading-p)
-	   (not (org-at-timestamp-p t))
-	   (not (org-in-regexp
-		 (concat org-plain-link-re "\\|"
-			 org-bracket-link-regexp "\\|"
-			 org-angle-link-re "\\|"
-			 "[ \t]:[^ \t\n]+:[ \t]*$")))
-	   (not (get-text-property (point) 'org-linked-text)))
-      (or (let* ((lkall (org-offer-links-in-entry (current-buffer) (point) arg))
-		 (lk0 (car lkall))
-		 (lk (if (stringp lk0) (list lk0) lk0))
-		 (lkend (cdr lkall)))
-	    (mapcar (lambda(l)
-		      (search-forward l nil lkend)
-		      (goto-char (match-beginning 0))
-		      (org-open-at-point))
-		    lk))
-	  (progn (require 'org-attach) (org-attach-reveal 'if-exists))))
-     ((run-hook-with-args-until-success 'org-open-at-point-functions))
-     ((and (org-at-timestamp-p t)
-	   (not (org-in-regexp org-bracket-link-regexp)))
-      (org-follow-timestamp-link))
-     ((and (or (org-footnote-at-reference-p) (org-footnote-at-definition-p))
-	   (not (org-in-regexp org-any-link-re)))
-      (org-footnote-action))
-     (t
-      (let (type path link line search (pos (point)))
-	(catch 'match
-	  (save-excursion
-	    (or (org-in-regexp org-plain-link-re)
-		(skip-chars-forward "^]\n\r"))
-	    (when (org-in-regexp org-bracket-link-regexp 1)
-	      (setq link (org-extract-attributes
-			  (org-link-unescape (org-match-string-no-properties 1))))
-	      (while (string-match " *\n *" link)
-		(setq link (replace-match " " t t link)))
-	      (setq link (org-link-expand-abbrev link))
-	      (cond
-	       ((or (file-name-absolute-p link)
-		    (string-match "^\\.\\.?/" link))
-		(setq type "file" path link))
-	       ((string-match org-link-re-with-space3 link)
-		(setq type (match-string 1 link) path (match-string 2 link)))
-	       ((string-match "^help:+\\(.+\\)" link)
-		(setq type "help" path (match-string 1 link)))
-	       (t (setq type "thisfile" path link)))
-	      (throw 'match t)))
-
-	  (when (get-text-property (point) 'org-linked-text)
-	    (setq type "thisfile"
-		  pos (if (get-text-property (1+ (point)) 'org-linked-text)
-			  (1+ (point)) (point))
-		  path (buffer-substring
-			(or (previous-single-property-change pos 'org-linked-text)
-			    (point-min))
-			(or (next-single-property-change pos 'org-linked-text)
-			    (point-max)))
-		  ;; Ensure we will search for a <<<radio>>> link, not
-		  ;; a simple reference like <<ref>>
-		  path (concat "<" path))
-	    (throw 'match t))
-
-	  (save-excursion
-	    (when (or (org-in-regexp org-angle-link-re)
-		      (let ((match (org-in-regexp org-plain-link-re)))
-			;; Check a plain link is not within a bracket link
-			(and match
-			     (save-excursion
-			       (save-match-data
-				 (progn
-				   (goto-char (car match))
-				   (not (org-in-regexp org-bracket-link-regexp)))))))
-		      (let ((line_ending (save-excursion (end-of-line) (point))))
-			;; We are in a line before a plain or bracket link
-			(or (re-search-forward org-plain-link-re line_ending t)
-			    (re-search-forward org-bracket-link-regexp line_ending t))))
-	      (setq type (match-string 1)
-		    path (org-link-unescape (match-string 2)))
-		(throw 'match t)))
-	  (save-excursion
-	    (when (org-in-regexp (org-re "\\(:[[:alnum:]_@#%:]+\\):[ \t]*$"))
-	      (setq type "tags"
-		    path (match-string 1))
-	      (while (string-match ":" path)
-		(setq path (replace-match "+" t t path)))
-	      (throw 'match t)))
-	  (when (org-in-regexp "<\\([^><\n]+\\)>")
-	    (setq type "tree-match"
-		  path (match-string 1))
-	    (throw 'match t)))
-	(unless path
+    (unless (run-hook-with-args-until-success 'org-open-at-point-functions)
+      (let* ((context
+	      ;; Only consider supported types, even if they are not
+	      ;; the closest one.
+	      (org-element-lineage
+	       (org-element-context)
+	       '(comment comment-block footnote-definition footnote-reference
+			 headline inlinetask keyword link node-property
+			 timestamp)
+	       t))
+	     (type (org-element-type context))
+	     (value (org-element-property :value context)))
+	(cond
+	 ((not context) (user-error "No link found"))
+	 ;; Exception: open timestamps and links in properties
+	 ;; drawers, keywords and comments.
+	 ((memq type '(comment comment-block keyword node-property))
+	  (cond ((org-in-regexp org-any-link-re)
+		 (org-open-link-from-string (match-string-no-properties 0)))
+		((or (org-at-timestamp-p t) (org-at-date-range-p t))
+		 (org-follow-timestamp-link))
+		(t (user-error "No link found"))))
+	 ;; On a headline or an inlinetask, but not on a timestamp,
+	 ;; a link, a footnote reference or on tags.
+	 ((and (memq type '(headline inlinetask))
+	       ;; Not on tags.
+	       (progn (save-excursion (beginning-of-line)
+				      (looking-at org-complex-heading-regexp))
+		      (or (not (match-beginning 5))
+			  (< (point) (match-beginning 5)))))
+	  (let* ((data (org-offer-links-in-entry (current-buffer) (point) arg))
+		 (links (car data))
+		 (links-end (cdr data)))
+	    (if links
+		(dolist (link (if (stringp links) (list links) links))
+		  (search-forward link nil links-end)
+		  (goto-char (match-beginning 0))
+		  (org-open-at-point))
+	      (require 'org-attach)
+	      (org-attach-reveal 'if-exists))))
+	 ;; Do nothing on white spaces after an object, unless point
+	 ;; is right after it.
+	 ((> (point)
+	     (save-excursion
+	       (goto-char (org-element-property :end context))
+	       (skip-chars-backward " \t")
+	       (point)))
 	  (user-error "No link found"))
-
-	;; switch back to reference buffer
-	;; needed when if called in a temporary buffer through
-	;; org-open-link-from-string
-	(with-current-buffer (or reference-buffer (current-buffer))
-
-	  ;; Remove any trailing spaces in path
-	  (if (string-match " +\\'" path)
-	      (setq path (replace-match "" t t path)))
-	  (if (and org-link-translation-function
-		   (fboundp org-link-translation-function))
-	      ;; Check if we need to translate the link
-	      (let ((tmp (funcall org-link-translation-function type path)))
-		(setq type (car tmp) path (cdr tmp))))
-
-	  (cond
-
-	   ((assoc type org-link-protocols)
-	    (funcall (nth 1 (assoc type org-link-protocols)) path))
-
-	   ((equal type "help")
-	    (let ((f-or-v (intern path)))
-	      (cond ((fboundp f-or-v)
-		     (describe-function f-or-v))
-		    ((boundp f-or-v)
-		     (describe-variable f-or-v))
-		    (t (error "Not a known function or variable")))))
-
-	   ((equal type "mailto")
-	    (let ((cmd (car org-link-mailto-program))
-		  (args (cdr org-link-mailto-program)) args1
-		  (address path) (subject "") a)
-	      (if (string-match "\\(.*\\)::\\(.*\\)" path)
-		  (setq address (match-string 1 path)
-			subject (org-link-escape (match-string 2 path))))
-	      (while args
-		(cond
-		 ((not (stringp (car args))) (push (pop args) args1))
-		 (t (setq a (pop args))
-		    (if (string-match "%a" a)
-			(setq a (replace-match address t t a)))
-		    (if (string-match "%s" a)
-			(setq a (replace-match subject t t a)))
-		    (push a args1))))
-	      (apply cmd (nreverse args1))))
-
-	   ((member type '("http" "https" "ftp" "news"))
-	    (browse-url
-	     (concat type ":"
-		     (if (org-string-match-p
-			  (concat "[[:nonascii:]"
-				  org-link-escape-chars-browser "]")
-			  path)
-			 (org-link-escape path org-link-escape-chars-browser)
-		       path))))
-
-	   ((string= type "doi")
-	    (browse-url
-	     (concat org-doi-server-url
-		     (if (org-string-match-p
-			  (concat "[[:nonascii:]"
-				  org-link-escape-chars-browser "]")
-			  path)
-			 (org-link-escape path org-link-escape-chars-browser)
-		       path))))
-
-	   ((member type '("message"))
-	    (browse-url (concat type ":" path)))
-
-	   ((string= type "tags")
-	    (org-tags-view arg path))
-
-	   ((string= type "tree-match")
-	    (org-occur (concat "\\[" (regexp-quote path) "\\]")))
-
-	   ((string= type "file")
-	    (if (string-match "::\\([0-9]+\\)\\'" path)
-		(setq line (string-to-number (match-string 1 path))
-		      path (substring path 0 (match-beginning 0)))
-	      (if (string-match "::\\(.+\\)\\'" path)
-		  (setq search (match-string 1 path)
-			path (substring path 0 (match-beginning 0)))))
-	    (if (string-match "[*?{]" (file-name-nondirectory path))
-		(dired path)
-	      (org-open-file path arg line search)))
-
-	   ((string= type "shell")
-	    (let ((buf (generate-new-buffer "*Org Shell Output"))
-		  (cmd path))
-	      (if (or (and (not (string= org-confirm-shell-link-not-regexp ""))
-			   (string-match org-confirm-shell-link-not-regexp cmd))
-		      (not org-confirm-shell-link-function)
-		      (funcall org-confirm-shell-link-function
-			       (format "Execute \"%s\" in shell? "
-				       (org-add-props cmd nil
-					 'face 'org-warning))))
-		  (progn
-		    (message "Executing %s" cmd)
-		    (shell-command cmd buf)
-		    (if (featurep 'midnight)
-			(setq clean-buffer-list-kill-buffer-names
-			      (cons buf clean-buffer-list-kill-buffer-names))))
-		(error "Abort"))))
-
-	   ((string= type "elisp")
-	    (let ((cmd path))
-	      (if (or (and (not (string= org-confirm-elisp-link-not-regexp ""))
-			   (string-match org-confirm-elisp-link-not-regexp cmd))
-		      (not org-confirm-elisp-link-function)
-		      (funcall org-confirm-elisp-link-function
-			       (format "Execute \"%s\" as elisp? "
-				       (org-add-props cmd nil
-					 'face 'org-warning))))
-		  (message "%s => %s" cmd
-			   (if (equal (string-to-char cmd) ?\()
-			       (eval (read cmd))
-			     (call-interactively (read cmd))))
-		(error "Abort"))))
-
-	   ((and (string= type "thisfile")
-		 (or (run-hook-with-args-until-success
-		      'org-open-link-functions path)
-		     (and link
-			  (string-match "^id:" link)
-			  (or (featurep 'org-id) (require 'org-id))
-			  (progn
-			    (funcall (nth 1 (assoc "id" org-link-protocols))
-				     (substring path 3))
-			    t)))))
-
-	   ((string= type "thisfile")
-	    (if arg
-		(switch-to-buffer-other-window
-		 (org-get-buffer-for-internal-link (current-buffer)))
-	      (org-mark-ring-push))
-	    (let ((cmd `(org-link-search
-			 ,path
-			 ,(cond ((equal arg '(4)) ''occur)
-				((equal arg '(16)) ''org-occur))
-			 ,pos)))
-	      (condition-case nil (let ((org-link-search-inhibit-query t))
-				    (eval cmd))
-		(error (progn (widen) (eval cmd))))))
-
-	   (t (browse-url-at-point)))))))
+	 ((eq type 'timestamp) (org-follow-timestamp-link))
+	 ;; On tags within a headline or an inlinetask.
+	 ((and (memq type '(headline inlinetask))
+	       (progn (save-excursion (beginning-of-line)
+				      (looking-at org-complex-heading-regexp))
+		      (and (match-beginning 5)
+			   (>= (point) (match-beginning 5)))))
+	  (org-tags-view arg (substring (match-string 5) 0 -1)))
+	 ((eq type 'link)
+	  ;; When link is located within the description of another
+	  ;; link (e.g., an inline image), always open the parent
+	  ;; link.
+	  (let*((link (let ((up (org-element-property :parent context)))
+			(if (eq (org-element-type up) 'link) up context)))
+		(type (org-element-property :type link))
+		(path (org-link-unescape (org-element-property :path link))))
+	    ;; Switch back to REFERENCE-BUFFER needed when called in
+	    ;; a temporary buffer through `org-open-link-from-string'.
+	    (with-current-buffer (or reference-buffer (current-buffer))
+	      (cond
+	       ((equal type "file")
+		(if (string-match "[*?{]" (file-name-nondirectory path))
+		    (dired path)
+		  ;; Look into `org-link-protocols' in order to find
+		  ;; a DEDICATED-FUNCTION to open file.  The function
+		  ;; will be applied on raw link instead of parsed
+		  ;; link due to the limitation in `org-add-link-type'
+		  ;; ("open" function called with a single argument).
+		  ;; If no such function is found, fallback to
+		  ;; `org-open-file'.
+		  ;;
+		  ;; Note : "file+emacs" and "file+sys" types are
+		  ;; hard-coded in order to escape the previous
+		  ;; limitation.
+		  (let* ((option (org-element-property :search-option link))
+			 (app (org-element-property :application link))
+			 (dedicated-function
+			  (nth 1 (assoc app org-link-protocols))))
+		    (if dedicated-function
+			(funcall dedicated-function
+				 (concat path
+					 (and option (concat "::" option))))
+		      (apply 'org-open-file
+			     path
+			     (cond (arg)
+				   ((equal app "emacs") 'emacs)
+				   ((equal app "sys") 'system))
+			     (cond ((not option) nil)
+				   ((org-string-match-p "\\`[0-9]+\\'" option)
+				    (list (string-to-number option)))
+				   (t (list nil
+					    (org-link-unescape option)))))))))
+	       ((assoc type org-link-protocols)
+		(funcall (nth 1 (assoc type org-link-protocols)) path))
+	       ((equal type "help")
+		(let ((f-or-v (intern path)))
+		  (cond ((fboundp f-or-v) (describe-function f-or-v))
+			((boundp f-or-v) (describe-variable f-or-v))
+			(t (error "Not a known function or variable")))))
+	       ((member type '("http" "https" "ftp" "mailto" "news"))
+		(browse-url (org-link-escape-browser (concat type ":" path))))
+	       ((equal type "doi")
+		(browse-url
+		 (org-link-escape-browser (concat org-doi-server-url path))))
+	       ((equal type "message") (browse-url (concat type ":" path)))
+	       ((equal type "shell")
+		(let ((buf (generate-new-buffer "*Org Shell Output*"))
+		      (cmd path))
+		  (if (or (and (org-string-nw-p
+				org-confirm-shell-link-not-regexp)
+			       (string-match
+				org-confirm-shell-link-not-regexp cmd))
+			  (not org-confirm-shell-link-function)
+			  (funcall org-confirm-shell-link-function
+				   (format "Execute \"%s\" in shell? "
+					   (org-add-props cmd nil
+					     'face 'org-warning))))
+		      (progn
+			(message "Executing %s" cmd)
+			(shell-command cmd buf)
+			(when (featurep 'midnight)
+			  (setq clean-buffer-list-kill-buffer-names
+				(cons (buffer-name buf)
+				      clean-buffer-list-kill-buffer-names))))
+		    (user-error "Abort"))))
+	       ((equal type "elisp")
+		(let ((cmd path))
+		  (if (or (and (org-string-nw-p
+				org-confirm-elisp-link-not-regexp)
+			       (org-string-match-p
+				org-confirm-elisp-link-not-regexp cmd))
+			  (not org-confirm-elisp-link-function)
+			  (funcall org-confirm-elisp-link-function
+				   (format "Execute \"%s\" as elisp? "
+					   (org-add-props cmd nil
+					     'face 'org-warning))))
+		      (message "%s => %s" cmd
+			       (if (eq (string-to-char cmd) ?\()
+				   (eval (read cmd))
+				 (call-interactively (read cmd))))
+		    (user-error "Abort"))))
+	       ((equal type "id")
+		(require 'ord-id)
+		(funcall (nth 1 (assoc "id" org-link-protocols)) path))
+	       ((member type '("coderef" "custom-id" "fuzzy" "radio"))
+		(unless (run-hook-with-args-until-success
+			 'org-open-link-functions path)
+		  (if (not arg) (org-mark-ring-push)
+		    (switch-to-buffer-other-window
+		     (org-get-buffer-for-internal-link (current-buffer))))
+		  (let ((cmd `(org-link-search
+			       ,(if (member type '("custom-id" "coderef"))
+				    (org-element-property :raw-link link)
+				  path)
+			       ,(cond ((equal arg '(4)) 'occur)
+				      ((equal arg '(16)) 'org-occur))
+			       ,(org-element-property :begin link))))
+		    (condition-case nil
+			(let ((org-link-search-inhibit-query t))
+			  (eval cmd))
+		      (error (progn (widen) (eval cmd)))))))
+	       (t (browse-url-at-point))))))
+	 ;; On a footnote reference or at a footnote definition's label.
+	 ((or (eq type 'footnote-reference)
+	      (and (eq type 'footnote-definition)
+		   (save-excursion
+		     ;; Do not validate action when point is on the
+		     ;; spaces right after the footnote label, in
+		     ;; order to be on par with behaviour on links.
+		     (skip-chars-forward " \t")
+		     (let ((begin
+			    (org-element-property :contents-begin context)))
+		       (if begin (< (point) begin)
+			 (= (org-element-property :post-affiliated context)
+			    (line-beginning-position)))))))
+	  (org-footnote-action))
+	 (t (user-error "No link found")))))
     (move-marker org-open-link-marker nil)
     (run-hook-with-args 'org-follow-link-hook)))
-
-(defsubst org-uniquify (list)
-  "Non-destructively remove duplicate elements from LIST."
-  (let ((res (copy-sequence list))) (delete-dups res)))
 
 (defun org-offer-links-in-entry (buffer marker &optional nth zero)
   "Offer links in the current entry and return the selected link.
@@ -10633,10 +10902,7 @@ there is one, return it."
       (save-restriction
 	(widen)
 	(goto-char marker)
-	(let ((re (concat "\\(" org-bracket-link-regexp "\\)\\|"
-			  "\\(" org-angle-link-re "\\)\\|"
-			  "\\(" org-plain-link-re "\\)"))
-	      (cnt ?0)
+	(let ((cnt ?0)
 	      (in-emacs (if (integerp nth) nil nth))
 	      have-zero end links link c)
 	  (when (and (stringp zero) (string-match org-bracket-link-regexp zero))
@@ -10645,7 +10911,7 @@ there is one, return it."
 	  (save-excursion
 	    (org-back-to-heading t)
 	    (setq end (save-excursion (outline-next-heading) (point)))
-	    (while (re-search-forward re end t)
+	    (while (re-search-forward org-any-link-re end t)
 	      (push (match-string 0) links))
 	    (setq links (org-uniquify (reverse links))))
 	  (cond
@@ -10674,7 +10940,7 @@ there is one, return it."
 		(message "Select link to open, RET to open all:")
 		(setq c (read-char-exclusive))
 		(and (get-buffer "*Select Link*") (kill-buffer "*Select Link*"))))
-	    (when (equal c ?q) (error "Abort"))
+	    (when (equal c ?q) (user-error "Abort"))
 	    (if (equal c ?\C-m)
 		(setq link links)
 	      (setq nth (- c ?0))
@@ -10684,10 +10950,8 @@ there is one, return it."
 	      (setq link (nth (1- nth) links)))))
 	  (cons link end))))))
 
-;; Add special file links that specify the way of opening
-
-(org-add-link-type "file+sys" 'org-open-file-with-system)
-(org-add-link-type "file+emacs" 'org-open-file-with-emacs)
+;; TODO: These functions are deprecated since `org-open-at-point'
+;; hard-codes behaviour for "file+emacs" and "file+sys" types.
 (defun org-open-file-with-system (path)
   "Open file at PATH using the system way of opening it."
   (org-open-file path 'system))
@@ -10751,9 +11015,8 @@ If the current buffer is in `dired-mode', grep will be used to search
 in all files.  If AVOID-POS is given, ignore matches near that position.
 
 When optional argument STEALTH is non-nil, do not modify
-visibility around point, thus ignoring
-`org-show-hierarchy-above', `org-show-following-heading' and
-`org-show-siblings' variables."
+visibility around point, thus ignoring `org-show-context-detail'
+variable."
   (let ((case-fold-search t)
 	(s0 (mapconcat 'identity (org-split-string s "[ \t\r\n]+") " "))
 	(markers (concat "\\(?:" (mapconcat (lambda (x) (regexp-quote (car x)))
@@ -10761,25 +11024,15 @@ visibility around point, thus ignoring
 						    org-emphasis-alist)
 					    "\\|") "\\)"))
 	(pos (point))
-	(pre nil) (post nil)
-	words re0 re1 re2 re3 re4_ re4 re5 re2a re2a_ reall)
+	words re0 re2 re4_ re4 re5 re2a re2a_ reall)
     (cond
      ;; First check if there are any special search functions
      ((run-hook-with-args-until-success 'org-execute-file-search-functions s))
      ;; Now try the builtin stuff
-     ((and (equal (string-to-char s0) ?#)
+     ((and (eq (aref s0 0) ?#)
 	   (> (length s0) 1)
-	   (save-excursion
-	     (goto-char (point-min))
-	     (and
-	      (re-search-forward
-	       (concat "^[ \t]*:CUSTOM_ID:[ \t]+"
-		       (regexp-quote (substring s0 1)) "[ \t]*$") nil t)
-	      (setq type 'dedicated
-		    pos (match-beginning 0))))
-	   ;; There is an exact target for this
-	   (goto-char pos)
-	   (org-back-to-heading t)))
+	   (let ((match (org-find-property "CUSTOM_ID" (substring s0 1))))
+	     (and match (goto-char match) (setf type 'dedicated)))))
      ((save-excursion
 	(goto-char (point-min))
 	(and
@@ -10816,14 +11069,35 @@ visibility around point, thus ignoring
        ((derived-mode-p 'org-mode)
 	(org-occur (match-string 1 s)))
        (t (org-do-occur (match-string 1 s)))))
-     ((and (derived-mode-p 'org-mode) org-link-search-must-match-exact-headline)
-      (and (equal (string-to-char s) ?*) (setq s (substring s 1)))
+     ((and (derived-mode-p 'org-mode)
+	   (or (and (equal (string-to-char s) ?*) (setq s (substring s 1)))
+	       org-link-search-must-match-exact-headline))
+      ;; Headline search.
       (goto-char (point-min))
       (cond
        ((let (case-fold-search)
-	  (re-search-forward (format org-complex-heading-regexp-format
-				     (regexp-quote s))
-			     nil t))
+	  (re-search-forward
+	   (let* ((wspace "[ \t]")
+		  (wspaceopt (concat wspace "*"))
+		  (cookie (concat "\\(?:"
+				  wspaceopt
+				  "\\[[0-9]*\\(?:%\\|/[0-9]*\\)\\]"
+				  wspaceopt
+				  "\\)"))
+		  (sep (concat "\\(?:" wspace "+\\|" cookie "+\\)")))
+	     (concat
+	      org-outline-regexp-bol
+	      "\\(?:" org-todo-regexp "[ \t]+\\)?"
+	      "\\(?:\\[#.\\][ \t]+\\)?"
+	      "\\(?:" org-comment-string "[ \t]+\\)?"
+	      sep "*"
+	      (mapconcat #'identity
+			 (org-split-string (regexp-quote s))
+			 (concat sep "+"))
+	      sep "*"
+	      (org-re "\\(?:[ \t]+:[[:alnum:]_@#%%:]+:\\)?")
+	      "[ \t]*$"))
+	   nil t))
 	;; OK, found a match
 	(setq type 'dedicated)
 	(goto-char (match-beginning 0)))
@@ -10831,19 +11105,15 @@ visibility around point, thus ignoring
 	     (eq org-link-search-must-match-exact-headline 'query-to-create)
 	     (y-or-n-p "No match - create this as a new heading? "))
 	(goto-char (point-max))
-	(or (bolp) (newline))
-	(insert "* " s "\n")
+	(unless (bolp) (newline))
+	(org-insert-heading nil t t)
+	(insert s "\n")
 	(beginning-of-line 0))
        (t
 	(goto-char pos)
 	(error "No match"))))
      (t
       ;; A normal search string
-      (when (equal (string-to-char s) ?*)
-	;; Anchor on headlines, post may include tags.
-	(setq pre "^\\*+[ \t]+\\(?:\\sw+\\)?[ \t]*"
-	      post (org-re "[ \t]*\\(?:[ \t]+:[[:alnum:]_@#%:+]:[ \t]*\\)?$")
-	      s (substring s 1)))
       (remove-text-properties
        0 (length s)
        '(face nil mouse-face nil keymap nil fontified nil) s)
@@ -10860,15 +11130,9 @@ visibility around point, thus ignoring
 					  "[^a-zA-Z_\r\n]+") "\\)[^a-zA-Z_]")
 	    re4 (concat "[^a-zA-Z_]" re4_)
 
-	    re1 (concat pre re2 post)
-	    re3 (concat pre (if pre re4_ re4) post)
-	    re5 (concat pre ".*" re4)
-	    re2 (concat pre re2)
-	    re2a (concat pre (if pre re2a_ re2a))
-	    re4 (concat pre (if pre re4_ re4))
-	    reall (concat "\\(" re0 "\\)\\|\\(" re1 "\\)\\|\\(" re2
-			  "\\)\\|\\(" re3 "\\)\\|\\(" re4 "\\)\\|\\("
-			  re5 "\\)"))
+	    re5 (concat ".*" re4)
+	    reall (concat "\\(" re0 "\\)\\|\\(" re2 "\\)\\|\\(" re4
+			  "\\)\\|\\(" re5 "\\)"))
       (cond
        ((eq type 'org-occur) (org-occur reall))
        ((eq type 'occur) (org-do-occur (downcase reall) 'cleanup))
@@ -10876,10 +11140,8 @@ visibility around point, thus ignoring
 	  (setq type 'fuzzy)
 	  (if (or (and (org-search-not-self 1 re0 nil t)
 		       (setq type 'dedicated))
-		  (org-search-not-self 1 re1 nil t)
 		  (org-search-not-self 1 re2 nil t)
 		  (org-search-not-self 1 re2a nil t)
-		  (org-search-not-self 1 re3 nil t)
 		  (org-search-not-self 1 re4 nil t)
 		  (org-search-not-self 1 re5 nil t))
 	      (goto-char (match-beginning 1))
@@ -11154,7 +11416,9 @@ If the file does not exist, an error is thrown."
 	  (eq cmd 'emacs))
       (funcall (cdr (assq 'file org-link-frame-setup)) file)
       (widen)
-      (if line (org-goto-line line)
+      (if line (progn (org-goto-line line)
+		      (if (derived-mode-p 'org-mode)
+			  (org-reveal)))
 	(if search (org-link-search search))))
      ((consp cmd)
       (let ((file (convert-standard-filename file)))
@@ -11534,25 +11798,24 @@ the *old* location.")
   (let ((org-refile-keep t))
     (funcall 'org-refile nil nil nil "Copy")))
 
-(defun org-refile (&optional goto default-buffer rfloc msg)
+(defun org-refile (&optional arg default-buffer rfloc msg)
   "Move the entry or entries at point to another heading.
 The list of target headings is compiled using the information in
 `org-refile-targets', which see.
 
-At the target location, the entry is filed as a subitem of the target
-heading.  Depending on `org-reverse-note-order', the new subitem will
-either be the first or the last subitem.
+At the target location, the entry is filed as a subitem of the
+target heading.  Depending on `org-reverse-note-order', the new
+subitem will either be the first or the last subitem.
 
-If there is an active region, all entries in that region will be moved.
-However, the region must fulfill the requirement that the first heading
-is the first one sets the top-level of the moved text - at most siblings
-below it are allowed.
+If there is an active region, all entries in that region will be
+refiled.  However, the region must fulfill the requirement that
+the first heading sets the top-level of the moved text.
 
-With prefix arg GOTO, the command will only visit the target location
-and not actually move anything.
+With prefix arg ARG, the command will only visit the target
+location and not actually move anything.
 
-With a double prefix arg \\[universal-argument] \\[universal-argument], \
-go to the location where the last refiling operation has put the subtree.
+With a double prefix arg \\[universal-argument] \\[universal-argument], go to the location where the last
+refiling operation has put the subtree.
 
 With a numeric prefix argument of `2', refile to the running clock.
 
@@ -11568,23 +11831,22 @@ another verb.  E.g. `org-copy' sets this parameter to \"Copy\".
 
 See also `org-refile-use-outline-path' and `org-completion-use-ido'.
 
-If you are using target caching (see `org-refile-use-cache'),
-you have to clear the target cache in order to find new targets.
+If you are using target caching (see `org-refile-use-cache'), you
+have to clear the target cache in order to find new targets.
 This can be done with a 0 prefix (`C-0 C-c C-w') or a triple
 prefix argument (`C-u C-u C-u C-c C-w')."
-
   (interactive "P")
-  (if (member goto '(0 (64)))
+  (if (member arg '(0 (64)))
       (org-refile-cache-clear)
     (let* ((actionmsg (cond (msg msg)
-			    ((equal goto 3) "Refile (and keep)")
+			    ((equal arg 3) "Refile (and keep)")
 			    (t "Refile")))
 	   (cbuf (current-buffer))
 	   (regionp (org-region-active-p))
 	   (region-start (and regionp (region-beginning)))
 	   (region-end (and regionp (region-end)))
 	   (filename (buffer-file-name (buffer-base-buffer cbuf)))
-	   (org-refile-keep (if (equal goto 3) t org-refile-keep))
+	   (org-refile-keep (if (equal arg 3) t org-refile-keep))
 	   pos it nbuf file re level reversed)
       (setq last-command nil)
       (when regionp
@@ -11598,10 +11860,10 @@ prefix argument (`C-u C-u C-u C-c C-w')."
 			(org-toggle-heading)
 			(setq region-end (+ (- (point-at-eol) s) region-end)))))
 	  (user-error "The region is not a (sequence of) subtree(s)")))
-      (if (equal goto '(16))
+      (if (equal arg '(16))
 	  (org-refile-goto-last-stored)
 	(when (or
-	       (and (equal goto 2)
+	       (and (equal arg 2)
 		    org-clock-hd-marker (marker-buffer org-clock-hd-marker)
 		    (prog1
 			(setq it (list (or org-clock-heading "running clock")
@@ -11609,28 +11871,30 @@ prefix argument (`C-u C-u C-u C-c C-w')."
 					(marker-buffer org-clock-hd-marker))
 				       ""
 				       (marker-position org-clock-hd-marker)))
-		      (setq goto nil)))
+		      (setq arg nil)))
 	       (setq it (or rfloc
 			    (let (heading-text)
 			      (save-excursion
-				(unless (and goto (listp goto))
+				(unless (and arg (listp arg))
 				  (org-back-to-heading t)
 				  (setq heading-text
-					(nth 4 (org-heading-components))))
-
+					(replace-regexp-in-string
+					 org-bracket-link-regexp
+					 "\\3"
+					 (nth 4 (org-heading-components)))))
 				(org-refile-get-location
-				 (cond ((and goto (listp goto)) "Goto")
+				 (cond ((and arg (listp arg)) "Goto")
 				       (regionp (concat actionmsg " region to"))
 				       (t (concat actionmsg " subtree \""
 						  heading-text "\" to")))
 				 default-buffer
-				 (and (not (equal '(4) goto))
+				 (and (not (equal '(4) arg))
 				      org-refile-allow-creating-parent-nodes)
-				 goto))))))
+				 arg))))))
 	  (setq file (nth 1 it)
 		re (nth 2 it)
 		pos (nth 3 it))
-	  (if (and (not goto)
+	  (if (and (not arg)
 		   pos
 		   (equal (buffer-file-name) file)
 		   (if regionp
@@ -11640,10 +11904,9 @@ prefix argument (`C-u C-u C-u C-c C-w')."
 			  (< pos (save-excursion
 				   (org-end-of-subtree t t))))))
 	      (error "Cannot refile to position inside the tree or region"))
-
 	  (setq nbuf (or (find-buffer-visiting file)
 			 (find-file-noselect file)))
-	  (if (and goto (not (equal goto 3)))
+	  (if (and arg (not (equal arg 3)))
 	      (progn
 		(org-pop-to-buffer-same-window nbuf)
 		(goto-char pos)
@@ -11676,7 +11939,7 @@ prefix argument (`C-u C-u C-u C-c C-w')."
 		      (goto-char (point-min))
 		      (or (outline-next-heading) (goto-char (point-max)))))
 		  (if (not (bolp)) (newline))
-		  (org-paste-subtree level)
+		  (org-paste-subtree level nil nil t)
 		  (when org-log-refile
 		    (org-add-log-setup 'refile nil nil 'findpos org-log-refile)
 		    (unless (eq org-log-refile 'note)
@@ -11688,7 +11951,7 @@ prefix argument (`C-u C-u C-u C-c C-w')."
 						  :last-refile)))
 		    (when bookmark-name
 		      (with-demoted-errors
-			(bookmark-set bookmark-name))))
+			  (bookmark-set bookmark-name))))
 		  ;; If we are refiling for capture, make sure that the
 		  ;; last-capture pointers point here
 		  (when (org-bound-and-true-p org-refile-for-capture)
@@ -11696,7 +11959,7 @@ prefix argument (`C-u C-u C-u C-c C-w')."
 						    :last-capture-marker)))
 		      (when bookmark-name
 			(with-demoted-errors
-			  (bookmark-set bookmark-name))))
+			    (bookmark-set bookmark-name))))
 		    (move-marker org-capture-last-stored-marker (point)))
 		  (if (fboundp 'deactivate-mark) (deactivate-mark))
 		  (run-hooks 'org-after-refile-insert-hook))))
@@ -11714,7 +11977,7 @@ prefix argument (`C-u C-u C-u C-c C-w')."
 (defun org-refile-goto-last-stored ()
   "Go to the location where the last refile was stored."
   (interactive)
-  (bookmark-jump "org-refile-last-stored")
+  (bookmark-jump (plist-get org-bookmark-names-plist :last-refile))
   (message "This is the location of the last refile"))
 
 (defun org-refile--get-location (refloc tbl)
@@ -11815,7 +12078,7 @@ this is used for the GOTO interface."
 	 (pos (nth 3 refile-pointer))
 	 buffer)
     (if (and (not (markerp pos)) (not file))
-	(user-error "Please save the buffer to a file before refiling")
+	(user-error "Please indicate a target file in the refile path")
       (when (org-string-nw-p re)
 	(setq buffer (if (markerp pos)
 			 (marker-buffer pos)
@@ -11861,31 +12124,26 @@ this is used for the GOTO interface."
   (let ((thetable collection)
 	(org-completion-use-ido nil)	   ; does not work with ido.
 	(org-completion-use-iswitchb nil)) ; or iswitchb
-    (apply
-     'org-icompleting-read prompt
-     (lambda (string predicate &optional flag)
-       (let (rtn r f (l (length string)))
-	 (cond
-	  ((eq flag nil)
-	   ;; try completion
-	   (try-completion string thetable))
-	  ((eq flag t)
-	   ;; all-completions
-	   (setq rtn (all-completions string thetable predicate))
-	   (mapcar
-	    (lambda (x)
-	      (setq r (substring x l))
-	      (if (string-match " ([^)]*)$" x)
-		  (setq f (match-string 0 x))
-		(setq f ""))
-	      (if (string-match "/" r)
-		  (concat string (substring r 0 (match-end 0)) f)
-		x))
-	    rtn))
-	  ((eq flag 'lambda)
-	   ;; exact match?
-	   (assoc string thetable)))))
-     args)))
+    (apply #'org-icompleting-read
+	   prompt
+	   collection
+	   (lambda (string predicate &optional flag)
+	     (cond
+	      ((eq flag nil) (try-completion string thetable))
+	      ((eq flag t)
+	       (let ((l (length string)))
+		 (mapcar (lambda (x)
+			   (let ((r (substring x l))
+				 (f (if (string-match " ([^)]*)$" x)
+					(match-string 0 x)
+				      "")))
+			     (if (string-match "/" r)
+				 (concat string (substring r 0 (match-end 0)) f)
+			       x)))
+			 (all-completions string thetable predicate))))
+	      ;; Exact match?
+	      ((eq flag 'lambda) (assoc string thetable))))
+	   args)))
 
 ;;;; Dynamic blocks
 
@@ -11901,16 +12159,9 @@ If not found, stay at current position and return nil."
     (if pos (goto-char pos))
     pos))
 
-(defconst org-dblock-start-re
-  "^[ \t]*#\\+\\(?:BEGIN\\|begin\\):[ \t]+\\(\\S-+\\)\\([ \t]+\\(.*\\)\\)?"
-  "Matches the start line of a dynamic block, with parameters.")
-
-(defconst org-dblock-end-re "^[ \t]*#\\+\\(?:END\\|end\\)\\([: \t\r\n]\\|$\\)"
-  "Matches the end of a dynamic block.")
-
 (defun org-create-dblock (plist)
   "Create a dynamic block section, with parameters taken from PLIST.
-PLIST must contain a :name entry which is used as name of the block."
+PLIST must contain a :name entry which is used as the name of the block."
   (when (string-match "\\S-" (buffer-substring (point-at-bol) (point-at-eol)))
     (end-of-line 1)
     (newline))
@@ -12038,7 +12289,7 @@ Export keywords include options, block names, attributes and
 keywords relative to each registered export back-end."
   (let (keywords)
     (dolist (backend
-	     (org-bound-and-true-p org-export--registered-backends)
+	     (org-bound-and-true-p org-export-registered-backends)
 	     (delq nil keywords))
       ;; Back-end name (for keywords, like #+LATEX:)
       (push (upcase (symbol-name (org-export-backend-name backend))) keywords)
@@ -12054,27 +12305,24 @@ keywords relative to each registered export back-end."
     "TITLE:" "TODO:" "TYP_TODO:" "SELECT_TAGS:" "EXCLUDE_TAGS:"))
 
 (defcustom org-structure-template-alist
-  '(("s" "#+BEGIN_SRC ?\n\n#+END_SRC" "<src lang=\"?\">\n\n</src>")
-    ("e" "#+BEGIN_EXAMPLE\n?\n#+END_EXAMPLE" "<example>\n?\n</example>")
-    ("q" "#+BEGIN_QUOTE\n?\n#+END_QUOTE" "<quote>\n?\n</quote>")
-    ("v" "#+BEGIN_VERSE\n?\n#+END_VERSE" "<verse>\n?\n</verse>")
-    ("V" "#+BEGIN_VERBATIM\n?\n#+END_VERBATIM" "<verbatim>\n?\n</verbatim>")
-    ("c" "#+BEGIN_CENTER\n?\n#+END_CENTER" "<center>\n?\n</center>")
-    ("l" "#+BEGIN_LaTeX\n?\n#+END_LaTeX"
-     "<literal style=\"latex\">\n?\n</literal>")
-    ("L" "#+LaTeX: " "<literal style=\"latex\">?</literal>")
-    ("h" "#+BEGIN_HTML\n?\n#+END_HTML"
-     "<literal style=\"html\">\n?\n</literal>")
-    ("H" "#+HTML: " "<literal style=\"html\">?</literal>")
-    ("a" "#+BEGIN_ASCII\n?\n#+END_ASCII" "")
-    ("A" "#+ASCII: " "")
-    ("i" "#+INDEX: ?" "#+INDEX: ?")
-    ("I" "#+INCLUDE: %file ?"
-     "<include file=%file markup=\"?\">"))
+  '(("s" "#+BEGIN_SRC ?\n\n#+END_SRC")
+    ("e" "#+BEGIN_EXAMPLE\n?\n#+END_EXAMPLE")
+    ("q" "#+BEGIN_QUOTE\n?\n#+END_QUOTE")
+    ("v" "#+BEGIN_VERSE\n?\n#+END_VERSE")
+    ("V" "#+BEGIN_VERBATIM\n?\n#+END_VERBATIM")
+    ("c" "#+BEGIN_CENTER\n?\n#+END_CENTER")
+    ("l" "#+BEGIN_LaTeX\n?\n#+END_LaTeX")
+    ("L" "#+LaTeX: ")
+    ("h" "#+BEGIN_HTML\n?\n#+END_HTML")
+    ("H" "#+HTML: ")
+    ("a" "#+BEGIN_ASCII\n?\n#+END_ASCII")
+    ("A" "#+ASCII: ")
+    ("i" "#+INDEX: ?")
+    ("I" "#+INCLUDE: %file ?"))
   "Structure completion elements.
 This is a list of abbreviation keys and values.  The value gets inserted
 if you type `<' followed by the key and then press the completion key,
-usually `M-TAB'.  %file will be replaced by a file name after prompting
+usually `TAB'.  %file will be replaced by a file name after prompting
 for the file using completion.  The cursor will be placed at the position
 of the `?` in the template.
 There are two templates for each key, the first uses the original Org syntax,
@@ -12085,8 +12333,9 @@ variable `org-mtags-prefer-muse-templates'."
   :type '(repeat
 	  (list
 	   (string :tag "Key")
-	   (string :tag "Template")
-	   (string :tag "Muse Template"))))
+	   (string :tag "Template")))
+  :version "25.1"
+  :package-version '(Org . "8.3"))
 
 (defun org-try-structure-completion ()
   "Try to complete a structure template before point.
@@ -12103,11 +12352,10 @@ expands them."
 
 (defun org-complete-expand-structure-template (start cell)
   "Expand a structure template."
-  (let* ((musep (org-bound-and-true-p org-mtags-prefer-muse-templates))
-	 (rpl (nth (if musep 2 1) cell))
-	 (ind ""))
+  (let ((rpl (nth 1 cell))
+	(ind ""))
     (delete-region start (point))
-    (when (string-match "\\`#\\+" rpl)
+    (when (string-match "\\`[ \t]*#\\+" rpl)
       (cond
        ((bolp))
        ((not (string-match "\\S-" (buffer-substring (point-at-bol) (point))))
@@ -12134,17 +12382,17 @@ expands them."
   (interactive)
   (save-excursion
     (org-back-to-heading)
-    (let (case-fold-search)
-      (cond
-       ((looking-at (format org-heading-keyword-regexp-format
-			    org-comment-string))
-	(goto-char (match-end 1))
-	(looking-at (concat " +" org-comment-string))
-	(replace-match "" t t)
-	(when (eolp) (insert " ")))
-       ((looking-at org-outline-regexp)
-	(goto-char (match-end 0))
-	(insert org-comment-string " "))))))
+    (looking-at org-complex-heading-regexp)
+    (goto-char (or (match-end 3) (match-end 2) (match-end 1)))
+    (skip-chars-forward " \t")
+    (unless (memq (char-before) '(?\s ?\t)) (insert " "))
+    (if (org-in-commented-heading-p t)
+	(delete-region (point)
+		       (progn (search-forward " " (line-end-position) 'move)
+			      (skip-chars-forward " \t")
+			      (point)))
+      (insert org-comment-string)
+      (unless (eolp) (insert " ")))))
 
 (defvar org-last-todo-state-is-todo nil
   "This is non-nil when the last TODO state change led to a TODO state.
@@ -12183,13 +12431,29 @@ nil or a string to be used for the todo mark." )
   (interactive "P")
   (if (eq major-mode 'org-agenda-mode)
       (apply 'org-agenda-todo-yesterday arg)
-    (let* ((hour (third (decode-time
+    (let* ((org-use-effective-time t)
+	   (hour (third (decode-time
 			 (org-current-time))))
 	   (org-extend-today-until (1+ hour)))
       (org-todo arg))))
 
 (defvar org-block-entry-blocking ""
   "First entry preventing the TODO state change.")
+
+(defun org-cancel-repeater ()
+  "Cancel a repeater by setting its numeric value to zero."
+  (interactive)
+  (save-excursion
+    (org-back-to-heading t)
+    (let ((bound1 (point))
+	  (bound0 (save-excursion (outline-next-heading) (point))))
+      (when (re-search-forward
+	     (concat "\\(" org-scheduled-time-regexp "\\)\\|\\("
+		     org-deadline-time-regexp "\\)\\|\\("
+		     org-ts-regexp "\\)")
+	     bound0 t)
+	(if (re-search-backward "[ \t]+\\(?:[.+]\\)?\\+\\([0-9]+\\)[hdwmy]" bound1 t)
+	    (replace-match "0" t nil nil 1))))))
 
 (defun org-todo (&optional arg)
   "Change the TODO state of an item.
@@ -12211,8 +12475,9 @@ With a double \\[universal-argument] prefix, switch to the next set of TODO \
 keywords (nextset).
 With a triple \\[universal-argument] prefix, circumvent any state blocking.
 With a numeric prefix arg of 0, inhibit note taking for the change.
+With a numeric prefix arg of -1, cancel repeater to allow marking as DONE.
 
-For calling through lisp, arg is also interpreted in the following way:
+When called through ELisp, arg is also interpreted in the following way:
 'none             -> empty state
 \"\"(empty string)  -> switch to empty state
 'done             -> switch to DONE
@@ -12230,6 +12495,7 @@ For calling through lisp, arg is also interpreted in the following way:
 	 org-loop-over-headlines-in-active-region
 	 cl (if (outline-invisible-p) (org-end-of-subtree nil t))))
     (if (equal arg '(16)) (setq arg 'nextset))
+    (when (equal arg -1) (org-cancel-repeater) (setq arg nil))
     (let ((org-blocker-hook org-blocker-hook)
 	  commentp
 	  case-fold-search)
@@ -12242,7 +12508,7 @@ For calling through lisp, arg is also interpreted in the following way:
       (save-excursion
 	(catch 'exit
 	  (org-back-to-heading t)
-	  (when (looking-at (concat "^\\*+ " org-comment-string))
+	  (when (org-in-commented-heading-p t)
 	    (org-toggle-comment)
 	    (setq commentp t))
 	  (if (looking-at org-outline-regexp) (goto-char (1- (match-end 0))))
@@ -12352,8 +12618,10 @@ For calling through lisp, arg is also interpreted in the following way:
 		  (throw 'exit nil))))
 	    (store-match-data match-data)
 	    (replace-match next t t)
-	    (unless (pos-visible-in-window-p hl-pos)
-	      (message "TODO state changed to %s" (org-trim next)))
+	    (cond ((equal this org-state)
+		   (message "TODO state was already %s" (org-trim next)))
+		  ((pos-visible-in-window-p hl-pos)
+		   (message "TODO state changed to %s" (org-trim next))))
 	    (unless head
 	      (setq head (org-get-todo-sequence-head org-state)
 		    ass (assoc head org-todo-kwd-alist)
@@ -12523,7 +12791,7 @@ See variable `org-track-ordered-property-with-tag'."
       (org-back-to-heading)
       (if (org-entry-get nil "ORDERED")
 	  (progn
-	    (org-delete-property "ORDERED" "PROPERTIES")
+	    (org-delete-property "ORDERED")
 	    (and tag (org-toggle-tag tag 'off))
 	    (message "Subtasks can be completed in arbitrary order"))
 	(org-entry-put nil "ORDERED" "t")
@@ -12667,14 +12935,30 @@ statistics everywhere."
 	    	(setq kwd (and (or recursive (= l1 ltoggle))
 	    		       (match-string 2)))
 	    	(if (or (eq org-provide-todo-statistics 'all-headlines)
+			(and (eq org-provide-todo-statistics t)
+			     (or (member kwd org-done-keywords)))
 	    		(and (listp org-provide-todo-statistics)
+			     (stringp (car org-provide-todo-statistics))
 	    		     (or (member kwd org-provide-todo-statistics)
-	    			 (member kwd org-done-keywords))))
+	    			 (member kwd org-done-keywords)))
+			(and (listp org-provide-todo-statistics)
+			     (listp (car org-provide-todo-statistics))
+			     (or (member kwd (car org-provide-todo-statistics))
+				 (and (member kwd org-done-keywords)
+				      (member kwd (cadr org-provide-todo-statistics))))))
 	    	    (setq cnt-all (1+ cnt-all))
 	    	  (if (eq org-provide-todo-statistics t)
 	    	      (and kwd (setq cnt-all (1+ cnt-all)))))
-	    	(and (member kwd org-done-keywords)
-	    	     (setq cnt-done (1+ cnt-done)))
+	    	(when (or (and (member org-provide-todo-statistics '(t all-headlines))
+			       (member kwd org-done-keywords))
+			  (and (listp org-provide-todo-statistics)
+			       (listp (car org-provide-todo-statistics))
+			       (member kwd org-done-keywords)
+			       (member kwd (cadr org-provide-todo-statistics)))
+			  (and (listp org-provide-todo-statistics)
+			       (stringp (car org-provide-todo-statistics))
+			       (member kwd org-done-keywords)))
+		  (setq cnt-done (1+ cnt-done)))
 	    	(outline-next-heading)))
 	    (setq new
 	    	  (if is-percent
@@ -12878,7 +13162,7 @@ Returns the new TODO keyword, or nil if no state change should occur."
 (defvar org-last-inserted-timestamp)
 (defvar org-log-post-message)
 (defvar org-log-note-purpose)
-(defvar org-log-note-how)
+(defvar org-log-note-how nil)
 (defvar org-log-note-extra)
 (defun org-auto-repeat-maybe (done-word)
   "Check if the current headline contains a repeated deadline/schedule.
@@ -12895,7 +13179,7 @@ This function is run automatically after each state change to a DONE state."
 	 (org-log-done nil)
 	 (org-todo-log-states nil)
 	 re type n what ts time to-state)
-    (when repeat
+    (when (and repeat (not (zerop (string-to-number (substring repeat 1)))))
       (if (eq org-log-repeat t) (setq org-log-repeat 'state))
       (setq to-state (or (org-entry-get nil "REPEAT_TO_STATE")
 			 org-todo-repeat-to-state))
@@ -12948,7 +13232,7 @@ This function is run automatically after each state change to a DONE state."
 			       (time-to-days (current-time))))
 		  (when (= (incf nshift) nshiftmax)
 		    (or (y-or-n-p (message "%d repeater intervals were not enough to shift date past today.  Continue? " nshift))
-			(error "Abort")))
+			(user-error "Abort")))
 		  (org-timestamp-change n (cdr (assoc what whata)))
 		  (org-at-timestamp-p t)
 		  (setq ts (match-string 1))
@@ -13165,16 +13449,28 @@ nil."
 (defvar org-time-was-given) ; dynamically scoped parameter
 (defvar org-end-time-was-given) ; dynamically scoped parameter
 
-(defun org-add-planning-info (what &optional time &rest remove)
-  "Insert new timestamp with keyword in the line directly after the headline.
-WHAT indicates what kind of time stamp to add.  TIME indicates the time to use.
-If non is given, the user is prompted for a date.
-REMOVE indicates what kind of entries to remove.  An old WHAT entry will also
-be removed."
-  (interactive)
-  (let (org-time-was-given org-end-time-was-given ts
-			   end default-time default-input)
+(defun org-at-planning-p ()
+  "Non-nil when point is on a planning info line."
+  ;; This is as accurate and faster than `org-element-at-point' since
+  ;; planning info location is fixed in the section.
+  (org-with-wide-buffer
+   (beginning-of-line)
+   (and (org-looking-at-p org-planning-line-re)
+	(eq (point)
+	    (ignore-errors
+	      (if (and (featurep 'org-inlinetask) (org-inlinetask-in-task-p))
+		  (org-back-to-heading t)
+		(org-with-limited-levels (org-back-to-heading t)))
+	      (line-beginning-position 2))))))
 
+(defun org-add-planning-info (what &optional time &rest remove)
+  "Insert new timestamp with keyword in the planning line.
+WHAT indicates what kind of time stamp to add.  It is a symbol
+among `closed', `deadline', `scheduled' and nil.  TIME indicates
+the time to use.  If none is given, the user is prompted for
+a date.  REMOVE indicates what kind of entries to remove.  An old
+WHAT entry will also be removed."
+  (let (org-time-was-given org-end-time-was-given default-time default-input)
     (catch 'exit
       (when (and (memq what '(scheduled deadline))
 		 (or (not time)
@@ -13183,101 +13479,79 @@ be removed."
 	;; Try to get a default date/time from existing timestamp
 	(save-excursion
 	  (org-back-to-heading t)
-	  (setq end (save-excursion (outline-next-heading) (point)))
-	  (when (re-search-forward (if (eq what 'scheduled)
-				       org-scheduled-time-regexp
-				     org-deadline-time-regexp)
-				   end t)
-	    (setq ts (match-string 1)
-		  default-time
-		  (apply 'encode-time (org-parse-time-string ts))
-		  default-input (and ts (org-get-compact-tod ts))))))
+	  (let ((end (save-excursion (outline-next-heading) (point))) ts)
+	    (when (re-search-forward (if (eq what 'scheduled)
+					 org-scheduled-time-regexp
+				       org-deadline-time-regexp)
+				     end t)
+	      (setq ts (match-string 1)
+		    default-time (apply 'encode-time (org-parse-time-string ts))
+		    default-input (and ts (org-get-compact-tod ts)))))))
       (when what
 	(setq time
 	      (if (stringp time)
-		  ;; This is a string (relative or absolute), set proper date
-		  (apply 'encode-time
+		  ;; This is a string (relative or absolute), set
+		  ;; proper date.
+		  (apply #'encode-time
 			 (org-read-date-analyze
 			  time default-time (decode-time default-time)))
 		;; If necessary, get the time from the user
 		(or time (org-read-date nil 'to-time nil nil
 					default-time default-input)))))
 
-      (when (and org-insert-labeled-timestamps-at-point
-		 (member what '(scheduled deadline)))
-	(insert
-	 (if (eq what 'scheduled) org-scheduled-string org-deadline-string) " ")
-	(org-insert-time-stamp time org-time-was-given
-			       nil nil nil (list org-end-time-was-given))
-	(setq what nil))
-      (save-excursion
-	(save-restriction
-	  (let (col list elt ts buffer-invisibility-spec)
-	    (org-back-to-heading t)
-	    (looking-at (concat org-outline-regexp "\\( *\\)[^\r\n]*"))
-	    (goto-char (match-end 1))
-	    (setq col (current-column))
-	    (goto-char (match-end 0))
-	    (if (eobp) (insert "\n") (forward-char 1))
-	    (when (and (not what)
-		       (not (looking-at
-			     (concat "[ \t]*"
-				     org-keyword-time-not-clock-regexp))))
-	      ;; Nothing to add, nothing to remove...... :-)
-	      (throw 'exit nil))
-	    (if (and (not (looking-at org-outline-regexp))
-		     (looking-at (concat "[^\r\n]*?" org-keyword-time-regexp
-					 "[^\r\n]*"))
-		     (not (equal (match-string 1) org-clock-string)))
-		(narrow-to-region (match-beginning 0) (match-end 0))
-	      (insert-before-markers "\n")
-	      (backward-char 1)
-	      (narrow-to-region (point) (point))
-	      (and org-adapt-indentation (org-indent-to-column col)))
-	    ;; Check if we have to remove something.
-	    (setq list (cons what remove))
-	    (while list
-	      (setq elt (pop list))
-	      (when (or (and (eq elt 'scheduled)
-			     (re-search-forward org-scheduled-time-regexp nil t))
-			(and (eq elt 'deadline)
-			     (re-search-forward org-deadline-time-regexp nil t))
-			(and (eq elt 'closed)
-			     (re-search-forward org-closed-time-regexp nil t)))
-		(replace-match "")
-		(if (looking-at "--+<[^>]+>") (replace-match ""))))
-	    (and (looking-at "[ \t]+") (replace-match ""))
-	    (and org-adapt-indentation (bolp) (org-indent-to-column col))
-	    (when what
-	      (insert
-	       (if (not (or (bolp) (eq (char-before) ?\ ))) " " "")
-	       (cond ((eq what 'scheduled) org-scheduled-string)
-		     ((eq what 'deadline) org-deadline-string)
-		     ((eq what 'closed) org-closed-string))
-	       " ")
-	      (setq ts (org-insert-time-stamp
-			time
-			(or org-time-was-given
-			    (and (eq what 'closed) org-log-done-with-time))
-			(eq what 'closed)
-			nil nil (list org-end-time-was-given)))
-	      (insert
-	       (if (not (or (bolp) (eq (char-before) ?\ )
-			    (memq (char-after) '(32 10))
-			    (eobp))) " " ""))
-	      (end-of-line 1))
-	    (goto-char (point-min))
-	    (widen)
-	    (if (and (looking-at "[ \t]*\n")
-		     (equal (char-before) ?\n))
-		(delete-region (1- (point)) (point-at-eol)))
-	    ts))))))
+      (org-with-wide-buffer
+       (org-back-to-heading t)
+       (forward-line)
+       (unless (bolp) (insert "\n"))
+       (cond ((org-looking-at-p org-planning-line-re)
+	      ;; Move to current indentation.
+	      (skip-chars-forward " \t")
+	      ;; Check if we have to remove something.
+	      (dolist (type (if what (cons what remove) remove))
+		(when (save-excursion
+			(re-search-forward
+			 (case type
+			   (closed org-closed-time-regexp)
+			   (deadline org-deadline-time-regexp)
+			   (scheduled org-scheduled-time-regexp)
+			   (otherwise (error "Invalid planning type: %s" type)))
+			 (line-end-position) t))
+		  (replace-match "")
+		  (when (looking-at "--+<[^>]+>") (replace-match ""))
+		  (when (and (not what) (eq type 'closed))
+		    (save-excursion
+		      (beginning-of-line)
+		      (if (looking-at "[ \t]*$")
+			  (delete-region (point) (1+ (point-at-eol)))))))
+		;; Remove leading white spaces.
+		(when (and (not (bolp)) (looking-at "[ \t]+")) (replace-match ""))))
+	     ((not what) (throw 'exit nil)) ; Nothing to do.
+	     (t (insert-before-markers "\n")
+		(backward-char 1)
+		(when org-adapt-indentation
+		  (org-indent-to-column (1+ (org-outline-level))))))
+       (when what
+	 ;; Insert planning keyword.
+	 (insert (case what
+		   (closed org-closed-string)
+		   (deadline org-deadline-string)
+		   (scheduled org-scheduled-string)
+		   (otherwise (error "Invalid planning type: %s" what)))
+		 " ")
+	 ;; Insert associated timestamp.
+	 (let ((ts (org-insert-time-stamp
+		    time
+		    (or org-time-was-given
+			(and (eq what 'closed) org-log-done-with-time))
+		    (eq what 'closed)
+		    nil nil (list org-end-time-was-given))))
+	   (unless (eolp) (insert " "))
+	   ts))))))
 
 (defvar org-log-note-marker (make-marker))
 (defvar org-log-note-purpose nil)
 (defvar org-log-note-state nil)
 (defvar org-log-note-previous-state nil)
-(defvar org-log-note-how nil)
 (defvar org-log-note-extra nil)
 (defvar org-log-note-window-configuration nil)
 (defvar org-log-note-return-to (make-marker))
@@ -13296,73 +13570,89 @@ This is done in the same way as adding a state change note."
   (interactive)
   (org-add-log-setup 'note nil nil 'findpos nil))
 
-(defvar org-property-end-re)
-(defun org-add-log-setup (&optional purpose state prev-state
-				    findpos how extra)
+(defun org-log-beginning (&optional create)
+  "Return expected start of log notes in current entry.
+When optional argument CREATE is non-nil, the function creates
+a drawer to store notes, if necessary.  Returned position ignores
+narrowing."
+  (org-with-wide-buffer
+   (org-end-of-meta-data)
+   (let ((end (if (org-at-heading-p) (point)
+		(save-excursion (outline-next-heading) (point))))
+	 (drawer (org-log-into-drawer)))
+     (cond
+      (drawer
+       (let ((regexp (concat "^[ \t]*:" (regexp-quote drawer) ":[ \t]*$"))
+	     (case-fold-search t))
+	 (catch 'exit
+	   ;; Try to find existing drawer.
+	   (while (re-search-forward regexp end t)
+	     (let ((element (org-element-at-point)))
+	       (when (eq (org-element-type element) 'drawer)
+		 (let ((cend  (org-element-property :contents-end element)))
+		   (when (and (not org-log-states-order-reversed) cend)
+		     (goto-char cend)))
+		 (throw 'exit nil))))
+	   ;; No drawer found.  Create one, if permitted.
+	   (when create
+	     (unless (bolp) (insert "\n"))
+	     (let ((beg (point)))
+	       (insert ":" drawer ":\n:END:\n")
+	       (org-indent-region beg (point)))
+	     (end-of-line -1)))))
+      (org-log-state-notes-insert-after-drawers
+       (while (and (looking-at org-drawer-regexp)
+		   (progn (goto-char (match-end 0))
+			  (re-search-forward org-property-end-re end t)))
+	 (forward-line)))))
+   (if (bolp) (point) (line-beginning-position 2))))
+
+(defun org-add-log-setup (&optional purpose state prev-state findpos how extra)
   "Set up the post command hook to take a note.
 If this is about to TODO state change, the new state is expected in STATE.
 When FINDPOS is non-nil, find the correct position for the note in
 the current entry.  If not, assume that it can be inserted at point.
 HOW is an indicator what kind of note should be created.
 EXTRA is additional text that will be inserted into the notes buffer."
-  (let* ((org-log-into-drawer (org-log-into-drawer))
-	 (drawer (cond ((stringp org-log-into-drawer)
-			org-log-into-drawer)
-		       (org-log-into-drawer "LOGBOOK"))))
-    (save-restriction
-      (save-excursion
-	(when findpos
-	  (org-back-to-heading t)
-	  (narrow-to-region (point) (save-excursion
-				      (outline-next-heading) (point)))
-	  (looking-at (concat org-outline-regexp "\\( *\\)[^\r\n]*"
-			      "\\(\n[^\r\n]*?" org-keyword-time-not-clock-regexp
-			      "[^\r\n]*\\)?"))
-	  (goto-char (match-end 0))
-	  (cond
-	   (drawer
-	    (if (re-search-forward (concat "^[ \t]*:" drawer ":[ \t]*$")
-				   nil t)
-		(progn
-		  (goto-char (match-end 0))
-		  (or org-log-states-order-reversed
-		      (and (re-search-forward org-property-end-re nil t)
-			   (goto-char (1- (match-beginning 0))))))
-	      (insert "\n:" drawer ":\n:END:")
-	      (beginning-of-line 0)
-	      (org-indent-line)
-	      (beginning-of-line 2)
-	      (org-indent-line)
-	      (end-of-line 0)))
-	   ((and org-log-state-notes-insert-after-drawers
-		 (save-excursion
-		   (forward-line) (looking-at org-drawer-regexp)))
-	    (forward-line)
-	    (while (looking-at org-drawer-regexp)
-	      (goto-char (match-end 0))
-	      (re-search-forward org-property-end-re (point-max) t)
-	      (forward-line))
-	    (forward-line -1)))
-	  (unless org-log-states-order-reversed
-	    (and (= (char-after) ?\n) (forward-char 1))
-	    (org-skip-over-state-notes)
-	    (skip-chars-backward " \t\n\r")))
-	(move-marker org-log-note-marker (point))
-	(setq org-log-note-purpose purpose
-	      org-log-note-state state
-	      org-log-note-previous-state prev-state
-	      org-log-note-how how
-	      org-log-note-extra extra
-	      org-log-note-effective-time (org-current-effective-time))
-	(add-hook 'post-command-hook 'org-add-log-note 'append)))))
+  (org-with-wide-buffer
+   (when findpos
+     (goto-char (org-log-beginning t))
+     (unless org-log-states-order-reversed
+       (org-skip-over-state-notes)
+       (skip-chars-backward " \t\n\r")
+       (forward-line)))
+   (move-marker org-log-note-marker (point))
+   ;; Preserve position even if a property drawer is inserted in the
+   ;; process.
+   (set-marker-insertion-type org-log-note-marker t)
+   (setq org-log-note-purpose purpose
+	 org-log-note-state state
+	 org-log-note-previous-state prev-state
+	 org-log-note-how how
+	 org-log-note-extra extra
+	 org-log-note-effective-time (org-current-effective-time))
+   (add-hook 'post-command-hook 'org-add-log-note 'append)))
 
 (defun org-skip-over-state-notes ()
   "Skip past the list of State notes in an entry."
-  (if (looking-at "\n[ \t]*- State") (forward-char 1))
   (when (ignore-errors (goto-char (org-in-item-p)))
     (let* ((struct (org-list-struct))
-	   (prevs (org-list-prevs-alist struct)))
-      (while (looking-at "[ \t]*- State")
+	   (prevs (org-list-prevs-alist struct))
+	   (regexp
+	    (concat "[ \t]*- +"
+		    (replace-regexp-in-string
+		     " +" " +"
+		     (org-replace-escapes
+		      (regexp-quote (cdr (assq 'state org-log-note-headings)))
+		      `(("%d" . ,org-ts-regexp-inactive)
+			("%D" . ,org-ts-regexp)
+			("%s" . "\"\\S-+\"")
+			("%S" . "\"\\S-+\"")
+			("%t" . ,org-ts-regexp-inactive)
+			("%T" . ,org-ts-regexp)
+			("%u" . ".*?")
+			("%U" . ".*?")))))))
+      (while (org-looking-at-p regexp)
 	(goto-char (or (org-list-get-next-item (point) struct prevs)
 		       (org-list-get-item-end (point) struct)))))))
 
@@ -13410,80 +13700,73 @@ EXTRA is additional text that will be inserted into the notes buffer."
   "Finish taking a log note, and insert it to where it belongs."
   (let ((txt (buffer-string)))
     (kill-buffer (current-buffer))
-    (let ((note (cdr (assq org-log-note-purpose org-log-note-headings)))
-	  lines ind bul)
-    (while (string-match "\\`# .*\n[ \t\n]*" txt)
-      (setq txt (replace-match "" t t txt)))
-    (if (string-match "\\s-+\\'" txt)
+    (let ((note (cdr (assq org-log-note-purpose org-log-note-headings))) lines)
+      (while (string-match "\\`# .*\n[ \t\n]*" txt)
 	(setq txt (replace-match "" t t txt)))
-    (setq lines (org-split-string txt "\n"))
-    (when (and note (string-match "\\S-" note))
-      (setq note
-	    (org-replace-escapes
-	     note
-	     (list (cons "%u" (user-login-name))
-		   (cons "%U" user-full-name)
-		   (cons "%t" (format-time-string
-			       (org-time-stamp-format 'long 'inactive)
-			       org-log-note-effective-time))
-		   (cons "%T" (format-time-string
-			       (org-time-stamp-format 'long nil)
-			       org-log-note-effective-time))
-		   (cons "%d" (format-time-string
-			       (org-time-stamp-format nil 'inactive)
-			       org-log-note-effective-time))
-		   (cons "%D" (format-time-string
-			       (org-time-stamp-format nil nil)
-			       org-log-note-effective-time))
-		   (cons "%s" (if org-log-note-state
-				  (concat "\"" org-log-note-state "\"")
-				""))
-		   (cons "%S" (if org-log-note-previous-state
-				  (concat "\"" org-log-note-previous-state "\"")
-				"\"\"")))))
-      (if lines (setq note (concat note " \\\\")))
-      (push note lines))
-    (when (or current-prefix-arg org-note-abort)
-      (when org-log-into-drawer
-	(org-remove-empty-drawer-at
-	 (if (stringp org-log-into-drawer) org-log-into-drawer "LOGBOOK")
-	 org-log-note-marker))
-      (setq lines nil))
-    (when lines
-      (with-current-buffer (marker-buffer org-log-note-marker)
-	(save-excursion
-	  (goto-char org-log-note-marker)
-	  (move-marker org-log-note-marker nil)
-	  (end-of-line 1)
-	  (if (not (bolp)) (let ((inhibit-read-only t)) (insert "\n")))
-	  (setq ind (save-excursion
-		      (if (ignore-errors (goto-char (org-in-item-p)))
-			  (let ((struct (org-list-struct)))
-			    (org-list-get-ind
-			     (org-list-get-top-point struct) struct))
-			(skip-chars-backward " \r\t\n")
-			(cond
-			 ((and (org-at-heading-p)
-			       org-adapt-indentation)
-			  (1+ (org-current-level)))
-			 ((org-at-heading-p) 0)
-			 (t (org-get-indentation))))))
-	  (setq bul (org-list-bullet-string "-"))
-	  (org-indent-line-to ind)
-	  (insert bul (pop lines))
-	  (let ((ind-body (+ (length bul) ind)))
-	    (while lines
-	      (insert "\n")
-	      (org-indent-line-to ind-body)
-	      (insert (pop lines))))
-	  (message "Note stored")
-	  (org-back-to-heading t)
-	  (org-cycle-hide-drawers 'children))
-	;; Fix `buffer-undo-list' when `org-store-log-note' is called
-	;; from within `org-add-log-note' because `buffer-undo-list'
-	;; is then modified outside of `org-with-remote-undo'.
-	(when (eq this-command 'org-agenda-todo)
-	  (setcdr buffer-undo-list (cddr buffer-undo-list)))))))
+      (if (string-match "\\s-+\\'" txt)
+	  (setq txt (replace-match "" t t txt)))
+      (setq lines (org-split-string txt "\n"))
+      (when (and note (string-match "\\S-" note))
+	(setq note
+	      (org-replace-escapes
+	       note
+	       (list (cons "%u" (user-login-name))
+		     (cons "%U" user-full-name)
+		     (cons "%t" (format-time-string
+				 (org-time-stamp-format 'long 'inactive)
+				 org-log-note-effective-time))
+		     (cons "%T" (format-time-string
+				 (org-time-stamp-format 'long nil)
+				 org-log-note-effective-time))
+		     (cons "%d" (format-time-string
+				 (org-time-stamp-format nil 'inactive)
+				 org-log-note-effective-time))
+		     (cons "%D" (format-time-string
+				 (org-time-stamp-format nil nil)
+				 org-log-note-effective-time))
+		     (cons "%s" (if org-log-note-state
+				    (concat "\"" org-log-note-state "\"")
+				  ""))
+		     (cons "%S" (if org-log-note-previous-state
+				    (concat "\"" org-log-note-previous-state "\"")
+				  "\"\"")))))
+	(when lines (setq note (concat note " \\\\")))
+	(push note lines))
+      (when (or current-prefix-arg org-note-abort)
+	(when (org-log-into-drawer)
+	  (org-remove-empty-drawer-at org-log-note-marker))
+	(setq lines nil))
+      (when lines
+	(with-current-buffer (marker-buffer org-log-note-marker)
+	  (save-excursion
+	    (goto-char org-log-note-marker)
+	    (move-marker org-log-note-marker nil)
+	    ;; Make sure point is at the beginning of an empty line.
+	    (cond ((not (bolp)) (let ((inhibit-read-only t)) (insert "\n")))
+		  ((looking-at "[ \t]*\\S-") (save-excursion (insert "\n"))))
+	    ;; In an existing list, add a new item at the top level.
+	    ;; Otherwise, indent line like a regular one.
+	    (let ((itemp (org-in-item-p)))
+	      (if itemp
+		  (org-indent-line-to
+		   (let ((struct (save-excursion
+				   (goto-char itemp) (org-list-struct))))
+		     (org-list-get-ind (org-list-get-top-point struct) struct)))
+		(org-indent-line)))
+	    (insert (org-list-bullet-string "-") (pop lines))
+	    (let ((ind (org-list-item-body-column (line-beginning-position))))
+	      (dolist (line lines)
+		(insert "\n")
+		(org-indent-line-to ind)
+		(insert line)))
+	    (message "Note stored")
+	    (org-back-to-heading t)
+	    (org-cycle-hide-drawers 'children))
+	  ;; Fix `buffer-undo-list' when `org-store-log-note' is called
+	  ;; from within `org-add-log-note' because `buffer-undo-list'
+	  ;; is then modified outside of `org-with-remote-undo'.
+	  (when (eq this-command 'org-agenda-todo)
+	    (setcdr buffer-undo-list (cddr buffer-undo-list)))))))
   ;; Don't add undo information when called from `org-agenda-todo'
   (let ((buffer-undo-list (eq this-command 'org-agenda-todo)))
     (set-window-configuration org-log-note-window-configuration)
@@ -13492,17 +13775,20 @@ EXTRA is additional text that will be inserted into the notes buffer."
     (move-marker org-log-note-return-to nil)
     (and org-log-post-message (message "%s" org-log-post-message))))
 
-(defun org-remove-empty-drawer-at (drawer pos)
-  "Remove an empty drawer DRAWER at position POS.
+(defun org-remove-empty-drawer-at (pos)
+  "Remove an empty drawer at position POS.
 POS may also be a marker."
   (with-current-buffer (if (markerp pos) (marker-buffer pos) (current-buffer))
-    (save-excursion
-      (save-restriction
-	(widen)
-	(goto-char pos)
-	(if (org-in-regexp
-	     (concat "^[ \t]*:" drawer ":[ \t]*\n[ \t]*:END:[ \t]*\n?") 2)
-	    (replace-match ""))))))
+    (org-with-wide-buffer
+     (goto-char pos)
+     (let ((drawer (org-element-at-point)))
+       (when (and (memq (org-element-type drawer) '(drawer property-drawer))
+		  (not (org-element-property :contents-begin drawer)))
+	 (delete-region (org-element-property :begin drawer)
+			(progn (goto-char (org-element-property :end drawer))
+			       (skip-chars-backward " \r\t\n")
+			       (forward-line)
+			       (point))))))))
 
 (defvar org-ts-type nil)
 (defun org-sparse-tree (&optional arg type)
@@ -13532,7 +13818,6 @@ D      Show deadlines and scheduled items between a date range."
 	     (deadline "only deadline")
 	     (active "only active timestamps")
 	     (inactive "only inactive timestamps")
-	     (scheduled-or-deadline "scheduled/deadline")
 	     (closed "with a closed time-stamp")
 	     (otherwise "scheduled/deadline")))
   (let ((answer (read-char-exclusive)))
@@ -13540,24 +13825,24 @@ D      Show deadlines and scheduled items between a date range."
       (?c
        (org-sparse-tree
 	arg
-	(cadr (memq type '(scheduled-or-deadline all scheduled deadline active
-						 inactive closed)))))
-      (?d (call-interactively #'org-check-deadlines))
-      (?b (call-interactively #'org-check-before-date))
-      (?a (call-interactively #'org-check-after-date))
-      (?D (call-interactively #'org-check-dates-range))
-      (?t (call-interactively #'org-show-todo-tree))
+	(cadr
+	 (memq type '(nil all scheduled deadline active inactive closed)))))
+      (?d (call-interactively 'org-check-deadlines))
+      (?b (call-interactively 'org-check-before-date))
+      (?a (call-interactively 'org-check-after-date))
+      (?D (call-interactively 'org-check-dates-range))
+      (?t (call-interactively 'org-show-todo-tree))
       (?T (org-show-todo-tree '(4)))
-      (?m (call-interactively #'org-match-sparse-tree))
+      (?m (call-interactively 'org-match-sparse-tree))
       ((?p ?P)
        (let* ((kwd (org-icompleting-read
-		    "Property: " (mapcar #'list (org-buffer-property-keys))))
+		    "Property: " (mapcar 'list (org-buffer-property-keys))))
 	      (value (org-icompleting-read
-		      "Value: " (mapcar #'list (org-property-values kwd)))))
+		      "Value: " (mapcar 'list (org-property-values kwd)))))
 	 (unless (string-match "\\`{.*}\\'" value)
 	   (setq value (concat "\"" value "\"")))
 	 (org-match-sparse-tree arg (concat kwd "=" value))))
-      ((?r ?R ?/) (call-interactively #'org-occur))
+      ((?r ?R ?/) (call-interactively 'org-occur))
       (otherwise (user-error "No such sparse tree command \"%c\"" answer)))))
 
 (defvar org-occur-highlights nil
@@ -13631,7 +13916,7 @@ starting point when no match is found."
       (while (setq p1 (funcall search-func (point) 'org-type))
 	(when (equal p1 limit)
 	  (goto-char pos)
-	  (error "No more matches"))
+	  (user-error "No more matches"))
 	(when (equal (get-char-property p1 'org-type) 'org-occur)
 	  (setq n (1- n))
 	  (when (= n 0)
@@ -13639,65 +13924,71 @@ starting point when no match is found."
 	    (throw 'exit (point))))
 	(goto-char p1))
       (goto-char p1)
-      (error "No more matches"))))
+      (user-error "No more matches"))))
 
 (defun org-show-context (&optional key)
   "Make sure point and context are visible.
-How much context is shown depends upon the variables
-`org-show-hierarchy-above', `org-show-following-heading',
-`org-show-entry-below' and `org-show-siblings'."
-  (let ((heading-p   (org-at-heading-p t))
-	(hierarchy-p (org-get-alist-option org-show-hierarchy-above key))
-	(following-p (org-get-alist-option org-show-following-heading key))
-	(entry-p     (org-get-alist-option org-show-entry-below key))
-	(siblings-p  (org-get-alist-option org-show-siblings key)))
-    ;; Show heading or entry text
-    (if (and heading-p (not entry-p))
-	(org-flag-heading nil)    ; only show the heading
-      (and (or entry-p (outline-invisible-p) (org-invisible-p2))
-	   (org-show-hidden-entry)))    ; show entire entry
-    (when following-p
-      ;; Show next sibling, or heading below text
+Optional argument KEY, when non-nil, is a symbol.  See
+`org-show-context-detail' for allowed values and how much is to
+be shown."
+  (org-show-set-visibility
+   (cond ((symbolp org-show-context-detail) org-show-context-detail)
+	 ((cdr (assq key org-show-context-detail)))
+	 (t (cdr (assq 'default org-show-context-detail))))))
+
+(defun org-show-set-visibility (detail)
+  "Set visibility around point according to DETAIL.
+DETAIL is either nil, `minimal', `local', `ancestors', `lineage',
+`tree', `canonical' or t.  See `org-show-context-detail' for more
+information."
+  (unless (org-before-first-heading-p)
+    ;; Show current heading and possibly its entry, following headline
+    ;; or all children.
+    (if (and (org-at-heading-p) (not (eq detail 'local)))
+	(org-flag-heading nil)
+      (org-show-entry)
+      (org-with-limited-levels
+       (case detail
+	 ((tree canonical t) (show-children))
+	 ((nil minimal ancestors))
+	 (t (save-excursion
+	      (outline-next-heading)
+	      (org-flag-heading nil))))))
+    ;; Show all siblings.
+    (when (eq detail 'lineage) (org-show-siblings))
+    ;; Show ancestors, possibly with their children.
+    (when (memq detail '(ancestors lineage tree canonical t))
       (save-excursion
-	(and (if heading-p (org-goto-sibling) (outline-next-heading))
-	     (org-flag-heading nil))))
-    (when siblings-p (org-show-siblings))
-    (when hierarchy-p
-      ;; show all higher headings, possibly with siblings
-      (save-excursion
-	(while (and (condition-case nil
-			(progn (org-up-heading-all 1) t)
-		      (error nil))
-		    (not (bobp)))
+	(while (org-up-heading-safe)
 	  (org-flag-heading nil)
-	  (when siblings-p (org-show-siblings)))))))
+	  (when (memq detail '(canonical t)) (org-show-entry))
+	  (when (memq detail '(tree canonical t)) (show-children)))))))
 
 (defvar org-reveal-start-hook nil
   "Hook run before revealing a location.")
 
 (defun org-reveal (&optional siblings)
   "Show current entry, hierarchy above it, and the following headline.
-This can be used to show a consistent set of context around locations
-exposed with `org-show-hierarchy-above' or `org-show-following-heading'
-not t for the search context.
+
+This can be used to show a consistent set of context around
+locations exposed with `org-show-context'.
 
 With optional argument SIBLINGS, on each level of the hierarchy all
 siblings are shown.  This repairs the tree structure to what it would
 look like when opened with hierarchical calls to `org-cycle'.
+
 With double optional argument \\[universal-argument] \\[universal-argument], \
 go to the parent and show the
 entire tree."
   (interactive "P")
   (run-hooks 'org-reveal-start-hook)
-  (let ((org-show-hierarchy-above t)
-	(org-show-following-heading t)
-	(org-show-siblings (if siblings t org-show-siblings)))
-    (org-show-context nil))
-  (when (equal siblings '(16))
-    (save-excursion
-      (when (org-up-heading-safe)
-	(org-show-subtree)
-	(run-hook-with-args 'org-cycle-hook 'subtree)))))
+  (cond ((equal siblings '(4)) (org-show-set-visibility 'canonical))
+	((equal siblings '(16))
+	 (save-excursion
+	   (when (org-up-heading-safe)
+	     (org-show-subtree)
+	     (run-hook-with-args 'org-cycle-hook 'subtree))))
+	(t (org-show-set-visibility 'lineage))))
 
 (defun org-highlight-new-match (beg end)
   "Highlight from BEG to END and mark the highlight is an occur headline."
@@ -13742,83 +14033,83 @@ ACTION can be `set', `up', `down', or a character."
   (interactive "P")
   (if (equal action '(4))
       (org-show-priority)
-  (unless org-enable-priority-commands
-    (user-error "Priority commands are disabled"))
-  (setq action (or action 'set))
-  (let (current new news have remove)
-    (save-excursion
-      (org-back-to-heading t)
-      (if (looking-at org-priority-regexp)
-	  (setq current (string-to-char (match-string 2))
-		have t))
-      (cond
-       ((eq action 'remove)
-	(setq remove t new ?\ ))
-       ((or (eq action 'set)
-	    (if (featurep 'xemacs) (characterp action) (integerp action)))
-	(if (not (eq action 'set))
-	    (setq new action)
-	  (message "Priority %c-%c, SPC to remove: "
-		   org-highest-priority org-lowest-priority)
-	  (save-match-data
-	    (setq new (read-char-exclusive))))
-	(if (and (= (upcase org-highest-priority) org-highest-priority)
-		 (= (upcase org-lowest-priority) org-lowest-priority))
-	    (setq new (upcase new)))
-	(cond ((equal new ?\ ) (setq remove t))
-	      ((or (< (upcase new) org-highest-priority) (> (upcase new) org-lowest-priority))
-	       (user-error "Priority must be between `%c' and `%c'"
-		      org-highest-priority org-lowest-priority))))
-       ((eq action 'up)
-	(setq new (if have
-		      (1- current)  ; normal cycling
-		    ;; last priority was empty
-		    (if (eq last-command this-command)
-			org-lowest-priority  ; wrap around empty to lowest
-		      ;; default
-		      (if org-priority-start-cycle-with-default
-			  org-default-priority
-			(1- org-default-priority))))))
-       ((eq action 'down)
-	(setq new (if have
-		      (1+ current)  ; normal cycling
-		    ;; last priority was empty
-		    (if (eq last-command this-command)
-			org-highest-priority  ; wrap around empty to highest
-		      ;; default
-		      (if org-priority-start-cycle-with-default
-			  org-default-priority
-			(1+ org-default-priority))))))
-       (t (user-error "Invalid action")))
-      (if (or (< (upcase new) org-highest-priority)
-	      (> (upcase new) org-lowest-priority))
-	  (if (and (memq action '(up down))
-		   (not have) (not (eq last-command this-command)))
-              ;; `new' is from default priority
-	      (error
-	       "The default can not be set, see `org-default-priority' why")
-            ;; normal cycling: `new' is beyond highest/lowest priority
-            ;; and is wrapped around to the empty priority
-	    (setq remove t)))
-      (setq news (format "%c" new))
-      (if have
+    (unless org-enable-priority-commands
+      (user-error "Priority commands are disabled"))
+    (setq action (or action 'set))
+    (let (current new news have remove)
+      (save-excursion
+	(org-back-to-heading t)
+	(if (looking-at org-priority-regexp)
+	    (setq current (string-to-char (match-string 2))
+		  have t))
+	(cond
+	 ((eq action 'remove)
+	  (setq remove t new ?\ ))
+	 ((or (eq action 'set)
+	      (if (featurep 'xemacs) (characterp action) (integerp action)))
+	  (if (not (eq action 'set))
+	      (setq new action)
+	    (message "Priority %c-%c, SPC to remove: "
+		     org-highest-priority org-lowest-priority)
+	    (save-match-data
+	      (setq new (read-char-exclusive))))
+	  (if (and (= (upcase org-highest-priority) org-highest-priority)
+		   (= (upcase org-lowest-priority) org-lowest-priority))
+	      (setq new (upcase new)))
+	  (cond ((equal new ?\ ) (setq remove t))
+		((or (< (upcase new) org-highest-priority) (> (upcase new) org-lowest-priority))
+		 (user-error "Priority must be between `%c' and `%c'"
+			     org-highest-priority org-lowest-priority))))
+	 ((eq action 'up)
+	  (setq new (if have
+			(1- current)  ; normal cycling
+		      ;; last priority was empty
+		      (if (eq last-command this-command)
+			  org-lowest-priority  ; wrap around empty to lowest
+			;; default
+			(if org-priority-start-cycle-with-default
+			    org-default-priority
+			  (1- org-default-priority))))))
+	 ((eq action 'down)
+	  (setq new (if have
+			(1+ current)  ; normal cycling
+		      ;; last priority was empty
+		      (if (eq last-command this-command)
+			  org-highest-priority  ; wrap around empty to highest
+			;; default
+			(if org-priority-start-cycle-with-default
+			    org-default-priority
+			  (1+ org-default-priority))))))
+	 (t (user-error "Invalid action")))
+	(if (or (< (upcase new) org-highest-priority)
+		(> (upcase new) org-lowest-priority))
+	    (if (and (memq action '(up down))
+		     (not have) (not (eq last-command this-command)))
+		;; `new' is from default priority
+		(error
+		 "The default can not be set, see `org-default-priority' why")
+	      ;; normal cycling: `new' is beyond highest/lowest priority
+	      ;; and is wrapped around to the empty priority
+	      (setq remove t)))
+	(setq news (format "%c" new))
+	(if have
+	    (if remove
+		(replace-match "" t t nil 1)
+	      (replace-match news t t nil 2))
 	  (if remove
-	      (replace-match "" t t nil 1)
-	    (replace-match news t t nil 2))
-	(if remove
-	    (user-error "No priority cookie found in line")
-	  (let ((case-fold-search nil))
-	    (looking-at org-todo-line-regexp))
-	  (if (match-end 2)
-	      (progn
-		(goto-char (match-end 2))
-		(insert " [#" news "]"))
-	    (goto-char (match-beginning 3))
-	    (insert "[#" news "] "))))
-      (org-preserve-lc (org-set-tags nil 'align)))
-    (if remove
-	(message "Priority removed")
-      (message "Priority of current item set to %s" news)))))
+	      (user-error "No priority cookie found in line")
+	    (let ((case-fold-search nil))
+	      (looking-at org-todo-line-regexp))
+	    (if (match-end 2)
+		(progn
+		  (goto-char (match-end 2))
+		  (insert " [#" news "]"))
+	      (goto-char (match-beginning 3))
+	      (insert "[#" news "] "))))
+	(org-set-tags nil 'align))
+      (if remove
+	  (message "Priority removed")
+	(message "Priority of current item set to %s" news)))))
 
 (defun org-show-priority ()
   "Show the priority of the current item.
@@ -13905,7 +14196,8 @@ headlines matching this string."
          lspos tags tags-list
 	 (tags-alist (list (cons 0 org-file-tags)))
 	 (llast 0) rtn rtn1 level category i txt
-	 todo marker entry priority)
+	 todo marker entry priority
+	 ts-date ts-date-type ts-date-pair)
     (when (not (or (member action '(agenda sparse-tree)) (functionp action)))
       (setq action (list 'lambda nil action)))
     (save-excursion
@@ -13922,6 +14214,10 @@ headlines matching this string."
 	  (goto-char (setq lspos (match-beginning 0)))
 	  (setq level (org-reduced-level (org-outline-level))
 		category (org-get-category))
+          (when (eq action 'agenda)
+            (setq ts-date-pair (org-agenda-entry-get-agenda-timestamp (point))
+		  ts-date (car ts-date-pair)
+		  ts-date-type (cdr ts-date-pair)))
 	  (setq i llast llast level)
 	  ;; remove tag lists from same and sublevels
 	  (while (>= i level)
@@ -13985,7 +14281,8 @@ headlines matching this string."
 			  (if (eq org-tags-match-list-sublevels 'indented)
 			      (make-string (1- level) ?.) "")
 			  (org-get-heading))
-			 level category
+			 (make-string level ?\s)
+			 category
 			 tags-list)
 		    priority (org-get-priority txt))
 	      (goto-char lspos)
@@ -13993,7 +14290,9 @@ headlines matching this string."
 	      (org-add-props txt props
 		'org-marker marker 'org-hd-marker marker 'org-category category
 		'todo-state todo
-		'priority priority 'type "tagsmatch")
+                'ts-date ts-date
+		'priority priority
+                'type (concat "tagsmatch" ts-date-type))
 	      (push txt rtn))
 	     ((functionp action)
 	      (setq org-map-continue-from nil)
@@ -14052,15 +14351,17 @@ also TODO lines."
 (defun org-cached-entry-get (pom property)
   (if (or (eq t org-use-property-inheritance)
 	  (and (stringp org-use-property-inheritance)
-	       (string-match org-use-property-inheritance property))
+	       (let ((case-fold-search t))
+		 (org-string-match-p org-use-property-inheritance property)))
 	  (and (listp org-use-property-inheritance)
-	       (member property org-use-property-inheritance)))
-      ;; Caching is not possible, check it directly
+	       (member-ignore-case property org-use-property-inheritance)))
+      ;; Caching is not possible, check it directly.
       (org-entry-get pom property 'inherit)
-    ;; Get all properties, so that we can do complicated checks easily
-    (cdr (assoc property (or org-cached-props
-			     (setq org-cached-props
-				   (org-entry-properties pom)))))))
+    ;; Get all properties, so we can do complicated checks easily.
+    (cdr (assoc-string property
+		       (or org-cached-props
+			   (setq org-cached-props (org-entry-properties pom)))
+		       t))))
 
 (defun org-global-tags-completion-table (&optional files)
   "Return the list of all tags in all agenda buffer/files.
@@ -14239,16 +14540,16 @@ See also `org-scan-tags'.
 			  matcher)))
     (cons match0 matcher)))
 
-(defun org-tags-expand (match &optional single-as-list downcased)
+(defun org-tags-expand (match &optional single-as-list downcased tags-already-expanded)
   "Expand group tags in MATCH.
 
 This replaces every group tag in MATCH with a regexp tag search.
 For example, a group tag \"Work\" defined as { Work : Lab Conf }
 will be replaced like this:
 
-   Work =>  {\\(?:Work\\|Lab\\|Conf\\)}
-  +Work => +{\\(?:Work\\|Lab\\|Conf\\)}
-  -Work => -{\\(?:Work\\|Lab\\|Conf\\)}
+   Work =>  {\\<\\(?:Work\\|Lab\\|Conf\\)\\>}
+  +Work => +{\\<\\(?:Work\\|Lab\\|Conf\\)\\>}
+  -Work => -{\\<\\(?:Work\\|Lab\\|Conf\\)\\>}
 
 Replacing by a regexp preserves the structure of the match.
 E.g., this expansion
@@ -14258,6 +14559,12 @@ E.g., this expansion
 will match anything tagged with \"Lab\" and \"Home\", or tagged
 with \"Conf\" and \"Home\" or tagged with \"Work\" and \"home\".
 
+A group tag in MATCH can contain regular expressions of its own.
+For example, a group tag \"Proj\" defined as { Proj : {P@.+} }
+will be replaced like this:
+
+   Proj => {\\<\\(?:Proj\\)\\>\\|P@.+}
+
 When the optional argument SINGLE-AS-LIST is non-nil, MATCH is
 assumed to be a single group tag, and the function will return
 the list of tags in this group.
@@ -14266,33 +14573,112 @@ When DOWNCASE is non-nil, expand downcased TAGS."
   (if org-group-tags
       (let* ((case-fold-search t)
 	     (stable org-mode-syntax-table)
-	     (tal (or org-tag-groups-alist-for-agenda
-		      org-tag-groups-alist))
-	     (tal (if downcased
-		      (mapcar (lambda(tg) (mapcar 'downcase tg)) tal) tal))
-	     (tml (mapcar 'car tal))
-	     (rtnmatch match) rpl)
-	;; @ and _ are allowed as word-components in tags
+	     (taggroups (or org-tag-groups-alist-for-agenda org-tag-groups-alist))
+	     (taggroups (if downcased
+			    (mapcar (lambda (tg) (mapcar #'downcase tg))
+				    taggroups)
+			  taggroups))
+	     (taggroups-keys (mapcar #'car taggroups))
+	     (return-match (if downcased (downcase match) match))
+	     (count 0)
+	     (work-already-expanded tags-already-expanded)
+	     regexps-in-match tags-in-group regexp-in-group regexp-in-group-escaped)
+	;; @ and _ are allowed as word-components in tags.
 	(modify-syntax-entry ?@ "w" stable)
 	(modify-syntax-entry ?_ "w" stable)
-	(while (and tml
+	;; Temporarily replace regexp-expressions in the match-expression.
+	(while (string-match "{.+?}" return-match)
+	  (incf count)
+	  (push (match-string 0 return-match) regexps-in-match)
+	  (setq return-match (replace-match (format "<%d>" count) t nil return-match)))
+	(while (and taggroups-keys
 		    (with-syntax-table stable
 		      (string-match
 		       (concat "\\(?1:[+-]?\\)\\(?2:\\<"
-			       (regexp-opt tml) "\\>\\)") rtnmatch)))
-	  (let* ((dir (match-string 1 rtnmatch))
-		 (tag (match-string 2 rtnmatch))
+			       (regexp-opt taggroups-keys) "\\>\\)") return-match)))
+	  (let* ((dir (match-string 1 return-match))
+		 (tag (match-string 2 return-match))
 		 (tag (if downcased (downcase tag) tag)))
-	    (setq tml (delete tag tml))
-	    (when (not (get-text-property 0 'grouptag (match-string 2 rtnmatch)))
-	      (setq rpl (append (org-uniquify rpl) (assoc tag tal)))
-	      (setq rpl (concat dir "{\\<" (regexp-opt rpl) "\\>}"))
-	      (if (stringp rpl) (org-add-props rpl '(grouptag t)))
-	      (setq rtnmatch (replace-match rpl t t rtnmatch)))))
+	    (unless (or (get-text-property 0 'grouptag (match-string 2 return-match))
+		        (member tag work-already-expanded))
+	      (setq tags-in-group (assoc tag taggroups))
+	      (push tag work-already-expanded)
+	      ;; Recursively expand each tag in the group, if the tag hasn't
+	      ;; already been expanded.  Restore the match-data after all recursive calls.
+	      (save-match-data
+		(let (tags-expanded)
+		  (dolist (x (cdr tags-in-group))
+		    (if (and (member x taggroups-keys)
+			     (not (member x work-already-expanded)))
+			(setq tags-expanded
+			      (delete-dups
+			       (append
+				(org-tags-expand x t downcased
+						 work-already-expanded)
+				tags-expanded)))
+		      (setq tags-expanded
+			    (append (list x) tags-expanded)))
+		    (setq work-already-expanded
+			  (delete-dups
+			   (append tags-expanded
+				   work-already-expanded))))
+		  (setq tags-in-group
+			(delete-dups (cons (car tags-in-group)
+					   tags-expanded)))))
+	      ;; Filter tag-regexps from tags.
+	      (setq regexp-in-group-escaped
+		    (delq nil (mapcar (lambda (x)
+					(if (stringp x)
+					    (and (equal "{" (substring x 0 1))
+						 (equal "}" (substring x -1))
+						 x)
+					  x))
+				      tags-in-group))
+		    regexp-in-group
+		    (mapcar (lambda (x)
+			      (substring x 1 -1))
+			    regexp-in-group-escaped)
+		    tags-in-group
+		    (delq nil (mapcar (lambda (x)
+					(if (stringp x)
+					    (and (not (equal "{" (substring x 0 1)))
+						 (not (equal "}" (substring x -1)))
+						 x)
+					  x))
+				      tags-in-group)))
+	      ;; If single-as-list, do no more in the while-loop.
+	      (if (not single-as-list)
+		  (progn
+		    (when regexp-in-group
+		      (setq regexp-in-group
+			    (concat "\\|"
+				    (mapconcat 'identity regexp-in-group
+					       "\\|"))))
+		    (setq tags-in-group
+			  (concat dir
+				  "{\\<"
+				  (regexp-opt tags-in-group)
+				  "\\>"
+				  regexp-in-group
+				  "}"))
+		    (when (stringp tags-in-group)
+		      (org-add-props tags-in-group '(grouptag t)))
+		    (setq return-match
+			  (replace-match tags-in-group t t return-match)))
+		(setq tags-in-group
+		      (append regexp-in-group-escaped tags-in-group))))
+	    (setq taggroups-keys (delete tag taggroups-keys))))
+	;; Add the regular expressions back into the match-expression again.
+	(while regexps-in-match
+	  (setq return-match (replace-regexp-in-string (format "<%d>" count)
+						       (pop regexps-in-match)
+						       return-match t t))
+	  (decf count))
 	(if single-as-list
-	    (or (reverse rpl) (list rtnmatch))
-	  rtnmatch))
-    (if single-as-list (list (if downcased (downcase match) match))
+	    (if tags-in-group tags-in-group (list return-match))
+	  return-match))
+    (if single-as-list
+	(list (if downcased (downcase match) match))
       match)))
 
 (defun org-op-to-function (op &optional stringp)
@@ -14624,7 +15010,7 @@ When JUST-ALIGN is non-nil, only align tags."
 		       0)
 		  p0 (if (equal (char-before) ?*) (1+ (point)) (point))
 		  tc (+ org-tags-column (if (> org-tags-column 0) (- di) di))
-		  c1 (max (1+ c0) (if (> tc 0) tc (- (- tc) (length tags))))
+		  c1 (max (1+ c0) (if (> tc 0) tc (- (- tc) (string-width tags))))
 		  rpl (concat (make-string (max 0 (- c1 c0)) ?\ ) tags)))
 	  (replace-match rpl t t)
 	  (and (not (featurep 'xemacs)) c0 indent-tabs-mode (tabify p0 (point)))
@@ -14751,7 +15137,7 @@ Returns the new tags string, or nil to not change the current settings."
 	 ov-start ov-end ov-prefix
 	 (exit-after-next org-fast-tag-selection-single-key)
 	 (done-keywords org-done-keywords)
-	 groups ingroup)
+	 groups ingroup intaggroup)
     (save-excursion
       (beginning-of-line 1)
       (if (looking-at
@@ -14784,24 +15170,33 @@ Returns the new tags string, or nil to not change the current settings."
       (setq tbl fulltable char ?a cnt 0)
       (while (setq e (pop tbl))
 	(cond
-	 ((equal (car e) :startgroup)
+	 ((eq (car e) :startgroup)
 	  (push '() groups) (setq ingroup t)
-	  (when (not (= cnt 0))
+	  (unless (zerop cnt)
 	    (setq cnt 0)
 	    (insert "\n"))
 	  (insert (if (cdr e) (format "%s: " (cdr e)) "") "{ "))
-	 ((equal (car e) :endgroup)
+	 ((eq (car e) :endgroup)
 	  (setq ingroup nil cnt 0)
 	  (insert "}" (if (cdr e) (format " (%s) " (cdr e)) "") "\n"))
+	 ((eq (car e) :startgrouptag)
+	  (setq intaggroup t)
+	  (unless (zerop cnt)
+	    (setq cnt 0)
+	    (insert "\n"))
+	  (insert "[ "))
+	 ((eq (car e) :endgrouptag)
+	  (setq intaggroup nil cnt 0)
+	  (insert "]\n"))
 	 ((equal e '(:newline))
-	  (when (not (= cnt 0))
+	  (unless (zerop cnt)
 	    (setq cnt 0)
 	    (insert "\n")
 	    (setq e (car tbl))
 	    (while (equal (car tbl) '(:newline))
 	      (insert "\n")
 	      (setq tbl (cdr tbl)))))
-	 ((equal e '(:grouptags)) nil)
+	 ((equal e '(:grouptags)) (insert " : "))
 	 (t
 	  (setq tg (copy-sequence (car e)) c2 nil)
 	  (if (cdr e)
@@ -14815,27 +15210,27 @@ Returns the new tags string, or nil to not change the current settings."
 		  (setq char (1+ char)))
 	      (setq c2 c1))
 	    (setq c (or c2 char)))
-	  (if ingroup (push tg (car groups)))
+	  (when ingroup (push tg (car groups)))
 	  (setq tg (org-add-props tg nil 'face
 	  			  (cond
 	  			   ((not (assoc tg table))
 	  			    (org-get-todo-face tg))
 	  			   ((member tg current) c-face)
 	  			   ((member tg inherited) i-face))))
-	  (if (equal (caar tbl) :grouptags)
-	      (org-add-props tg nil 'face 'org-tag-group))
-	  (if (and (= cnt 0) (not ingroup)) (insert "  "))
+	  (when (equal (caar tbl) :grouptags)
+	    (org-add-props tg nil 'face 'org-tag-group))
+	  (when (and (zerop cnt) (not ingroup) (not intaggroup)) (insert " "))
 	  (insert "[" c "] " tg (make-string
 				 (- fwidth 4 (length tg)) ?\ ))
 	  (push (cons tg c) ntable)
-	  (when (= (setq cnt (1+ cnt)) ncol)
+	  (when (= (incf cnt) ncol)
 	    (insert "\n")
-	    (if ingroup (insert "  "))
+	    (when (or ingroup intaggroup) (insert " "))
 	    (setq cnt 0)))))
       (setq ntable (nreverse ntable))
       (insert "\n")
       (goto-char (point-min))
-      (if (not expert) (org-fit-window-to-buffer))
+      (unless expert (org-fit-window-to-buffer))
       (setq rtn
 	    (catch 'exit
 	      (while t
@@ -14865,7 +15260,7 @@ Returns the new tags string, or nil to not change the current settings."
 		  (setq quit-flag t))
 		 ((= c ?\ )
 		  (setq current nil)
-		  (if exit-after-next (setq exit-after-next 'now)))
+		  (when exit-after-next (setq exit-after-next 'now)))
 		 ((= c ?\t)
 		  (condition-case nil
 		      (setq tg (org-icompleting-read
@@ -14879,28 +15274,26 @@ Returns the new tags string, or nil to not change the current settings."
 		    (if (member tg current)
 			(setq current (delete tg current))
 		      (push tg current)))
-		  (if exit-after-next (setq exit-after-next 'now)))
+		  (when exit-after-next (setq exit-after-next 'now)))
 		 ((setq e (rassoc c todo-table) tg (car e))
 		  (with-current-buffer buf
 		    (save-excursion (org-todo tg)))
-		  (if exit-after-next (setq exit-after-next 'now)))
+		  (when exit-after-next (setq exit-after-next 'now)))
 		 ((setq e (rassoc c ntable) tg (car e))
 		  (if (member tg current)
 		      (setq current (delete tg current))
 		    (loop for g in groups do
-			  (if (member tg g)
-			      (mapc (lambda (x)
-				      (setq current (delete x current)))
-				    g)))
+			  (when (member tg g)
+			    (dolist (x g) (setq current (delete x current)))))
 		    (push tg current))
-		  (if exit-after-next (setq exit-after-next 'now))))
+		  (when exit-after-next (setq exit-after-next 'now))))
 
 		;; Create a sorted list
 		(setq current
 		      (sort current
 			    (lambda (a b)
 			      (assoc b (cdr (memq (assoc a ntable) ntable))))))
-		(if (eq exit-after-next 'now) (throw 'exit t))
+		(when (eq exit-after-next 'now) (throw 'exit t))
 		(goto-char (point-min))
 		(beginning-of-line 2)
 		(delete-region (point) (point-at-eol))
@@ -14938,16 +15331,16 @@ Returns the new tags string, or nil to not change the current settings."
 
 (defun org-get-buffer-tags ()
   "Get a table of all tags used in the buffer, for completion."
-  (let (tags)
-    (save-excursion
-      (goto-char (point-min))
-      (while (re-search-forward
-	      (org-re "[ \t]:\\([[:alnum:]_@#%:]+\\):[ \t\r\n]") nil t)
-	(when (equal (char-after (point-at-bol 0)) ?*)
-	  (mapc (lambda (x) (add-to-list 'tags x))
-		(org-split-string (org-match-string-no-properties 1) ":")))))
-    (mapc (lambda (s) (add-to-list 'tags s)) org-file-tags)
-    (mapcar 'list tags)))
+  (org-with-wide-buffer
+   (goto-char (point-min))
+   (let ((tag-re (concat org-outline-regexp-bol
+			 "\\(?:.*?[ \t]\\)?"
+			 (org-re ":\\([[:alnum:]_@#%:]+\\):[ \t]*$")))
+	 tags)
+     (while (re-search-forward tag-re nil t)
+       (dolist (tag (org-split-string (org-match-string-no-properties 1) ":"))
+	 (push tag tags)))
+     (mapcar #'list (append org-file-tags (org-uniquify tags))))))
 
 ;;;; The mapping API
 
@@ -15024,7 +15417,6 @@ a *different* entry, you cannot use these techniques."
 	   org-todo-keywords-for-agenda
 	   org-done-keywords-for-agenda
 	   org-todo-keyword-alist-for-agenda
-	   org-drawers-for-agenda
 	   org-tag-alist-for-agenda
 	   todo-only)
 
@@ -15083,15 +15475,12 @@ a *different* entry, you cannot use these techniques."
 		    (setq res (append res (org-scan-tags func matcher todo-only))))))))))
       res)))
 
-;;;; Properties
-
-;;; Setting and retrieving properties
+;;; Properties API
 
 (defconst org-special-properties
-  '("TODO" "TAGS" "ALLTAGS" "DEADLINE" "SCHEDULED" "CLOCK" "CLOSED" "PRIORITY"
-    "TIMESTAMP" "TIMESTAMP_IA" "BLOCKED" "FILE" "CLOCKSUM" "CLOCKSUM_T")
-  "The special properties valid in Org-mode.
-
+  '("ALLTAGS" "BLOCKED" "CLOCKSUM" "CLOCKSUM_T" "CLOSED" "DEADLINE" "FILE"
+    "ITEM" "PRIORITY" "SCHEDULED" "TAGS" "TIMESTAMP" "TIMESTAMP_IA" "TODO")
+  "The special properties valid in Org mode.
 These are properties that are not defined in the property drawer,
 but in some other way.")
 
@@ -15100,59 +15489,80 @@ but in some other way.")
     "LOCATION" "LOGGING" "COLUMNS" "VISIBILITY"
     "TABLE_EXPORT_FORMAT" "TABLE_EXPORT_FILE"
     "EXPORT_OPTIONS" "EXPORT_TEXT" "EXPORT_FILE_NAME"
-    "EXPORT_TITLE" "EXPORT_AUTHOR" "EXPORT_DATE"
+    "EXPORT_TITLE" "EXPORT_AUTHOR" "EXPORT_DATE" "UNNUMBERED"
     "ORDERED" "NOBLOCKING" "COOKIE_DATA" "LOG_INTO_DRAWER" "REPEAT_TO_STATE"
     "CLOCK_MODELINE_TOTAL" "STYLE" "HTML_CONTAINER_CLASS")
-  "Some properties that are used by Org-mode for various purposes.
+  "Some properties that are used by Org mode for various purposes.
 Being in this list makes sure that they are offered for completion.")
 
-(defconst org-property-start-re "^[ \t]*:PROPERTIES:[ \t]*$"
-  "Regular expression matching the first line of a property drawer.")
+(defun org--update-property-plist (key val props)
+  "Associate KEY to VAL in alist PROPS.
+Modifications are made by side-effect.  Return new alist."
+  (let* ((appending (string= (substring key -1) "+"))
+	 (key (if appending (substring key 0 -1) key))
+	 (old (assoc-string key props t)))
+    (if (not old) (cons (cons key val) props)
+      (setcdr old (if appending (concat (cdr old) " " val) val))
+      props)))
 
-(defconst org-property-end-re "^[ \t]*:END:[ \t]*$"
-  "Regular expression matching the last line of a property drawer.")
+(defun org-get-property-block (&optional beg force)
+  "Return the (beg . end) range of the body of the property drawer.
+BEG is the beginning of the current subtree, or of the part
+before the first headline.  If it is not given, it will be found.
+If the drawer does not exist, create it if FORCE is non-nil, or
+return nil."
+  (org-with-wide-buffer
+   (when beg (goto-char beg))
+   (unless (org-before-first-heading-p)
+     (let ((beg (cond (beg)
+		      ((or (not (featurep 'org-inlinetask))
+			   (org-inlinetask-in-task-p))
+		       (org-back-to-heading t))
+		      (t (org-with-limited-levels (org-back-to-heading t))))))
+       (forward-line)
+       (when (org-looking-at-p org-planning-line-re) (forward-line))
+       (cond ((looking-at org-property-drawer-re)
+	      (forward-line)
+	      (cons (point) (progn (goto-char (match-end 0))
+				   (line-beginning-position))))
+	     (force
+	      (goto-char beg)
+	      (org-insert-property-drawer)
+	      (let ((pos (save-excursion (search-forward ":END:")
+					 (line-beginning-position))))
+		(cons pos pos))))))))
 
-(defconst org-clock-drawer-start-re "^[ \t]*:CLOCK:[ \t]*$"
-  "Regular expression matching the first line of a property drawer.")
-
-(defconst org-clock-drawer-end-re "^[ \t]*:END:[ \t]*$"
-  "Regular expression matching the first line of a property drawer.")
-
-(defconst org-property-drawer-re
-  (concat "\\(" org-property-start-re "\\)[^\000]*\\("
-	  org-property-end-re "\\)\n?")
-  "Matches an entire property drawer.")
-
-(defconst org-clock-drawer-re
-  (concat "\\(" org-clock-drawer-start-re "\\)[^\000]*\\("
-	  org-property-end-re "\\)\n?")
-  "Matches an entire clock drawer.")
+(defun org-at-property-p ()
+  "Non-nil when point is inside a property drawer.
+See `org-property-re' for match data, if applicable."
+  (save-excursion
+    (beginning-of-line)
+    (and (looking-at org-property-re)
+	 (let ((property-drawer (save-match-data (org-get-property-block))))
+	   (and property-drawer
+		(>= (point) (car property-drawer))
+		(< (point) (cdr property-drawer)))))))
 
 (defun org-property-action ()
   "Do an action on properties."
   (interactive)
-  (let (c)
-    (org-at-property-p)
-    (message "Property Action:  [s]et  [d]elete  [D]elete globally  [c]ompute")
-    (setq c (read-char-exclusive))
-    (cond
-     ((equal c ?s)
-      (call-interactively 'org-set-property))
-     ((equal c ?d)
-      (call-interactively 'org-delete-property))
-     ((equal c ?D)
-      (call-interactively 'org-delete-property-globally))
-     ((equal c ?c)
-      (call-interactively 'org-compute-property-at-point))
-     (t (user-error "No such property action %c" c)))))
+  (unless (org-at-property-p) (user-error "Not at a property"))
+  (message "Property Action:  [s]et  [d]elete  [D]elete globally  [c]ompute")
+  (let ((c (read-char-exclusive)))
+    (case c
+      (?s (call-interactively #'org-set-property))
+      (?d (call-interactively #'org-delete-property))
+      (?D (call-interactively #'org-delete-property-globally))
+      (?c (call-interactively #'org-compute-property-at-point))
+      (otherwise (user-error "No such property action %c" c)))))
 
 (defun org-inc-effort ()
   "Increment the value of the effort property in the current entry."
   (interactive)
   (org-set-effort nil t))
 
-(defvar org-clock-effort)       ;; Defined in org-clock.el
-(defvar org-clock-current-task) ;; Defined in org-clock.el
+(defvar org-clock-effort)       ; Defined in org-clock.el.
+(defvar org-clock-current-task) ; Defined in org-clock.el.
 (defun org-set-effort (&optional value increment)
   "Set the effort property of the current entry.
 With numerical prefix arg, use the nth allowed value, 0 stands for the
@@ -15197,218 +15607,263 @@ When INCREMENT is non-nil, set the property to the next allowed value."
 		   existing nil nil "" nil cur))))))
     (unless (equal (org-entry-get nil prop) val)
       (org-entry-put nil prop val))
-    (save-excursion
-      (org-back-to-heading t)
-      (put-text-property (point-at-bol) (point-at-eol) 'org-effort val))
+    (org-refresh-property
+     '((effort . identity)
+       (effort-minutes . org-duration-string-to-minutes))
+     val)
     (when (string= heading org-clock-current-task)
-      (setq org-clock-effort (get-text-property (point-at-bol) 'org-effort))
+      (setq org-clock-effort (get-text-property (point-at-bol) 'effort))
       (org-clock-update-mode-line))
     (message "%s is now %s" prop val)))
 
-(defun org-at-property-p ()
-  "Is cursor inside a property drawer?"
-  (save-excursion
-    (when (equal 'node-property (car (org-element-at-point)))
-      (beginning-of-line 1)
-      (looking-at org-property-re))))
+(defun org-entry-properties (&optional pom which)
+  "Get all properties of the current entry.
 
-(defun org-get-property-block (&optional beg end force)
-  "Return the (beg . end) range of the body of the property drawer.
-BEG and END are the beginning and end of the current subtree, or of
-the part before the first headline.  If they are not given, they will
-be found.  If the drawer does not exist and FORCE is non-nil, create
-the drawer."
-  (catch 'exit
-    (save-excursion
-      (let* ((beg (or beg (and (org-before-first-heading-p) (point-min))
-		      (progn (org-back-to-heading t) (point))))
-	     (end (or end (and (not (outline-next-heading)) (point-max))
-		      (point))))
-	(goto-char beg)
-	(if (re-search-forward org-property-start-re end t)
-	    (setq beg (1+ (match-end 0)))
-	  (if force
-	      (save-excursion
-		(org-insert-property-drawer)
-		(setq end (progn (outline-next-heading) (point))))
-	    (throw 'exit nil))
-	  (goto-char beg)
-	  (if (re-search-forward org-property-start-re end t)
-	      (setq beg (1+ (match-end 0)))))
-	(if (re-search-forward org-property-end-re end t)
-	    (setq end (match-beginning 0))
-	  (or force (throw 'exit nil))
-	  (goto-char beg)
-	  (setq end beg)
-	  (org-indent-line)
-	  (insert ":END:\n"))
-	(cons beg end)))))
+When POM is a buffer position, get all properties from the entry
+there instead.
 
-(defun org-entry-properties (&optional pom which specific)
-  "Get all properties of the entry at point-or-marker POM.
-This includes the TODO keyword, the tags, time strings for deadline,
-scheduled, and clocking, and any additional properties defined in the
-entry.  The return value is an alist, keys may occur multiple times
-if the property key was used several times.
-POM may also be nil, in which case the current entry is used.
+This includes the TODO keyword, the tags, time strings for
+deadline, scheduled, and clocking, and any additional properties
+defined in the entry.
+
 If WHICH is nil or `all', get all properties.  If WHICH is
-`special' or `standard', only get that subclass.  If WHICH
-is a string only get exactly this property.  SPECIFIC can be a string, the
-specific property we are interested in.  Specifying it can speed
-things up because then unnecessary parsing is avoided."
-  (setq which (or which 'all))
-  (org-with-wide-buffer
-   (org-with-point-at pom
-     (let ((clockstr (substring org-clock-string 0 -1))
-	   (excluded '("TODO" "TAGS" "ALLTAGS" "PRIORITY" "BLOCKED"))
-	   (case-fold-search nil)
-	   beg end range props sum-props key key1 value string clocksum clocksumt)
-       (when (and (derived-mode-p 'org-mode)
-		  (ignore-errors (org-back-to-heading t)))
-	 (setq beg (point))
-	 (setq sum-props (get-text-property (point) 'org-summaries))
-	 (setq clocksum (get-text-property (point) :org-clock-minutes)
-	       clocksumt (get-text-property (point) :org-clock-minutes-today))
-	 (outline-next-heading)
-	 (setq end (point))
-	 (when (memq which '(all special))
-	   ;; Get the special properties, like TODO and tags
-	   (goto-char beg)
-	   (when (and (or (not specific) (string= specific "TODO"))
-		      (looking-at org-todo-line-regexp) (match-end 2))
-	     (push (cons "TODO" (org-match-string-no-properties 2)) props))
-	   (when (and (or (not specific) (string= specific "PRIORITY"))
-		      (looking-at org-priority-regexp))
-	     (push (cons "PRIORITY" (org-match-string-no-properties 2)) props))
-	   (when (or (not specific) (string= specific "FILE"))
-	     (push (cons "FILE" buffer-file-name) props))
-	   (when (and (or (not specific) (string= specific "TAGS"))
-		      (setq value (org-get-tags-string))
-		      (string-match "\\S-" value))
-	     (push (cons "TAGS" value) props))
-	   (when (and (or (not specific) (string= specific "ALLTAGS"))
-		      (setq value (org-get-tags-at)))
-	     (push (cons "ALLTAGS" (concat ":" (mapconcat 'identity value ":")
-					   ":"))
-		   props))
-	   (when (or (not specific) (string= specific "BLOCKED"))
-	     (push (cons "BLOCKED" (if (org-entry-blocked-p) "t" "")) props))
-	   (when (or (not specific)
-		     (member specific
-			     '("SCHEDULED" "DEADLINE" "CLOCK" "CLOSED"
-			       "TIMESTAMP" "TIMESTAMP_IA")))
-	     (catch 'match
-	       (while (and (re-search-forward org-maybe-keyword-time-regexp end t)
-			   (not (text-property-any 0 (length (match-string 0))
-						   'face 'font-lock-comment-face
-						   (match-string 0))))
-		 (setq key (if (match-end 1)
-			       (substring (org-match-string-no-properties 1)
-					  0 -1))
-		       string (if (equal key clockstr)
-				  (org-trim
-				   (buffer-substring-no-properties
-				    (match-beginning 3) (goto-char
-							 (point-at-eol))))
-				(substring (org-match-string-no-properties 3)
-					   1 -1)))
-		 ;; Get the correct property name from the key.  This is
-		 ;; necessary if the user has configured time keywords.
-		 (setq key1 (concat key ":"))
-		 (cond
-		  ((not key)
-		   (setq key
-			 (if (= (char-after (match-beginning 3)) ?\[)
-			     "TIMESTAMP_IA" "TIMESTAMP")))
-		  ((equal key1 org-scheduled-string) (setq key "SCHEDULED"))
-		  ((equal key1 org-deadline-string)  (setq key "DEADLINE"))
-		  ((equal key1 org-closed-string)    (setq key "CLOSED"))
-		  ((equal key1 org-clock-string)     (setq key "CLOCK")))
-		 (if (and specific (equal key specific) (not (equal key "CLOCK")))
-		     (progn
-		       (push (cons key string) props)
-		       ;; no need to search further if match is found
-		       (throw 'match t))
-		   (when (or (equal key "CLOCK") (not (assoc key props)))
-		     (push (cons key string) props)))))))
+`special' or `standard', only get that subclass.  If WHICH is
+a string, only get that property.
 
-	 (when (memq which '(all standard))
-	   ;; Get the standard properties, like :PROP: ...
-	   (setq range (org-get-property-block beg end))
-	   (when range
-	     (goto-char (car range))
-	     (while (re-search-forward org-property-re
-				       (cdr range) t)
-	       (setq key (org-match-string-no-properties 2)
-		     value (org-trim (or (org-match-string-no-properties 3) "")))
-	       (unless (member key excluded)
-		 (push (cons key (or value "")) props)))))
-	 (if clocksum
-	     (push (cons "CLOCKSUM"
-			 (org-columns-number-to-string (/ (float clocksum) 60.)
-						       'add_times))
-		   props))
-	 (if clocksumt
-	     (push (cons "CLOCKSUM_T"
-			 (org-columns-number-to-string (/ (float clocksumt) 60.)
-						       'add_times))
-		   props))
-	 (unless (assoc "CATEGORY" props)
-	   (push (cons "CATEGORY" (org-get-category)) props))
-	 (append sum-props (nreverse props)))))))
+Return value is an alist.  Keys are properties, as upcased
+strings."
+  (org-with-point-at pom
+    (when (and (derived-mode-p 'org-mode)
+	       (ignore-errors (org-back-to-heading t)))
+      (catch 'exit
+	(let* ((beg (point))
+	       (specific (and (stringp which) (upcase which)))
+	       (which (cond ((not specific) which)
+			    ((member specific org-special-properties) 'special)
+			    (t 'standard)))
+	       props)
+	  ;; Get the special properties, like TODO and TAGS.
+	  (when (memq which '(nil all special))
+	    (when (or (not specific) (string= specific "CLOCKSUM"))
+	      (let ((clocksum (get-text-property (point) :org-clock-minutes)))
+		(when clocksum
+		  (push (cons "CLOCKSUM"
+			      (org-columns-number-to-string
+			       (/ (float clocksum) 60.) 'add_times))
+			props)))
+	      (when specific (throw 'exit props)))
+	    (when (or (not specific) (string= specific "CLOCKSUM_T"))
+	      (let ((clocksumt (get-text-property (point)
+						  :org-clock-minutes-today)))
+		(when clocksumt
+		  (push (cons "CLOCKSUM_T"
+			      (org-columns-number-to-string
+			       (/ (float clocksumt) 60.) 'add_times))
+			props)))
+	      (when specific (throw 'exit props)))
+	    (when (or (not specific) (string= specific "ITEM"))
+	      (when (looking-at org-complex-heading-regexp)
+		(push (cons "ITEM"
+			    (concat
+			     (org-match-string-no-properties 1)
+			     (let ((title (org-match-string-no-properties 4)))
+			       (when (org-string-nw-p title)
+				 (concat " " (org-remove-tabs title))))))
+		      props))
+	      (when specific (throw 'exit props)))
+	    (when (or (not specific) (string= specific "TODO"))
+	      (when (and (looking-at org-todo-line-regexp) (match-end 2))
+		(push (cons "TODO" (org-match-string-no-properties 2)) props))
+	      (when specific (throw 'exit props)))
+	    (when (or (not specific) (string= specific "PRIORITY"))
+	      (when (looking-at org-priority-regexp)
+		(push (cons "PRIORITY" (org-match-string-no-properties 2)) props))
+	      (when specific (throw 'exit props)))
+	    (when (or (not specific) (string= specific "FILE"))
+	      (push (cons "FILE" (buffer-file-name (buffer-base-buffer)))
+		    props)
+	      (when specific (throw 'exit props)))
+	    (when (or (not specific) (string= specific "TAGS"))
+	      (let ((value (org-string-nw-p (org-get-tags-string))))
+		(when value (push (cons "TAGS" value) props)))
+	      (when specific (throw 'exit props)))
+	    (when (or (not specific) (string= specific "ALLTAGS"))
+	      (let ((value (org-get-tags-at)))
+		(when value
+		  (push (cons "ALLTAGS"
+			      (format ":%s:" (mapconcat #'identity value ":")))
+			props)))
+	      (when specific (throw 'exit props)))
+	    (when (or (not specific) (string= specific "BLOCKED"))
+	      (push (cons "BLOCKED" (if (org-entry-blocked-p) "t" "")) props)
+	      (when specific (throw 'exit props)))
+	    (when (or (not specific)
+		      (member specific '("CLOSED" "DEADLINE" "SCHEDULED")))
+	      (forward-line)
+	      (when (org-looking-at-p org-planning-line-re)
+		(end-of-line)
+		(let ((bol (line-beginning-position))
+		      ;; Backward compatibility: time keywords used to
+		      ;; be configurable (before 8.3).  Make sure we
+		      ;; get the correct keyword.
+		      (key-assoc `(("CLOSED" . ,org-closed-string)
+				   ("DEADLINE" . ,org-deadline-string)
+				   ("SCHEDULED" . ,org-scheduled-string))))
+		  (dolist (pair (if specific (list (assoc specific key-assoc))
+				  key-assoc))
+		    (save-excursion
+		      (when (search-backward (cdr pair) bol t)
+			(goto-char (match-end 0))
+			(skip-chars-forward " \t")
+			(and (looking-at org-ts-regexp-both)
+			     (push (cons (car pair)
+					 (org-match-string-no-properties 0))
+				   props)))))))
+	      (when specific (throw 'exit props)))
+	    (when (or (not specific)
+		      (member specific '("TIMESTAMP" "TIMESTAMP_IA")))
+	      (let ((find-ts
+		     (lambda (end ts)
+		       (let ((regexp (if (or (string= specific "TIMESTAMP")
+					     (assoc "TIMESTAMP_IA" ts))
+					 org-ts-regexp
+				       org-ts-regexp-both)))
+			 (catch 'next
+			   (while (re-search-forward regexp end t)
+			     (backward-char)
+			     (let ((object (org-element-context)))
+			       ;; Accept to match timestamps in node
+			       ;; properties, too.
+			       (when (memq (org-element-type object)
+					   '(node-property timestamp))
+				 (let ((type
+					(org-element-property :type object)))
+				   (cond
+				    ((and (memq type '(active active-range))
+					  (not (equal specific "TIMESTAMP_IA")))
+				     (unless (assoc "TIMESTAMP" ts)
+				       (push (cons "TIMESTAMP"
+						   (org-element-property
+						    :raw-value object))
+					     ts)
+				       (when specific (throw 'exit ts))))
+				    ((and (memq type '(inactive inactive-range))
+					  (not (string= specific "TIMESTAMP")))
+				     (unless (assoc "TIMESTAMP_IA" ts)
+				       (push (cons "TIMESTAMP_IA"
+						   (org-element-property
+						    :raw-value object))
+					     ts)
+				       (when specific (throw 'exit ts))))))
+				 ;; Both timestamp types are found,
+				 ;; move to next part.
+				 (when (= (length ts) 2) (throw 'next ts)))))
+			   ts)))))
+		(goto-char beg)
+		;; First look for timestamps within headline.
+		(let ((ts (funcall find-ts (line-end-position) nil)))
+		  (if (= (length ts) 2) (setq props (nconc ts props))
+		    (forward-line)
+		    ;; Then find timestamps in the section, skipping
+		    ;; planning line.
+		    (when (org-looking-at-p org-planning-line-re)
+		      (forward-line))
+		    (let ((end (save-excursion (outline-next-heading))))
+		      (setq props (nconc (funcall find-ts end ts) props))))))))
+	  ;; Get the standard properties, like :PROP:.
+	  (when (memq which '(nil all standard))
+	    ;; If we are looking after a specific property, delegate
+	    ;; to `org-entry-get', which is faster.  However, make an
+	    ;; exception for "CATEGORY", since it can be also set
+	    ;; through keywords (i.e. #+CATEGORY).
+	    (if (and specific (not (equal specific "CATEGORY")))
+		(let ((value (org-entry-get beg specific nil t)))
+		  (throw 'exit (and value (list (cons specific value)))))
+	      (let ((range (org-get-property-block beg)))
+		(when range
+		  (let ((end (cdr range)) seen-base)
+		    (goto-char (car range))
+		    ;; Unlike to `org--update-property-plist', we
+		    ;; handle the case where base values is found
+		    ;; after its extension.  We also forbid standard
+		    ;; properties to be named as special properties.
+		    (while (re-search-forward org-property-re end t)
+		      (let* ((key (upcase (org-match-string-no-properties 2)))
+			     (extendp (org-string-match-p "\\+\\'" key))
+			     (key-base (if extendp (substring key 0 -1) key))
+			     (value (org-match-string-no-properties 3)))
+			(cond
+			 ((member-ignore-case key-base org-special-properties))
+			 (extendp
+			  (setq props
+				(org--update-property-plist key value props)))
+			 ((member key seen-base))
+			 (t (push key seen-base)
+			    (let ((p (assoc-string key props t)))
+			      (if p (setcdr p (concat value " " (cdr p)))
+				(push (cons key value) props))))))))))))
+	  (unless (assoc "CATEGORY" props)
+	    (push (cons "CATEGORY" (org-get-category beg)) props)
+	    (when (string= specific "CATEGORY") (throw 'exit props)))
+	  ;; Return value.
+	  (append (get-text-property beg 'org-summaries) props))))))
 
 (defun org-entry-get (pom property &optional inherit literal-nil)
   "Get value of PROPERTY for entry or content at point-or-marker POM.
+
 If INHERIT is non-nil and the entry does not have the property,
-then also check higher levels of the hierarchy.
-If INHERIT is the symbol `selective', use inheritance only if the setting
-in `org-use-property-inheritance' selects PROPERTY for inheritance.
-If the property is present but empty, the return value is the empty string.
-If the property is not present at all, nil is returned.
+then also check higher levels of the hierarchy.  If INHERIT is
+the symbol `selective', use inheritance only if the setting in
+`org-use-property-inheritance' selects PROPERTY for inheritance.
 
-Return the value as a string.
+If the property is present but empty, the return value is the
+empty string.  If the property is not present at all, nil is
+returned.  In any other case, return the value as a string.
+Search is case-insensitive.
 
-If LITERAL-NIL is set, return the string value \"nil\" as a string,
-do not interpret it as the list atom nil.  This is used for inheritance
-when a \"nil\" value can supersede a non-nil value higher up the hierarchy."
+If LITERAL-NIL is set, return the string value \"nil\" as
+a string, do not interpret it as the list atom nil.  This is used
+for inheritance when a \"nil\" value can supersede a non-nil
+value higher up the hierarchy."
   (org-with-point-at pom
-    (if (and inherit (if (eq inherit 'selective)
-			 (org-property-inherit-p property)
-		       t))
-	(org-entry-get-with-inheritance property literal-nil)
-      (if (member property org-special-properties)
-	  ;; We need a special property.  Use `org-entry-properties'
-	  ;; to retrieve it, but specify the wanted property
-	  (cdr (assoc property (org-entry-properties nil 'special property)))
-	(org-with-wide-buffer
-	 (let ((range (org-get-property-block)))
-	   (when (and range (not (eq (car range) (cdr range)))
-		      (save-excursion
-		      	(goto-char (car range))
-		      	(re-search-forward
-		      	 (concat (org-re-property property) "\\|"
-				 (org-re-property (concat property "+")))
-			 (cdr range) t)))
-	     (let* ((props
-		     (list (or (assoc property org-file-properties)
-			       (assoc property org-global-properties)
-			       (assoc property org-global-properties-fixed))))
-		    (ap (lambda (key)
-			  (when (re-search-forward
-				 (org-re-property key) (cdr range) t)
-			    (setq props
-				  (org-update-property-plist
-				   key
-				   (if (match-end 3)
-				       (org-match-string-no-properties 3) "")
-				   props)))))
-		    val)
-	       (goto-char (car range))
-	       (funcall ap property)
-	       (goto-char (car range))
-	       (while (funcall ap (concat property "+")))
-	       (setq val (cdr (assoc property props)))
-	       (when val (if literal-nil val (org-not-nil val)))))))))))
+    (cond
+     ((and inherit
+	   (or (not (eq inherit 'selective)) (org-property-inherit-p property)))
+      (org-entry-get-with-inheritance property literal-nil))
+     ((member-ignore-case property (cons "CATEGORY" org-special-properties))
+      ;; We need a special property.  Use `org-entry-properties' to
+      ;; retrieve it, but specify the wanted property.
+      (cdr (assoc-string property (org-entry-properties nil property))))
+     (t
+      (let ((range (org-get-property-block)))
+	(when range
+	  (let* ((case-fold-search t)
+		 (end (cdr range))
+		 (props
+		  (let ((global
+			 (or (assoc-string property org-file-properties t)
+			     (assoc-string property org-global-properties t)
+			     (assoc-string
+			      property org-global-properties-fixed t))))
+		    ;; Make sure to not re-use GLOBAL as
+		    ;; `org--update-property-plist' would alter it by
+		    ;; side-effect.
+		    (and global (list (cons property (cdr global))))))
+		 (find-value
+		  (lambda (key)
+		    (when (re-search-forward (org-re-property key nil t) end t)
+		      (setq props
+			    (org--update-property-plist
+			     key (org-match-string-no-properties 3) props))))))
+	    (goto-char (car range))
+	    ;; Find base value.
+	    (save-excursion (funcall find-value property))
+	    ;; Find additional values.
+	    (let ((property+ (concat property "+")))
+	      (while (funcall find-value property+)))
+	    ;; Return final value.
+	    (let ((val (cdr (assoc-string property props t))))
+	      (if literal-nil val (org-not-nil val))))))))))
 
 (defun org-property-or-variable-value (var &optional inherit)
   "Check if there is a property fixing the value of VAR.
@@ -15418,26 +15873,28 @@ If yes, return this value.  If not, return the current value of the variable."
 	(read prop)
       (symbol-value var))))
 
-(defun org-entry-delete (pom property &optional delete-empty-drawer)
-  "Delete the property PROPERTY from entry at point-or-marker POM.
-When optional argument DELETE-EMPTY-DRAWER is a string, it defines
-an empty drawer to delete."
-  (org-with-point-at pom
-    (if (member property org-special-properties)
-	nil ; cannot delete these properties.
+(defun org-entry-delete (pom property)
+  "Delete PROPERTY from entry at point-or-marker POM.
+Accumulated properties, i.e. PROPERTY+, are also removed.  Return
+non-nil when a property was removed."
+  (unless (member property org-special-properties)
+    (org-with-point-at pom
       (let ((range (org-get-property-block)))
-	(if (and range
-		 (goto-char (car range))
-		 (re-search-forward
-		  (org-re-property property nil t)
-		  (cdr range) t))
-	    (progn
-	      (delete-region (match-beginning 0) (1+ (point-at-eol)))
-	      (and delete-empty-drawer
-		   (org-remove-empty-drawer-at
-		    delete-empty-drawer (car range)))
-	      t)
-	  nil)))))
+	(when range
+	  (let* ((begin (car range))
+		 (origin (cdr range))
+		 (end (copy-marker origin))
+		 (re (org-re-property
+		      (concat (regexp-quote property) "\\+?") t t)))
+	    (goto-char begin)
+	    (while (re-search-forward re end t)
+	      (delete-region (match-beginning 0) (line-beginning-position 2)))
+	    ;; If drawer is empty, remove it altogether.
+	    (when (= begin end)
+	      (delete-region (line-beginning-position 0)
+			     (line-beginning-position 2)))
+	    ;; Return non-nil if some property was removed.
+	    (prog1 (/= end origin) (set-marker end nil))))))))
 
 ;; Multi-values properties are properties that contain multiple values
 ;; These values are assumed to be single words, separated by whitespace.
@@ -15514,24 +15971,21 @@ If the value found is \"nil\", return nil to show that the property
 should be considered as undefined (this is the meaning of nil here).
 However, if LITERAL-NIL is set, return the string value \"nil\" instead."
   (move-marker org-entry-property-inherited-from nil)
-  (let (tmp)
-    (save-excursion
-      (save-restriction
-	(widen)
-	(catch 'ex
-	  (while t
-	    (when (setq tmp (org-entry-get nil property nil literal-nil))
-	      (or (ignore-errors (org-back-to-heading t))
-		  (goto-char (point-min)))
-	      (move-marker org-entry-property-inherited-from (point))
-	      (throw 'ex tmp))
-	    (or (ignore-errors (org-up-heading-safe))
-		(throw 'ex nil))))))
-    (setq tmp (or tmp
-		  (cdr (assoc property org-file-properties))
-		  (cdr (assoc property org-global-properties))
-		  (cdr (assoc property org-global-properties-fixed))))
-    (if literal-nil tmp (org-not-nil tmp))))
+  (let (value)
+    (org-with-wide-buffer
+     (catch 'exit
+       (while t
+	 (when (setq value (org-entry-get nil property nil literal-nil))
+	   (org-back-to-heading t)
+	   (move-marker org-entry-property-inherited-from (point))
+	   (throw 'exit nil))
+	 (or (org-up-heading-safe) (throw 'exit nil)))))
+    (unless value
+      (setq value
+	    (cdr (or (assoc-string property org-file-properties t)
+		     (assoc-string property org-global-properties t)
+		     (assoc-string property org-global-properties-fixed t)))))
+    (if literal-nil value (org-not-nil value))))
 
 (defvar org-property-changed-functions nil
   "Hook called when the value of a property has changed.
@@ -15540,176 +15994,175 @@ and the new value.")
 
 (defun org-entry-put (pom property value)
   "Set PROPERTY to VALUE for entry at point-or-marker POM.
-If the value is `nil', it is converted to the empty string.
-If it is not a string, an error is raised."
+
+If the value is `nil', it is converted to the empty string.  If
+it is not a string, an error is raised.
+
+PROPERTY can be any regular property (see
+`org-special-properties').  It can also be \"TODO\",
+\"PRIORITY\", \"SCHEDULED\" and \"DEADLINE\".
+
+For the last two properties, VALUE may have any of the special
+values \"earlier\" and \"later\".  The function then increases or
+decreases scheduled or deadline date by one day."
   (cond ((null value) (setq value ""))
-	((not (stringp value))
-	 (error "Properties values should be strings.")))
+	((not (stringp value)) (error "Properties values should be strings")))
   (org-with-point-at pom
-    (org-back-to-heading t)
-    (let ((beg (point)) (end (save-excursion (outline-next-heading) (point)))
-	  range)
+    (if (or (not (featurep 'org-inlinetask)) (org-inlinetask-in-task-p))
+	(org-back-to-heading t)
+      (org-with-limited-levels (org-back-to-heading t)))
+    (let ((beg (point)))
       (cond
        ((equal property "TODO")
-	(when (and (string-match "\\S-" value)
-		   (not (member value org-todo-keywords-1)))
-	  (user-error "\"%s\" is not a valid TODO state" value))
-	(if (or (not value)
-		(not (string-match "\\S-" value)))
-	    (setq value 'none))
+	(cond ((not (org-string-nw-p value)) (setq value 'none))
+	      ((not (member value org-todo-keywords-1))
+	       (user-error "\"%s\" is not a valid TODO state" value)))
 	(org-todo value)
 	(org-set-tags nil 'align))
        ((equal property "PRIORITY")
-	(org-priority (if (and value (string-match "\\S-" value))
-			  (string-to-char value) ?\ ))
+	(org-priority (if (org-string-nw-p value) (string-to-char value) ?\s))
 	(org-set-tags nil 'align))
-       ((equal property "CLOCKSUM")
-	(if (not (re-search-forward
-		  (concat org-clock-string ".*\\]--\\(\\[[^]]+\\]\\)") nil t))
-	    (error "Cannot find a clock log")
-	  (goto-char (- (match-end 1) 2))
-	  (cond
-	   ((eq value 'earlier) (org-timestamp-down))
-	   ((eq value 'later) (org-timestamp-up)))
-	  (org-clock-sum-current-item)))
        ((equal property "SCHEDULED")
-	(if (re-search-forward org-scheduled-time-regexp end t)
-	    (cond
-	     ((eq value 'earlier) (org-timestamp-change -1 'day))
-	     ((eq value 'later) (org-timestamp-change 1 'day))
-	     (t (call-interactively 'org-schedule)))
-	  (call-interactively 'org-schedule)))
+	(forward-line)
+	(if (and (org-looking-at-p org-planning-line-re)
+		 (re-search-forward
+		  org-scheduled-time-regexp (line-end-position) t))
+	    (cond ((string= value "earlier") (org-timestamp-change -1 'day))
+		  ((string= value "later") (org-timestamp-change 1 'day))
+		  ((string= value "") (org-schedule '(4)))
+		  (t (org-schedule nil value)))
+	  (if (member value '("earlier" "later" ""))
+	      (call-interactively #'org-schedule)
+	    (org-schedule nil value))))
        ((equal property "DEADLINE")
-	(if (re-search-forward org-deadline-time-regexp end t)
-	    (cond
-	     ((eq value 'earlier) (org-timestamp-change -1 'day))
-	     ((eq value 'later) (org-timestamp-change 1 'day))
-	     (t (call-interactively 'org-deadline)))
-	  (call-interactively 'org-deadline)))
+	(forward-line)
+	(if (and (org-looking-at-p org-planning-line-re)
+		 (re-search-forward
+		  org-deadline-time-regexp (line-end-position) t))
+	    (cond ((string= value "earlier") (org-timestamp-change -1 'day))
+		  ((string= value "later") (org-timestamp-change 1 'day))
+		  ((string= value "") (org-deadline '(4)))
+		  (t (org-deadline nil value)))
+	  (if (member value '("earlier" "later" ""))
+	      (call-interactively #'org-deadline)
+	    (org-deadline nil value))))
        ((member property org-special-properties)
-	(error "The %s property can not yet be set with `org-entry-put'"
-	       property))
-       (t ; a non-special property
-	(let ((buffer-invisibility-spec (org-inhibit-invisibility))) ; Emacs 21
-	  (setq range (org-get-property-block beg end 'force))
+	(error "The %s property cannot be set with `org-entry-put'" property))
+       (t
+	(let* ((range (org-get-property-block beg 'force))
+	       (end (cdr range))
+	       (case-fold-search t))
 	  (goto-char (car range))
-	  (if (re-search-forward
-	       (org-re-property property nil t) (cdr range) t)
-	      (progn
-		(delete-region (match-beginning 0) (match-end 0))
-		(goto-char (match-beginning 0)))
-	    (goto-char (cdr range))
+	  (if (re-search-forward (org-re-property property nil t) end t)
+	      (progn (delete-region (match-beginning 0) (match-end 0))
+		     (goto-char (match-beginning 0)))
+	    (goto-char end)
 	    (insert "\n")
-	    (backward-char 1)
-	    (org-indent-line))
+	    (backward-char))
 	  (insert ":" property ":")
-	  (and value (insert " " value))
+	  (when value (insert " " value))
 	  (org-indent-line)))))
     (run-hook-with-args 'org-property-changed-functions property value)))
 
-(defun org-buffer-property-keys (&optional include-specials include-defaults include-columns)
+(defun org-buffer-property-keys (&optional specials defaults columns)
   "Get all property keys in the current buffer.
-With INCLUDE-SPECIALS, also list the special properties that reflect things
-like tags and TODO state.
-With INCLUDE-DEFAULTS, also include properties that has special meaning
-internally: ARCHIVE, CATEGORY, SUMMARY, DESCRIPTION, LOCATION, and LOGGING
-and others.
-With INCLUDE-COLUMNS, also include property names given in COLUMN
-formats in the current buffer."
-  (let (rtn range cfmt s p)
-    (save-excursion
-      (save-restriction
-	(widen)
-	(goto-char (point-min))
-	(while (re-search-forward org-property-start-re nil t)
-	  (setq range (org-get-property-block))
-	  (goto-char (car range))
-	  (while (re-search-forward org-property-re
-		  (cdr range) t)
-	    (add-to-list 'rtn (org-match-string-no-properties 2)))
-	  (outline-next-heading))))
 
-    (when include-specials
-      (setq rtn (append org-special-properties rtn)))
+When SPECIALS is non-nil, also list the special properties that
+reflect things like tags and TODO state.
 
-    (when include-defaults
-      (mapc (lambda (x) (add-to-list 'rtn x)) org-default-properties)
-      (add-to-list 'rtn org-effort-property))
+When DEFAULTS is non-nil, also include properties that has
+special meaning internally: ARCHIVE, CATEGORY, SUMMARY,
+DESCRIPTION, LOCATION, and LOGGING and others.
 
-    (when include-columns
-      (save-excursion
-	(save-restriction
-	  (widen)
-	  (goto-char (point-min))
-	  (while (re-search-forward
-		  "^\\(#\\+COLUMNS:\\|[ \t]*:COLUMNS:\\)[ \t]*\\(.*\\)"
-		  nil t)
-	    (setq cfmt (match-string 2) s 0)
-	    (while (string-match (org-re "%[0-9]*\\([-[:alnum:]_]+\\)")
-				 cfmt s)
-	      (setq s (match-end 0)
-		    p (match-string 1 cfmt))
-	      (unless (or (equal p "ITEM")
-			  (member p org-special-properties))
-		(add-to-list 'rtn (match-string 1 cfmt))))))))
-
-    (sort rtn (lambda (a b) (string< (upcase a) (upcase b))))))
+When COLUMNS in non-nil, also include property names given in
+COLUMN formats in the current buffer."
+  (let ((case-fold-search t)
+	(props (append
+		(and specials org-special-properties)
+		(and defaults (cons org-effort-property org-default-properties))
+		nil)))
+    (org-with-wide-buffer
+     (goto-char (point-min))
+     (while (re-search-forward org-property-start-re nil t)
+       (let ((range (org-get-property-block)))
+	 (catch 'skip
+	   (unless range
+	     (when (and (not (org-before-first-heading-p))
+			(y-or-n-p (format "Malformed drawer at %d, repair?"
+					  (line-beginning-position))))
+	       (org-get-property-block nil t))
+	     (throw 'skip nil))
+	   (goto-char (car range))
+	   (let ((begin (car range))
+		 (end (cdr range)))
+	     ;; Make sure that found property block is not located
+	     ;; before current point, as it would generate an infloop.
+	     ;; It can happen, for example, in the following
+	     ;; situation:
+	     ;;
+	     ;; * Headline
+	     ;;   :PROPERTIES:
+	     ;;   ...
+	     ;;   :END:
+	     ;; *************** Inlinetask
+	     ;; #+BEGIN_EXAMPLE
+	     ;; :PROPERTIES:
+	     ;; #+END_EXAMPLE
+	     ;;
+	     (if (< begin (point)) (throw 'skip nil) (goto-char begin))
+	     (while (< (point) end)
+	       (let ((p (progn (looking-at org-property-re)
+			       (org-match-string-no-properties 2))))
+		 ;; Only add true property name, not extension symbol.
+		 (add-to-list 'props
+			      (if (not (org-string-match-p "\\+\\'" p)) p
+				(substring p 0 -1))))
+	       (forward-line))))
+	 (outline-next-heading)))
+     (when columns
+       (goto-char (point-min))
+       (while (re-search-forward "^[ \t]*\\(?:#\\+\\|:\\)COLUMNS:" nil t)
+	 (let ((element (org-element-at-point)))
+	   (when (memq (org-element-type element) '(keyword node-property))
+	     (let ((value (org-element-property :value element))
+		   (start 0))
+	       (while (string-match "%[0-9]*\\(\\S-+\\)" value start)
+		 (setq start (match-end 0))
+		 (let ((p (org-match-string-no-properties 1 value)))
+		   (unless (member-ignore-case p org-special-properties)
+		     (add-to-list 'props p))))))))))
+    (sort props (lambda (a b) (string< (upcase a) (upcase b))))))
 
 (defun org-property-values (key)
-  "Return a list of all values of property KEY in the current buffer."
-  (save-excursion
-    (save-restriction
-      (widen)
-      (goto-char (point-min))
-      (let ((re (org-re-property key))
-	    values)
-	(while (re-search-forward re nil t)
-	  (add-to-list 'values (org-trim (match-string 3))))
-	(delete "" values)))))
+  "List all non-nil values of property KEY in current buffer."
+  (org-with-wide-buffer
+   (goto-char (point-min))
+   (let ((case-fold-search t)
+	 (re (org-re-property key))
+	 values)
+     (while (re-search-forward re nil t)
+       (add-to-list 'values (org-entry-get (point) key)))
+     values)))
 
 (defun org-insert-property-drawer ()
   "Insert a property drawer into the current entry."
-  (org-back-to-heading t)
-  (looking-at org-outline-regexp)
-  (let ((indent (if org-adapt-indentation
-		    (- (match-end 0) (match-beginning 0))
-		  0))
-	(beg (point))
-	(re (concat "^[ \t]*" org-keyword-time-regexp))
-	end hiddenp)
-    (outline-next-heading)
-    (setq end (point))
-    (goto-char beg)
-    (while (re-search-forward re end t))
-    (setq hiddenp (outline-invisible-p))
-    (end-of-line 1)
-    (and (equal (char-after) ?\n) (forward-char 1))
-    (while (looking-at "^[ \t]*\\(:CLOCK:\\|:LOGBOOK:\\|CLOCK:\\|:END:\\)")
-      (if (member (match-string 1) '("CLOCK:" ":END:"))
-	  ;; just skip this line
-	  (beginning-of-line 2)
-	;; Drawer start, find the end
-	(re-search-forward "^\\*+ \\|^[ \t]*:END:" nil t)
-	(beginning-of-line 1)))
-    (org-skip-over-state-notes)
-    (skip-chars-backward " \t\n\r")
-    (if (and (eq (char-before) ?*) (not (eq (char-after) ?\n)))
-	(forward-char 1))
-    (goto-char (point-at-eol))
-    (let ((inhibit-read-only t)) (insert "\n:PROPERTIES:\n:END:"))
-    (beginning-of-line 0)
-    (org-indent-to-column indent)
-    (beginning-of-line 2)
-    (org-indent-to-column indent)
-    (beginning-of-line 0)
-    (if hiddenp
-	(save-excursion
-	  (org-back-to-heading t)
-	  (hide-entry))
-      (org-flag-drawer t))))
+  (org-with-wide-buffer
+   (if (or (not (featurep 'org-inlinetask)) (org-inlinetask-in-task-p))
+       (org-back-to-heading t)
+     (org-with-limited-levels (org-back-to-heading t)))
+   (forward-line)
+   (when (org-looking-at-p org-planning-line-re) (forward-line))
+   (unless (org-looking-at-p org-property-drawer-re)
+     (let ((inhibit-read-only t))
+       (unless (bolp) (insert "\n"))
+       (let ((begin (point)))
+	 (insert ":PROPERTIES:\n:END:\n")
+	 (org-indent-region begin (point)))))))
 
 (defun org-insert-drawer (&optional arg drawer)
   "Insert a drawer at point.
+
+When optional argument ARG is non-nil, insert a property drawer.
 
 Optional argument DRAWER, when non-nil, is a string representing
 drawer's name.  Otherwise, the user is prompted for a name.
@@ -15719,23 +16172,14 @@ instead.
 
 Point is left between drawer's boundaries."
   (interactive "P")
-  (let* ((logbook (if (stringp org-log-into-drawer) org-log-into-drawer
-		    "LOGBOOK"))
-	 ;; SYSTEM-DRAWERS is a list of drawer names that are used
-	 ;; internally by Org.  They are meant to be inserted
-	 ;; automatically.
-	 (system-drawers `("CLOCK" ,logbook "PROPERTIES"))
-	 ;; Remove system drawers from list.  Note: For some reason,
-	 ;; `org-completing-read' ignores the predicate while
-	 ;; `completing-read' handles it fine.
-	 (drawer (if arg "PROPERTIES"
-		   (or drawer
-		       (completing-read
-			"Drawer: " org-drawers
-			(lambda (d) (not (member d system-drawers))))))))
+  (let* ((drawer (if arg "PROPERTIES"
+		   (or drawer (read-from-minibuffer "Drawer: ")))))
     (cond
      ;; With C-u, fall back on `org-insert-property-drawer'
      (arg (org-insert-property-drawer))
+     ;; Check validity of suggested drawer's name.
+     ((not (org-string-match-p org-drawer-regexp (format ":%s:" drawer)))
+      (user-error "Invalid drawer name"))
      ;; With an active region, insert a drawer at point.
      ((not (org-region-active-p))
       (progn
@@ -15811,28 +16255,16 @@ This is computed according to `org-property-set-functions-alist'."
 (defvar org-last-set-property-value nil)
 (defun org-read-property-name ()
   "Read a property name."
-  (let* ((completion-ignore-case t)
-	 (keys (org-buffer-property-keys nil t t))
-	 (default-prop (or (save-excursion
-			     (save-match-data
-			       (beginning-of-line)
-			       (and (looking-at "^\\s-*:\\([^:\n]+\\):")
-				    (null (string= (match-string 1) "END"))
-				    (match-string 1))))
-			   org-last-set-property))
-	 (property (org-icompleting-read
-		    (concat "Property"
-			    (if default-prop (concat " [" default-prop "]") "")
-			    ": ")
-		    (mapcar 'list keys)
-		    nil nil nil nil
-		    default-prop)))
-    (if (member property keys)
-	property
-      (or (cdr (assoc (downcase property)
-		      (mapcar (lambda (x) (cons (downcase x) x))
-			      keys)))
-	  property))))
+  (let ((completion-ignore-case t)
+	(default-prop (or (and (org-at-property-p)
+			       (org-match-string-no-properties 2))
+			  org-last-set-property)))
+    (org-completing-read
+     (concat "Property"
+	     (if default-prop (concat " [" default-prop "]") "")
+	     ": ")
+     (mapcar #'list (org-buffer-property-keys nil t t))
+     nil nil nil nil default-prop)))
 
 (defun org-set-property-and-value (use-last)
   "Allow to set [PROPERTY]: [value] direction from prompt.
@@ -15869,10 +16301,28 @@ in the current file."
     (unless (equal (org-entry-get nil property) value)
       (org-entry-put nil property value))))
 
-(defun org-delete-property (property &optional delete-empty-drawer)
-  "In the current entry, delete PROPERTY.
-When optional argument DELETE-EMPTY-DRAWER is a string, it defines
-an empty drawer to delete."
+(defun org-find-property (property &optional value)
+  "Find first entry in buffer that sets PROPERTY.
+
+When optional argument VALUE is non-nil, only consider an entry
+if it contains PROPERTY set to this value.  If PROPERTY should be
+explicitly set to nil, use string \"nil\" for VALUE.
+
+Return position where the entry begins, or nil if there is no
+such entry.  If narrowing is in effect, only search the visible
+part of the buffer."
+  (save-excursion
+    (goto-char (point-min))
+    (let ((case-fold-search t)
+	  (re (org-re-property property nil (not value) value)))
+      (catch 'exit
+	(while (re-search-forward re nil t)
+	  (when (if value (org-at-property-p)
+		  (org-entry-get (point) property nil t))
+	    (throw 'exit (progn (org-back-to-heading t) (point)))))))))
+
+(defun org-delete-property (property)
+  "In the current entry, delete PROPERTY."
   (interactive
    (let* ((completion-ignore-case t)
 	  (cat (org-entry-get (point) "CATEGORY"))
@@ -15885,28 +16335,25 @@ an empty drawer to delete."
      (list prop)))
   (if (not property)
       (message "No property to delete in this entry")
-    (org-entry-delete nil property delete-empty-drawer)
+    (org-entry-delete nil property)
     (message "Property \"%s\" deleted" property)))
 
 (defun org-delete-property-globally (property)
-  "Remove PROPERTY globally, from all entries."
+  "Remove PROPERTY globally, from all entries.
+This function ignores narrowing, if any."
   (interactive
    (let* ((completion-ignore-case t)
 	  (prop (org-icompleting-read
 		 "Globally remove property: "
-		 (mapcar 'list (org-buffer-property-keys)))))
+		 (mapcar #'list (org-buffer-property-keys)))))
      (list prop)))
-  (save-excursion
-    (save-restriction
-      (widen)
-      (goto-char (point-min))
-      (let ((cnt 0))
-	(while (re-search-forward
-		(org-re-property property)
-		nil t)
-	  (setq cnt (1+ cnt))
-	  (delete-region (match-beginning 0) (1+ (point-at-eol))))
-	(message "Property \"%s\" removed from %d entries" property cnt)))))
+  (org-with-wide-buffer
+   (goto-char (point-min))
+   (let ((count 0)
+	 (re (org-re-property (concat (regexp-quote property) "\\+?") t t)))
+     (while (re-search-forward re nil t)
+       (when (org-entry-delete (point) property) (incf count)))
+     (message "Property \"%s\" removed from %d entries" property count))))
 
 (defvar org-columns-current-fmt-compiled) ; defined in org-colview.el
 
@@ -15946,6 +16393,7 @@ completion."
 	(while (>= n org-highest-priority)
 	  (push (char-to-string n) vals)
 	  (setq n (1- n)))))
+     ((equal property "CATEGORY"))
      ((member property org-special-properties))
      ((setq vals (run-hook-with-args-until-success
 		  'org-property-allowed-value-functions property)))
@@ -15996,9 +16444,10 @@ completion."
     (beginning-of-line 1)
     (skip-chars-forward " \t")
     (when (equal prop org-effort-property)
-      (save-excursion
-	(org-back-to-heading t)
-	(put-text-property (point-at-bol) (point-at-eol) 'org-effort nval))
+      (org-refresh-property
+       '((effort . identity)
+	 (effort-minutes . org-duration-string-to-minutes))
+       nval)
       (when (string= org-clock-current-task heading)
 	(setq org-clock-effort nval)
 	(org-clock-update-mode-line)))
@@ -16073,7 +16522,7 @@ a priority cookie and tags in the standard locations."
   "Find Org node headline HEADING in all .org files in directory DIR.
 When the target headline is found, return a marker to this location."
   (let ((files (directory-files (or dir default-directory)
-				nil "\\`[^.#].*\\.org\\'"))
+				t "\\`[^.#].*\\.org\\'"))
         file visiting m buffer)
     (catch 'found
       (while (setq file (pop files))
@@ -16093,19 +16542,10 @@ Return the position where this entry starts, or nil if there is no such entry."
   (interactive "sID: ")
   (let ((id (cond
 	     ((stringp ident) ident)
-	     ((symbol-name ident) (symbol-name ident))
+	     ((symbolp ident) (symbol-name ident))
 	     ((numberp ident) (number-to-string ident))
-	     (t (error "IDENT %s must be a string, symbol or number" ident))))
-	(case-fold-search nil))
-    (save-excursion
-      (save-restriction
-	(widen)
-	(goto-char (point-min))
-	(when (re-search-forward
-	       (concat "^[ \t]*:ID:[ \t]+" (regexp-quote id) "[ \t]*$")
-	       nil t)
-	  (org-back-to-heading t)
-	  (point))))))
+	     (t (error "IDENT %s must be a string, symbol or number" ident)))))
+    (org-with-wide-buffer (org-find-property "ID" id))))
 
 ;;;; Timestamps
 
@@ -16116,17 +16556,16 @@ Return the position where this entry starts, or nil if there is no such entry."
 
 (defun org-time-stamp (arg &optional inactive)
   "Prompt for a date/time and insert a time stamp.
+
 If the user specifies a time like HH:MM or if this command is
 called with at least one prefix argument, the time stamp contains
-the date and the time.  Otherwise, only the date is be included.
+the date and the time.  Otherwise, only the date is included.
 
-All parts of a date not specified by the user is filled in from
-the current date/time.  So if you just press return without
-typing anything, the time stamp will represent the current
-date/time.
+All parts of a date not specified by the user are filled in from
+the timestamp at point, if any, or the current date/time
+otherwise.
 
-If there is already a timestamp at the cursor, it will be
-modified.
+If there is already a timestamp at the cursor, it is replaced.
 
 With two universal prefix arguments, insert an active timestamp
 with the current time without prompting the user.
@@ -16134,57 +16573,59 @@ with the current time without prompting the user.
 When called from lisp, the timestamp is inactive if INACTIVE is
 non-nil."
   (interactive "P")
-  (let* ((ts nil)
-	 (default-time
-	   ;; Default time is either today, or, when entering a range,
-	   ;; the range start.
-	   (if (or (and (org-at-timestamp-p t) (setq ts (match-string 0)))
-		   (save-excursion
-		     (re-search-backward
-		      (concat org-ts-regexp "--?-?\\=") ; 1-3 minuses
-		      (- (point) 20) t)))
-	       (apply 'encode-time (org-parse-time-string (match-string 1)))
-	     (current-time)))
-	 (default-input (and ts (org-get-compact-tod ts)))
-	 (repeater (save-excursion
-	 	     (save-match-data
-	 	       (beginning-of-line)
-	 	       (when (re-search-forward
-			      "\\([.+-]+[0-9]+[hdwmy] ?\\)+" ;;\\(?:[/ ][-+]?[0-9]+[hdwmy]\\)?\\) ?"
-			      (save-excursion (progn (end-of-line) (point))) t)
-			 (match-string 0)))))
-	 org-time-was-given org-end-time-was-given time)
+  (let* ((ts
+	  (cond ((org-at-date-range-p t)
+		 (save-excursion
+		   (goto-char (match-beginning 0))
+		   (looking-at (if inactive org-ts-regexp-both org-ts-regexp)))
+		 (match-string 0))
+		((org-at-timestamp-p t) (match-string 0))))
+	 ;; Default time is either the timestamp at point or today.
+	 ;; When entering a range, only the range start is considered.
+         (default-time (if (not ts) (current-time)
+			 (apply #'encode-time (org-parse-time-string ts))))
+         (default-input (and ts (org-get-compact-tod ts)))
+         (repeater (and ts
+			(string-match "\\([.+-]+[0-9]+[hdwmy] ?\\)+" ts)
+			(match-string 0 ts)))
+	 org-time-was-given
+	 org-end-time-was-given
+	 (time
+	  (and (if (equal arg '(16)) (current-time)
+		 ;; Preserve `this-command' and `last-command'.
+		 (let ((this-command this-command)
+		       (last-command last-command))
+		   (org-read-date
+		    arg 'totime nil nil default-time default-input
+		    inactive))))))
     (cond
-     ((and (org-at-timestamp-p t)
-	   (memq last-command '(org-time-stamp org-time-stamp-inactive))
-	   (memq this-command '(org-time-stamp org-time-stamp-inactive)))
+     ((and ts
+           (memq last-command '(org-time-stamp org-time-stamp-inactive))
+           (memq this-command '(org-time-stamp org-time-stamp-inactive)))
       (insert "--")
-      (setq time (let ((this-command this-command))
-		   (org-read-date arg 'totime nil nil
-				  default-time default-input inactive)))
       (org-insert-time-stamp time (or org-time-was-given arg) inactive))
-     ((org-at-timestamp-p t)
-      (setq time (let ((this-command this-command))
-		   (org-read-date arg 'totime nil nil default-time default-input inactive)))
-      (when (org-at-timestamp-p t) ; just to get the match data
-					;	(setq inactive (eq (char-after (match-beginning 0)) ?\[))
-	(replace-match "")
+     (ts
+      ;; Make sure we're on a timestamp.  When in the middle of a date
+      ;; range, move arbitrarily to range end.
+      (unless (org-at-timestamp-p t)
+	(skip-chars-forward "-")
+	(org-at-timestamp-p t))
+      (replace-match "")
+      (setq org-last-changed-timestamp
+	    (org-insert-time-stamp
+	     time (or org-time-was-given arg)
+	     inactive nil nil (list org-end-time-was-given)))
+      (when repeater
+	(backward-char)
+	(insert " " repeater)
 	(setq org-last-changed-timestamp
-	      (org-insert-time-stamp
-	       time (or org-time-was-given arg)
-	       inactive nil nil (list org-end-time-was-given)))
-	(when repeater (goto-char (1- (point))) (insert " " repeater)
-	      (setq org-last-changed-timestamp
-		    (concat (substring org-last-inserted-timestamp 0 -1)
-			    " " repeater ">"))))
+	      (concat (substring org-last-inserted-timestamp 0 -1)
+		      " " repeater ">")))
       (message "Timestamp updated"))
-     ((equal arg '(16))
-      (org-insert-time-stamp (current-time) t inactive))
-     (t
-      (setq time (let ((this-command this-command))
-		   (org-read-date arg 'totime nil nil default-time default-input inactive)))
-      (org-insert-time-stamp time (or org-time-was-given arg) inactive
-			     nil nil (list org-end-time-was-given))))))
+     ((equal arg '(16)) (org-insert-time-stamp time t inactive))
+     (t (org-insert-time-stamp
+	 time (or org-time-was-given arg) inactive nil nil
+	 (list org-end-time-was-given))))))
 
 ;; FIXME: can we use this for something else, like computing time differences?
 (defun org-get-compact-tod (s)
@@ -16231,8 +16672,7 @@ So these are more for recording a certain time/date."
 (defvar org-read-date-inactive)
 
 (defvar org-read-date-minibuffer-local-map
-  (let* ((org-replace-disputed-keys nil)
-	 (map (make-sparse-keymap)))
+  (let* ((map (make-sparse-keymap)))
     (set-keymap-parent map minibuffer-local-map)
     (org-defkey map (kbd ".")
                 (lambda () (interactive)
@@ -16285,10 +16725,10 @@ So these are more for recording a certain time/date."
                   (message "")))
     (org-defkey map ">"
                 (lambda () (interactive)
-                  (org-eval-in-calendar '(scroll-calendar-left 1))))
+                  (org-eval-in-calendar '(calendar-scroll-left 1))))
     (org-defkey map "<"
                 (lambda () (interactive)
-                  (org-eval-in-calendar '(scroll-calendar-right 1))))
+                  (org-eval-in-calendar '(calendar-scroll-right 1))))
     (org-defkey map "\C-v"
                 (lambda () (interactive)
                   (org-eval-in-calendar
@@ -16370,9 +16810,10 @@ user."
 		    (setcar (nthcdr 1 org-defdecode) 59)
 		    (setq org-def (apply 'encode-time org-defdecode)
 			  org-defdecode (decode-time org-def)))))
+         (cur-frame (selected-frame))
 	 (mouse-autoselect-window nil) ; Don't let the mouse jump
 	 (calendar-frame-setup nil)
-	 (calendar-setup nil)
+	 (calendar-setup (when (eq calendar-setup 'calendar-only) 'calendar-only))
 	 (calendar-move-hook nil)
 	 (calendar-view-diary-initially-flag nil)
 	 (calendar-view-holidays-initially-flag nil)
@@ -16380,7 +16821,7 @@ user."
 		   (if org-with-time "%Y-%m-%d %H:%M" "%Y-%m-%d") org-def))
 	 (prompt (concat (if prompt (concat prompt " ") "")
 			 (format "Date+time [%s]: " timestr)))
-	 ans (org-ans0 "") org-ans1 org-ans2 final)
+	 ans (org-ans0 "") org-ans1 org-ans2 final cal-frame)
 
     (cond
      (from-string (setq ans from-string))
@@ -16388,9 +16829,13 @@ user."
       (save-excursion
 	(save-window-excursion
 	  (calendar)
+	  (when (eq calendar-setup 'calendar-only)
+	    (setq cal-frame
+		  (window-frame (get-buffer-window "*Calendar*" 'visible)))
+	    (select-frame cal-frame))
 	  (org-eval-in-calendar '(setq cursor-type nil) t)
-          (unwind-protect
-              (progn
+	  (unwind-protect
+	      (progn
 		(calendar-forward-day (- (time-to-days org-def)
 					 (calendar-absolute-from-gregorian
 					  (calendar-current-date))))
@@ -16417,8 +16862,11 @@ user."
 		    (use-local-map old-map)
 		    (when org-read-date-overlay
 		      (delete-overlay org-read-date-overlay)
-                      (setq org-read-date-overlay nil)))))
-	    (bury-buffer "*Calendar*")))))
+		      (setq org-read-date-overlay nil)))))
+	    (bury-buffer "*Calendar*")
+	    (when cal-frame
+	      (delete-frame cal-frame)
+	      (select-frame-set-input-focus cur-frame))))))
 
      (t ; Naked prompt only
       (unwind-protect
@@ -16593,16 +17041,35 @@ user."
 
     (setq tl (parse-time-string ans)
 	  day (or (nth 3 tl) (nth 3 org-defdecode))
-	  month (or (nth 4 tl)
-		    (if (and org-read-date-prefer-future
-			     (nth 3 tl) (< (nth 3 tl) (nth 3 nowdecode)))
-			(prog1 (1+ (nth 4 nowdecode)) (setq futurep t))
-		      (nth 4 org-defdecode)))
-	  year (or (and (not kill-year) (nth 5 tl))
-		   (if (and org-read-date-prefer-future
-			    (nth 4 tl) (< (nth 4 tl) (nth 4 nowdecode)))
-		       (prog1 (1+ (nth 5 nowdecode)) (setq futurep t))
-		     (nth 5 org-defdecode)))
+	  month
+	  (cond ((nth 4 tl))
+		((not org-read-date-prefer-future) (nth 4 org-defdecode))
+		;; Day was specified.  Make sure DAY+MONTH
+		;; combination happens in the future.
+		((nth 3 tl)
+		 (setq futurep t)
+		 (if (< day (nth 3 nowdecode)) (1+ (nth 4 nowdecode))
+		   (nth 4 nowdecode)))
+		(t (nth 4 org-defdecode)))
+	  year
+	  (cond ((and (not kill-year) (nth 5 tl)))
+		((not org-read-date-prefer-future) (nth 5 org-defdecode))
+		;; Month was guessed in the future and is at least
+		;; equal to NOWDECODE's.  Fix year accordingly.
+		(futurep
+		 (if (or (> month (nth 4 nowdecode))
+			 (>= day (nth 3 nowdecode)))
+		     (nth 5 nowdecode)
+		   (1+ (nth 5 nowdecode))))
+		;; Month was specified.  Make sure MONTH+YEAR
+		;; combination happens in the future.
+		((nth 4 tl)
+		 (setq futurep t)
+		 (cond ((> month (nth 4 nowdecode)) (nth 5 nowdecode))
+		       ((< month (nth 4 nowdecode)) (1+ (nth 5 nowdecode)))
+		       ((< day (nth 3 nowdecode)) (1+ (nth 5 nowdecode)))
+		       (t (nth 5 nowdecode))))
+		(t (nth 5 org-defdecode)))
 	  hour (or (nth 2 tl) (nth 2 org-defdecode))
 	  minute (or (nth 1 tl) (nth 1 org-defdecode))
 	  second (or (nth 0 tl) 0)
@@ -16631,7 +17098,7 @@ user."
 	    day (or iso-weekday wday 1)
 	    wday nil ; to make sure that the trigger below does not match
 	    iso-date (calendar-gregorian-from-absolute
-		      (calendar-absolute-from-iso
+		      (calendar-iso-to-absolute
 		       (list iso-week day year))))
 					; FIXME:  Should we also push ISO weeks into the future?
 					;      (when (and org-read-date-prefer-future
@@ -16640,7 +17107,7 @@ user."
 					;		    (time-to-days (current-time))))
 					;	(setq year (1+ year)
 					;	      iso-date (calendar-gregorian-from-absolute
-					;			(calendar-absolute-from-iso
+					;			(calendar-iso-to-absolute
 					;			 (list iso-week day year)))))
       (setq month (car iso-date)
 	    year (nth 2 iso-date)
@@ -16765,6 +17232,7 @@ This is used by `org-read-date' in a temporary keymap for the calendar buffer."
 
 (defun org-insert-time-stamp (time &optional with-hm inactive pre post extra)
   "Insert a date stamp for the date given by the internal TIME.
+See `format-time-string' for the format of TIME.
 WITH-HM means use the stamp format that includes the time of the day.
 INACTIVE means use square brackets instead of angular ones, so that the
 stamp will not contribute to the agenda.
@@ -16836,33 +17304,6 @@ The command returns the inserted time stamp."
 	  (put-text-property beg end 'invisible t)
 	  (put-text-property beg end 'end-glyph (make-glyph str)))
       (put-text-property beg end 'display str))))
-
-(defun org-translate-time (string)
-  "Translate all timestamps in STRING to custom format.
-But do this only if the variable `org-display-custom-times' is set."
-  (when org-display-custom-times
-    (save-match-data
-      (let* ((start 0)
-	     (re org-ts-regexp-both)
-	     t1 with-hm inactive tf time str beg end)
-	(while (setq start (string-match re string start))
-	  (setq beg (match-beginning 0)
-		end (match-end 0)
-		t1 (save-match-data
-		     (org-parse-time-string (substring string beg end) t))
-		with-hm (and (nth 1 t1) (nth 2 t1))
-		inactive (equal (substring string beg (1+ beg)) "[")
-		tf (funcall (if with-hm 'cdr 'car)
-			    org-time-stamp-custom-formats)
-		time (org-fix-decoded-time t1)
-		str (format-time-string
-		     (concat
-		      (if inactive "[" "<") (substring tf 1 -1)
-		      (if inactive "]" ">"))
-		     (apply 'encode-time time))
-		string (replace-match str t t string)
-		start (+ start (length str)))))))
-  string)
 
 (defun org-fix-decoded-time (time)
   "Set 0 instead of nil for the first 6 elements of time.
@@ -16954,14 +17395,17 @@ Allowed values for TYPE are:
 
 When TYPE is nil, fall back on returning a regexp that matches
 both scheduled and deadline timestamps."
-  (cond ((eq type 'all) "\\([0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\}\\(?: +[^]+0-9>\n -]+\\)?\\(?: +[0-9]\\{1,2\\}:[0-9]\\{2\\}\\)?\\)")
-	((eq type 'active) org-ts-regexp)
-	((eq type 'inactive) "\\[\\([0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\} ?[^\n>]*?\\)\\]")
-	((eq type 'scheduled) (concat "\\<" org-scheduled-string " *<\\([^>]+\\)>"))
-	((eq type 'deadline) (concat "\\<" org-deadline-string " *<\\([^>]+\\)>"))
-	((eq type 'closed) (concat org-closed-string " \\[\\([0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\} ?[^\n>]*?\\)\\]"))
-	((eq type 'scheduled-or-deadline)
-	 (concat "\\<\\(?:" org-deadline-string "\\|" org-scheduled-string "\\) *<\\([^>]+\\)>"))))
+  (case type
+    (all org-ts-regexp-both)
+    (active org-ts-regexp)
+    (inactive org-ts-regexp-inactive)
+    (scheduled org-scheduled-time-regexp)
+    (deadline org-deadline-time-regexp)
+    (closed org-closed-time-regexp)
+    (otherwise
+     (concat "\\<"
+	     (regexp-opt (list org-deadline-string org-scheduled-string))
+	     " *<\\([^>]+\\)>"))))
 
 (defun org-check-before-date (date)
   "Check if there are deadlines or scheduled entries before DATE."
@@ -16969,9 +17413,13 @@ both scheduled and deadline timestamps."
   (let ((case-fold-search nil)
 	(regexp (org-re-timestamp org-ts-type))
 	(callback
-	 (lambda () (time-less-p
-		     (org-time-string-to-time (match-string 1))
-		     (org-time-string-to-time date)))))
+	 `(lambda ()
+	    (and ,(if (memq org-ts-type '(active inactive all))
+		      '(eq (org-element-type (org-element-context) 'timestamp))
+		    '(org-at-planning-p))
+		 (time-less-p
+		  (org-time-string-to-time (match-string 1))
+		  (org-time-string-to-time date))))))
     (message "%d entries before %s"
 	     (org-occur regexp nil callback) date)))
 
@@ -16981,10 +17429,13 @@ both scheduled and deadline timestamps."
   (let ((case-fold-search nil)
 	(regexp (org-re-timestamp org-ts-type))
 	(callback
-	 (lambda () (not
-		     (time-less-p
-		      (org-time-string-to-time (match-string 1))
-		      (org-time-string-to-time date))))))
+	 `(lambda ()
+	    (and ,(if (memq org-ts-type '(active inactive all))
+		      '(eq (org-element-type (org-element-context) 'timestamp))
+		    '(org-at-planning-p))
+		 (not (time-less-p
+		       (org-time-string-to-time (match-string 1))
+		       (org-time-string-to-time date)))))))
     (message "%d entries after %s"
 	     (org-occur regexp nil callback) date)))
 
@@ -16995,15 +17446,18 @@ both scheduled and deadline timestamps."
   (let ((case-fold-search nil)
 	(regexp (org-re-timestamp org-ts-type))
 	(callback
-	 (lambda ()
-	   (let ((match (match-string 1)))
-	     (and
-	      (not (time-less-p
-		    (org-time-string-to-time match)
-		    (org-time-string-to-time start-date)))
-	      (time-less-p
-	       (org-time-string-to-time match)
-	       (org-time-string-to-time end-date)))))))
+	 `(lambda ()
+	    (let ((match (match-string 1)))
+	      (and
+	       ,(if (memq org-ts-type '(active inactive all))
+		    '(eq (org-element-type (org-element-context) 'timestamp))
+		  '(org-at-planning-p))
+	       (not (time-less-p
+		     (org-time-string-to-time match)
+		     (org-time-string-to-time start-date)))
+	       (time-less-p
+		(org-time-string-to-time match)
+		(org-time-string-to-time end-date)))))))
     (message "%d entries between %s and %s"
 	     (org-occur regexp nil callback) start-date end-date)))
 
@@ -17129,14 +17583,15 @@ The variable `date' is bound by the calendar when this is called."
 
 (defun org-small-year-to-year (year)
   "Convert 2-digit years into 4-digit years.
-38-99 are mapped into 1938-1999.  1-37 are mapped into 2001-2037.
-The year 2000 cannot be abbreviated.  Any year larger than 99
-is returned unchanged."
-  (if (< year 38)
-      (setq year (+ 2000 year))
-    (if (< year 100)
-	(setq year (+ 1900 year))))
-  year)
+YEAR is expanded into one of the 30 next years, if possible, or
+into a past one.  Any year larger than 99 is returned unchanged."
+  (if (>= year 100) year
+    (let* ((current (string-to-number (format-time-string "%Y" (current-time))))
+	   (century (/ current 100))
+	   (offset (- year (% current 100))))
+      (cond ((> offset 30) (+ (* (1- century) 100) year))
+	    ((> offset -70) (+ (* century 100) year))
+	    (t (+ (* (1+ century) 100) year))))))
 
 (defun org-time-from-absolute (d)
   "Return the time corresponding to date D.
@@ -17392,7 +17847,7 @@ With prefix ARG, change that many days."
   "Is the cursor on the clock log line?"
   (save-excursion
     (move-beginning-of-line 1)
-    (looking-at "^[ \t]*CLOCK:")))
+    (looking-at org-clock-line-re)))
 
 (defvar org-clock-history)                     ; defined in org-clock.el
 (defvar org-clock-adjust-closest nil)          ; defined in org-clock.el
@@ -17510,7 +17965,7 @@ When SUPPRESS-TMP-DELAY is non-nil, suppress delays like \"--2d\"."
 	    (let* ((p (save-excursion (org-back-to-heading t)))
 		   (cl (mapcar (lambda(c) (abs (- (marker-position c) p))) org-clock-history))
 		   (clfixnth
-		    (+ fixnext (- (length cl) (or (length (member (apply #'min cl) cl)) 100))))
+		    (+ fixnext (- (length cl) (or (length (member (apply 'min cl) cl)) 100))))
 		   (clfixpos (if (> 0 clfixnth) nil (nth clfixnth org-clock-history))))
 	      (if (not clfixpos)
 		  (message "No clock to adjust")
@@ -17614,7 +18069,8 @@ If there is already a time stamp at the cursor position, update it."
        (encode-time 0 0 0 (nth 1 cal-date) (car cal-date) (nth 2 cal-date))))))
 
 (defcustom org-effort-durations
-  `(("h" . 60)
+  `(("min" . 1)
+    ("h" . 60)
     ("d" . ,(* 60 8))
     ("w" . ,(* 60 8 5))
     ("m" . ,(* 60 8 5 4))
@@ -17630,7 +18086,8 @@ minutes.
 For example, if the value of this variable is ((\"hours\" . 60)), then an
 effort string \"2hours\" is equivalent to 120 minutes."
   :group 'org-agenda
-  :version "24.1"
+  :version "25.1"
+  :package-version '(Org . "8.3")
   :type '(alist :key-type (string :tag "Modifier")
 		:value-type (number :tag "Minutes")))
 
@@ -17782,19 +18239,25 @@ tables are not re-aligned, etc."
   :version "24.3"
   :group 'org-agenda)
 
-(defcustom org-agenda-ignore-drawer-properties nil
+(define-obsolete-variable-alias
+  'org-agenda-ignore-drawer-properties
+  'org-agenda-ignore-properties "25.1")
+
+(defcustom org-agenda-ignore-properties nil
   "Avoid updating text properties when building the agenda.
-Properties are used to prepare buffers for effort estimates, appointments,
-and subtree-local categories.
-If you don't use these in the agenda, you can add them to this list and
-agenda building will be a bit faster.
+Properties are used to prepare buffers for effort estimates,
+appointments, statistics and subtree-local categories.
+If you don't use these in the agenda, you can add them to this
+list and agenda building will be a bit faster.
 The value is a list, with zero or more of the symbols `effort', `appt',
-or `category'."
+`stats' or `category'."
   :type '(set :greedy t
 	      (const effort)
 	      (const appt)
+	      (const stats)
 	      (const category))
-  :version "24.3"
+  :version "25.1"
+  :package-version '(Org . "8.3")
   :group 'org-agenda)
 
 (defun org-duration-string-to-minutes (s &optional output-to-string)
@@ -17957,8 +18420,10 @@ used by the agenda files.  If ARCHIVE is `ifmode', do this only if
   "Return non-nil, if FILE is an agenda file.
 If FILE is omitted, use the file associated with the current
 buffer."
-  (member (or file (buffer-file-name))
-          (org-agenda-files t)))
+  (let ((fname (or file (buffer-file-name))))
+    (and fname
+         (member (file-truename fname)
+                 (mapcar #'file-truename (org-agenda-files t))))))
 
 (defun org-edit-agenda-file-list ()
   "Edit the list of agenda files.
@@ -18087,7 +18552,7 @@ Optional argument FILE means use this file instead of the current."
 	(progn
 	  (org-store-new-agenda-file-list files)
 	  (org-install-agenda-files-menu)
-	  (message "Removed file: %s" afile))
+	  (message "Removed from Org Agenda list: %s" afile))
       (message "File was not in list: %s (not removed)" afile))))
 
 (defun org-file-menu-entry (file)
@@ -18103,11 +18568,12 @@ Optional argument FILE means use this file instead of the current."
        ((equal r ?r)
 	(org-remove-file file)
 	(throw 'nextfile t))
-       (t (error "Abort"))))))
+       (t (user-error "Abort"))))))
 
 (defun org-get-agenda-file-buffer (file)
-  "Get a buffer visiting FILE.  If the buffer needs to be created, add
-it to the list of buffers which might be released later."
+  "Get an agenda buffer visiting FILE.
+If the buffer needs to be created, add it to the list of buffers
+which might be released later."
   (let ((buf (org-find-base-buffer-visiting file)))
     (if buf
 	buf ; just return it
@@ -18150,20 +18616,15 @@ When a buffer is unmodified, it is just killed.  When modified, it is saved
 	      (org-check-agenda-file file)
 	      (set-buffer (org-get-agenda-file-buffer file)))
 	    (widen)
-	    (org-set-regexps-and-options-for-tags)
+	    (org-set-regexps-and-options 'tags-only)
 	    (setq pos (point))
-	    (goto-char (point-min))
-	    (let ((case-fold-search t))
-	      (when (search-forward "#+setupfile" nil t)
-		;; Don't set all regexps and options systematically as
-		;; this is only run for setting agenda tags from setup
-		;; file
-		(org-set-regexps-and-options)))
-	    (or (memq 'category org-agenda-ignore-drawer-properties)
+	    (or (memq 'category org-agenda-ignore-properties)
 		(org-refresh-category-properties))
-	    (or (memq 'effort org-agenda-ignore-drawer-properties)
-		(org-refresh-properties org-effort-property 'org-effort))
-	    (or (memq 'appt org-agenda-ignore-drawer-properties)
+	    (or (memq 'stats org-agenda-ignore-properties)
+		(org-refresh-stats-properties))
+	    (or (memq 'effort org-agenda-ignore-properties)
+		(org-refresh-effort-properties))
+	    (or (memq 'appt org-agenda-ignore-properties)
 		(org-refresh-properties "APPT_WARNTIME" 'org-appt-warntime))
 	    (setq org-todo-keywords-for-agenda
 		  (append org-todo-keywords-for-agenda org-todo-keywords-1))
@@ -18171,8 +18632,6 @@ When a buffer is unmodified, it is just killed.  When modified, it is saved
 		  (append org-done-keywords-for-agenda org-done-keywords))
 	    (setq org-todo-keyword-alist-for-agenda
 		  (append org-todo-keyword-alist-for-agenda org-todo-key-alist))
-	    (setq org-drawers-for-agenda
-		  (append org-drawers-for-agenda org-drawers))
 	    (setq org-tag-alist-for-agenda
 		  (org-uniquify
 		   (append org-tag-alist-for-agenda
@@ -18191,11 +18650,11 @@ When a buffer is unmodified, it is just killed.  When modified, it is saved
 		   (if (org-at-heading-p t)
 		       (add-text-properties (point-at-bol) (org-end-of-subtree t) pa))))
 	       (goto-char (point-min))
-	       (setq re (format org-heading-keyword-regexp-format
-				org-comment-string))
+	       (setq re (format "^\\* .*\\<%s\\>" org-comment-string))
 	       (while (re-search-forward re nil t)
-		 (add-text-properties
-		  (match-beginning 0) (org-end-of-subtree t) pc))))
+		 (when (save-match-data (org-in-commented-heading-p t))
+		   (add-text-properties
+		    (match-beginning 0) (org-end-of-subtree t) pc)))))
 	    (goto-char pos)))))
     (setq org-todo-keywords-for-agenda
           (org-uniquify org-todo-keywords-for-agenda))
@@ -18212,7 +18671,7 @@ When a buffer is unmodified, it is just killed.  When modified, it is saved
 (org-defkey org-cdlatex-mode-map "^" 'org-cdlatex-underscore-caret)
 (org-defkey org-cdlatex-mode-map "`" 'cdlatex-math-symbol)
 (org-defkey org-cdlatex-mode-map "'" 'org-cdlatex-math-modify)
-(org-defkey org-cdlatex-mode-map "\C-c{" 'cdlatex-environment)
+(org-defkey org-cdlatex-mode-map "\C-c{" 'org-cdlatex-environment-indent)
 
 (defvar org-cdlatex-texmathp-advice-is-done nil
   "Flag remembering if we have applied the advice to texmathp already.")
@@ -18290,20 +18749,65 @@ Revert to the normal definition outside of these fragments."
     (let (org-cdlatex-mode)
       (call-interactively (key-binding (vector last-input-event))))))
 
+(defun org-cdlatex-environment-indent (&optional environment item)
+  "Execute `cdlatex-environment' and indent the inserted environment.
+
+ENVIRONMENT and ITEM are passed to `cdlatex-environment'.
+
+The inserted environment is indented to current indentation
+unless point is at the beginning of the line, in which the
+environment remains unintended."
+  (interactive)
+  ;; cdlatex-environment always return nil.  Therefore, capture output
+  ;; first and determine if an environment was selected.
+  (let* ((beg (point-marker))
+	 (end (copy-marker (point) t))
+	 (inserted (progn
+		     (ignore-errors (cdlatex-environment environment item))
+		     (< beg end)))
+	 ;; Figure out how many lines to move forward after the
+	 ;; environment has been inserted.
+	 (lines (when inserted
+		  (save-excursion
+		    (- (loop while (< beg (point))
+				with x = 0
+				do (forward-line -1)
+				(incf x)
+				finally return x)
+		       (if (progn (goto-char beg)
+				  (and (progn (skip-chars-forward " \t") (eolp))
+				       (progn (skip-chars-backward " \t") (bolp))))
+			   1 0)))))
+	 (env (org-trim (delete-and-extract-region beg end))))
+    (when inserted
+      ;; Get indentation of next line unless at column 0.
+      (let ((ind (if (bolp) 0
+		   (save-excursion
+		     (org-return-indent)
+		     (prog1 (org-get-indentation)
+		       (when (progn (skip-chars-forward " \t") (eolp))
+			 (delete-region beg (point)))))))
+	    (bol (progn (skip-chars-backward " \t") (bolp))))
+	;; Insert a newline before environment unless at column zero
+	;; to "escape" the current line.  Insert a newline if
+	;; something is one the same line as \end{ENVIRONMENT}.
+	(insert
+	 (concat (unless bol "\n") env
+		 (when (and (skip-chars-forward " \t") (not (eolp))) "\n")))
+	(unless (zerop ind)
+	  (save-excursion
+	    (goto-char beg)
+	    (while (< (point) end)
+	      (unless (eolp) (org-indent-line-to ind))
+	      (forward-line))))
+	(goto-char beg)
+	(forward-line lines)
+	(org-indent-line-to ind)))
+    (set-marker beg nil)
+    (set-marker end nil)))
 
 
 ;;;; LaTeX fragments
-
-(defvar org-latex-regexps
-  '(("begin" "^[ \t]*\\(\\\\begin{\\([a-zA-Z0-9\\*]+\\)[^\000]+?\\\\end{\\2}\\)" 1 t)
-    ;; ("$" "\\([ 	(]\\|^\\)\\(\\(\\([$]\\)\\([^ 	\r\n,.$].*?\\(\n.*?\\)\\{0,5\\}[^ 	\r\n,.$]\\)\\4\\)\\)\\([ 	.,?;:'\")]\\|$\\)" 2 nil)
-    ;; \000 in the following regex is needed for org-inside-LaTeX-fragment-p
-    ("$1" "\\([^$]\\|^\\)\\(\\$[^ 	\r\n,;.$]\\$\\)\\([- 	.,?;:'\")\000]\\|$\\)" 2 nil)
-    ("$" "\\([^$]\\|^\\)\\(\\(\\$\\([^ 	\r\n,;.$][^$\n\r]*?\\(\n[^$\n\r]*?\\)\\{0,2\\}[^ 	\r\n,.$]\\)\\$\\)\\)\\([- 	.,?;:'\")\000]\\|$\\)" 2 nil)
-    ("\\(" "\\\\([^\000]*?\\\\)" 0 nil)
-    ("\\[" "\\\\\\[[^\000]*?\\\\\\]" 0 nil)
-    ("$$" "\\$\\$[^\000]*?\\$\\$" 0 nil))
-  "Regular expressions for matching embedded LaTeX.")
 
 (defun org-inside-LaTeX-fragment-p ()
   "Test if point is inside a LaTeX fragment.
@@ -18359,175 +18863,232 @@ looks only before point, not after."
   "List of overlays carrying the images of latex fragments.")
 (make-variable-buffer-local 'org-latex-fragment-image-overlays)
 
-(defun org-remove-latex-fragment-image-overlays ()
-  "Remove all overlays with LaTeX fragment images in current buffer."
-  (mapc 'delete-overlay org-latex-fragment-image-overlays)
-  (setq org-latex-fragment-image-overlays nil))
+(defun org-remove-latex-fragment-image-overlays (&optional beg end)
+  "Remove all overlays with LaTeX fragment images in current buffer.
+When optional arguments BEG and END are non-nil, remove all
+overlays between them instead.  Return t when some overlays were
+removed, nil otherwise."
+  (let (removedp)
+    (setq org-latex-fragment-image-overlays
+	  (let ((beg (or beg (point-min)))
+		(end (or end (point-max))))
+	    (org-remove-if
+	     (lambda (o)
+	       (and (>= (overlay-start o) beg)
+		    (<= (overlay-end o) end)
+		    (progn (delete-overlay o)
+			   (or removedp (setq removedp t)))))
+	     org-latex-fragment-image-overlays)))
+    removedp))
 
-(defun org-preview-latex-fragment (&optional subtree)
+(define-obsolete-function-alias
+  'org-preview-latex-fragment 'org-toggle-latex-fragment "24.4")
+(defun org-toggle-latex-fragment (&optional arg)
   "Preview the LaTeX fragment at point, or all locally or globally.
-If the cursor is in a LaTeX fragment, create the image and overlay
-it over the source code.  If there is no fragment at point, display
-all fragments in the current text, from one headline to the next.  With
-prefix SUBTREE, display all fragments in the current subtree.  With a
-double prefix arg \\[universal-argument] \\[universal-argument], or when \
-the cursor is before the first headline,
-display all fragments in the buffer.
-The images can be removed again with \\[org-ctrl-c-ctrl-c]."
+
+If the cursor is on a LaTeX fragment, create the image and overlay
+it over the source code, if there is none.  Remove it otherwise.
+If there is no fragment at point, display all fragments in the
+current section.
+
+With prefix ARG, preview or clear image for all fragments in the
+current subtree or in the whole buffer when used before the first
+headline.  With a double prefix ARG \\[universal-argument] \
+\\[universal-argument] preview or clear images
+for all fragments in the buffer."
   (interactive "P")
-  (unless buffer-file-name
+  (unless (buffer-file-name (buffer-base-buffer))
     (user-error "Can't preview LaTeX fragment in a non-file buffer"))
   (when (display-graphic-p)
-    (org-remove-latex-fragment-image-overlays)
-    (save-excursion
-      (save-restriction
-	(let (beg end at msg)
-	  (cond
-	   ((or (equal subtree '(16))
-		(not (save-excursion
-		       (re-search-backward org-outline-regexp-bol nil t))))
-	    (setq beg (point-min) end (point-max)
-		  msg "Creating images for buffer...%s"))
-	   ((equal subtree '(4))
-	    (org-back-to-heading)
-	    (setq beg (point) end (org-end-of-subtree t)
-		  msg "Creating images for subtree...%s"))
-	   (t
-	    (if (setq at (org-inside-LaTeX-fragment-p))
-		(goto-char (max (point-min) (- (cdr at) 2)))
-	      (org-back-to-heading))
-	    (setq beg (point) end (progn (outline-next-heading) (point))
-		  msg (if at "Creating image...%s"
-			"Creating images for entry...%s"))))
-	  (message msg "")
-	  (narrow-to-region beg end)
-	  (goto-char beg)
-	  (org-format-latex
-	   (concat org-latex-preview-ltxpng-directory (file-name-sans-extension
-						       (file-name-nondirectory
-							buffer-file-name)))
-	   default-directory 'overlays msg at 'forbuffer
-	   org-latex-create-formula-image-program)
-	  (message msg "done.  Use `C-c C-c' to remove images."))))))
-
-(defun org-format-latex (prefix &optional dir overlays msg at
-				forbuffer processing-type)
-  "Replace LaTeX fragments with links to an image, and produce images.
-Some of the options can be changed using the variable
-`org-format-latex-options'."
-  (if (and overlays (fboundp 'clear-image-cache)) (clear-image-cache))
-  (let* ((prefixnodir (file-name-nondirectory prefix))
-	 (absprefix (expand-file-name prefix dir))
-	 (todir (file-name-directory absprefix))
-	 (opt org-format-latex-options)
-	 (optnew org-format-latex-options)
-	 (matchers (plist-get opt :matchers))
-	 (re-list org-latex-regexps)
-	 (cnt 0) txt hash link beg end re e checkdir
-	 string
-	 m n block-type block linkfile movefile ov)
-    ;; Check the different regular expressions
-    (while (setq e (pop re-list))
-      (setq m (car e) re (nth 1 e) n (nth 2 e) block-type (nth 3 e)
-	    block (if block-type "\n\n" ""))
-      (when (member m matchers)
-	(goto-char (point-min))
-	(while (re-search-forward re nil t)
-	  (when (and (or (not at) (equal (cdr at) (match-beginning n)))
-		     (or (not overlays)
-			 (not (eq (get-char-property (match-beginning n)
-						     'org-overlay-type)
-				  'org-latex-overlay))))
+    (catch 'exit
+      (save-excursion
+	(let ((window-start (window-start)) msg)
+	  (save-restriction
 	    (cond
-	     ((eq processing-type 'verbatim))
-	     ((eq processing-type 'mathjax)
-	      ;; Prepare for MathJax processing.
-	      (setq string (match-string n))
-	      (when (member m '("$" "$1"))
-		(save-excursion
-		  (delete-region (match-beginning n) (match-end n))
-		  (goto-char (match-beginning n))
-		  (insert (concat "\\(" (substring string 1 -1) "\\)")))))
-	     ((or (eq processing-type 'dvipng)
-		  (eq processing-type 'imagemagick))
-	      ;; Process to an image.
-	      (setq txt (match-string n)
-		    beg (match-beginning n) end (match-end n)
-		    cnt (1+ cnt))
-	      (let ((face (face-at-point))
-		    (fg (plist-get opt :foreground))
-		    (bg (plist-get opt :background))
-		    ;; Ensure full list is printed.
-		    print-length print-level)
-		(when forbuffer
-		  ;; Get the colors from the face at point.
-		  (goto-char beg)
-		  (when (eq fg 'auto)
-		    (setq fg (face-attribute face :foreground nil 'default)))
-		  (when (eq bg 'auto)
-		    (setq bg (face-attribute face :background nil 'default)))
-		  (setq optnew (copy-sequence opt))
-		  (plist-put optnew :foreground fg)
-		  (plist-put optnew :background bg))
-		(setq hash (sha1 (prin1-to-string
-				  (list org-format-latex-header
-					org-latex-default-packages-alist
-					org-latex-packages-alist
-					org-format-latex-options
-					forbuffer txt fg bg)))
-		      linkfile (format "%s_%s.png" prefix hash)
-		      movefile (format "%s_%s.png" absprefix hash)))
-	      (setq link (concat block "[[file:" linkfile "]]" block))
-	      (if msg (message msg cnt))
-	      (goto-char beg)
-	      (unless checkdir	      ; Ensure the directory exists.
-		(setq checkdir t)
-		(or (file-directory-p todir) (make-directory todir t)))
-	      (unless (file-exists-p movefile)
-		(org-create-formula-image
-		 txt movefile optnew forbuffer processing-type))
-	      (if overlays
-		  (progn
-		    (mapc (lambda (o)
-			    (if (eq (overlay-get o 'org-overlay-type)
-				    'org-latex-overlay)
-				(delete-overlay o)))
-			  (overlays-in beg end))
-		    (setq ov (make-overlay beg end))
-		    (overlay-put ov 'org-overlay-type 'org-latex-overlay)
-		    (if (featurep 'xemacs)
-			(progn
-			  (overlay-put ov 'invisible t)
-			  (overlay-put
-			   ov 'end-glyph
-			   (make-glyph (vector 'png :file movefile))))
-		      (overlay-put
-		       ov 'display
-		       (list 'image :type 'png :file movefile :ascent 'center)))
-		    (push ov org-latex-fragment-image-overlays)
-		    (goto-char end))
-		(delete-region beg end)
-		(insert (org-add-props link
-			    (list 'org-latex-src
-				  (replace-regexp-in-string
-				   "\"" "" txt)
-				  'org-latex-src-embed-type
-				  (if block-type 'paragraph 'character))))))
-	     ((eq processing-type 'mathml)
-	      ;; Process to MathML
-	      (unless (save-match-data (org-format-latex-mathml-available-p))
-		(user-error "LaTeX to MathML converter not configured"))
-	      (setq txt (match-string n)
-		    beg (match-beginning n) end (match-end n)
-		    cnt (1+ cnt))
-	      (if msg (message msg cnt))
-	      (goto-char beg)
-	      (delete-region beg end)
-	      (insert (org-format-latex-as-mathml
-		       txt block-type prefix dir)))
+	     ((or (equal arg '(16))
+		  (and (equal arg '(4))
+		       (org-with-limited-levels (org-before-first-heading-p))))
+	      (if (org-remove-latex-fragment-image-overlays)
+		  (progn (message "LaTeX fragments images removed from buffer")
+			 (throw 'exit nil))
+		(setq msg "Creating images for buffer...")))
+	     ((equal arg '(4))
+	      (org-with-limited-levels (org-back-to-heading t))
+	      (let ((beg (point))
+		    (end (progn (org-end-of-subtree t) (point))))
+		(if (org-remove-latex-fragment-image-overlays beg end)
+		    (progn
+		      (message "LaTeX fragment images removed from subtree")
+		      (throw 'exit nil))
+		  (setq msg "Creating images for subtree...")
+		  (narrow-to-region beg end))))
+	     ((let ((datum (org-element-context)))
+		(when (memq (org-element-type datum)
+			    '(latex-environment latex-fragment))
+		  (let* ((beg (org-element-property :begin datum))
+			 (end (org-element-property :end datum)))
+		    (if (org-remove-latex-fragment-image-overlays beg end)
+			(progn (message "LaTeX fragment image removed")
+			       (throw 'exit nil))
+		      (narrow-to-region beg end)
+		      (setq msg "Creating image..."))))))
 	     (t
-	      (error "Unknown conversion type %s for LaTeX fragments"
-		     processing-type)))))))))
+	      (org-with-limited-levels
+	       (let ((beg (if (org-at-heading-p) (line-beginning-position)
+			    (outline-previous-heading)
+			    (point)))
+		     (end (progn (outline-next-heading) (point))))
+		 (if (org-remove-latex-fragment-image-overlays beg end)
+		     (progn
+		       (message "LaTeX fragment images removed from section")
+		       (throw 'exit nil))
+		   (setq msg "Creating images for section...")
+		   (narrow-to-region beg end))))))
+	    (let ((file (buffer-file-name (buffer-base-buffer))))
+	      (org-format-latex
+	       (concat org-latex-preview-ltxpng-directory
+		       (file-name-sans-extension (file-name-nondirectory file)))
+	       ;; Emacs cannot overlay images from remote hosts.
+	       ;; Create it in `temporary-file-directory' instead.
+	       (if (file-remote-p file) temporary-file-directory
+		 default-directory)
+	       'overlays msg 'forbuffer
+	       org-latex-create-formula-image-program)))
+	  ;; Work around a bug that doesn't restore window's start
+	  ;; when widening back the buffer.
+	  (set-window-start nil window-start)
+	  (message (concat msg "done")))))))
+
+(defun org-format-latex
+    (prefix &optional dir overlays msg forbuffer processing-type)
+  "Replace LaTeX fragments with links to an image, and produce images.
+
+When optional argument OVERLAYS is non-nil, display the image on
+top of the fragment instead of replacing it.
+
+PROCESSING-TYPE is the conversion method to use, as a symbol.
+
+Some of the options can be changed using the variable
+`org-format-latex-options', which see."
+  (when (and overlays (fboundp 'clear-image-cache)) (clear-image-cache))
+  (unless (eq processing-type 'verbatim)
+    (let* ((math-regexp "\\$\\|\\\\[([]\\|^[ \t]*\\\\begin{[A-Za-z0-9*]+}")
+	   (cnt 0)
+	   checkdir-flag)
+      (goto-char (point-min))
+      ;; Optimize overlay creation: (info "(elisp) Managing Overlays").
+      (when (and overlays (memq processing-type '(dvipng imagemagick)))
+	(overlay-recenter (point-max)))
+      (while (re-search-forward math-regexp nil t)
+	(unless (and overlays
+		     (eq (get-char-property (point) 'org-overlay-type)
+			 'org-latex-overlay))
+	  (let* ((context (org-element-context))
+		 (type (org-element-type context)))
+	    (when (memq type '(latex-environment latex-fragment))
+	      (let ((block-type (eq type 'latex-environment))
+		    (value (org-element-property :value context))
+		    (beg (org-element-property :begin context))
+		    (end (save-excursion
+			   (goto-char (org-element-property :end context))
+			   (skip-chars-backward " \r\t\n")
+			   (point))))
+		(case processing-type
+		  (mathjax
+		   ;; Prepare for MathJax processing.
+		   (if (eq (char-after beg) ?$)
+		       (save-excursion
+			 (delete-region beg end)
+			 (insert "\\(" (substring value 1 -1) "\\)"))
+		     (goto-char end)))
+		  ((dvipng imagemagick)
+		   ;; Process to an image.
+		   (incf cnt)
+		   (goto-char beg)
+		   (let* ((face (face-at-point))
+			  ;; Get the colors from the face at point.
+			  (fg
+			   (let ((color (plist-get org-format-latex-options
+						   :foreground)))
+			     (if (and forbuffer (eq color 'auto))
+				 (face-attribute face :foreground nil 'default)
+			       color)))
+			  (bg
+			   (let ((color (plist-get org-format-latex-options
+						   :background)))
+			     (if (and forbuffer (eq color 'auto))
+				 (face-attribute face :background nil 'default)
+			       color)))
+			  (hash (sha1 (prin1-to-string
+				       (list org-format-latex-header
+					     org-latex-default-packages-alist
+					     org-latex-packages-alist
+					     org-format-latex-options
+					     forbuffer value fg bg))))
+			  (absprefix (expand-file-name prefix dir))
+			  (linkfile (format "%s_%s.png" prefix hash))
+			  (movefile (format "%s_%s.png" absprefix hash))
+			  (sep (and block-type "\n\n"))
+			  (link (concat sep "[[file:" linkfile "]]" sep))
+			  (options
+			   (org-combine-plists
+			    org-format-latex-options
+			    `(:foreground ,fg :background ,bg))))
+		     (when msg (message msg cnt))
+		     (unless checkdir-flag ; Ensure the directory exists.
+		       (setq checkdir-flag t)
+		       (let ((todir (file-name-directory absprefix)))
+			 (unless (file-directory-p todir)
+			   (make-directory todir t))))
+		     (unless (file-exists-p movefile)
+		       (org-create-formula-image
+			value movefile options forbuffer processing-type))
+		     (if overlays
+			 (progn
+			   (dolist (o (overlays-in beg end))
+			     (when (eq (overlay-get o 'org-overlay-type)
+				       'org-latex-overlay)
+			       (delete-overlay o)))
+			   (let ((ov (make-overlay beg end)))
+			     (overlay-put ov
+					  'org-overlay-type
+					  'org-latex-overlay)
+			     (overlay-put ov 'evaporate t)
+			     (if (featurep 'xemacs)
+				 (progn
+				   (overlay-put ov 'invisible t)
+				   (overlay-put
+				    ov 'end-glyph
+				    (make-glyph
+				     (vector 'png :file movefile))))
+			       (overlay-put
+				ov 'display
+				(list 'image
+				      :type 'png
+				      :file movefile
+				      :ascent 'center)))
+			     (push ov org-latex-fragment-image-overlays))
+			   (goto-char end))
+		       (delete-region beg end)
+		       (insert
+			(org-add-props link
+			    (list 'org-latex-src
+				  (replace-regexp-in-string "\"" "" value)
+				  'org-latex-src-embed-type
+				  (if block-type 'paragraph 'character)))))))
+		  (mathml
+		   ;; Process to MathML.
+		   (unless (org-format-latex-mathml-available-p)
+		     (user-error "LaTeX to MathML converter not configured"))
+		   (incf cnt)
+		   (when msg (message msg cnt))
+		   (goto-char beg)
+		   (delete-region beg end)
+		   (insert (org-format-latex-as-mathml
+			    value block-type prefix dir)))
+		  (otherwise
+		   (error "Unknown conversion type %s for LaTeX fragments"
+			  processing-type)))))))))))
 
 (defun org-create-math-formula (latex-frag &optional mathml-file)
   "Convert LATEX-FRAG to MathML and store it in MATHML-FILE.
@@ -18542,7 +19103,7 @@ inspection."
 				   (buffer-substring-no-properties
 				    (region-beginning) (region-end)))))
 		       (read-string "LaTeX Fragment: " frag nil frag))))
-  (unless latex-frag (error "Invalid LaTeX fragment"))
+  (unless latex-frag (user-error "Invalid LaTeX fragment"))
   (let* ((tmp-in-file (file-relative-name
 		       (make-temp-name (expand-file-name "ltxmathml-in"))))
 	 (ignore (write-region latex-frag nil tmp-in-file))
@@ -18550,9 +19111,12 @@ inspection."
 			(make-temp-name (expand-file-name  "ltxmathml-out"))))
 	 (cmd (format-spec
 	       org-latex-to-mathml-convert-command
-	       `((?j . ,(shell-quote-argument
-			 (expand-file-name org-latex-to-mathml-jar-file)))
+	       `((?j . ,(and org-latex-to-mathml-jar-file
+			 (shell-quote-argument
+			  (expand-file-name
+			   org-latex-to-mathml-jar-file))))
 		 (?I . ,(shell-quote-argument tmp-in-file))
+		 (?i . ,latex-frag)
 		 (?o . ,(shell-quote-argument tmp-out-file)))))
 	 mathml shell-command-output)
     (when (org-called-interactively-p 'any)
@@ -18567,9 +19131,11 @@ inspection."
 	      (when (re-search-forward
 		     (concat
 		      (regexp-quote
-		       "<math xmlns=\"http://www.w3.org/1998/Math/MathML\">")
+		       "<math xmlns=\"http://www.w3.org/1998/Math/MathML\"")
+		      "[^>]*?>"
 		      "\\(.\\|\n\\)*"
-		      (regexp-quote "</math>")) nil t)
+		      "</math>")
+		     nil t)
 		(prog1 (match-string 0) (kill-buffer))))))
     (cond
      (mathml
@@ -18629,11 +19195,11 @@ share a good deal of logic."
    "latex" "needed to convert LaTeX fragments to images")
   (funcall
    (case (or type org-latex-create-formula-image-program)
-     ('dvipng
+     (dvipng
       (org-check-external-command
        "dvipng" "needed to convert LaTeX fragments to images")
       #'org-create-formula-image-with-dvipng)
-     ('imagemagick
+     (imagemagick
       (org-check-external-command
        "convert" "you need to install imagemagick")
       #'org-create-formula-image-with-imagemagick)
@@ -18661,6 +19227,16 @@ share a good deal of logic."
        (plist-get info :latex-header)))
      info)))
 
+(defun org--get-display-dpi ()
+  "Get the DPI of the display.
+
+Assumes that the display has the same pixel width in the
+horizontal and vertical directions."
+  (if (display-graphic-p)
+      (round (/ (display-pixel-height)
+		(/ (display-mm-height) 25.4)))
+    (error "Attempt to calculate the dpi of a non-graphic display")))
+
 ;; This function borrows from Ganesh Swami's latex2png.el
 (defun org-create-formula-image-with-dvipng (string tofile options buffer)
   "This calls dvipng."
@@ -18673,11 +19249,10 @@ share a good deal of logic."
 	 (texfile (concat texfilebase ".tex"))
 	 (dvifile (concat texfilebase ".dvi"))
 	 (pngfile (concat texfilebase ".png"))
-	 (fnh (if (featurep 'xemacs)
-                  (font-height (face-font 'default))
-                (face-attribute 'default :height nil)))
 	 (scale (or (plist-get options (if buffer :scale :html-scale)) 1.0))
-	 (dpi (number-to-string (* scale (floor (* 0.9 (if buffer fnh 140.))))))
+	 ;; This assumes that the display has the same pixel width in
+	 ;; the horizontal and vertical directions
+	 (dpi (number-to-string (* scale (if buffer (org--get-display-dpi) 120))))
 	 (fg (or (plist-get options (if buffer :foreground :html-foreground))
 		 "Black"))
 	 (bg (or (plist-get options (if buffer :background :html-background))
@@ -18691,29 +19266,26 @@ share a good deal of logic."
 	(insert latex-header)
 	(insert "\n\\begin{document}\n" string "\n\\end{document}\n")))
     (let ((dir default-directory))
-      (condition-case nil
-	  (progn
-	    (cd tmpdir)
-	    (call-process "latex" nil nil nil texfile))
-	(error nil))
+      (ignore-errors
+	(cd tmpdir)
+	(call-process "latex" nil nil nil texfile))
       (cd dir))
     (if (not (file-exists-p dvifile))
 	(progn (message "Failed to create dvi file from %s" texfile) nil)
-      (condition-case nil
-	  (if (featurep 'xemacs)
-	      (call-process "dvipng" nil nil nil
-			    "-fg" fg "-bg" bg
-			    "-T" "tight"
-			    "-o" pngfile
-			    dvifile)
+      (ignore-errors
+	(if (featurep 'xemacs)
 	    (call-process "dvipng" nil nil nil
 			  "-fg" fg "-bg" bg
-			  "-D" dpi
-			  ;;"-x" scale "-y" scale
 			  "-T" "tight"
 			  "-o" pngfile
-			  dvifile))
-	(error nil))
+			  dvifile)
+	  (call-process "dvipng" nil nil nil
+			"-fg" fg "-bg" bg
+			"-D" dpi
+			;;"-x" scale "-y" scale
+			"-T" "tight"
+			"-o" pngfile
+			dvifile)))
       (if (not (file-exists-p pngfile))
 	  (if org-format-latex-signal-error
 	      (error "Failed to create png file from %s" texfile)
@@ -18738,11 +19310,8 @@ share a good deal of logic."
 	 (texfile (concat texfilebase ".tex"))
 	 (pdffile (concat texfilebase ".pdf"))
 	 (pngfile (concat texfilebase ".png"))
-	 (fnh (if (featurep 'xemacs)
-                  (font-height (face-font 'default))
-                (face-attribute 'default :height nil)))
 	 (scale (or (plist-get options (if buffer :scale :html-scale)) 1.0))
-	 (dpi (number-to-string (* scale (floor (if buffer fnh 120.)))))
+	 (dpi (number-to-string (* scale (if buffer (org--get-display-dpi) 120))))
 	 (fg (or (plist-get options (if buffer :foreground :html-foreground))
 		 "black"))
 	 (bg (or (plist-get options (if buffer :background :html-background))
@@ -18766,25 +19335,24 @@ share a good deal of logic."
     (org-latex-compile texfile t)
     (if (not (file-exists-p pdffile))
 	(progn (message "Failed to create pdf file from %s" texfile) nil)
-      (condition-case nil
-	  (if (featurep 'xemacs)
-	      (call-process "convert" nil nil nil
-			    "-density" "96"
-			    "-trim"
-			    "-antialias"
-			    pdffile
-			    "-quality" "100"
-			    ;; "-sharpen" "0x1.0"
-			    pngfile)
+      (ignore-errors
+	(if (featurep 'xemacs)
 	    (call-process "convert" nil nil nil
-			  "-density" dpi
+			  "-density" "96"
 			  "-trim"
 			  "-antialias"
 			  pdffile
 			  "-quality" "100"
 			  ;; "-sharpen" "0x1.0"
-			  pngfile))
-	(error nil))
+			  pngfile)
+	  (call-process "convert" nil nil nil
+			"-density" dpi
+			"-trim"
+			"-antialias"
+			pdffile
+			"-quality" "100"
+			;; "-sharpen" "0x1.0"
+			pngfile)))
       (if (not (file-exists-p pngfile))
 	  (if org-format-latex-signal-error
 	      (error "Failed to create png file from %s" texfile)
@@ -18871,7 +19439,7 @@ SNIPPETS-P indicates if this is run to create snippet images for HTML."
   "Convert COLOR-NAME to a RGB color value for dvipng."
   (apply 'format "rgb %s %s %s"
 	 (mapcar 'org-normalize-color
-		   (color-values color-name))))
+		 (color-values color-name))))
 
 (defun org-latex-color (attr)
   "Return a RGB color for the LaTeX color package."
@@ -18908,13 +19476,14 @@ INCLUDE-LINKED is passed to `org-display-inline-images'."
   (if org-inline-image-overlays
       (progn
 	(org-remove-inline-images)
-	(message "Inline image display turned off"))
+	(when (org-called-interactively-p 'interactive)
+	  (message "Inline image display turned off")))
     (org-display-inline-images include-linked)
-    (if (and (org-called-interactively-p)
-	     org-inline-image-overlays)
-	(message "%d images displayed inline"
-		 (length org-inline-image-overlays))
-      (message "No images to display inline"))))
+    (when (org-called-interactively-p 'interactive)
+      (message (if org-inline-image-overlays
+		   (format "%d images displayed inline"
+			   (length org-inline-image-overlays))
+		 "No images to display inline")))))
 
 (defun org-redisplay-inline-images ()
   "Refresh the display of inline images."
@@ -18926,63 +19495,112 @@ INCLUDE-LINKED is passed to `org-display-inline-images'."
 
 (defun org-display-inline-images (&optional include-linked refresh beg end)
   "Display inline images.
-Normally only links without a description part are inlined, because this
-is how it will work for export.  When INCLUDE-LINKED is set, also links
-with a description part will be inlined.  This can be nice for a quick
-look at those images, but it does not reflect what exported files will look
-like.
-When REFRESH is set, refresh existing images between BEG and END.
-This will create new image displays only if necessary.
-BEG and END default to the buffer boundaries."
+
+An inline image is a link which follows either of these
+conventions:
+
+  1. Its path is a file with an extension matching return value
+     from `image-file-name-regexp' and it has no contents.
+
+  2. Its description consists in a single link of the previous
+     type.
+
+When optional argument INCLUDE-LINKED is non-nil, also links with
+a text description part will be inlined.  This can be nice for
+a quick look at those images, but it does not reflect what
+exported files will look like.
+
+When optional argument REFRESH is non-nil, refresh existing
+images between BEG and END.  This will create new image displays
+only if necessary.  BEG and END default to the buffer
+boundaries."
   (interactive "P")
   (when (display-graphic-p)
     (unless refresh
       (org-remove-inline-images)
-      (if (fboundp 'clear-image-cache) (clear-image-cache)))
-    (save-excursion
-      (save-restriction
-	(widen)
-	(setq beg (or beg (point-min)) end (or end (point-max)))
-	(goto-char beg)
-	(let ((re (concat "\\[\\[\\(\\(file:\\)\\|\\([./~]\\)\\)\\([^]\n]+?"
-			  (substring (org-image-file-name-regexp) 0 -2)
-			  "\\)\\]" (if include-linked "" "\\]")))
-	      (case-fold-search t)
-	      old file ov img type attrwidth width)
-	  (while (re-search-forward re end t)
-	    (setq old (get-char-property-and-overlay (match-beginning 1)
-						     'org-image-overlay)
-		  file (expand-file-name
-			(concat (or (match-string 3) "") (match-string 4))))
-	    (when (image-type-available-p 'imagemagick)
-	      (setq attrwidth (if (or (listp org-image-actual-width)
-				      (null org-image-actual-width))
-				  (save-excursion
-				    (save-match-data
-				      (when (re-search-backward
-					     "#\\+attr.*:width[ \t]+\\([^ ]+\\)"
-					     (save-excursion
-					       (re-search-backward "^[ \t]*$\\|\\`" nil t)) t)
-					(string-to-number (match-string 1))))))
-		    width (cond ((eq org-image-actual-width t) nil)
-				((null org-image-actual-width) attrwidth)
-				((numberp org-image-actual-width)
-				 org-image-actual-width)
-				((listp org-image-actual-width)
-				 (or attrwidth (car org-image-actual-width))))
-		    type (if width 'imagemagick)))
-	    (when (file-exists-p file)
-	      (if (and (car-safe old) refresh)
-		  (image-refresh (overlay-get (cdr old) 'display))
-		(setq img (save-match-data (create-image file type nil :width width)))
-		(when img
-		  (setq ov (make-overlay (match-beginning 0) (match-end 0)))
-		  (overlay-put ov 'display img)
-		  (overlay-put ov 'face 'default)
-		  (overlay-put ov 'org-image-overlay t)
-		  (overlay-put ov 'modification-hooks
-			       (list 'org-display-inline-remove-overlay))
-		  (push ov org-inline-image-overlays))))))))))
+      (when (fboundp 'clear-image-cache) (clear-image-cache)))
+    (org-with-wide-buffer
+     (goto-char (or beg (point-min)))
+     (let ((case-fold-search t)
+	   (file-extension-re (org-image-file-name-regexp)))
+       (while (re-search-forward "[][]\\[\\(?:file\\|[./~]\\)" end t)
+	 (let ((link (save-match-data (org-element-context))))
+	   ;; Check if we're at an inline image.
+	   (when (and (equal (org-element-property :type link) "file")
+		      (or include-linked
+			  (not (org-element-property :contents-begin link)))
+		      (let ((parent (org-element-property :parent link)))
+			(or (not (eq (org-element-type parent) 'link))
+			    (not (cdr (org-element-contents parent)))))
+		      (org-string-match-p file-extension-re
+					  (org-element-property :path link)))
+	     (let ((file (expand-file-name (org-element-property :path link))))
+	       (when (file-exists-p file)
+		 (let ((width
+			;; Apply `org-image-actual-width' specifications.
+			(cond
+			 ((not (image-type-available-p 'imagemagick)) nil)
+			 ((eq org-image-actual-width t) nil)
+			 ((listp org-image-actual-width)
+			  (or
+			   ;; First try to find a width among
+			   ;; attributes associated to the paragraph
+			   ;; containing link.
+			   (let ((paragraph
+				  (let ((e link))
+				    (while (and (setq e (org-element-property
+							 :parent e))
+						(not (eq (org-element-type e)
+							 'paragraph))))
+				    e)))
+			     (when paragraph
+			       (save-excursion
+				 (goto-char (org-element-property :begin paragraph))
+				   (when
+				       (re-search-forward
+					"^[ \t]*#\\+attr_.*?: +.*?:width +\\(\\S-+\\)"
+					(org-element-property
+					 :post-affiliated paragraph)
+					t)
+				     (string-to-number (match-string 1))))))
+			   ;; Otherwise, fall-back to provided number.
+			   (car org-image-actual-width)))
+			 ((numberp org-image-actual-width)
+			  org-image-actual-width)))
+		       (old (get-char-property-and-overlay
+			     (org-element-property :begin link)
+			     'org-image-overlay)))
+		   (if (and (car-safe old) refresh)
+		       (image-refresh (overlay-get (cdr old) 'display))
+		     (let ((image (create-image file
+						  (and width 'imagemagick)
+						  nil
+						  :width width)))
+		       (when image
+			 (let* ((link
+				 ;; If inline image is the description
+				 ;; of another link, be sure to
+				 ;; consider the latter as the one to
+				 ;; apply the overlay on.
+				 (let ((parent
+					(org-element-property :parent link)))
+				   (if (eq (org-element-type parent) 'link)
+				       parent
+				     link)))
+				(ov (make-overlay
+				     (org-element-property :begin link)
+				     (progn
+				       (goto-char
+					(org-element-property :end link))
+				       (skip-chars-backward " \t")
+				       (point)))))
+			   (overlay-put ov 'display image)
+			   (overlay-put ov 'face 'default)
+			   (overlay-put ov 'org-image-overlay t)
+			   (overlay-put
+			    ov 'modification-hooks
+			    (list 'org-display-inline-remove-overlay))
+			   (push ov org-inline-image-overlays)))))))))))))))
 
 (define-obsolete-function-alias
   'org-display-inline-modification-hook 'org-display-inline-remove-overlay "24.3")
@@ -19015,34 +19633,38 @@ BEG and END default to the buffer boundaries."
 (define-key org-mode-map [remap outline-promote] 'org-promote-subtree)
 (define-key org-mode-map [remap outline-demote] 'org-demote-subtree)
 (define-key org-mode-map [remap outline-insert-heading] 'org-ctrl-c-ret)
+(define-key org-mode-map [remap outline-next-visible-heading]
+  'org-next-visible-heading)
+(define-key org-mode-map [remap outline-previous-visible-heading]
+  'org-previous-visible-heading)
 
 ;; Outline functions from `outline-mode-prefix-map' that can not
 ;; be remapped in Org:
-;;
+
 ;; - the column "key binding" shows whether the Outline function is still
 ;;   available in Org mode on the same key that it has been bound to in
 ;;   Outline mode:
 ;;   - "overridden": key used for a different functionality in Org mode
 ;;   - else: key still bound to the same Outline function in Org mode
-;;
-;; | Outline function                   | key binding | Org replacement       |
-;; |------------------------------------+-------------+-----------------------|
-;; | `outline-next-visible-heading'     | `C-c C-n'   | still same function   |
-;; | `outline-previous-visible-heading' | `C-c C-p'   | still same function   |
-;; | `outline-up-heading'               | `C-c C-u'   | still same function   |
-;; | `outline-move-subtree-up'          | overridden  | better: org-shiftup   |
-;; | `outline-move-subtree-down'        | overridden  | better: org-shiftdown |
-;; | `show-entry'                       | overridden  | no replacement        |
-;; | `show-children'                    | `C-c C-i'   | visibility cycling    |
-;; | `show-branches'                    | `C-c C-k'   | still same function   |
-;; | `show-subtree'                     | overridden  | visibility cycling    |
-;; | `show-all'                         | overridden  | no replacement        |
-;; | `hide-subtree'                     | overridden  | visibility cycling    |
-;; | `hide-body'                        | overridden  | no replacement        |
-;; | `hide-entry'                       | overridden  | visibility cycling    |
-;; | `hide-leaves'                      | overridden  | no replacement        |
-;; | `hide-sublevels'                   | overridden  | no replacement        |
-;; | `hide-other'                       | overridden  | no replacement        |
+
+;; | Outline function                   | key binding | Org replacement          |
+;; |------------------------------------+-------------+--------------------------|
+;; | `outline-next-visible-heading'     | `C-c C-n'   | better: skip inlinetasks |
+;; | `outline-previous-visible-heading' | `C-c C-p'   | better: skip inlinetasks |
+;; | `outline-up-heading'               | `C-c C-u'   | still same function      |
+;; | `outline-move-subtree-up'          | overridden  | better: org-shiftup      |
+;; | `outline-move-subtree-down'        | overridden  | better: org-shiftdown    |
+;; | `show-entry'                       | overridden  | no replacement           |
+;; | `show-children'                    | `C-c C-i'   | visibility cycling       |
+;; | `show-branches'                    | `C-c C-k'   | still same function      |
+;; | `show-subtree'                     | overridden  | visibility cycling       |
+;; | `show-all'                         | overridden  | no replacement           |
+;; | `hide-subtree'                     | overridden  | visibility cycling       |
+;; | `hide-body'                        | overridden  | no replacement           |
+;; | `hide-entry'                       | overridden  | visibility cycling       |
+;; | `hide-leaves'                      | overridden  | no replacement           |
+;; | `hide-sublevels'                   | overridden  | no replacement           |
+;; | `hide-other'                       | overridden  | no replacement           |
 
 ;; Make `C-c C-x' a prefix key
 (org-defkey org-mode-map "\C-c\C-x" (make-sparse-keymap))
@@ -19068,6 +19690,8 @@ BEG and END default to the buffer boundaries."
 (org-defkey org-mode-map [(meta up)]    'org-metaup)
 (org-defkey org-mode-map [(meta down)]  'org-metadown)
 
+(org-defkey org-mode-map [(control meta shift right)] 'org-increase-number-at-point)
+(org-defkey org-mode-map [(control meta shift left)] 'org-decrease-number-at-point)
 (org-defkey org-mode-map [(meta shift left)]   'org-shiftmetaleft)
 (org-defkey org-mode-map [(meta shift right)]  'org-shiftmetaright)
 (org-defkey org-mode-map [(meta shift up)]     'org-shiftmetaup)
@@ -19174,6 +19798,7 @@ BEG and END default to the buffer boundaries."
 (org-defkey org-mode-map "\C-c\C-x\C-n" 'org-next-link)
 (org-defkey org-mode-map "\C-c\C-x\C-p" 'org-previous-link)
 (org-defkey org-mode-map "\C-c\C-l" 'org-insert-link)
+(org-defkey org-mode-map "\C-c\M-l" 'org-insert-last-stored-link)
 (org-defkey org-mode-map "\C-c\C-\M-l" 'org-insert-all-links)
 (org-defkey org-mode-map "\C-c\C-o" 'org-open-at-point)
 (org-defkey org-mode-map "\C-c%"    'org-mark-ring-push)
@@ -19198,8 +19823,10 @@ BEG and END default to the buffer boundaries."
 (org-defkey org-mode-map "\C-c\C-k" 'org-kill-note-or-show-branches)
 (org-defkey org-mode-map "\C-c#"    'org-update-statistics-cookies)
 (org-defkey org-mode-map [remap open-line] 'org-open-line)
+(org-defkey org-mode-map [remap comment-dwim] 'org-comment-dwim)
 (org-defkey org-mode-map [remap forward-paragraph] 'org-forward-paragraph)
 (org-defkey org-mode-map [remap backward-paragraph] 'org-backward-paragraph)
+(org-defkey org-mode-map "\M-^"     'org-delete-indentation)
 (org-defkey org-mode-map "\C-m"     'org-return)
 (org-defkey org-mode-map "\C-j"     'org-return-indent)
 (org-defkey org-mode-map "\C-c?"    'org-table-field-info)
@@ -19208,6 +19835,8 @@ BEG and END default to the buffer boundaries."
 (org-defkey org-mode-map "\C-c="    'org-table-eval-formula)
 (org-defkey org-mode-map "\C-c'"    'org-edit-special)
 (org-defkey org-mode-map "\C-c`"    'org-table-edit-field)
+(org-defkey org-mode-map "\C-c\"a"  'orgtbl-ascii-plot)
+(org-defkey org-mode-map "\C-c\"g"  'org-plot/gnuplot)
 (org-defkey org-mode-map "\C-c|"    'org-table-create-or-convert-from-region)
 (org-defkey org-mode-map [(control ?#)] 'org-table-rotate-recalc-marks)
 (org-defkey org-mode-map "\C-c~"    'org-table-create-with-table.el)
@@ -19215,7 +19844,7 @@ BEG and END default to the buffer boundaries."
 (org-defkey org-mode-map "\C-c}"    'org-table-toggle-coordinate-overlays)
 (org-defkey org-mode-map "\C-c{"    'org-table-toggle-formula-debugger)
 (org-defkey org-mode-map "\C-c\C-e" 'org-export-dispatch)
-(org-defkey org-mode-map "\C-c:"    'org-toggle-fixed-width-section)
+(org-defkey org-mode-map "\C-c:"    'org-toggle-fixed-width)
 (org-defkey org-mode-map "\C-c\C-x\C-f" 'org-emphasize)
 (org-defkey org-mode-map "\C-c\C-xf"    'org-footnote-action)
 (org-defkey org-mode-map "\C-c\C-x\C-mg"    'org-mobile-pull)
@@ -19239,7 +19868,7 @@ BEG and END default to the buffer boundaries."
 (org-defkey org-mode-map "\C-c\C-x\C-d" 'org-clock-display)
 (org-defkey org-mode-map "\C-c\C-x\C-r" 'org-clock-report)
 (org-defkey org-mode-map "\C-c\C-x\C-u" 'org-dblock-update)
-(org-defkey org-mode-map "\C-c\C-x\C-l" 'org-preview-latex-fragment)
+(org-defkey org-mode-map "\C-c\C-x\C-l" 'org-toggle-latex-fragment)
 (org-defkey org-mode-map "\C-c\C-x\C-v" 'org-toggle-inline-images)
 (org-defkey org-mode-map "\C-c\C-x\C-\M-v" 'org-redisplay-inline-images)
 (org-defkey org-mode-map "\C-c\C-x\\"   'org-toggle-pretty-entities)
@@ -19251,7 +19880,6 @@ BEG and END default to the buffer boundaries."
 (org-defkey org-mode-map "\C-c\C-xo"    'org-toggle-ordered-property)
 (org-defkey org-mode-map "\C-c\C-xi"    'org-insert-columns-dblock)
 (org-defkey org-mode-map [(control ?c) (control ?x) ?\;] 'org-timer-set-timer)
-(org-defkey org-mode-map [(control ?c) (control ?x) ?\:] 'org-timer-cancel-timer)
 
 (org-defkey org-mode-map "\C-c\C-x."    'org-timer)
 (org-defkey org-mode-map "\C-c\C-x-"    'org-timer-item)
@@ -19276,8 +19904,8 @@ BEG and END default to the buffer boundaries."
 (defconst org-speed-commands-default
   '(
     ("Outline Navigation")
-    ("n" . (org-speed-move-safe 'outline-next-visible-heading))
-    ("p" . (org-speed-move-safe 'outline-previous-visible-heading))
+    ("n" . (org-speed-move-safe 'org-next-visible-heading))
+    ("p" . (org-speed-move-safe 'org-previous-visible-heading))
     ("f" . (org-speed-move-safe 'org-forward-heading-same-level))
     ("b" . (org-speed-move-safe 'org-backward-heading-same-level))
     ("F" . org-next-block)
@@ -19292,8 +19920,8 @@ BEG and END default to the buffer boundaries."
     ("s" . org-narrow-to-subtree)
     ("=" . org-columns)
     ("Outline Structure Editing")
-    ("U" . org-shiftmetaup)
-    ("D" . org-shiftmetadown)
+    ("U" . org-metaup)
+    ("D" . org-metadown)
     ("r" . org-metaright)
     ("l" . org-metaleft)
     ("R" . org-shiftmetaright)
@@ -19423,9 +20051,11 @@ overwritten, and the table is not marked as requiring realignment."
   (org-check-before-invisible-edit 'insert)
   (cond
    ((and org-use-speed-commands
-	 (setq org-speed-command
-	       (run-hook-with-args-until-success
-		'org-speed-command-hook (this-command-keys))))
+	 (let ((kv (this-command-keys-vector)))
+	   (setq org-speed-command
+		 (run-hook-with-args-until-success
+		  'org-speed-command-hook
+		  (make-string 1 (aref kv (1- (length kv))))))))
     (cond
      ((commandp org-speed-command)
       (setq this-command org-speed-command)
@@ -19441,8 +20071,8 @@ overwritten, and the table is not marked as requiring realignment."
      (progn
        ;; check if we blank the field, and if that triggers align
        (and (featurep 'org-table) org-table-auto-blank-field
-	    (member last-command
-		    '(org-cycle org-return org-shifttab org-ctrl-c-ctrl-c yas/expand))
+	    (memq last-command
+		  '(org-cycle org-return org-shifttab org-ctrl-c-ctrl-c))
 	    (if (or (equal (char-after) ?\ ) (looking-at "[^|\n]*  |"))
 		;; got extra space, this field does not determine column width
 		(let (org-table-may-need-update) (org-table-blank-field))
@@ -19810,31 +20440,29 @@ individual commands for more information."
    (t (org-modifier-cursor-error))))
 
 (defun org-shiftmetaup (&optional arg)
-  "Move subtree up or kill table row.
-Calls `org-move-subtree-up' or `org-table-kill-row' or
-`org-move-item-up' or `org-timestamp-up', depending on context.
-See the individual commands for more information."
+  "Drag the line at point up.
+In a table, kill the current row.
+On a clock timestamp, update the value of the timestamp like `S-<up>'
+but also adjust the previous clocked item in the clock history.
+Everywhere else, drag the line at point up."
   (interactive "P")
   (cond
    ((run-hook-with-args-until-success 'org-shiftmetaup-hook))
    ((org-at-table-p) (call-interactively 'org-table-kill-row))
-   ((org-at-heading-p) (call-interactively 'org-move-subtree-up))
-   ((org-at-item-p) (call-interactively 'org-move-item-up))
    ((org-at-clock-log-p) (let ((org-clock-adjust-closest t))
 			   (call-interactively 'org-timestamp-up)))
    (t (call-interactively 'org-drag-line-backward))))
 
 (defun org-shiftmetadown (&optional arg)
-  "Move subtree down or insert table row.
-Calls `org-move-subtree-down' or `org-table-insert-row' or
-`org-move-item-down' or `org-timestamp-up', depending on context.
-See the individual commands for more information."
+  "Drag the line at point down.
+In a table, insert an empty row at the current line.
+On a clock timestamp, update the value of the timestamp like `S-<down>'
+but also adjust the previous clocked item in the clock history.
+Everywhere else, drag the line at point down."
   (interactive "P")
   (cond
    ((run-hook-with-args-until-success 'org-shiftmetadown-hook))
    ((org-at-table-p) (call-interactively 'org-table-insert-row))
-   ((org-at-heading-p) (call-interactively 'org-move-subtree-down))
-   ((org-at-item-p) (call-interactively 'org-move-item-down))
    ((org-at-clock-log-p) (let ((org-clock-adjust-closest t))
 			   (call-interactively 'org-timestamp-down)))
    (t (call-interactively 'org-drag-line-forward))))
@@ -19844,10 +20472,15 @@ See the individual commands for more information."
    "Hidden subtree, open with TAB or use subtree command M-S-<left>/<right>"))
 
 (defun org-metaleft (&optional arg)
-  "Promote heading or move table column to left.
-Calls `org-do-promote' or `org-table-move-column', depending on context.
-With no specific context, calls the Emacs default `backward-word'.
-See the individual commands for more information."
+  "Promote heading, list item at point or move table column left.
+
+Calls `org-do-promote', `org-outdent-item' or `org-table-move-column',
+depending on context.  With no specific context, calls the Emacs
+default `backward-word'.  See the individual commands for more
+information.
+
+This function runs the hook `org-metaleft-hook' as a first step,
+and returns at first non-nil value."
   (interactive "P")
   (cond
    ((run-hook-with-args-until-success 'org-metaleft-hook))
@@ -19873,10 +20506,17 @@ See the individual commands for more information."
    (t (call-interactively 'backward-word))))
 
 (defun org-metaright (&optional arg)
-  "Demote a subtree, a list item or move table column to right.
+  "Demote heading, list item at point or move table column right.
+
 In front of a drawer or a block keyword, indent it correctly.
+
+Calls `org-do-demote', `org-indent-item', `org-table-move-column',
+`org-indnet-drawer' or `org-indent-block' depending on context.
 With no specific context, calls the Emacs default `forward-word'.
-See the individual commands for more information."
+See the individual commands for more information.
+
+This function runs the hook `org-metaright-hook' as a first step,
+and returns at first non-nil value."
   (interactive "P")
   (cond
    ((run-hook-with-args-until-success 'org-metaright-hook))
@@ -20138,6 +20778,32 @@ Optional argument N tells to change by that many units."
 	(org-clock-timestamps-down n))
     (user-error "Not at a clock log")))
 
+(defun org-increase-number-at-point (&optional inc)
+  "Increment the number at point.
+With an optional prefix numeric argument INC, increment using
+this numeric value."
+  (interactive "p")
+  (if (not (number-at-point))
+      (user-error "Not on a number")
+    (unless inc (setq inc 1))
+    (let ((pos (point))
+	  (beg (skip-chars-backward "-+^/*0-9eE."))
+	  (end (skip-chars-forward "-+^/*0-9eE^.")) nap)
+      (setq nap (buffer-substring-no-properties
+		 (+ pos beg) (+ pos beg end)))
+      (delete-region (+ pos beg) (+ pos beg end))
+      (insert (calc-eval (concat (number-to-string inc) "+" nap))))
+    (when (org-at-table-p)
+      (org-table-align)
+      (org-table-end-of-field 1))))
+
+(defun org-decrease-number-at-point (&optional inc)
+  "Decrement the number at point.
+With an optional prefix numeric argument INC, decrement using
+this numeric value."
+  (interactive "p")
+  (org-increase-number-at-point (- inc)))
+
 (defun org-ctrl-c-ret ()
   "Call `org-table-hline-and-move' or `org-insert-heading' dep. on context."
   (interactive)
@@ -20205,7 +20871,9 @@ See the individual commands for more information."
 When at a table, call the formula editor with `org-table-edit-formulas'.
 When in a source code block, call `org-edit-src-code'.
 When in a fixed-width region, call `org-edit-fixed-width-region'.
+When in an export block, call `org-edit-export-block'.
 When at an #+INCLUDE keyword, visit the included file.
+When at a footnote reference, call `org-edit-footnote-reference'
 On a link, call `ffap' to visit the link at point.
 Otherwise, return a user error."
   (interactive "P")
@@ -20228,24 +20896,35 @@ Otherwise, return a user error."
 		       session params))))))
       (keyword
        (if (member (org-element-property :key element) '("INCLUDE" "SETUPFILE"))
-           (find-file
-            (org-remove-double-quotes
-             (car (org-split-string (org-element-property :value element)))))
+           (org-open-link-from-string
+	    (format "[[%s]]"
+		    (expand-file-name
+		     (let ((value (org-element-property :value element)))
+		       (cond ((not (org-string-nw-p value))
+			      (user-error "No file to edit"))
+			     ((string-match "\\`\"\\(.*?\\)\"" value)
+			      (match-string 1 value))
+			     ((string-match "\\`[^ \t\"]\\S-*" value)
+			      (match-string 0 value))
+			     (t (user-error "No valid file specified")))))))
          (user-error "No special environment to edit here")))
       (table
        (if (eq (org-element-property :type element) 'table.el)
-           (org-edit-src-code)
+           (org-edit-table.el)
          (call-interactively 'org-table-edit-formulas)))
       ;; Only Org tables contain `table-row' type elements.
       (table-row (call-interactively 'org-table-edit-formulas))
-      ((example-block export-block) (org-edit-src-code))
+      (example-block (org-edit-src-code))
+      (export-block (org-edit-export-block))
       (fixed-width (org-edit-fixed-width-region))
       (otherwise
-       ;; No notable element at point.  Though, we may be at a link,
-       ;; which is an object.  Thus, scan deeper.
-       (if (eq (org-element-type (org-element-context element)) 'link)
-	   (call-interactively 'ffap)
-	 (user-error "No special environment to edit here"))))))
+       ;; No notable element at point.  Though, we may be at a link or
+       ;; a footnote reference, which are objects.  Thus, scan deeper.
+       (let ((context (org-element-context element)))
+	 (case (org-element-type context)
+	   (link (call-interactively #'ffap))
+	   (footnote-reference (org-edit-footnote-reference))
+	   (t (user-error "No special environment to edit here"))))))))
 
 (defvar org-table-coordinate-overlays) ; defined in org-table.el
 (defun org-ctrl-c-ctrl-c (&optional arg)
@@ -20295,22 +20974,20 @@ This command does many different things, depending on context:
   (interactive "P")
   (cond
    ((or (and (boundp 'org-clock-overlays) org-clock-overlays)
-	org-occur-highlights
-	org-latex-fragment-image-overlays)
+	org-occur-highlights)
     (and (boundp 'org-clock-overlays) (org-clock-remove-overlays))
     (org-remove-occur-highlights)
-    (org-remove-latex-fragment-image-overlays)
     (message "Temporary highlights/overlays removed from current buffer"))
    ((and (local-variable-p 'org-finish-function (current-buffer))
 	 (fboundp org-finish-function))
     (funcall org-finish-function))
    ((run-hook-with-args-until-success 'org-ctrl-c-ctrl-c-hook))
    (t
-    (let* ((context (org-element-context)) (type (org-element-type context)))
-      ;; Test if point is within a blank line.
-      (if (save-excursion (beginning-of-line) (looking-at "[ \t]*$"))
-	  (or (run-hook-with-args-until-success 'org-ctrl-c-ctrl-c-final-hook)
-	      (user-error "C-c C-c can do nothing useful at this location"))
+    (if (save-excursion (beginning-of-line) (looking-at "[ \t]*$"))
+	(or (run-hook-with-args-until-success 'org-ctrl-c-ctrl-c-final-hook)
+	    (user-error "C-c C-c can do nothing useful at this location"))
+      (let* ((context (org-element-context))
+	     (type (org-element-type context)))
 	(case type
 	  ;; When at a link, act according to the parent instead.
 	  (link (setq context (org-element-property :parent context))
@@ -20320,16 +20997,16 @@ This command does many different things, depending on context:
 	  ((bold code entity export-snippet inline-babel-call inline-src-block
 		 italic latex-fragment line-break macro strike-through subscript
 		 superscript underline verbatim)
-	   (while (and (setq context (org-element-property :parent context))
-		       (not (memq (setq type (org-element-type context))
-				  '(radio-target paragraph verse-block
-						 table-cell)))))))
+	   (setq context
+		 (org-element-lineage
+		  context '(radio-target paragraph verse-block table-cell)))))
 	;; For convenience: at the first line of a paragraph on the
 	;; same line as an item, apply function on that item instead.
 	(when (eq type 'paragraph)
 	  (let ((parent (org-element-property :parent context)))
 	    (when (and (eq (org-element-type parent) 'item)
-		       (= (point-at-bol) (org-element-property :begin parent)))
+		       (= (line-beginning-position)
+			  (org-element-property :begin parent)))
 	      (setq context parent type 'item))))
 	;; Act according to type of element or object at point.
 	(case type
@@ -20477,6 +21154,39 @@ This command does many different things, depending on context:
     (let ((org-note-abort t))
       (funcall org-finish-function))))
 
+(defun org-delete-indentation (&optional ARG)
+  "Join current line to previous and fix whitespace at join.
+
+If previous line is a headline add to headline title.  Otherwise
+the function calls `delete-indentation'.
+
+With argument, join this line to following line."
+  (interactive "*P")
+  (if (save-excursion
+	(if ARG (beginning-of-line)
+	  (forward-line -1))
+	(looking-at org-complex-heading-regexp))
+      ;; At headline.
+      (let ((tags-column (when (match-beginning 5)
+			   (save-excursion (goto-char (match-beginning 5))
+					   (current-column))))
+	    (string (concat " " (progn (when ARG (forward-line 1))
+				       (org-trim (delete-and-extract-region
+						  (line-beginning-position)
+						  (line-end-position)))))))
+	(unless (bobp) (delete-region (point) (1- (point))))
+	(goto-char (or (match-end 4)
+		       (match-beginning 5)
+		       (match-end 0)))
+	(skip-chars-backward " \t")
+	(save-excursion (insert string))
+	;; Adjust alignment of tags.
+	(when tags-column
+	  (org-align-tags-here (if org-auto-align-tags
+				   org-tags-column
+				 tags-column))))
+    (delete-indentation ARG)))
+
 (defun org-open-line (n)
   "Insert a new row in tables, call `open-line' elsewhere.
 If `org-special-ctrl-o' is nil, just call `open-line' everywhere."
@@ -20491,44 +21201,78 @@ If `org-special-ctrl-o' is nil, just call `open-line' everywhere."
 
 (defun org-return (&optional indent)
   "Goto next table row or insert a newline.
+
 Calls `org-table-next-row' or `newline', depending on context.
-See the individual commands for more information."
+
+When optional INDENT argument is non-nil, call
+`newline-and-indent' instead of `newline'.
+
+When `org-return-follows-link' is non-nil and point is on
+a timestamp or a link, call `org-open-at-point'.  However, it
+will not happen if point is in a table or on a \"dead\"
+object (e.g., within a comment).  In these case, you need to use
+`org-open-at-point' directly."
   (interactive)
-  (let (org-ts-what)
-    (cond
-     ((or (bobp) (org-in-src-block-p))
-      (if indent (newline-and-indent) (newline)))
-     ((org-at-table-p)
-      (org-table-justify-field-maybe)
-      (call-interactively 'org-table-next-row))
-     ;; when `newline-and-indent' is called within a list, make sure
-     ;; text moved stays inside the item.
-     ((and (org-in-item-p) indent)
-      (if (and (org-at-item-p) (>= (point) (match-end 0)))
-	  (progn
-	    (save-match-data (newline))
-	    (org-indent-line-to (length (match-string 0))))
-	(let ((ind (org-get-indentation)))
-	  (newline)
-	  (if (org-looking-back org-list-end-re)
-	      (org-indent-line)
-	    (org-indent-line-to ind)))))
-     ((and org-return-follows-link
-	   (org-at-timestamp-p t)
-	   (not (eq org-ts-what 'after)))
-      (org-follow-timestamp-link))
-     ((and org-return-follows-link
-	   (let ((tprop (get-text-property (point) 'face)))
-	     (or (eq tprop 'org-link)
-		 (and (listp tprop) (memq 'org-link tprop)))))
-      (call-interactively 'org-open-at-point))
-     ((and (org-at-heading-p)
-	   (looking-at
-	    (org-re "\\([ \t]+\\(:[[:alnum:]_@#%:]+:\\)\\)[ \t]*$")))
-      (org-show-entry)
-      (end-of-line 1)
-      (newline))
-     (t (if indent (newline-and-indent) (newline))))))
+  (if (and (not (bolp))
+	   (save-excursion (beginning-of-line)
+			   (looking-at org-complex-heading-regexp)))
+      ;; At headline.
+      (let ((tags-column (when (match-beginning 5)
+			   (save-excursion (goto-char (match-beginning 5))
+					   (current-column))))
+	    ;; Test if before or after headline title.
+	    (string (when (and (match-end 4)
+			       (not (or (< (point)
+					   (or (match-end 3)
+					       (match-end 2)
+					       (save-excursion
+						 (goto-char (match-beginning 4))
+						 (skip-chars-backward " \t")
+						 (point))))
+					(and (match-beginning 5)
+					     (>= (point) (match-beginning 5))))))
+		      ;; Point is on headline keywords, tags or cookies.  Do not break
+		      ;; them: add a newline after the headline instead.
+		      (org-string-nw-p
+		       (delete-and-extract-region (point) (match-end 4))))))
+	;; Adjust alignment of tags.
+	(when (and tags-column string)
+	  (org-align-tags-here (if org-auto-align-tags
+				   org-tags-column
+				 tags-column)))
+	(end-of-line)
+	(org-show-entry)
+	(if indent (newline-and-indent) (newline))
+	(and string (save-excursion (insert (org-trim string)))))
+    (let* ((context (if org-return-follows-link (org-element-context)
+		      (org-element-at-point)))
+	   (type (org-element-type context)))
+      (cond
+       ;; In a table, call `org-table-next-row'.
+       ((or (and (eq type 'table)
+		 (>= (point) (org-element-property :contents-begin context))
+		 (< (point) (org-element-property :contents-end context)))
+	    (org-element-lineage context '(table-row table-cell) t))
+	(org-table-justify-field-maybe)
+	(call-interactively #'org-table-next-row))
+       ;; On a link or a timestamp but not on white spaces after it,
+       ;; call `org-open-line' if `org-return-follows-link' allows it.
+       ((and org-return-follows-link
+	     (memq type '(link timestamp))
+	     (< (point)
+		(save-excursion (goto-char (org-element-property :end context))
+				(skip-chars-backward " \t")
+				(point))))
+	(call-interactively #'org-open-at-point))
+       ;; In a list, make sure indenting keeps trailing text within.
+       ((and indent
+	     (not (eolp))
+	     (org-element-lineage context '(item)))
+	(let ((trailing-data
+	       (delete-and-extract-region (point) (line-end-position))))
+	  (newline-and-indent)
+	  (save-excursion (insert trailing-data))))
+       (t (if indent (newline-and-indent) (newline)))))))
 
 (defun org-return-indent ()
   "Goto next table row or insert a newline and indent.
@@ -20641,6 +21385,8 @@ With a prefix argument ARG, change the region in a single item."
 	((org-at-heading-p)
 	 (let* ((bul (org-list-bullet-string "-"))
 		(bul-len (length bul))
+		(done (org-entry-is-done-p))
+		(todo (org-entry-is-todo-p))
 		;; Indentation of the first heading.  It should be
 		;; relative to the indentation of its parent, if any.
 		(start-ind (save-excursion
@@ -20651,6 +21397,7 @@ With a prefix argument ARG, change the region in a single item."
 		;; Level of first heading.  Further headings will be
 		;; compared to it to determine hierarchy in the list.
 		(ref-level (org-reduced-level (org-outline-level))))
+	   (when (or done todo) (org-todo ""))
 	   (while (< (point) end)
 	     (let* ((level (org-reduced-level (org-outline-level)))
 		    (delta (max 0 (- level ref-level))))
@@ -20660,6 +21407,15 @@ With a prefix argument ARG, change the region in a single item."
 	       (when (< level ref-level) (setq ref-level level))
 	       (replace-match bul t t)
 	       (org-indent-line-to (+ start-ind (* delta bul-len)))
+	       (when (or done todo)
+		 (let* ((struct (org-list-struct))
+			(old (copy-tree struct)))
+		   (org-list-set-checkbox (line-beginning-position)
+					  struct
+					  (if done "[X]" "[ ]"))
+		   (org-list-write-struct struct
+					  (org-list-parents-alist struct)
+					  old)))
 	       ;; Ensure all text down to END (or SECTION-END) belongs
 	       ;; to the newly created item.
 	       (let ((section-end (save-excursion
@@ -20672,19 +21428,19 @@ With a prefix argument ARG, change the region in a single item."
 	;;         an item, and shift indentation of others lines to
 	;;         set them as item's body.
 	(arg (let* ((bul (org-list-bullet-string "-"))
-		  (bul-len (length bul))
-		  (ref-ind (org-get-indentation)))
-	     (skip-chars-forward " \t")
-	     (insert bul)
-	     (forward-line)
-	     (while (< (point) end)
-	       ;; Ensure that lines less indented than first one
-	       ;; still get included in item body.
-	       (funcall shift-text
-			(+ ref-ind bul-len)
-			(min end (save-excursion (or (outline-next-heading)
-						     (point)))))
-	       (forward-line))))
+		    (bul-len (length bul))
+		    (ref-ind (org-get-indentation)))
+	       (skip-chars-forward " \t")
+	       (insert bul)
+	       (forward-line)
+	       (while (< (point) end)
+		 ;; Ensure that lines less indented than first one
+		 ;; still get included in item body.
+		 (funcall shift-text
+			  (+ ref-ind bul-len)
+			  (min end (save-excursion (or (outline-next-heading)
+						       (point)))))
+		 (forward-line))))
 	;; Case 4. Normal line without ARG: turn each non-item line
 	;;         into an item.
 	(t
@@ -20760,31 +21516,16 @@ number of stars to add."
 	;; Case 2. Started at an item: change items into headlines.
 	;;         One star will be added by `org-list-to-subtree'.
 	((org-at-item-p)
-	 (let* ((stars (make-string
-			;; subtract the star that will be added again by
-			;; `org-list-to-subtree'
-			(if (numberp nstars) (1- nstars)
-			  (or (org-current-level) 0))
-			?*))
-		(add-stars
-		 (cond (nstars "")               ; stars from prefix only
-		       ((equal stars "") "")     ; before first heading
-		       (org-odd-levels-only "*") ; inside heading, odd
-		       (t ""))))                 ; inside heading, oddeven
-	   (while (< (point) end)
-	     (when (org-at-item-p)
-	       ;; Pay attention to cases when region ends before list.
-	       (let* ((struct (org-list-struct))
-		      (list-end (min (org-list-get-bottom-point struct) (1+ end))))
-		 (save-restriction
-		   (narrow-to-region (point) list-end)
-		   (insert
-		    (org-list-to-subtree
-		     (org-list-parse-list t)
-		     '(:istart (concat stars add-stars (funcall get-stars depth))
-			       :icount (concat stars add-stars (funcall get-stars depth)))))))
-	       (setq toggled t))
-	     (forward-line))))
+	 (while (< (point) end)
+	   (when (org-at-item-p)
+	     ;; Pay attention to cases when region ends before list.
+	     (let* ((struct (org-list-struct))
+		    (list-end (min (org-list-get-bottom-point struct) (1+ end))))
+	       (save-restriction
+		 (narrow-to-region (point) list-end)
+		 (insert (org-list-to-subtree (org-list-parse-list t)))))
+	     (setq toggled t))
+	   (forward-line)))
 	;; Case 3. Started at normal text: make every line an heading,
 	;;         skipping headlines and items.
 	(t (let* ((stars
@@ -20889,7 +21630,11 @@ on context.  See the individual commands for more information."
     ["Import from File" org-table-import (not (org-at-table-p))]
     ["Export to File" org-table-export (org-at-table-p)]
     "--"
-    ["Create/Convert from/to table.el" org-table-create-with-table.el t]))
+    ["Create/Convert from/to table.el" org-table-create-with-table.el t]
+    "--"
+    ("Plot"
+     ["Ascii plot" orgtbl-ascii-plot :active (org-at-table-p) :keys "C-c \" a"]
+     ["Gnuplot" org-plot/gnuplot :active (org-at-table-p) :keys "C-c \" g"])))
 
 (easy-menu-define org-org-menu org-mode-map "Org menu"
   '("Org"
@@ -20914,8 +21659,8 @@ on context.  See the individual commands for more information."
     ("Edit Structure"
      ["Refile Subtree" org-refile (org-in-subtree-not-table-p)]
      "--"
-     ["Move Subtree Up" org-shiftmetaup (org-in-subtree-not-table-p)]
-     ["Move Subtree Down" org-shiftmetadown (org-in-subtree-not-table-p)]
+     ["Move Subtree Up" org-metaup (org-at-heading-p)]
+     ["Move Subtree Down" org-metadown (org-at-heading-p)]
      "--"
      ["Copy Subtree"  org-copy-special (org-in-subtree-not-table-p)]
      ["Cut Subtree"  org-cut-special (org-in-subtree-not-table-p)]
@@ -21269,9 +22014,9 @@ With prefix arg UNCOMPILED, load the uncompiled versions."
 
 ;;; Generally useful functions
 
-(defun org-get-at-bol (property)
-  "Get text property PROPERTY at beginning of line."
-  (get-text-property (point-at-bol) property))
+(defsubst org-get-at-eol (property n)
+  "Get text property PROPERTY at the end of line less N characters."
+  (get-text-property (- (point-at-eol) n) property))
 
 (defun org-find-text-property-in-string (prop s)
   "Return the first non-nil value of property PROP in string S."
@@ -21309,17 +22054,6 @@ With prefix arg UNCOMPILED, load the uncompiled versions."
 	   (re-search-forward "^[ \t]*#\\+END:.*" nil t)
 	   (>= (match-end 0) pos)
 	   start))))
-
-(defun org-in-commented-line ()
-  "Is point in a line starting with `#'?"
-  (equal (char-after (point-at-bol)) ?#))
-
-(defun org-in-indented-comment-line ()
-  "Is point in a line starting with `#' after some white space?"
-  (save-excursion
-    (save-match-data
-      (goto-char (point-at-bol))
-      (looking-at "[ \t]*#"))))
 
 (defun org-in-verbatim-emphasis ()
   (save-match-data
@@ -21484,12 +22218,6 @@ N may optionally be the number of spaces to remove."
     (or (buffer-base-buffer buffer)
 	buffer)))
 
-(defun org-trim (s)
-  "Remove whitespace at beginning and end of string."
-  (if (string-match "\\`[ \t\n\r]+" s) (setq s (replace-match "" t t s)))
-  (if (string-match "[ \t\n\r]+\\'" s) (setq s (replace-match "" t t s)))
-  s)
-
 (defun org-wrap (string &optional width lines)
   "Wrap string to either a number of lines, or a width in characters.
 If WIDTH is non-nil, the string is wrapped to that width, however many lines
@@ -21568,9 +22296,7 @@ and end of string."
 When INSIDE is non-nil, don't consider we are within a src block
 when point is at #+BEGIN_SRC or #+END_SRC."
   (let ((case-fold-search t) ov)
-    (or (and (setq ov (overlays-at (point)))
-	     (memq 'org-block-background
-		   (overlay-properties (car ov))))
+    (or (and (eq (get-char-property (point) 'src-block) t))
 	(and (not inside)
 	     (save-match-data
 	       (save-excursion
@@ -21598,7 +22324,7 @@ contexts are:
 :clocktable       in a clocktable
 :src-block        in a source block
 :link             on a hyperlink
-:keyword          on a keyword: SCHEDULED, DEADLINE, CLOSE, COMMENT, QUOTE.
+:keyword          on a keyword: SCHEDULED, DEADLINE, CLOSE, COMMENT.
 :target           on a <<target>>
 :radio-target     on a <<<radio-target>>>
 :latex-fragment   on a LaTeX fragment
@@ -21648,16 +22374,16 @@ and :keyword."
       ;; New the "medium" contexts: clocktables, source blocks
       (cond ((org-in-clocktable-p)
 	     (push (list :clocktable
-			 (and (or (looking-at "#\\+BEGIN: clocktable")
-				  (search-backward "#+BEGIN: clocktable" nil t))
-			      (match-beginning 0))
-			 (and (re-search-forward "#\\+END:?" nil t)
+			 (and (or (looking-at "[ \t]*\\(#\\+BEGIN: clocktable\\)")
+				  (re-search-backward "[ \t]*\\(#+BEGIN: clocktable\\)" nil t))
+			      (match-beginning 1))
+			 (and (re-search-forward "[ \t]*#\\+END:?" nil t)
 			      (match-end 0))) clist))
 	    ((org-in-src-block-p)
 	     (push (list :src-block
-			 (and (or (looking-at "#\\+BEGIN_SRC")
-				  (search-backward "#+BEGIN_SRC" nil t))
-			      (match-beginning 0))
+			 (and (or (looking-at "[ \t]*\\(#\\+BEGIN_SRC\\)")
+				  (re-search-backward "[ \t]*\\(#+BEGIN_SRC\\)" nil t))
+			      (match-beginning 1))
 			 (and (search-forward "#+END_SRC" nil t)
 			      (match-beginning 0))) clist))))
     (goto-char p)
@@ -21696,13 +22422,13 @@ and :keyword."
     (setq clist (nreverse (delq nil clist)))
     clist))
 
-;; FIXME: Compare with at-regexp-p Do we need both?
 (defun org-in-regexp (re &optional nlines visually)
-  "Check if point is inside a match of regexp.
-Normally only the current line is checked, but you can include NLINES extra
-lines both before and after point into the search.
-If VISUALLY is set, require that the cursor is not after the match but
-really on, so that the block visually is on the match."
+  "Check if point is inside a match of RE.
+
+Normally only the current line is checked, but you can include
+NLINES extra lines after point into the search.  If VISUALLY is
+set, require that the cursor is not after the match but really
+on, so that the block visually is on the match."
   (catch 'exit
     (let ((pos (point))
           (eol (point-at-eol (+ 1 (or nlines 0))))
@@ -21713,18 +22439,8 @@ really on, so that the block visually is on the match."
 	  (if (and (<= (match-beginning 0) pos)
 		   (>= (+ inc (match-end 0)) pos))
 	      (throw 'exit (cons (match-beginning 0) (match-end 0)))))))))
-
-(defun org-at-regexp-p (regexp)
-  "Is point inside a match of REGEXP in the current line?"
-  (catch 'exit
-    (save-excursion
-      (let ((pos (point)) (end (point-at-eol)))
-	(beginning-of-line 1)
-	(while (re-search-forward regexp end t)
-	  (if (and (<= (match-beginning 0) pos)
-		   (>= (match-end 0) pos))
-	      (throw 'exit t)))
-	nil))))
+(define-obsolete-function-alias 'org-at-regexp-p 'org-in-regexp
+  "Org mode 8.3")
 
 (defun org-between-regexps-p (start-re end-re &optional lim-up lim-down)
   "Non-nil when point is between matches of START-RE and END-RE.
@@ -21745,7 +22461,7 @@ position before START-RE (resp. after END-RE)."
       (save-excursion
 	;; Point is on a block when on START-RE or if START-RE can be
 	;; found before it...
-	(and (or (org-at-regexp-p start-re)
+	(and (or (org-in-regexp start-re)
 		 (re-search-backward start-re limit-up t))
 	     (setq beg (match-beginning 0))
 	     ;; ... and END-RE after it...
@@ -21781,17 +22497,6 @@ block from point."
 	      names))
       nil)))
 
-(defun org-in-drawer-p ()
-  "Is point within a drawer?"
-  (save-match-data
-    (let ((case-fold-search t)
-	  (lim-up (save-excursion (outline-previous-heading)))
-	  (lim-down (save-excursion (outline-next-heading))))
-      (org-between-regexps-p
-       (concat "^[ \t]*:" (regexp-opt org-drawers) ":")
-       "^[ \t]*:end:.*$"
-       lim-up lim-down))))
-
 (defun org-occur-in-agenda-files (regexp &optional nlines)
   "Call `multi-occur' with buffers for all agenda files."
   (interactive "sOrg-files matching: \np")
@@ -21823,13 +22528,13 @@ block from point."
 		  (org-reveal))))
   ;; Emacs 22
   (defadvice occur-mode-goto-occurrence
-    (after org-occur-reveal activate)
+      (after org-occur-reveal activate)
     (and (derived-mode-p 'org-mode) (org-reveal)))
   (defadvice occur-mode-goto-occurrence-other-window
-    (after org-occur-reveal activate)
+      (after org-occur-reveal activate)
     (and (derived-mode-p 'org-mode) (org-reveal)))
   (defadvice occur-mode-display-occurrence
-    (after org-occur-reveal activate)
+      (after org-occur-reveal activate)
     (when (derived-mode-p 'org-mode)
       (let ((pos (occur-mode-find-occurrence)))
 	(with-current-buffer (marker-buffer pos)
@@ -21873,7 +22578,7 @@ The function returns the new ALIST."
 	   (setq n (cons (car e) (append (cdr (assoc (car e) rtn)) (cdr e))))
 	   (setq rtn (assq-delete-all (car e) rtn))
 	   (push n rtn))))
-	  alist)
+     alist)
     rtn))
 
 (defun org-delete-all (elts list)
@@ -22095,168 +22800,343 @@ hierarchy of headlines by UP levels before marking the subtree."
 
 ;;; Indentation
 
+(defun org--get-expected-indentation (element contentsp)
+  "Expected indentation column for current line, according to ELEMENT.
+ELEMENT is an element containing point.  CONTENTSP is non-nil
+when indentation is to be computed according to contents of
+ELEMENT."
+  (let ((type (org-element-type element))
+	(start (org-element-property :begin element))
+	(post-affiliated (org-element-property :post-affiliated element)))
+    (org-with-wide-buffer
+     (cond
+      (contentsp
+       (case type
+	 ((diary-sexp footnote-definition) 0)
+	 ((headline inlinetask nil)
+	  (if (not org-adapt-indentation) 0
+	    (let ((level (org-current-level)))
+	      (if level (1+ level) 0))))
+	 ((item plain-list) (org-list-item-body-column post-affiliated))
+	 (t
+	  (goto-char start)
+	  (org-get-indentation))))
+      ((memq type '(headline inlinetask nil))
+       (if (save-excursion (beginning-of-line) (looking-at "[ \t]*$"))
+	   (org--get-expected-indentation element t)
+	 0))
+      ((memq type '(diary-sexp footnote-definition)) 0)
+      ;; First paragraph of a footnote definition or an item.
+      ;; Indent like parent.
+      ((< (line-beginning-position) start)
+       (org--get-expected-indentation
+	(org-element-property :parent element) t))
+      ;; At first line: indent according to previous sibling, if any,
+      ;; ignoring footnote definitions and inline tasks, or parent's
+      ;; contents.
+      ((= (line-beginning-position) start)
+       (catch 'exit
+	 (while t
+	   (if (= (point-min) start) (throw 'exit 0)
+	     (goto-char (1- start))
+	     (let* ((previous (org-element-at-point))
+		    (parent previous))
+	       (while (and parent (<= (org-element-property :end parent) start))
+		 (setq previous parent
+		       parent (org-element-property :parent parent)))
+	       (cond
+		((not previous) (throw 'exit 0))
+		((> (org-element-property :end previous) start)
+		 (throw 'exit (org--get-expected-indentation previous t)))
+		((memq (org-element-type previous)
+		       '(footnote-definition inlinetask))
+		 (setq start (org-element-property :begin previous)))
+		(t (goto-char (org-element-property :begin previous))
+		   (throw 'exit
+			  (if (bolp) (org-get-indentation)
+			    ;; At first paragraph in an item or
+			    ;; a footnote definition.
+			    (org--get-expected-indentation
+			     (org-element-property :parent previous) t))))))))))
+      ;; Otherwise, move to the first non-blank line above.
+      (t
+       (beginning-of-line)
+       (let ((pos (point)))
+	 (skip-chars-backward " \r\t\n")
+	 (cond
+	  ;; Two blank lines end a footnote definition or a plain
+	  ;; list.  When we indent an empty line after them, the
+	  ;; containing list or footnote definition is over, so it
+	  ;; qualifies as a previous sibling.  Therefore, we indent
+	  ;; like its first line.
+	  ((and (memq type '(footnote-definition plain-list))
+		(> (count-lines (point) pos) 2))
+	   (goto-char start)
+	   (org-get-indentation))
+	  ;; Line above is the first one of a paragraph at the
+	  ;; beginning of an item or a footnote definition.  Indent
+	  ;; like parent.
+	  ((< (line-beginning-position) start)
+	   (org--get-expected-indentation
+	    (org-element-property :parent element) t))
+	  ;; Line above is the beginning of an element, i.e., point
+	  ;; was originally on the blank lines between element's start
+	  ;; and contents.
+	  ((= (line-beginning-position) post-affiliated)
+	   (org--get-expected-indentation element t))
+	  ;; POS is after contents in a greater element.  Indent like
+	  ;; the beginning of the element.
+	  ;;
+	  ;; As a special case, if point is at the end of a footnote
+	  ;; definition or an item, indent like the very last element
+	  ;; within.
+	  ((and (not (eq type 'paragraph))
+		(let ((cend (org-element-property :contents-end element)))
+		  (and cend (<= cend pos))))
+	   (if (memq type '(footnote-definition item plain-list))
+	       (let ((last (org-element-at-point)))
+		 (org--get-expected-indentation
+		  last
+		  (memq (org-element-type last)
+			'(footnote-definition item plain-list))))
+	     (goto-char start)
+	     (org-get-indentation)))
+	  ;; In any other case, indent like the current line.
+	  (t (org-get-indentation)))))))))
+
+(defun org--align-node-property ()
+  "Align node property at point.
+Alignment is done according to `org-property-format', which see."
+  (when (save-excursion
+	  (beginning-of-line)
+	  (looking-at org-property-re))
+    (replace-match
+     (concat (match-string 4)
+	     (org-trim
+	      (format org-property-format (match-string 1) (match-string 3))))
+     t t)))
+
 (defun org-indent-line ()
-  "Indent line depending on context."
+  "Indent line depending on context.
+
+Indentation is done according to the following rules:
+
+  - Footnote definitions, diary sexps, headlines and inline tasks
+    have to start at column 0.
+
+  - On the very first line of an element, consider, in order, the
+    next rules until one matches:
+
+    1. If there's a sibling element before, ignoring footnote
+       definitions and inline tasks, indent like its first line.
+
+    2. If element has a parent, indent like its contents.  More
+       precisely, if parent is an item, indent after the
+       description part, if any, or the bullet (see
+       `org-list-description-max-indent').  Else, indent like
+       parent's first line.
+
+    3. Otherwise, indent relatively to current level, if
+       `org-adapt-indentation' is non-nil, or to left margin.
+
+  - On a blank line at the end of an element, indent according to
+    the type of the element.  More precisely
+
+    1. If element is a plain list, an item, or a footnote
+       definition, indent like the very last element within.
+
+    2. If element is a paragraph, indent like its last non blank
+       line.
+
+    3. Otherwise, indent like its very first line.
+
+  - In the code part of a source block, use language major mode
+    to indent current line if `org-src-tab-acts-natively' is
+    non-nil.  If it is nil, do nothing.
+
+  - Otherwise, indent like the first non-blank line above.
+
+The function doesn't indent an item as it could break the whole
+list structure.  Instead, use \\<org-mode-map>\\[org-shiftmetaleft] or \
+\\[org-shiftmetaright].
+
+Also align node properties according to `org-property-format'."
   (interactive)
-  (let* ((pos (point))
-	 (itemp (org-at-item-p))
-	 (case-fold-search t)
-	 (org-drawer-regexp (or org-drawer-regexp "\000"))
-	 (inline-task-p (and (featurep 'org-inlinetask)
-			     (org-inlinetask-in-task-p)))
-	 (inline-re (and inline-task-p
-			 (org-inlinetask-outline-regexp)))
-	 column)
-    (if (and orgstruct-is-++ (eq pos (point)))
-	(let ((indent-line-function (cadadr (assoc 'indent-line-function org-fb-vars))))
-	  (indent-according-to-mode))
-      (beginning-of-line 1)
-      (cond
-       ;; Headings
-       ((looking-at org-outline-regexp) (setq column 0))
-       ;; Footnote definition
-       ((looking-at org-footnote-definition-re) (setq column 0))
-       ;; Literal examples
-       ((looking-at "[ \t]*:\\( \\|$\\)")
-	(setq column (org-get-indentation))) ; do nothing
-       ;; Lists
-       ((ignore-errors (goto-char (org-in-item-p)))
-	(setq column (if itemp
-			 (org-get-indentation)
-		       (org-list-item-body-column (point))))
-	(goto-char pos))
-       ;; Drawers
-       ((and (looking-at "[ \t]*:END:")
-	     (save-excursion (re-search-backward org-drawer-regexp nil t)))
-	(save-excursion
-	  (goto-char (1- (match-beginning 1)))
-	  (setq column (current-column))))
-       ;; Special blocks
-       ((and (looking-at "[ \t]*#\\+end_\\([a-z]+\\)")
-	     (save-excursion
-	       (re-search-backward
-		(concat "^[ \t]*#\\+begin_" (downcase (match-string 1))) nil t)))
-	(setq column (org-get-indentation (match-string 0))))
-       ((and (not (looking-at "[ \t]*#\\+begin_"))
-	     (org-between-regexps-p "^[ \t]*#\\+begin_" "[ \t]*#\\+end_"))
-	(save-excursion
-	  (re-search-backward "^[ \t]*#\\+begin_\\([a-z]+\\)" nil t))
-	(setq column
-	      (cond ((equal (downcase (match-string 1)) "src")
-		     ;; src blocks: let `org-edit-src-exit' handle them
-		     (org-get-indentation))
-		    ((equal (downcase (match-string 1)) "example")
-		     (max (org-get-indentation)
-			  (org-get-indentation (match-string 0))))
-		    (t
-		     (org-get-indentation (match-string 0))))))
-       ;; This line has nothing special, look at the previous relevant
-       ;; line to compute indentation
-       (t
-	(beginning-of-line 0)
-	(while (and (not (bobp))
-		    (not (looking-at org-table-line-regexp))
-		    (not (looking-at org-drawer-regexp))
-		    ;; When point started in an inline task, do not move
-		    ;; above task starting line.
-		    (not (and inline-task-p (looking-at inline-re)))
-		    ;; Skip drawers, blocks, empty lines, verbatim,
-		    ;; comments, tables, footnotes definitions, lists,
-		    ;; inline tasks.
-		    (or (and (looking-at "[ \t]*:END:")
-			     (re-search-backward org-drawer-regexp nil t))
-			(and (looking-at "[ \t]*#\\+end_")
-			     (re-search-backward "[ \t]*#\\+begin_"nil t))
-			(looking-at "[ \t]*[\n:#|]")
-			(looking-at org-footnote-definition-re)
-			(and (not inline-task-p)
-			     (featurep 'org-inlinetask)
-			     (org-inlinetask-in-task-p)
-			     (or (org-inlinetask-goto-beginning) t))))
-	  (beginning-of-line 0))
-	(cond
-	 ;; There was a list item above.
-	 ((ignore-errors (goto-char (org-in-item-p)))
-	  (goto-char (org-list-get-top-point (org-list-struct)))
-	  (setq column (org-get-indentation)))
-	 ;; There was an heading above.
-	 ((looking-at "\\*+[ \t]+")
-	  (if (not org-adapt-indentation)
-	      (setq column 0)
-	    (goto-char (match-end 0))
-	    (setq column (current-column))))
-	 ;; A drawer had started and is unfinished
-	 ((looking-at org-drawer-regexp)
-	  (goto-char (1- (match-beginning 1)))
-	  (setq column (current-column)))
-	 ;; Else, nothing noticeable found: get indentation and go on.
-	 (t (setq column (org-get-indentation))))))
-      ;; Now apply indentation and move cursor accordingly
-      (goto-char pos)
-      (if (<= (current-column) (current-indentation))
-	  (org-indent-line-to column)
-	(save-excursion (org-indent-line-to column)))
-      ;; Special polishing for properties, see `org-property-format'
-      (setq column (current-column))
-      (beginning-of-line 1)
-      (if (looking-at org-property-re)
-	  (replace-match (concat (match-string 4)
-				 (format org-property-format
-					 (match-string 1) (match-string 3)))
-			 t t))
-      (org-move-to-column column))))
+  (cond
+   (orgstruct-is-++
+    (let ((indent-line-function
+	   (cadadr (assq 'indent-line-function org-fb-vars))))
+      (indent-according-to-mode)))
+   ((org-at-heading-p) 'noindent)
+   (t
+    (let* ((element (save-excursion (beginning-of-line) (org-element-at-point)))
+	   (type (org-element-type element)))
+      (cond ((and (memq type '(plain-list item))
+		  (= (line-beginning-position)
+		     (org-element-property :post-affiliated element)))
+	     'noindent)
+	    ((and (eq type 'src-block)
+		  org-src-tab-acts-natively
+		  (> (line-beginning-position)
+		     (org-element-property :post-affiliated element))
+		  (< (line-beginning-position)
+		     (org-with-wide-buffer
+		      (goto-char (org-element-property :end element))
+		      (skip-chars-backward " \r\t\n")
+		      (line-beginning-position))))
+	     (org-babel-do-key-sequence-in-edit-buffer (kbd "TAB")))
+	    (t
+	     (let ((column (org--get-expected-indentation element nil)))
+	       ;; Preserve current column.
+	       (if (<= (current-column) (current-indentation))
+		   (org-indent-line-to column)
+		 (save-excursion (org-indent-line-to column))))
+	     ;; Align node property.  Also preserve current column.
+	     (when (eq type 'node-property)
+	       (let ((column (current-column)))
+		 (org--align-node-property)
+		 (org-move-to-column column)))))))))
+
+(defun org-indent-region (start end)
+  "Indent each non-blank line in the region.
+Called from a program, START and END specify the region to
+indent.  The function will not indent contents of example blocks,
+verse blocks and export blocks as leading white spaces are
+assumed to be significant there."
+  (interactive "r")
+  (save-excursion
+    (goto-char start)
+    (skip-chars-forward " \r\t\n")
+    (unless (eobp) (beginning-of-line))
+    (let ((indent-to
+	   (lambda (ind pos)
+	     ;; Set IND as indentation for all lines between point and
+	     ;; POS or END, whichever comes first.  Blank lines are
+	     ;; ignored.  Leave point after POS once done.
+	     (let ((limit (copy-marker (min end pos))))
+	       (while (< (point) limit)
+		 (unless (org-looking-at-p "[ \t]*$") (org-indent-line-to ind))
+		 (forward-line))
+	       (set-marker limit nil))))
+	  (end (copy-marker end)))
+      (while (< (point) end)
+	(if (or (org-looking-at-p " \r\t\n") (org-at-heading-p)) (forward-line)
+	  (let* ((element (org-element-at-point))
+		 (type (org-element-type element))
+		 (element-end (copy-marker (org-element-property :end element)))
+		 (ind (org--get-expected-indentation element nil)))
+	    (cond
+	     ((or (memq type '(paragraph table table-row))
+		  (not (or (org-element-property :contents-begin element)
+			   (memq type
+				 '(example-block export-block src-block)))))
+	      ;; Elements here are indented as a single block.  Also
+	      ;; align node properties.
+	      (when (eq type 'node-property)
+		(org--align-node-property)
+		(beginning-of-line))
+	      (funcall indent-to ind element-end))
+	     (t
+	      ;; Elements in this category consist of three parts:
+	      ;; before the contents, the contents, and after the
+	      ;; contents.  The contents are treated specially,
+	      ;; according to the element type, or not indented at
+	      ;; all.  Other parts are indented as a single block.
+	      (let* ((post (copy-marker
+			    (org-element-property :post-affiliated element)))
+		     (cbeg
+		      (copy-marker
+		       (cond
+			((not (org-element-property :contents-begin element))
+			 ;; Fake contents for source blocks.
+			 (org-with-wide-buffer
+			  (goto-char post)
+			  (forward-line)
+			  (point)))
+			((memq type '(footnote-definition item plain-list))
+			 ;; Contents in these elements could start on
+			 ;; the same line as the beginning of the
+			 ;; element.  Make sure we start indenting
+			 ;; from the second line.
+			 (org-with-wide-buffer
+			  (goto-char post)
+			  (end-of-line)
+			  (skip-chars-forward " \r\t\n")
+			  (if (eobp) (point) (line-beginning-position))))
+			(t (org-element-property :contents-begin element)))))
+		     (cend (copy-marker
+			    (or (org-element-property :contents-end element)
+				;; Fake contents for source blocks.
+				(org-with-wide-buffer
+				 (goto-char element-end)
+				 (skip-chars-backward " \r\t\n")
+				 (line-beginning-position)))
+			    t)))
+		;; Do not change items indentation individually as it
+		;; might break the list as a whole.  On the other
+		;; hand, when at a plain list, indent it as a whole.
+		(cond ((eq type 'plain-list)
+		       (let ((offset (- ind (org-get-indentation))))
+			 (unless (zerop offset)
+			   (indent-rigidly (org-element-property :begin element)
+					   (org-element-property :end element)
+					   offset))
+			 (goto-char cbeg)))
+		      ((eq type 'item) (goto-char cbeg))
+		      (t (funcall indent-to ind cbeg)))
+		(when (< (point) end)
+		  (case type
+		    ((example-block export-block verse-block))
+		    (src-block
+		     ;; In a source block, indent source code
+		     ;; according to language major mode, but only if
+		     ;; `org-src-tab-acts-natively' is non-nil.
+		     (when (and (< (point) end) org-src-tab-acts-natively)
+		       (ignore-errors
+			 (org-babel-do-in-edit-buffer
+			  (indent-region (point-min) (point-max))))))
+		    (t (org-indent-region (point) (min cend end))))
+		  (goto-char (min cend end))
+		  (when (< (point) end) (funcall indent-to ind element-end)))
+		(set-marker post nil)
+		(set-marker cbeg nil)
+		(set-marker cend nil))))
+	    (set-marker element-end nil))))
+      (set-marker end nil))))
 
 (defun org-indent-drawer ()
   "Indent the drawer at point."
   (interactive)
-  (let ((p (point))
-	(e (and (save-excursion (re-search-forward ":END:" nil t))
-		(match-end 0)))
-	(folded
-	 (save-excursion
-	   (end-of-line)
-	   (when (overlays-at (point))
-	     (member 'invisible (overlay-properties
-				 (car (overlays-at (point)))))))))
-    (when folded (org-cycle))
-    (indent-for-tab-command)
-    (while (and (move-beginning-of-line 2) (< (point) e))
-      (indent-for-tab-command))
-    (goto-char p)
-    (when folded (org-cycle)))
+  (unless (save-excursion
+	    (beginning-of-line)
+	    (org-looking-at-p org-drawer-regexp))
+    (user-error "Not at a drawer"))
+  (let ((element (org-element-at-point)))
+    (unless (memq (org-element-type element) '(drawer property-drawer))
+      (user-error "Not at a drawer"))
+    (org-with-wide-buffer
+     (org-indent-region (org-element-property :begin element)
+			(org-element-property :end element))))
   (message "Drawer at point indented"))
 
 (defun org-indent-block ()
   "Indent the block at point."
   (interactive)
-  (let ((p (point))
-	(case-fold-search t)
-	(e (and (save-excursion (re-search-forward "#\\+end_?\\(?:[a-z]+\\)?" nil t))
-		(match-end 0)))
-	(folded
-	 (save-excursion
-	   (end-of-line)
-	   (when (overlays-at (point))
-	     (member 'invisible (overlay-properties
-				 (car (overlays-at (point)))))))))
-    (when folded (org-cycle))
-    (indent-for-tab-command)
-    (while (and (move-beginning-of-line 2) (< (point) e))
-      (indent-for-tab-command))
-    (goto-char p)
-    (when folded (org-cycle)))
+  (unless (save-excursion
+	    (beginning-of-line)
+	    (let ((case-fold-search t))
+	      (org-looking-at-p "[ \t]*#\\+\\(begin\\|end\\)_")))
+    (user-error "Not at a block"))
+  (let ((element (org-element-at-point)))
+    (unless (memq (org-element-type element)
+		  '(comment-block center-block dynamic-block example-block
+				  export-block quote-block special-block
+				  src-block verse-block))
+      (user-error "Not at a block"))
+    (org-with-wide-buffer
+     (org-indent-region (org-element-property :begin element)
+			(org-element-property :end element))))
   (message "Block at point indented"))
-
-(defun org-indent-region (start end)
-  "Indent region."
-  (interactive "r")
-  (save-excursion
-    (let ((line-end (org-current-line end)))
-      (goto-char start)
-      (while (< (org-current-line) line-end)
-	(cond ((org-in-src-block-p t) (org-src-native-tab-command-maybe))
-	      (t (call-interactively 'org-indent-line)))
-	(move-beginning-of-line 2)))))
 
 
 ;;; Filling
@@ -22318,69 +23198,64 @@ matches in paragraphs or comments, use it."
     (when (derived-mode-p 'message-mode)
       (save-excursion
 	(beginning-of-line)
-	(cond ((or (not (message-in-body-p))
-		   (looking-at orgtbl-line-start-regexp))
-	       (throw 'exit nil))
+	(cond ((not (message-in-body-p)) (throw 'exit nil))
+	      ((org-looking-at-p org-table-line-regexp) (throw 'exit nil))
 	      ((looking-at message-cite-prefix-regexp)
 	       (throw 'exit (match-string-no-properties 0)))
 	      ((looking-at org-outline-regexp)
-	       (throw 'exit (make-string (length (match-string 0)) ? ))))))
+	       (throw 'exit (make-string (length (match-string 0)) ?\s))))))
     (org-with-wide-buffer
-     (let* ((p (line-beginning-position))
-	    (element (save-excursion
-		       (beginning-of-line)
-		       (or (ignore-errors (org-element-at-point))
-			   (user-error "An element cannot be parsed line %d"
-				       (line-number-at-pos (point))))))
-	    (type (org-element-type element))
-	    (post-affiliated (org-element-property :post-affiliated element)))
-       (unless (and post-affiliated (< p post-affiliated))
-	 (case type
-	   (comment
-	    (save-excursion
-	      (beginning-of-line)
-	      (looking-at "[ \t]*")
-	      (concat (match-string 0) "# ")))
-	   (footnote-definition "")
-	   ((item plain-list)
-	    (make-string (org-list-item-body-column
-			  (or post-affiliated
-			      (org-element-property :begin element)))
-			 ? ))
-	   (paragraph
-	    ;; Fill prefix is usually the same as the current line,
-	    ;; unless the paragraph is at the beginning of an item.
-	    (let ((parent (org-element-property :parent element)))
+     (unless (org-at-heading-p)
+       (let* ((p (line-beginning-position))
+	      (element (save-excursion
+			 (beginning-of-line)
+			 (org-element-at-point)))
+	      (type (org-element-type element))
+	      (post-affiliated (org-element-property :post-affiliated element)))
+	 (unless (< p post-affiliated)
+	   (case type
+	     (comment
 	      (save-excursion
 		(beginning-of-line)
-		(cond ((eq (org-element-type parent) 'item)
-		       (make-string (org-list-item-body-column
-				     (org-element-property :begin parent))
-				    ? ))
-		      ((and adaptive-fill-regexp
-			    ;; Locally disable
-			    ;; `adaptive-fill-function' to let
-			    ;; `fill-context-prefix' handle
-			    ;; `adaptive-fill-regexp' variable.
-			    (let (adaptive-fill-function)
-			      (fill-context-prefix
-			       post-affiliated
-			       (org-element-property :end element)))))
-		      ((looking-at "[ \t]+") (match-string 0))
-		      (t  "")))))
-	   (comment-block
-	    ;; Only fill contents if P is within block boundaries.
-	    (let* ((cbeg (save-excursion (goto-char post-affiliated)
-					 (forward-line)
-					 (point)))
-		   (cend (save-excursion
-			   (goto-char (org-element-property :end element))
-			   (skip-chars-backward " \r\t\n")
-			   (line-beginning-position))))
-	      (when (and (>= p cbeg) (< p cend))
-		(if (save-excursion (beginning-of-line) (looking-at "[ \t]+"))
-		    (match-string 0)
-		  ""))))))))))
+		(looking-at "[ \t]*")
+		(concat (match-string 0) "# ")))
+	     (footnote-definition "")
+	     ((item plain-list)
+	      (make-string (org-list-item-body-column post-affiliated) ?\s))
+	     (paragraph
+	      ;; Fill prefix is usually the same as the current line,
+	      ;; unless the paragraph is at the beginning of an item.
+	      (let ((parent (org-element-property :parent element)))
+		(save-excursion
+		  (beginning-of-line)
+		  (cond ((eq (org-element-type parent) 'item)
+			 (make-string (org-list-item-body-column
+				       (org-element-property :begin parent))
+				      ?\s))
+			((and adaptive-fill-regexp
+			      ;; Locally disable
+			      ;; `adaptive-fill-function' to let
+			      ;; `fill-context-prefix' handle
+			      ;; `adaptive-fill-regexp' variable.
+			      (let (adaptive-fill-function)
+				(fill-context-prefix
+				 post-affiliated
+				 (org-element-property :end element)))))
+			((looking-at "[ \t]+") (match-string 0))
+			(t  "")))))
+	     (comment-block
+	      ;; Only fill contents if P is within block boundaries.
+	      (let* ((cbeg (save-excursion (goto-char post-affiliated)
+					   (forward-line)
+					   (point)))
+		     (cend (save-excursion
+			     (goto-char (org-element-property :end element))
+			     (skip-chars-backward " \r\t\n")
+			     (line-beginning-position))))
+		(when (and (>= p cbeg) (< p cend))
+		  (if (save-excursion (beginning-of-line) (looking-at "[ \t]+"))
+		      (match-string 0)
+		    "")))))))))))
 
 (declare-function message-goto-body "message" ())
 (defvar message-cite-prefix-regexp)	; From message.el
@@ -22451,25 +23326,18 @@ a footnote definition, try to fill the first paragraph within."
 			  (concat "^" message-cite-prefix-regexp) end t))
 		   (setq end (match-beginning 0))))
 	       ;; Fill paragraph, taking line breaks into account.
-	       ;; For that, slice the paragraph using line breaks as
-	       ;; separators, and fill the parts in reverse order to
-	       ;; avoid messing with markers.
 	       (save-excursion
-		 (goto-char end)
-		 (mapc
-		  (lambda (pos)
-		    (fill-region-as-paragraph pos (point) justify)
-		    (goto-char pos))
-		  ;; Find the list of ending positions for line breaks
-		  ;; in the current paragraph.  Add paragraph
-		  ;; beginning to include first slice.
-		  (nreverse
-		   (cons beg
-			 (org-element-map
-			     (org-element--parse-objects
-			      beg end nil (org-element-restriction 'paragraph))
-			     'line-break
-			   (lambda (lb) (org-element-property :end lb)))))))
+		 (goto-char beg)
+		 (let ((cuts (list beg)))
+		   (while (re-search-forward "\\\\\\\\[ \t]*\n" end t)
+		     (when (eq 'line-break
+			       (org-element-type
+				(save-excursion (backward-char)
+						(org-element-context))))
+		       (push (point) cuts)))
+		   (dolist (c (delq end cuts))
+		     (fill-region-as-paragraph c end justify)
+		     (setq end c))))
 	       t)))
 	  ;; Contents of `comment-block' type elements should be
 	  ;; filled as plain text, but only if point is within block
@@ -22550,6 +23418,130 @@ non-nil."
   (insert-before-markers-and-inherit fill-prefix))
 
 
+;;; Fixed Width Areas
+
+(defun org-toggle-fixed-width ()
+  "Toggle fixed-width markup.
+
+Add or remove fixed-width markup on current line, whenever it
+makes sense.  Return an error otherwise.
+
+If a region is active and if it contains only fixed-width areas
+or blank lines, remove all fixed-width markup in it.  If the
+region contains anything else, convert all non-fixed-width lines
+to fixed-width ones.
+
+Blank lines at the end of the region are ignored unless the
+region only contains such lines."
+  (interactive)
+  (if (not (org-region-active-p))
+      ;; No region:
+      ;;
+      ;; Remove fixed width marker only in a fixed-with element.
+      ;;
+      ;; Add fixed width maker in paragraphs, in blank lines after
+      ;; elements or at the beginning of a headline or an inlinetask,
+      ;; and before any one-line elements (e.g., a clock).
+      (progn
+        (beginning-of-line)
+        (let* ((element (org-element-at-point))
+               (type (org-element-type element)))
+          (cond
+           ((and (eq type 'fixed-width)
+                 (looking-at "[ \t]*\\(:\\(?: \\|$\\)\\)"))
+            (replace-match
+	     "" nil nil nil (if (= (line-end-position) (match-end 0)) 0 1)))
+           ((and (memq type '(babel-call clock comment diary-sexp headline
+					 horizontal-rule keyword paragraph
+					 planning))
+		 (<= (org-element-property :post-affiliated element) (point)))
+            (skip-chars-forward " \t")
+            (insert ": "))
+           ((and (org-looking-at-p "[ \t]*$")
+                 (or (eq type 'inlinetask)
+                     (save-excursion
+                       (skip-chars-forward " \r\t\n")
+                       (<= (org-element-property :end element) (point)))))
+            (delete-region (point) (line-end-position))
+            (org-indent-line)
+            (insert ": "))
+           (t (user-error "Cannot insert a fixed-width line here")))))
+    ;; Region active.
+    (let* ((begin (save-excursion
+                    (goto-char (region-beginning))
+                    (line-beginning-position)))
+           (end (copy-marker
+                 (save-excursion
+                   (goto-char (region-end))
+                   (unless (eolp) (beginning-of-line))
+                   (if (save-excursion (re-search-backward "\\S-" begin t))
+                       (progn (skip-chars-backward " \r\t\n") (point))
+                     (point)))))
+           (all-fixed-width-p
+            (catch 'not-all-p
+              (save-excursion
+                (goto-char begin)
+                (skip-chars-forward " \r\t\n")
+                (when (eobp) (throw 'not-all-p nil))
+                (while (< (point) end)
+                  (let ((element (org-element-at-point)))
+                    (if (eq (org-element-type element) 'fixed-width)
+                        (goto-char (org-element-property :end element))
+                      (throw 'not-all-p nil))))
+                t))))
+      (if all-fixed-width-p
+          (save-excursion
+            (goto-char begin)
+            (while (< (point) end)
+              (when (looking-at "[ \t]*\\(:\\(?: \\|$\\)\\)")
+                (replace-match
+                 "" nil nil nil
+                 (if (= (line-end-position) (match-end 0)) 0 1)))
+              (forward-line)))
+        (let ((min-ind (point-max)))
+          ;; Find minimum indentation across all lines.
+          (save-excursion
+            (goto-char begin)
+            (if (not (save-excursion (re-search-forward "\\S-" end t)))
+                (setq min-ind 0)
+              (catch 'zerop
+                (while (< (point) end)
+                  (unless (org-looking-at-p "[ \t]*$")
+                    (let ((ind (org-get-indentation)))
+                      (setq min-ind (min min-ind ind))
+                      (when (zerop ind) (throw 'zerop t))))
+                  (forward-line)))))
+          ;; Loop over all lines and add fixed-width markup everywhere
+          ;; but in fixed-width lines.
+          (save-excursion
+            (goto-char begin)
+            (while (< (point) end)
+              (cond
+               ((org-at-heading-p)
+                (insert ": ")
+                (forward-line)
+                (while (and (< (point) end) (org-looking-at-p "[ \t]*$"))
+                  (insert ":")
+                  (forward-line)))
+               ((org-looking-at-p "[ \t]*:\\( \\|$\\)")
+                (let* ((element (org-element-at-point))
+                       (element-end (org-element-property :end element)))
+                  (if (eq (org-element-type element) 'fixed-width)
+                      (progn (goto-char element-end)
+                             (skip-chars-backward " \r\t\n")
+                             (forward-line))
+                    (let ((limit (min end element-end)))
+                      (while (< (point) limit)
+                        (org-move-to-column min-ind t)
+                        (insert ": ")
+                        (forward-line))))))
+               (t
+                (org-move-to-column min-ind t)
+                (insert ": ")
+                (forward-line)))))))
+      (set-marker end nil))))
+
+
 ;;; Comments
 
 ;; Org comments syntax is quite complex.  It requires the entire line
@@ -22579,78 +23571,124 @@ non-nil."
 
 (defun org-insert-comment ()
   "Insert an empty comment above current line.
-If the line is empty, insert comment at its beginning."
-  (beginning-of-line)
-  (if (looking-at "\\s-*$") (replace-match "") (open-line 1))
-  (org-indent-line)
-  (insert "# "))
+If the line is empty, insert comment at its beginning.  When
+point is within a source block, comment according to the related
+major mode."
+  (if (let ((element (org-element-at-point)))
+	(and (eq (org-element-type element) 'src-block)
+	     (< (save-excursion
+		  (goto-char (org-element-property :post-affiliated element))
+		  (line-end-position))
+		(point))
+	     (> (save-excursion
+		  (goto-char (org-element-property :end element))
+		  (skip-chars-backward " \r\t\n")
+		  (line-beginning-position))
+		(point))))
+      (org-babel-do-in-edit-buffer (call-interactively 'comment-dwim))
+    (beginning-of-line)
+    (if (looking-at "\\s-*$") (delete-region (point) (point-at-eol))
+      (open-line 1))
+    (org-indent-line)
+    (insert "# ")))
 
 (defvar comment-empty-lines)		; From newcomment.el.
 (defun org-comment-or-uncomment-region (beg end &rest ignore)
   "Comment or uncomment each non-blank line in the region.
 Uncomment each non-blank line between BEG and END if it only
-contains commented lines.  Otherwise, comment them."
-  (save-restriction
-    ;; Restrict region
-    (narrow-to-region (save-excursion (goto-char beg)
-				      (skip-chars-forward " \r\t\n" end)
-				      (line-beginning-position))
-		      (save-excursion (goto-char end)
-				      (skip-chars-backward " \r\t\n" beg)
-				      (line-end-position)))
-    (let ((uncommentp
-	   ;; UNCOMMENTP is non-nil when every non blank line between
-	   ;; BEG and END is a comment.
-	   (save-excursion
-	     (goto-char (point-min))
-	     (while (and (not (eobp))
-			 (let ((element (org-element-at-point)))
-			   (and (eq (org-element-type element) 'comment)
-				(goto-char (min (point-max)
-						(org-element-property
-						 :end element)))))))
-	     (eobp))))
-      (if uncommentp
-	  ;; Only blank lines and comments in region: uncomment it.
-	  (save-excursion
-	    (goto-char (point-min))
-	    (while (not (eobp))
-	      (when (looking-at "[ \t]*\\(#\\(?: \\|$\\)\\)")
-		(replace-match "" nil nil nil 1))
-	      (forward-line)))
-	;; Comment each line in region.
-	(let ((min-indent (point-max)))
-	  ;; First find the minimum indentation across all lines.
-	  (save-excursion
-	    (goto-char (point-min))
-	    (while (and (not (eobp)) (not (zerop min-indent)))
-	      (unless (looking-at "[ \t]*$")
-		(setq min-indent (min min-indent (current-indentation))))
-	      (forward-line)))
-	  ;; Then loop over all lines.
-	  (save-excursion
-	    (goto-char (point-min))
-	    (while (not (eobp))
-	      (unless (and (not comment-empty-lines) (looking-at "[ \t]*$"))
-		;; Don't get fooled by invisible text (e.g. link path)
-		;; when moving to column MIN-INDENT.
-		(let ((buffer-invisibility-spec nil))
-		  (org-move-to-column min-indent t))
-		(insert comment-start))
-	      (forward-line))))))))
+contains commented lines.  Otherwise, comment them.  If region is
+strictly within a source block, use appropriate comment syntax."
+  (if (let ((element (org-element-at-point)))
+	(and (eq (org-element-type element) 'src-block)
+	     (< (save-excursion
+		  (goto-char (org-element-property :post-affiliated element))
+		  (line-end-position))
+		beg)
+	     (>= (save-excursion
+		   (goto-char (org-element-property :end element))
+		   (skip-chars-backward " \r\t\n")
+		   (line-beginning-position))
+		 end)))
+      (org-babel-do-in-edit-buffer (call-interactively 'comment-dwim))
+    (save-restriction
+      ;; Restrict region
+      (narrow-to-region (save-excursion (goto-char beg)
+					(skip-chars-forward " \r\t\n" end)
+					(line-beginning-position))
+			(save-excursion (goto-char end)
+					(skip-chars-backward " \r\t\n" beg)
+					(line-end-position)))
+      (let ((uncommentp
+	     ;; UNCOMMENTP is non-nil when every non blank line between
+	     ;; BEG and END is a comment.
+	     (save-excursion
+	       (goto-char (point-min))
+	       (while (and (not (eobp))
+			   (let ((element (org-element-at-point)))
+			     (and (eq (org-element-type element) 'comment)
+				  (goto-char (min (point-max)
+						  (org-element-property
+						   :end element)))))))
+	       (eobp))))
+	(if uncommentp
+	    ;; Only blank lines and comments in region: uncomment it.
+	    (save-excursion
+	      (goto-char (point-min))
+	      (while (not (eobp))
+		(when (looking-at "[ \t]*\\(#\\(?: \\|$\\)\\)")
+		  (replace-match "" nil nil nil 1))
+		(forward-line)))
+	  ;; Comment each line in region.
+	  (let ((min-indent (point-max)))
+	    ;; First find the minimum indentation across all lines.
+	    (save-excursion
+	      (goto-char (point-min))
+	      (while (and (not (eobp)) (not (zerop min-indent)))
+		(unless (looking-at "[ \t]*$")
+		  (setq min-indent (min min-indent (current-indentation))))
+		(forward-line)))
+	    ;; Then loop over all lines.
+	    (save-excursion
+	      (goto-char (point-min))
+	      (while (not (eobp))
+		(unless (and (not comment-empty-lines) (looking-at "[ \t]*$"))
+		  ;; Don't get fooled by invisible text (e.g. link path)
+		  ;; when moving to column MIN-INDENT.
+		  (let ((buffer-invisibility-spec nil))
+		    (org-move-to-column min-indent t))
+		  (insert comment-start))
+		(forward-line)))))))))
+
+(defun org-comment-dwim (arg)
+  "Call `comment-dwim' within a source edit buffer if needed."
+  (interactive "*P")
+  (if (org-in-src-block-p)
+      (org-babel-do-in-edit-buffer (call-interactively 'comment-dwim))
+    (call-interactively 'comment-dwim)))
 
 
-;;; Planning
+;;; Timestamps API
 
 ;; This section contains tools to operate on timestamp objects, as
 ;; returned by, e.g. `org-element-context'.
+
+(defun org-timestamp--to-internal-time (timestamp &optional end)
+  "Encode TIMESTAMP object into Emacs internal time.
+Use end of date range or time range when END is non-nil."
+  (apply #'encode-time
+	 (cons 0
+	       (mapcar
+		(lambda (prop) (or (org-element-property prop timestamp) 0))
+		(if end '(:minute-end :hour-end :day-end :month-end :year-end)
+		  '(:minute-start :hour-start :day-start :month-start
+				  :year-start))))))
 
 (defun org-timestamp-has-time-p (timestamp)
   "Non-nil when TIMESTAMP has a time specified."
   (org-element-property :hour-start timestamp))
 
 (defun org-timestamp-format (timestamp format &optional end utc)
-  "Format a TIMESTAMP element into a string.
+  "Format a TIMESTAMP object into a string.
 
 FORMAT is a format specifier to be passed to
 `format-time-string'.
@@ -22661,27 +23699,18 @@ time-range, if possible.
 When optional argument UTC is non-nil, time will be expressed as
 Universal Time."
   (format-time-string
-   format
-   (apply 'encode-time
-          (cons 0
-                (mapcar
-                 (lambda (prop) (or (org-element-property prop timestamp) 0))
-                 (if end '(:minute-end :hour-end :day-end :month-end :year-end)
-                   '(:minute-start :hour-start :day-start :month-start
-                                   :year-start)))))
-   utc))
+   format (org-timestamp--to-internal-time timestamp end) utc))
 
 (defun org-timestamp-split-range (timestamp &optional end)
-  "Extract a timestamp object from a date or time range.
+  "Extract a TIMESTAMP object from a date or time range.
 
-TIMESTAMP is a timestamp object. END, when non-nil, means extract
-the end of the range.  Otherwise, extract its start.
+END, when non-nil, means extract the end of the range.
+Otherwise, extract its start.
 
-Return a new timestamp object sharing the same parent as
-TIMESTAMP."
+Return a new timestamp object."
   (let ((type (org-element-property :type timestamp)))
     (if (memq type '(active inactive diary)) timestamp
-      (let ((split-ts (list 'timestamp (copy-sequence (nth 1 timestamp)))))
+      (let ((split-ts (org-element-copy timestamp)))
 	;; Set new type.
 	(org-element-put-property
 	 split-ts :type (if (eq type 'active-range) 'active 'inactive))
@@ -22695,88 +23724,41 @@ TIMESTAMP."
 	  (dolist (p-cell p-alist)
 	    (org-element-put-property
 	     split-ts
-	     (funcall (if end 'car 'cdr) p-cell)
+	     (funcall (if end #'car #'cdr) p-cell)
 	     (org-element-property
-	      (funcall (if end 'cdr 'car) p-cell) split-ts)))
+	      (funcall (if end #'cdr #'car) p-cell) split-ts)))
 	  ;; Eventually refresh `:raw-value'.
 	  (org-element-put-property split-ts :raw-value nil)
 	  (org-element-put-property
 	   split-ts :raw-value (org-element-interpret-data split-ts)))))))
 
 (defun org-timestamp-translate (timestamp &optional boundary)
-  "Apply `org-translate-time' on a TIMESTAMP object.
+  "Translate TIMESTAMP object to custom format.
+
+Format string is defined in `org-time-stamp-custom-formats',
+which see.
+
 When optional argument BOUNDARY is non-nil, it is either the
 symbol `start' or `end'.  In this case, only translate the
 starting or ending part of TIMESTAMP if it is a date or time
-range.  Otherwise, translate both parts."
-  (if (and (not boundary)
-	   (memq (org-element-property :type timestamp)
-		 '(active-range inactive-range)))
-      (concat
-       (org-translate-time
-	(org-element-property :raw-value
-			      (org-timestamp-split-range timestamp)))
-       "--"
-       (org-translate-time
-	(org-element-property :raw-value
-			      (org-timestamp-split-range timestamp t))))
-    (org-translate-time
-     (org-element-property
-      :raw-value
-      (if (not boundary) timestamp
-	(org-timestamp-split-range timestamp (eq boundary 'end)))))))
+range.  Otherwise, translate both parts.
+
+Return timestamp as-is if `org-display-custom-times' is nil or if
+it has a `diary' type."
+  (let ((type (org-element-property :type timestamp)))
+    (if (or (not org-display-custom-times) (eq type 'diary))
+	(org-element-interpret-data timestamp)
+      (let ((fmt (funcall (if (org-timestamp-has-time-p timestamp) #'cdr #'car)
+			  org-time-stamp-custom-formats)))
+	(if (and (not boundary) (memq type '(active-range inactive-range)))
+	    (concat (org-timestamp-format timestamp fmt)
+		    "--"
+		    (org-timestamp-format timestamp fmt t))
+	  (org-timestamp-format timestamp fmt (eq boundary 'end)))))))
 
 
 
 ;;; Other stuff.
-
-(defun org-toggle-fixed-width-section (arg)
-  "Toggle the fixed-width export.
-If there is no active region, the QUOTE keyword at the current headline is
-inserted or removed.  When present, it causes the text between this headline
-and the next to be exported as fixed-width text, and unmodified.
-If there is an active region, this command adds or removes a colon as the
-first character of this line.  If the first character of a line is a colon,
-this line is also exported in fixed-width font."
-  (interactive "P")
-  (let* ((cc 0)
-	 (regionp (org-region-active-p))
-	 (beg (if regionp (region-beginning) (point)))
-	 (end (if regionp (region-end)))
-	 (nlines (or arg (if (and beg end) (count-lines beg end) 1)))
-	 (case-fold-search nil)
-	 (re "[ \t]*\\(:\\(?: \\|$\\)\\)")
-	 off)
-    (if regionp
-	(save-excursion
-	  (goto-char beg)
-	  (setq cc (current-column))
-	  (beginning-of-line 1)
-	  (setq off (looking-at re))
-	  (while (> nlines 0)
-	    (setq nlines (1- nlines))
-	    (beginning-of-line 1)
-	    (cond
-	     (arg
-	      (org-move-to-column cc t)
-	      (insert ": \n")
-	      (forward-line -1))
-	     ((and off (looking-at re))
-	      (replace-match "" t t nil 1))
-	     ((not off) (org-move-to-column cc t) (insert ": ")))
-	    (forward-line 1)))
-      (save-excursion
-	(org-back-to-heading)
-	(cond
-	 ((looking-at (format org-heading-keyword-regexp-format
-			      org-quote-string))
-	  (goto-char (match-end 1))
-	  (looking-at (concat " +" org-quote-string))
-	  (replace-match "" t t)
-	  (when (eolp) (insert " ")))
-	 ((looking-at org-outline-regexp)
-	  (goto-char (match-end 0))
-	  (insert org-quote-string " ")))))))
 
 (defun org-reftex-citation ()
   "Use reftex-citation to insert a citation into the buffer.
@@ -22799,11 +23781,11 @@ package ox-bibtex by Taru Karttunen."
       (save-restriction
 	(widen)
 	(let ((case-fold-search t)
-	      (re "^#\\+bibliography:[ \t]+\\([^ \t\n]+\\)"))
+	      (re "^[ \t]*#\\+BIBLIOGRAPHY:[ \t]+\\([^ \t\n]+\\)"))
 	  (if (not (save-excursion
 		     (or (re-search-forward re nil t)
 			 (re-search-backward re nil t))))
-	      (error "No bibliography defined in file")
+	      (user-error "No bibliography defined in file")
 	    (setq bib (concat (match-string 1) ".bib")
 		  rds (list (list 'bib bib)))))))
     (call-interactively 'reftex-citation)))
@@ -22909,7 +23891,7 @@ the cursor is already beyond the end of the headline."
 		      (goto-char (match-end 0))
 		    (goto-char (match-beginning 1))))
 	      (call-interactively move-fun))))
-	 ((org-element-property :hiddenp element)
+	 ((outline-invisible-p (line-end-position))
 	  ;; If element is hidden, `move-end-of-line' would put point
 	  ;; after it.  Use `end-of-line' to stay on current line.
 	  (call-interactively 'end-of-line))
@@ -22927,18 +23909,43 @@ the cursor is already beyond the end of the headline."
 This will call `backward-sentence' or `org-table-beginning-of-field',
 depending on context."
   (interactive "P")
-  (cond
-   ((org-at-table-p) (call-interactively 'org-table-beginning-of-field))
-   (t (call-interactively 'backward-sentence))))
+  (let* ((element (org-element-at-point))
+	 (contents-begin (org-element-property :contents-begin element))
+	 (table (org-element-lineage element '(table) t)))
+    (if (and table
+	     (> (point) contents-begin)
+	     (<= (point) (org-element-property :contents-end table)))
+	(call-interactively #'org-table-beginning-of-field)
+      (save-restriction
+	(when (and contents-begin
+		   (< (point-min) contents-begin)
+		   (> (point) contents-begin))
+	  (narrow-to-region contents-begin
+			    (org-element-property :contents-end element)))
+	(call-interactively #'backward-sentence)))))
 
 (defun org-forward-sentence (&optional arg)
   "Go to end of sentence, or end of table field.
 This will call `forward-sentence' or `org-table-end-of-field',
 depending on context."
   (interactive "P")
-  (cond
-   ((org-at-table-p) (call-interactively 'org-table-end-of-field))
-   (t (call-interactively 'forward-sentence))))
+  (let* ((element (org-element-at-point))
+	 (contents-end (org-element-property :contents-end element))
+	 (table (org-element-lineage element '(table) t)))
+    (if (and table
+	     (>= (point) (org-element-property :contents-begin table))
+	     (< (point) contents-end))
+	(call-interactively #'org-table-end-of-field)
+      (save-restriction
+	(when (and contents-end
+		   (> (point-max) contents-end)
+		   ;; Skip blank lines between elements.
+		   (< (org-element-property :end element)
+		      (save-excursion (goto-char contents-end)
+				      (skip-chars-forward " \r\t\n"))))
+	  (narrow-to-region (org-element-property :contents-begin element)
+			    contents-end))
+	(call-interactively #'forward-sentence)))))
 
 (define-key org-mode-map "\M-a" 'org-backward-sentence)
 (define-key org-mode-map "\M-e" 'org-forward-sentence)
@@ -22972,15 +23979,15 @@ cursor is at the beginning of a line or after the stars of a currently
 empty headline, then the yank is handled specially.  How exactly depends
 on the value of the following variables, both set by default.
 
-org-yank-folded-subtrees
+`org-yank-folded-subtrees'
     When set, the subtree(s) will be folded after insertion, but only
     if doing so would now swallow text after the yanked text.
 
-org-yank-adjusted-subtrees
+`org-yank-adjusted-subtrees'
     When set, the subtree will be promoted or demoted in order to
-    fit into the local outline tree structure, which means that the level
-    will be adjusted so that it becomes the smaller one of the two
-    *visible* surrounding headings.
+    fit into the local outline tree structure, which means that the
+    level will be adjusted so that it becomes the smaller one of the
+    two *visible* surrounding headings.
 
 Any prefix to this command will cause `yank' to be called directly with
 no special treatment.  In particular, a simple \\[universal-argument] prefix \
@@ -23103,11 +24110,27 @@ This version does not only check the character property, but also
 ;; Compatibility alias with Org versions < 7.8.03
 (defalias 'org-on-heading-p 'org-at-heading-p)
 
+(defun org-in-commented-heading-p (&optional no-inheritance)
+  "Non-nil if point is under a commented heading.
+This function also checks ancestors of the current headline,
+unless optional argument NO-INHERITANCE is non-nil."
+  (cond
+   ((org-before-first-heading-p) nil)
+   ((let ((headline (nth 4 (org-heading-components))))
+      (and headline
+	   (let ((case-fold-search nil))
+	     (org-string-match-p (concat "^" org-comment-string "\\(?: \\|$\\)")
+				 headline)))))
+   (no-inheritance nil)
+   (t
+    (save-excursion (and (org-up-heading-safe) (org-in-commented-heading-p))))))
+
 (defun org-at-comment-p nil
-  "Is cursor in a line starting with a # character?"
+  "Is cursor in a commented line?"
   (save-excursion
-    (beginning-of-line)
-    (looking-at "^#")))
+    (save-match-data
+      (beginning-of-line)
+      (looking-at "^[ \t]*# "))))
 
 (defun org-at-drawer-p nil
   "Is cursor at a drawer keyword?"
@@ -23158,14 +24181,11 @@ headline found, or nil if no higher level is found.
 Also, this function will be a lot faster than `outline-up-heading',
 because it relies on stars being the outline starters.  This can really
 make a significant difference in outlines with very many siblings."
-  (let (start-level re)
-    (org-back-to-heading t)
-    (setq start-level (funcall outline-level))
-    (if (equal start-level 1)
-	nil
-      (setq re (concat "^\\*\\{1," (number-to-string (1- start-level)) "\\} "))
-      (if (re-search-backward re nil t)
-	  (funcall outline-level)))))
+  (when (ignore-errors (org-back-to-heading t))
+    (let ((level-up (1- (funcall outline-level))))
+      (and (> level-up 0)
+	   (re-search-backward (format "^\\*\\{1,%d\\} " level-up) nil t)
+	   (funcall outline-level)))))
 
 (defun org-first-sibling-p ()
   "Is this heading the first child of its parents?"
@@ -23190,7 +24210,7 @@ move point."
 	(pos (point))
 	(re org-outline-regexp-bol)
 	level l)
-    (when (condition-case nil (org-back-to-heading t) (error nil))
+    (when (ignore-errors (org-back-to-heading t))
       (setq level (funcall outline-level))
       (catch 'exit
 	(or previous (forward-char 1))
@@ -23214,7 +24234,7 @@ move point."
 Return t when a child was found.  Otherwise don't move point and
 return nil."
   (let (level (pos (point)) (re org-outline-regexp-bol))
-    (when (condition-case nil (org-back-to-heading t) (error nil))
+    (when (ignore-errors (org-back-to-heading t))
       (setq level (outline-level))
       (forward-char 1)
       (if (and (re-search-forward re nil t) (> (outline-level) level))
@@ -23303,24 +24323,28 @@ If there is no such heading, return nil."
     		(forward-char -1))))))
   (point))
 
-(defun org-end-of-meta-data-and-drawers ()
-  "Jump to the first text after meta data and drawers in the current entry.
-This will move over empty lines, lines with planning time stamps,
-clocking lines, and drawers."
+(defun org-end-of-meta-data (&optional full)
+  "Skip planning line and properties drawer in current entry.
+When optional argument FULL is non-nil, also skip empty lines,
+clocking lines and regular drawers at the beginning of the
+entry."
   (org-back-to-heading t)
-  (let ((end (save-excursion (outline-next-heading) (point)))
-	(re (concat "\\(" org-drawer-regexp "\\)"
-		    "\\|" "[ \t]*" org-keyword-time-regexp)))
-    (forward-line 1)
-    (while (re-search-forward re end t)
-      (if (not (match-end 1))
-	  ;; empty or planning line
-	  (forward-line 1)
-	;; a drawer, find the end
-	(re-search-forward "^[ \t]*:END:" end 'move)
-	(forward-line 1)))
-    (and (re-search-forward "[^\n]" nil t) (backward-char 1))
-    (point)))
+  (forward-line)
+  (when (org-looking-at-p org-planning-line-re) (forward-line))
+  (when (looking-at org-property-drawer-re)
+    (goto-char (match-end 0))
+    (forward-line))
+  (when (and full (not (org-at-heading-p)))
+    (catch 'exit
+      (let ((end (save-excursion (outline-next-heading) (point)))
+	    (re (concat "[ \t]*$" "\\|" org-clock-line-re)))
+	(while (not (eobp))
+	  (cond ((org-looking-at-p org-drawer-regexp)
+		 (if (re-search-forward "^[ \t]*:END:[ \t]*$" end t)
+		     (forward-line)
+		   (throw 'exit t)))
+		((org-looking-at-p re) (forward-line))
+		(t (throw 'exit t))))))))
 
 (defun org-forward-heading-same-level (arg &optional invisible-ok)
   "Move forward to the ARG'th subheading at same level as this one.
@@ -23361,20 +24385,64 @@ Stop at the first and last subheadings of a superior heading."
   (interactive "p")
   (org-forward-heading-same-level (if arg (- arg) -1) invisible-ok))
 
+(defun org-next-visible-heading (arg)
+  "Move to the next visible heading.
+
+This function wraps `outline-next-visible-heading' with
+`org-with-limited-levels' in order to skip over inline tasks and
+respect customization of `org-odd-levels-only'."
+  (interactive "p")
+  (org-with-limited-levels
+   (outline-next-visible-heading arg)))
+
+(defun org-previous-visible-heading (arg)
+  "Move to the next visible heading.
+
+This function wraps `outline-previous-visible-heading' with
+`org-with-limited-levels' in order to skip over inline tasks and
+respect customization of `org-odd-levels-only'."
+  (interactive "p")
+  (org-with-limited-levels
+   (outline-previous-visible-heading arg)))
+
 (defun org-next-block (arg &optional backward block-regexp)
   "Jump to the next block.
-With a prefix argument ARG, jump forward ARG many source blocks.
+
+With a prefix argument ARG, jump forward ARG many blocks.
+
 When BACKWARD is non-nil, jump to the previous block.
-When BLOCK-REGEXP is non-nil, use this regexp to find blocks."
+
+When BLOCK-REGEXP is non-nil, use this regexp to find blocks.
+Match data is set according to this regexp when the function
+returns.
+
+Return point at beginning of the opening line of found block.
+Throw an error if no block is found."
   (interactive "p")
-  (let ((re (or block-regexp org-block-regexp))
-	(re-search-fn (or (and backward 're-search-backward)
-			   're-search-forward)))
-    (if (looking-at re) (forward-char 1))
-    (condition-case nil
-	(funcall re-search-fn re nil nil arg)
-      (error (error "No %s code blocks" (if backward "previous" "further" ))))
-    (goto-char (match-beginning 0)) (org-show-context)))
+  (let ((re (or block-regexp "^[ \t]*#\\+BEGIN"))
+	(case-fold-search t)
+	(search-fn (if backward #'re-search-backward #'re-search-forward))
+	(count (or arg 1))
+	(origin (point))
+	last-element)
+    (if backward (beginning-of-line) (end-of-line))
+    (while (and (> count 0) (funcall search-fn re nil t))
+      (let ((element (save-excursion
+		       (goto-char (match-beginning 0))
+		       (save-match-data (org-element-at-point)))))
+	(when (and (memq (org-element-type element)
+			 '(center-block comment-block dynamic-block
+					example-block export-block quote-block
+					special-block src-block verse-block))
+		   (<= (match-beginning 0)
+		       (org-element-property :post-affiliated element)))
+	  (setq last-element element)
+	  (decf count))))
+    (if (= count 0)
+	(prog1 (goto-char (org-element-property :post-affiliated last-element))
+	  (save-match-data (org-show-context)))
+      (goto-char origin)
+      (user-error "No %s code blocks" (if backward "previous" "further")))))
 
 (defun org-previous-block (arg &optional block-regexp)
   "Jump to the previous block.
@@ -23413,7 +24481,7 @@ item, etc.  It also provides some special moves for convenience:
            (skip-chars-forward " \r\t\n")
            (or (eobp) (beginning-of-line)))
           ;; On affiliated keywords, move to element's beginning.
-          ((and post-affiliated (< (point) post-affiliated))
+          ((< (point) post-affiliated)
            (goto-char post-affiliated))
           ;; At a table row, move to the end of the table.  Similarly,
           ;; at a node property, move to the end of the property
@@ -23492,7 +24560,7 @@ convenience:
      ((= (point) begin)
       (backward-char)
       (org-backward-paragraph))
-     ((and post-affiliated (<= (point) post-affiliated)) (goto-char begin))
+     ((<= (point) post-affiliated) (goto-char begin))
      ((memq type '(node-property table-row))
       (goto-char (org-element-property
                   :post-affiliated (org-element-property :parent element))))
@@ -23566,18 +24634,21 @@ Move to the previous element at the same level, when possible."
 		 (progn (goto-char origin)
 			(user-error "Cannot move further up"))))))
 	(t
-	 (let* ((trail (org-element-at-point 'keep-trail))
-		(elem (car trail))
-		(prev-elem (nth 1 trail))
+	 (let* ((elem (org-element-at-point))
 		(beg (org-element-property :begin elem)))
 	   (cond
 	    ;; Move to beginning of current element if point isn't
 	    ;; there already.
 	    ((null beg) (message "No element at point"))
 	    ((/= (point) beg) (goto-char beg))
-	    (prev-elem (goto-char (org-element-property :begin prev-elem)))
-	    ((org-before-first-heading-p) (goto-char (point-min)))
-	    (t (org-back-to-heading)))))))
+	    (t (goto-char beg)
+	       (skip-chars-backward " \r\t\n")
+	       (unless (bobp)
+		 (let ((prev (org-element-at-point)))
+		   (goto-char (org-element-property :begin prev))
+		   (while (and (setq prev (org-element-property :parent prev))
+			       (<= (org-element-property :end prev) beg))
+		     (goto-char (org-element-property :begin prev)))))))))))
 
 (defun org-up-element ()
   "Move to upper element."
@@ -23602,7 +24673,7 @@ Move to the previous element at the same level, when possible."
       (forward-char))
      ((memq (org-element-type element) org-element-greater-elements)
       ;; If contents are hidden, first disclose them.
-      (when (org-element-property :hiddenp element) (org-cycle))
+      (when (outline-invisible-p (line-end-position)) (org-cycle))
       (goto-char (or (org-element-property :contents-begin element)
 		     (user-error "No content for this element"))))
      (t (user-error "No inner element")))))
@@ -23611,9 +24682,19 @@ Move to the previous element at the same level, when possible."
   "Move backward element at point."
   (interactive)
   (if (org-with-limited-levels (org-at-heading-p)) (org-move-subtree-up)
-    (let* ((trail (org-element-at-point 'keep-trail))
-	   (elem (car trail))
-	   (prev-elem (nth 1 trail)))
+    (let* ((elem (org-element-at-point))
+	   (prev-elem
+	    (save-excursion
+	      (goto-char (org-element-property :begin elem))
+	      (skip-chars-backward " \r\t\n")
+	      (unless (bobp)
+		(let* ((beg (org-element-property :begin elem))
+		       (prev (org-element-at-point))
+		       (up prev))
+		  (while (and (setq up (org-element-property :parent up))
+			      (<= (org-element-property :end up) beg))
+		    (setq prev up))
+		  prev)))))
       ;; Error out if no previous element or previous element is
       ;; a parent of the current one.
       (if (or (not prev-elem) (org-element-nested-p elem prev-elem))
@@ -23762,27 +24843,26 @@ modified."
 Show the heading too, if it is currently invisible."
   (interactive)
   (save-excursion
-    (condition-case nil
-	(progn
-	  (org-back-to-heading t)
-	  (outline-flag-region
-	   (max (point-min) (1- (point)))
-	   (save-excursion
-	     (if (re-search-forward
-		  (concat "[\r\n]\\(" org-outline-regexp "\\)") nil t)
-		 (match-beginning 1)
-	       (point-max)))
-	   nil)
-	  (org-cycle-hide-drawers 'children))
-      (error nil))))
+    (ignore-errors
+      (org-back-to-heading t)
+      (outline-flag-region
+       (max (point-min) (1- (point)))
+       (save-excursion
+	 (if (re-search-forward
+	      (concat "[\r\n]\\(" org-outline-regexp "\\)") nil t)
+	     (match-beginning 1)
+	   (point-max)))
+       nil)
+      (org-cycle-hide-drawers 'children))))
 
 (defun org-make-options-regexp (kwds &optional extra)
-  "Make a regular expression for keyword lines."
-  (concat
-   "^#\\+\\("
-   (mapconcat 'regexp-quote kwds "\\|")
-   (if extra (concat "\\|" extra))
-   "\\):[ \t]*\\(.*\\)"))
+  "Make a regular expression for keyword lines.
+KWDS is a list of keywords, as strings.  Optional argument EXTRA,
+when non-nil, is a regexp matching keywords names."
+  (concat "^[ \t]*#\\+\\("
+	  (regexp-opt kwds)
+	  (and extra (concat (and kwds "\\|") extra))
+	  "\\):[ \t]*\\(.*\\)"))
 
 ;; Make isearch reveal the necessary context
 (defun org-isearch-end ()
@@ -23938,34 +25018,97 @@ To get rid of the restriction, use \\[org-agenda-remove-restriction-lock]."
 
 ;;; Fixes and Hacks for problems with other packages
 
-;; Make flyspell not check words in links, to not mess up our keymap
-(defvar org-element-affiliated-keywords) ; From org-element.el
-(defvar org-element-block-name-alist)	 ; From org-element.el
+(defun org--flyspell-object-check-p (element)
+  "Non-nil when Flyspell can check object at point.
+ELEMENT is the element at point."
+  (let ((object (save-excursion
+		  (when (org-looking-at-p "\\>") (backward-char))
+		  (org-element-context element))))
+    (case (org-element-type object)
+      ;; Prevent checks in links due to keybinding conflict with
+      ;; Flyspell.
+      ((code entity export-snippet inline-babel-call
+	     inline-src-block line-break latex-fragment link macro
+	     statistics-cookie target timestamp verbatim)
+       nil)
+      (footnote-reference
+       ;; Only in inline footnotes, within the definition.
+       (and (eq (org-element-property :type object) 'inline)
+	    (< (save-excursion
+		 (goto-char (org-element-property :begin object))
+		 (search-forward ":" nil t 2))
+	       (point))))
+      (otherwise t))))
+
 (defun org-mode-flyspell-verify ()
-  "Don't let flyspell put overlays at active buttons, or on
-   {todo,all-time,additional-option-like}-keywords."
-  (require 'org-element) ; For `org-element-affiliated-keywords'
-  (let ((pos (max (1- (point)) (point-min)))
-	(word (thing-at-point 'word)))
-    (and (not (get-text-property pos 'keymap))
-	 (not (get-text-property pos 'org-no-flyspell))
-	 (not (member word org-todo-keywords-1))
-	 (not (member word org-all-time-keywords))
-	 (not (member word org-options-keywords))
-	 (not (member word (mapcar 'car org-startup-options)))
-	 (not (member-ignore-case word org-element-affiliated-keywords))
-	 (not (member-ignore-case word (org-get-export-keywords)))
-	 (not (member-ignore-case
-	       word (mapcar 'car org-element-block-name-alist)))
-	 (not (member-ignore-case word '("BEGIN" "END" "ATTR")))
-	 (not (org-in-src-block-p)))))
+  "Function used for `flyspell-generic-check-word-predicate'."
+  (if (org-at-heading-p)
+      ;; At a headline or an inlinetask, check title only.  This is
+      ;; faster than relying on `org-element-at-point'.
+      (and (save-excursion (beginning-of-line)
+			   (and (let ((case-fold-search t))
+				  (not (looking-at "\\*+ END[ \t]*$")))
+				(looking-at org-complex-heading-regexp)))
+	   (match-beginning 4)
+	   (>= (point) (match-beginning 4))
+	   (or (not (match-beginning 5))
+	       (< (point) (match-beginning 5))))
+    (let* ((element (org-element-at-point))
+	   (post-affiliated (org-element-property :post-affiliated element)))
+      (cond
+       ;; Ignore checks in all affiliated keywords but captions.
+       ((< (point) post-affiliated)
+	(and (save-excursion
+	       (beginning-of-line)
+	       (let ((case-fold-search t)) (looking-at "[ \t]*#\\+CAPTION:")))
+	     (> (point) (match-end 0))
+	     (org--flyspell-object-check-p element)))
+       ;; Ignore checks in LOGBOOK (or equivalent) drawer.
+       ((let ((log (org-log-into-drawer)))
+	  (and log
+	       (let ((drawer (org-element-lineage element '(drawer))))
+		 (and drawer
+		      (eq (compare-strings
+			   log nil nil
+			   (org-element-property :drawer-name drawer) nil nil t)
+			  t)))))
+	nil)
+       (t
+	(case (org-element-type element)
+	  ((comment quote-section) t)
+	  (comment-block
+	   ;; Allow checks between block markers, not on them.
+	   (and (> (line-beginning-position) post-affiliated)
+		(save-excursion
+		  (end-of-line)
+		  (skip-chars-forward " \r\t\n")
+		  (< (point) (org-element-property :end element)))))
+	  ;; Arbitrary list of keywords where checks are meaningful.
+	  ;; Make sure point is on the value part of the element.
+	  (keyword
+	   (and (member (org-element-property :key element)
+			'("DESCRIPTION" "TITLE"))
+		(save-excursion
+		  (search-backward ":" (line-beginning-position) t))))
+	  ;; Check is globally allowed in paragraphs verse blocks and
+	  ;; table rows (after affiliated keywords) but some objects
+	  ;; must not be affected.
+	  ((paragraph table-row verse-block)
+	   (let ((cbeg (org-element-property :contents-begin element))
+		 (cend (org-element-property :contents-end element)))
+	     (and cbeg (>= (point) cbeg) (< (point) cend)
+		  (org--flyspell-object-check-p element))))))))))
+(put 'org-mode 'flyspell-mode-predicate 'org-mode-flyspell-verify)
 
 (defun org-remove-flyspell-overlays-in (beg end)
   "Remove flyspell overlays in region."
   (and (org-bound-and-true-p flyspell-mode)
        (fboundp 'flyspell-delete-region-overlays)
-       (flyspell-delete-region-overlays beg end))
-  (add-text-properties beg end '(org-no-flyspell t)))
+       (flyspell-delete-region-overlays beg end)))
+
+(defvar flyspell-delayed-commands)
+(eval-after-load "flyspell"
+  '(add-to-list 'flyspell-delayed-commands 'org-self-insert-command))
 
 ;; Make `bookmark-jump' shows the jump location if it was hidden.
 (eval-after-load "bookmark"
@@ -23997,6 +25140,27 @@ To get rid of the restriction, use \\[org-agenda-remove-restriction-lock]."
 	   (save-excursion (goto-char (max (point-min) (1- (point))))
 			   (outline-invisible-p)))
        (org-show-context 'bookmark-jump)))
+
+(defun org-mark-jump-unhide ()
+  "Make the point visible with `org-show-context' after jumping to the mark."
+  (when (and (derived-mode-p 'org-mode)
+	     (outline-invisible-p))
+    (org-show-context 'mark-goto)))
+
+(eval-after-load "simple"
+  '(defadvice pop-to-mark-command (after org-make-visible activate)
+     "Make the point visible with `org-show-context'."
+     (org-mark-jump-unhide)))
+
+(eval-after-load "simple"
+  '(defadvice exchange-point-and-mark (after org-make-visible activate)
+     "Make the point visible with `org-show-context'."
+     (org-mark-jump-unhide)))
+
+(eval-after-load "simple"
+  '(defadvice pop-global-mark (after org-make-visible activate)
+     "Make the point visible with `org-show-context'."
+     (org-mark-jump-unhide)))
 
 ;; Make session.el ignore our circular variable
 (defvar session-globals-exclude)

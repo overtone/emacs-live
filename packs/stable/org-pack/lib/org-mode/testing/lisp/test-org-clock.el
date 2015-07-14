@@ -1,6 +1,6 @@
 ;;; test-org-clock.el --- Tests for org-clock.el
 
-;; Copyright (C) 2012, 2014  Nicolas Goaziou
+;; Copyright (C) 2012, 2014, 2015  Nicolas Goaziou
 
 ;; Author: Nicolas Goaziou <n.goaziou at gmail dot com>
 
@@ -84,7 +84,25 @@ contents.  The clocktable doesn't appear in the buffer."
 
 ;;; Clocktable
 
-(ert-deftest test-org-clock/clocktable ()
+(defun test-org-clock/clocktable (string)
+  (let ((org-clock-total-time-cell-format "*%s*"))
+    ;; Install Clock lines in "Foo".
+    (search-forward "** Foo")
+    (forward-line)
+    (insert (org-test-clock-create-clock "-2d 8:00" "-2d 13:00"))
+    (insert (org-test-clock-create-clock ". 8:00" "13:00"))
+    ;; Install Clock lines in "Bar".
+    (search-forward "** Bar")
+    (forward-line)
+    (insert (org-test-clock-create-clock "-2d 15:00" "-2d 18:00"))
+    (insert (org-test-clock-create-clock "-1d 8:00" "-1d 13:00"))
+    (insert (org-test-clock-create-clock "-1d 15:00" "-1d 18:00"))
+    (insert (org-test-clock-create-clock ". 15:00"))
+    ;; Previous two days.
+    (goto-char (point-min))
+    (forward-line)
+    (test-org-clock-clocktable-contents-at-point string)))
+(ert-deftest test-org-clock/clocktable1 ()
   "Test clocktable specifications."
   ;; Relative time: Previous two days.
   (should
@@ -97,25 +115,11 @@ contents.  The clocktable doesn't appear in the buffer."
 | Foo                          |         |  5:00 |
 | Bar                          |         | 11:00 |
 "
-    (org-test-with-temp-text "* Relative times in clocktable\n** Foo\n** Bar\n"
-      (progn
-	;; Install Clock lines in "Foo".
-	(search-forward "** Foo")
-	(forward-line)
-	(insert (org-test-clock-create-clock "-2d 8:00" "-2d 13:00"))
-	(insert (org-test-clock-create-clock ". 8:00" "13:00"))
-	;; Install Clock lines in "Bar".
-	(search-forward "** Bar")
-	(forward-line)
-	(insert (org-test-clock-create-clock "-2d 15:00" "-2d 18:00"))
-	(insert (org-test-clock-create-clock "-1d 8:00" "-1d 13:00"))
-	(insert (org-test-clock-create-clock "-1d 15:00" "-1d 18:00"))
-	(insert (org-test-clock-create-clock ". 15:00"))
-	;; Previous two days.
-	(goto-char (point-min))
-	(forward-line)
-	(test-org-clock-clocktable-contents-at-point
-	 ":tstart \"<today-2>\" :tend \"<today>\" :indent nil")))))
+    (org-test-with-temp-text
+     "* Relative times in clocktable\n** Foo\n** Bar\n"
+     (test-org-clock/clocktable ":tstart \"<today-2>\" :tend \"<today>\" :indent nil")))))
+(ert-deftest test-org-clock/clocktable2 ()
+  "Test clocktable specifications."
   ;; Relative time: Yesterday until now.
   (should
    (equal
@@ -127,26 +131,9 @@ contents.  The clocktable doesn't appear in the buffer."
 | Foo                          |         | 5:00 |
 | Bar                          |         | 8:00 |
 "
-    (org-test-with-temp-text "* Relative times in clocktable\n** Foo\n** Bar\n"
-      (progn
-	;; Install Clock lines in "Foo".
-	(search-forward "** Foo")
-	(forward-line)
-	(insert (org-test-clock-create-clock "-2d 8:00" "-2d 13:00"))
-	(insert (org-test-clock-create-clock ". 8:00" "13:00"))
-	;; Install Clock lines in "Bar".
-	(search-forward "** Bar")
-	(forward-line)
-	(insert (org-test-clock-create-clock "-2d 15:00" "-2d 18:00"))
-	(insert (org-test-clock-create-clock "-1d 8:00" "-1d 13:00"))
-	(insert (org-test-clock-create-clock "-1d 15:00" "-1d 18:00"))
-	(insert (org-test-clock-create-clock ". 15:00"))
-	;; Previous two days.
-	(goto-char (point-min))
-	(forward-line)
-	(test-org-clock-clocktable-contents-at-point
-	 ":tstart \"<yesterday>\" :tend \"<tomorrow>\" :indent nil"))))))
-
+    (org-test-with-temp-text
+     "* Relative times in clocktable\n** Foo\n** Bar\n"
+     (test-org-clock/clocktable ":tstart \"<yesterday>\" :tend \"<tomorrow>\" :indent nil")))))
 
 (provide 'test-org-clock)
 ;;; test-org-clock.el end here

@@ -1,6 +1,6 @@
 ;;; cider-tests.el
 
-;; Copyright © 2012-2014 Tim King, Bozhidar Batsov
+;; Copyright © 2012-2015 Tim King, Bozhidar Batsov
 
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Bozhidar Batsov <bozhidar@batsov.com>
@@ -152,9 +152,8 @@
              (cider--nrepl-version () "0.2.1"))
       (setq-local nrepl-endpoint '("localhost" 4005))
       (setq-local nrepl-project-dir "proj")
-      (setq-local nrepl-buffer-ns "somens")
       (should (string= (cider--connection-info (buffer-name (current-buffer)))
-                       "Active nREPL connection: proj:somens, localhost:4005 (Java 1.7, Clojure 1.5.1, nREPL 0.2.1)")))))
+                       "Active nREPL connection: proj@localhost:4005 (Java 1.7, Clojure 1.5.1, nREPL 0.2.1)")))))
 
 (ert-deftest test-cider-current-connection-info-no-project ()
   (with-temp-buffer
@@ -162,9 +161,8 @@
              (cider--clojure-version () "1.5.1")
              (cider--nrepl-version () "0.2.1"))
       (setq-local nrepl-endpoint '("localhost" 4005))
-      (setq-local nrepl-buffer-ns "somens")
       (should (string= (cider--connection-info (buffer-name (current-buffer)))
-                       "Active nREPL connection: <no project>:somens, localhost:4005 (Java 1.7, Clojure 1.5.1, nREPL 0.2.1)")))))
+                       "Active nREPL connection: <no project>@localhost:4005 (Java 1.7, Clojure 1.5.1, nREPL 0.2.1)")))))
 
 (ert-deftest test-nrepl-close ()
   (let ((connections (nrepl-connection-buffers)))
@@ -215,7 +213,7 @@
                              (buffer-string)))
               (goto-char 80)         ; somewhere in the second connection listed
               (nrepl-connections-make-default)
-              (should (equal (buffer-name b2) (first nrepl-connection-list)))
+              (should (equal (buffer-name b2) (car nrepl-connection-list)))
               (should (equal "  Host              Port   Project
 
   localhost         4005   proj
@@ -547,3 +545,14 @@
              (should (equal (funcall cider-to-nrepl-filename-function unix-file-name) windows-file-name)))
       (and (should (eq (funcall cider-from-nrepl-filename-function unix-file-name) unix-file-name))
            (should (eq (funcall cider-to-nrepl-filename-function unix-file-name) unix-file-name))))))
+
+
+;;; Util tests
+
+(ert-deftest cider-namespace-qualified-p-test ()
+  (should (cider-namespace-qualified-p "a/a"))
+  (should (cider-namespace-qualified-p "a.a/a"))
+  (should (cider-namespace-qualified-p "a-a/a"))
+  (should (cider-namespace-qualified-p "a.a-a/a-a"))
+  (should (not (cider-namespace-qualified-p "/")))
+  (should (not (cider-namespace-qualified-p "/a"))))

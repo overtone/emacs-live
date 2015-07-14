@@ -82,7 +82,6 @@ class MSG(object):
         else:
             editor_log(msg)
 
-
     def __str__(self):
         if python2:
             return self.__unicode__().encode('utf-8')

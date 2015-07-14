@@ -23,6 +23,8 @@ Feature: Move forms
 
     (defn add [a b]
       (+ a b))
+
+    (add 1 2)
     """
     And the cursor is inside the first defn form
     And I start an action chain
@@ -34,6 +36,8 @@ Feature: Move forms
     """
     (ns cljr.src
       (:require [cljr.dest :refer [add]]))
+
+    (add 1 2)
     """
     And I open file "tmp/src/cljr/dest.clj"
     Then I should see:
@@ -45,6 +49,43 @@ Feature: Move forms
 
     (defn add [a b]
       (+ a b))
+    """
+
+  Scenario: Include requires when moving
+    When I insert:
+    """
+    (ns cljr.src
+      (:require [clojure.string :as str]))
+
+    (defn foo [y x]
+      (str/join x y))
+
+    (foo 1 2)
+    """
+    And the cursor is inside the first defn form
+    And I start an action chain
+    And I press "C-! mf"
+    And I type "dest.clj"
+    And I press "RET"
+    And I execute the action chain
+    Then I should see:
+    """
+    (ns cljr.src
+      (:require [cljr.dest :refer [foo]]))
+
+    (foo 1 2)
+    """
+    And I open file "tmp/src/cljr/dest.clj"
+    Then I should see:
+    """
+    (ns cljr.dest
+      (:require [clojure.string :as str]))
+
+    (defn frobinator [a b]
+      (+ a b))
+
+    (defn foo [y x]
+      (str/join x y))
     """
 
   Scenario: Use visual selection to select multiple defn forms
@@ -63,6 +104,8 @@ Feature: Move forms
 
     (defn div [a b]
       (/ a b))
+
+    (div (add 1 (sub 1 2)) (mult 1 3))
     """
     And I press "M-<"
     And I press "C-2 C-n"
@@ -80,6 +123,8 @@ Feature: Move forms
 
     (defn div [a b]
       (/ a b))
+
+    (div (add 1 (sub 1 2)) (mult 1 3))
     """
     And I open file "tmp/src/cljr/dest.clj"
     Then I should see:
@@ -107,6 +152,8 @@ Feature: Move forms
 
     (defn add [a b]
       (+ a b))
+
+    (add (this 1) (that 2))
     """
     And the cursor is inside the first defn form
     And I start an action chain
@@ -118,6 +165,8 @@ Feature: Move forms
     """
     (ns cljr.src
       (:require [cljr.dest :refer [this that add]]))
+
+    (add (this 1) (that 2))
     """
     And I open file "tmp/src/cljr/dest.clj"
     Then I should see:
@@ -181,6 +230,8 @@ Feature: Move forms
       {:added "1.0"}
       [xrel kmap]
         (set (map #(rename-keys kmap) xrel)))
+
+    (select (find-doc (foo/those)))
     """
     And I press "M-<"
     And I press "C-u 13 C-n"
@@ -211,6 +262,8 @@ Feature: Move forms
       {:added "1.0"}
       [xrel kmap]
         (set (map #(rename-keys kmap) xrel)))
+
+    (select (find-doc (foo/those)))
     """
     And I open file "tmp/src/cljr/dest.clj"
     Then I should see:

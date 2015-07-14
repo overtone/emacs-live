@@ -1,6 +1,6 @@
 ;;; ox-groff.el --- Groff Back-End for Org Export Engine
 
-;; Copyright (C) 2011-2014  Free Software Foundation, Inc.
+;; Copyright (C) 2011-2015  Free Software Foundation, Inc.
 
 ;; Author: Nicolas Goaziou <n.goaziou at gmail dot com>
 ;; Author: Luis R Anaya <papoanaya aroba hot mail punto com>
@@ -50,8 +50,6 @@
     (center-block . org-groff-center-block)
     (clock . org-groff-clock)
     (code . org-groff-code)
-    (comment . (lambda (&rest args) ""))
-    (comment-block . (lambda (&rest args) ""))
     (drawer . org-groff-drawer)
     (dynamic-block . org-groff-dynamic-block)
     (entity . org-groff-entity)
@@ -70,13 +68,13 @@
     (keyword . org-groff-keyword)
     (line-break . org-groff-line-break)
     (link . org-groff-link)
+    (node-property . org-groff-node-property)
     (paragraph . org-groff-paragraph)
     (plain-list . org-groff-plain-list)
     (plain-text . org-groff-plain-text)
     (planning . org-groff-planning)
-    (property-drawer . (lambda (&rest args) ""))
+    (property-drawer . org-groff-property-drawer)
     (quote-block . org-groff-quote-block)
-    (quote-section . org-groff-quote-section)
     (radio-target . org-groff-radio-target)
     (section . org-groff-section)
     (special-block . org-groff-special-block)
@@ -563,7 +561,8 @@ See `org-groff-text-markup-alist' for details."
       (t (format ".AF \"%s\" \n" (or org-groff-organization "")))))
 
    ;; 2. Title
-   (let ((subtitle1 (plist-get attr :subtitle1))
+   (let ((title (if (plist-get info :with-title) title ""))
+	 (subtitle1 (plist-get attr :subtitle1))
          (subtitle2 (plist-get attr :subtitle2)))
 
      (cond
@@ -1253,11 +1252,10 @@ INFO is a plist holding contextual information.  See
          (path (cond
                 ((member type '("http" "https" "ftp" "mailto"))
                  (concat type ":" raw-path))
-                ((and (string= type "file") (file-name-absolute-p raw-path))
-                 (concat "file://" raw-path))
-                (t raw-path)))
-         protocol)
+                ((string= type "file") (org-export-file-uri raw-path))
+                (t raw-path))))
     (cond
+     ((org-export-custom-protocol-maybe link desc 'groff))
      ;; Image file.
      (imagep (org-groff-link--inline-image link info))
      ;; import groff files
@@ -1270,8 +1268,7 @@ INFO is a plist holding contextual information.  See
       (let ((destination (org-export-resolve-radio-link link info)))
         (if (not destination) desc
           (format "\\fI [%s] \\fP"
-                  (org-export-solidify-link-text
-		   (org-element-property :value destination))))))
+		  (org-export-get-reference destination info)))))
 
      ;; Links pointing to a headline: find destination and build
      ;; appropriate referencing command.
@@ -1303,15 +1300,26 @@ INFO is a plist holding contextual information.  See
                             (org-element-property :title destination) info))))))
           ;; Fuzzy link points to a target.  Do as above.
           (otherwise
-           (let ((path (org-export-solidify-link-text path)))
-             (if (not desc) (format "\\fI%s\\fP" path)
-               (format "%s \\fBat\\fP \\fI%s\\fP" desc path)))))))
+           (let ((ref (org-export-get-reference destination info)))
+             (if (not desc) (format "\\fI%s\\fP" ref)
+               (format "%s \\fBat\\fP \\fI%s\\fP" desc ref)))))))
      ;; External link with a description part.
      ((and path desc) (format "%s \\fBat\\fP \\fI%s\\fP" path desc))
      ;; External link without a description part.
      (path (format "\\fI%s\\fP" path))
      ;; No path, only description.  Try to do something useful.
      (t (format org-groff-link-with-unknown-path-format desc)))))
+
+;;; Node Property
+
+(defun org-groff-node-property (node-property contents info)
+  "Transcode a NODE-PROPERTY element from Org to Groff.
+CONTENTS is nil.  INFO is a plist holding contextual
+information."
+  (format "%s:%s"
+          (org-element-property :key node-property)
+          (let ((value (org-element-property :value node-property)))
+            (if value (concat " " value) ""))))
 
 ;;; Paragraph
 
@@ -1423,6 +1431,15 @@ information."
     "")
    ""))
 
+;;;; Property Drawer
+
+(defun org-groff-property-drawer (property-drawer contents info)
+  "Transcode a PROPERTY-DRAWER element from Org to Groff.
+CONTENTS holds the contents of the drawer.  INFO is a plist
+holding contextual information."
+  (and (org-string-nw-p contents)
+       (format "\\fC\n%s\\fP" contents)))
+
 ;;; Quote Block
 
 (defun org-groff-quote-block (quote-block contents info)
@@ -1433,25 +1450,13 @@ holding contextual information."
    quote-block
    (format ".DS I\n.I\n%s\n.R\n.DE" contents)))
 
-;;; Quote Section
-
-(defun org-groff-quote-section (quote-section contents info)
-  "Transcode a QUOTE-SECTION element from Org to Groff.
-CONTENTS is nil.  INFO is a plist holding contextual information."
-  (let ((value (org-remove-indentation
-                (org-element-property :value quote-section))))
-    (when value (format ".DS L\n\\fI%s\\fP\n.DE\n" value))))
-
 ;;; Radio Target
 
 (defun org-groff-radio-target (radio-target text info)
   "Transcode a RADIO-TARGET object from Org to Groff.
 TEXT is the text of the target.  INFO is a plist holding
 contextual information."
-  (format "%s - %s"
-          (org-export-solidify-link-text
-           (org-element-property :value radio-target))
-          text))
+  (format "%s - %s" (org-export-get-reference radio-target info) text))
 
 ;;; Section
 
@@ -1467,7 +1472,7 @@ holding contextual information."
   "Transcode a SPECIAL-BLOCK element from Org to Groff.
 CONTENTS holds the contents of the block.  INFO is a plist
 holding contextual information."
-  (let ((type (downcase (org-element-property :type special-block))))
+  (let ((type (org-element-property :type special-block)))
     (org-groff--wrap-label
      special-block
      (format "%s\n" contents))))
@@ -1781,8 +1786,7 @@ a communication channel."
   "Transcode a TARGET object from Org to Groff.
 CONTENTS is nil.  INFO is a plist holding contextual
 information."
-  (format "\\fI%s\\fP"
-          (org-export-solidify-link-text (org-element-property :value target))))
+  (format "\\fI%s\\fP" (org-export-get-reference target info)))
 
 ;;; Timestamp
 

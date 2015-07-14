@@ -8,9 +8,9 @@
 ;; Michael Ivey
 ;; Phil Hagelberg
 ;; Dan McKinley
-;; Version: 1.1.1
+;; Version: 1.2.1
 ;; Keywords: gist git github paste pastie pastebin
-;; Package-Requires: ((eieio "1.3") (gh "0.7.2") (tabulated-list "0"))
+;; Package-Requires: ((emacs "24.1") (gh "0.8.1"))
 
 ;; This file is NOT part of GNU Emacs.
 
@@ -48,7 +48,7 @@
 (require 'tabulated-list)
 
 (defgroup gist nil
-  "Gist"
+  "Interface to GitHub's Gist."
   :group 'applications)
 
 (defcustom gist-list-format '((id "Id" 10 nil identity)
@@ -58,58 +58,77 @@
                                             (or (and public "public")
                                                 "private")))
                               (description "Description" 0 nil identity))
-  "Format for gist list"
+  "Format for gist list."
   :type '(alist :key-type
-                (choice (const :tag "Id" id)
-                        (const :tag "Creation date" created)
-                        (const :tag "Visibility" visibility)
-                        (const :tag "Description" description))
-                :value-type
-                (list
-                 (string :tag "Label")
-                 (integer :tag "Field length")
-                 (boolean :tag "Sortable")
-                 (choice (string :tag "Format")
-                         (function :tag "Formatter"))))
+          (choice
+           (const :tag "Id" id)
+           (const :tag "Creation date" created)
+           (const :tag "Visibility" visibility)
+           (const :tag "Description" description)
+           (const :tag "Files" files))
+          :value-type
+          (list
+           (string :tag "Label")
+           (integer :tag "Field length")
+           (boolean :tag "Sortable")
+           (choice
+            (string :tag "Format")
+            (function :tag "Formatter"))))
   :group 'gist)
 
 (defcustom gist-view-gist nil
-  "If non-nil, automatically use `browse-url' to view gists after
-they're posted.")
+  "If non-nil, view gists with `browse-url' after posting."
+  :type 'boolean
+  :group 'gist)
 
-(defvar gist-supported-modes-alist '((action-script-mode . "as")
-                                     (c-mode . "c")
-                                     (c++-mode . "cpp")
-                                     (clojure-mode . "clj")
-                                     (common-lisp-mode . "lisp")
-                                     (css-mode . "css")
-                                     (diff-mode . "diff")
-                                     (emacs-lisp-mode . "el")
-                                     (lisp-interaction-mode . "el")
-                                     (erlang-mode . "erl")
-                                     (haskell-mode . "hs")
-                                     (html-mode . "html")
-                                     (io-mode . "io")
-                                     (java-mode . "java")
-                                     (javascript-mode . "js")
-                                     (jde-mode . "java")
-                                     (js2-mode . "js")
-                                     (lua-mode . "lua")
-                                     (ocaml-mode . "ml")
-                                     (objective-c-mode . "m")
-                                     (perl-mode . "pl")
-                                     (php-mode . "php")
-                                     (python-mode . "py")
-                                     (ruby-mode . "rb")
-                                     (text-mode . "txt")
-                                     (scala-mode . "scala")
-                                     (sql-mode . "sql")
-                                     (scheme-mode . "scm")
-                                     (smalltalk-mode . "st")
-                                     (sh-mode . "sh")
-                                     (tcl-mode . "tcl")
-                                     (tex-mode . "tex")
-                                     (xml-mode . "xml")))
+(defcustom gist-multiple-files-mark "+"
+  "Symbol to use to indicate gists with multiple files."
+  :type 'string
+  :group 'gist)
+
+(defcustom gist-ask-for-description nil
+  "If non-nil, prompt for description before submitting gist."
+  :type 'boolean
+  :group 'gist)
+
+(defcustom gist-supported-modes-alist '((action-script-mode . "as")
+                                        (c-mode . "c")
+                                        (c++-mode . "cpp")
+                                        (clojure-mode . "clj")
+                                        (common-lisp-mode . "lisp")
+                                        (css-mode . "css")
+                                        (diff-mode . "diff")
+                                        (emacs-lisp-mode . "el")
+                                        (lisp-interaction-mode . "el")
+                                        (erlang-mode . "erl")
+                                        (haskell-mode . "hs")
+                                        (html-mode . "html")
+                                        (io-mode . "io")
+                                        (java-mode . "java")
+                                        (javascript-mode . "js")
+                                        (jde-mode . "java")
+                                        (js2-mode . "js")
+                                        (lua-mode . "lua")
+                                        (ocaml-mode . "ml")
+                                        (objective-c-mode . "m")
+                                        (perl-mode . "pl")
+                                        (php-mode . "php")
+                                        (python-mode . "py")
+                                        (ruby-mode . "rb")
+                                        (text-mode . "txt")
+                                        (scala-mode . "scala")
+                                        (sql-mode . "sql")
+                                        (scheme-mode . "scm")
+                                        (smalltalk-mode . "st")
+                                        (sh-mode . "sh")
+                                        (tcl-mode . "tcl")
+                                        (tex-mode . "tex")
+                                        (xml-mode . "xml"))
+  "Mapping between major-modes and file extensions.
+Used to generate filenames for created gists, and to select
+appropriate modes from fetched gist files (based on filenames)."
+  :type '(alist :key-type   (symbol :tag "Mode")
+                :value-type (string :tag "Extension")))
 
 (defvar gist-list-db nil)
 
@@ -127,7 +146,7 @@ they're posted.")
 (defun gist-internal-new (files &optional private description callback)
   (let* ((api (gist-get-api))
          (gist (gh-gist-gist-stub "gist"
-                                  :public (not private)
+                                  :public (or (not private) json-false)
                                   :description (or description "")
                                   :files files))
          (resp (gh-gist-new api gist)))
@@ -138,6 +157,10 @@ they're posted.")
        (lambda (gist)
          (let ((gh-profile-current-profile profile))
            (funcall (or cb 'gist-created-callback) gist)))))))
+
+(defun gist-ask-for-description-maybe ()
+  (when gist-ask-for-description
+    (read-from-minibuffer "Gist description: ")))
 
 ;;;###autoload
 (defun gist-region (begin end &optional private callback)
@@ -156,7 +179,8 @@ With a prefix argument, makes a private paste."
                  (gh-gist-gist-file "file"
                                     :filename fname
                                     :content (buffer-substring begin end)))))
-    (gist-internal-new files private nil callback)))
+    (gist-internal-new files private
+                       (gist-ask-for-description-maybe) callback)))
 
 (defun gist-files (filenames &optional private callback)
   (let ((files nil))
@@ -166,7 +190,8 @@ With a prefix argument, makes a private paste."
         (let ((name (file-name-nondirectory f)))
           (push (gh-gist-gist-file name :filename name :content (buffer-string))
                 files))))
-    (gist-internal-new files private nil callback)))
+    (gist-internal-new files private
+                       (gist-ask-for-description-maybe) callback)))
 
 (defun gist-created-callback (gist)
   (let ((location (oref gist :html-url)))
@@ -257,7 +282,7 @@ Copies the URL into the kill ring."
 
 (defun gist-tabulated-entry (gist)
   (let* ((data (gist-parse-gist gist))
-         (repo (car data)))
+         (repo (oref gist :id)))
     (list repo (apply 'vector data))))
 
 (defun gist-lists-retrieved-callback (gists &optional background)
@@ -283,7 +308,8 @@ for the gist."
   (let ((repo (oref gist :id))
         (creation (gist--get-time gist))
         (desc (or (oref gist :description) ""))
-        (public (oref gist :public)))
+        (public (eq t (oref gist :public)))
+        (fnames (mapcar (lambda (f) (oref f :filename)) (oref gist :files))))
     (loop for (id label width sort format) in gist-list-format
           collect (let ((string-formatter (if (eq id 'created)
                                               'format-time-string
@@ -291,7 +317,8 @@ for the gist."
                         (value (cond ((eq id 'id) repo)
                                      ((eq id 'created) creation)
                                      ((eq id 'visibility) public)
-                                     ((eq id 'description) desc))))
+                                     ((eq id 'description) desc)
+                                     ((eq id 'files) fnames))))
                     (funcall (if (stringp format)
                                  (lambda (val)
                                    (funcall string-formatter format val))
@@ -306,9 +333,7 @@ for the gist."
         (prefix (format "*gist %s*" id))
         (result nil)
         (profile (gh-profile-current-profile)))
-    (dolist (g gist-list-db)
-      (when (string= (oref g :id) id)
-        (setq gist g)))
+    (setq gist (gist-list-db-get-gist id))
     (let ((api (gist-get-api t)))
       (cond ((null gist)
              ;; fetch it
@@ -330,7 +355,8 @@ for the gist."
               ;; set major mode
               (if (fboundp mode)
                   (funcall mode)
-                (let ((buffer-file-name fname))
+                (let ((buffer-file-name fname)
+                      enable-dir-local-variables)
                   (normal-mode)))
               ;; set minor mode
               (gist-mode 1)
@@ -353,6 +379,12 @@ for the gist."
 (defun gist-fetch-current ()
   (interactive)
   (gist-fetch (tabulated-list-get-id)))
+
+(defun gist-fetch-current-noselect ()
+  (interactive)
+  (let ((win (selected-window)))
+    (gist-fetch-current)
+    (select-window win)))
 
 (defun gist-edit-current-description ()
   (interactive)
@@ -437,6 +469,7 @@ put it into `kill-ring'."
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map tabulated-list-mode-map)
     (define-key map "\C-m" 'gist-fetch-current)
+    (define-key map [tab] 'gist-fetch-current-noselect)
     (define-key map "g" 'gist-list-reload)
     (define-key map "e" 'gist-edit-current-description)
     (define-key map "k" 'gist-kill-current)
@@ -477,7 +510,7 @@ put it into `kill-ring'."
       (goto-char (point-min))
       (while (not (eobp))
         (if (member (tabulated-list-get-id) ids)
-            (tabulated-list-put-tag "+" t)
+            (tabulated-list-put-tag gist-multiple-files-mark t)
           (forward-line 1))))))
 
 (defun gist-list-db-get-gist (id)

@@ -1,6 +1,6 @@
 ;;; ob-ocaml.el --- org-babel functions for ocaml evaluation
 
-;; Copyright (C) 2009-2014 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2015 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;; Keywords: literate programming, reproducible research
@@ -70,7 +70,8 @@
 		  (session org-babel-ocaml-eoe-output t full-body)
 		(insert
 		 (concat
-		  (org-babel-chomp full-body)";;\n"org-babel-ocaml-eoe-indicator))
+		  (org-babel-chomp full-body) ";;\n"
+		  org-babel-ocaml-eoe-indicator))
 		(tuareg-interactive-send-input)))
 	 (clean
 	  (car (let ((re (regexp-quote org-babel-ocaml-eoe-output)) out)
@@ -79,16 +80,25 @@
 					 (progn (setq out nil) line)
 				       (when (string-match re line)
 					 (progn (setq out t) nil))))
-				   (mapcar #'org-babel-trim (reverse raw))))))))
+				   (mapcar #'org-babel-trim (reverse raw)))))))
+	 (raw (org-babel-trim clean))
+	 (result-params (cdr (assoc :result-params params)))
+	 (parsed 
+	  (string-match 
+	   "\\(\\(.*\n\\)*\\)[^:\n]+ : \\([^=\n]+\\) =\\(\n\\| \\)\\(.+\\)$" 
+	   raw))
+	 (output (match-string 1 raw))
+	 (type (match-string 3 raw))
+	 (value (match-string 5 raw)))
     (org-babel-reassemble-table
-     (let ((raw (org-babel-trim clean))
-	   (result-params (cdr (assoc :result-params params))))
-       (org-babel-result-cond result-params
-	 ;; strip type information from output unless verbatim is specified
-	 (if (and (not (member "verbatim" result-params))
-		  (string-match "= \\(.+\\)$" raw))
-	     (match-string 1 raw) raw)
-	 (org-babel-ocaml-parse-output raw)))
+     (org-babel-result-cond result-params
+       (cond
+	((member "verbatim" result-params) raw)
+	((member "output" result-params) output)
+	(t raw))
+       (if (and value type)
+	   (org-babel-ocaml-parse-output value type)
+	 raw))
      (org-babel-pick-name
       (cdr (assoc :colname-names params)) (cdr (assoc :colnames params)))
      (org-babel-pick-name
@@ -121,26 +131,29 @@
       (concat "[|" (mapconcat #'org-babel-ocaml-elisp-to-ocaml val "; ") "|]")
     (format "%S" val)))
 
-(defun org-babel-ocaml-parse-output (output)
-  "Parse OUTPUT.
-OUTPUT is string output from an ocaml process."
-  (let ((regexp "[^:]+ : %s = \\(.+\\)$"))
-    (cond
-     ((string-match (format regexp "string") output)
-      (org-babel-read (match-string 1 output)))
-     ((or (string-match (format regexp "int") output)
-          (string-match (format regexp "float") output))
-      (string-to-number (match-string 1 output)))
-     ((string-match (format regexp "list") output)
-      (org-babel-ocaml-read-list (match-string 1 output)))
-     ((string-match (format regexp "array") output)
-      (org-babel-ocaml-read-array (match-string 1 output)))
-     (t (message "don't recognize type of %s" output) output))))
+(defun org-babel-ocaml-parse-output (value type)
+  "Parse VALUE of type TYPE.
+VALUE and TYPE are string output from an ocaml process."
+  (cond
+   ((string= "string" type)
+    (org-babel-read value))
+   ((or (string= "int" type)
+	(string= "float" type))
+    (string-to-number value))
+   ((string-match "list" type)
+    (org-babel-ocaml-read-list value))
+   ((string-match "array" type)
+    (org-babel-ocaml-read-array value))
+   (t (message "don't recognize type %s" type) value)))
 
 (defun org-babel-ocaml-read-list (results)
   "Convert RESULTS into an elisp table or string.
 If the results look like a table, then convert them into an
 Emacs-lisp table, otherwise return the results as a string."
+  ;; XXX: This probably does not behave as expected when a semicolon
+  ;; is in a string in a list.  The same comment applies to
+  ;; `org-babel-ocaml-read-array' below (with even more failure
+  ;; modes).
   (org-babel-script-escape (replace-regexp-in-string ";" "," results)))
 
 (defun org-babel-ocaml-read-array (results)

@@ -1,5 +1,7 @@
 (live-add-pack-lib "cider")
 (require 'cider)
+(require 'cider-apropos)
+(require 'cider-macroexpansion)
 
 (defun live-windows-hide-eol ()
  "Do not show ^M in files containing mixed UNIX and DOS line endings."
@@ -25,11 +27,11 @@
 (add-to-list 'same-window-buffer-names "*cider*")
 
 ;;Auto Complete
-(live-add-pack-lib "ac-nrepl")
-(require 'ac-nrepl )
+(live-add-pack-lib "ac-cider")
+(require 'ac-cider )
 
-(add-hook 'cider-mode-hook 'ac-nrepl-setup)
-(add-hook 'cider-repl-mode-hook 'ac-nrepl-setup)
+(add-hook 'cider-mode-hook 'ac-cider-setup)
+(add-hook 'cider-repl-mode-hook 'ac-cider-setup)
 
 (eval-after-load "auto-complete"
   '(add-to-list 'ac-modes 'cider-mode))

@@ -1,15 +1,15 @@
 ;;; epl-test.el --- EPL: Test suite -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2013, 2014  Sebastian Wiesner
+;; Copyright (C) 2013-2015  Sebastian Wiesner
 
-;; Author: Sebastian Wiesner <lunaryorn@gmail.com>
+;; Author: Sebastian Wiesner <swiesner@lunaryorn.com>
 ;; Maintainer: Johan Andersson <johan.rejeep@gmail.com>
-;;     Sebastian Wiesner <lunaryorn@gmail.com>
+;;     Sebastian Wiesner <swiesner@lunaryorn.com>
 ;; URL: http://github.com/cask/epl
 
 ;; This file is NOT part of GNU Emacs.
 
-;; Author: Sebastian Wiesner <lunaryorn@gmail.com>
+;; Author: Sebastian Wiesner <swiesner@lunaryorn.com>
 ;; Keywords: convenience
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -85,6 +85,23 @@ exist when entering the sandbox environment."
     (should (eq (car data) #'epl-package-p))
     (should (equal (cadr data) "bar"))))
 
+(ert-deftest epl-package-from-buffer/invalid-lisp-package ()
+  (with-temp-buffer
+    (insert "
+foo.el --- Foo
+
+Version: 1
+Package-Requires: ((foo
+
+;;; foo.el ends here")
+    (should-error (epl-package-from-buffer) :type '(epl-invalid-package))))
+
+(ert-deftest epl-package-from-lisp-file/invalid-lisp-package ()
+  (let* ((file-name (epl-test-resource-file-name "invalid-package.el"))
+         (err (should-error (epl-package-from-lisp-file file-name)
+                              :type '(epl-invalid-package-file))))
+    (should (equal (cadr err) file-name))))
+
 (ert-deftest epl-package-from-file/valid-lisp-package ()
   (let* ((file (epl-test-resource-file-name "dummy-package.el"))
          (package (epl-package-from-file file))
@@ -156,11 +173,29 @@ package.el tends to have such unfortunate side effects."
    (epl-package-from-file
     (epl-test-resource-file-name "invalid-package-pkg.el"))))
 
+(ert-deftest epl-package-directory/should-work ()
+  (epl-test/with-sandbox
+   (epl-install-file (epl-test-resource-file-name "smartie-package.el"))
+   (let ((package (epl-find-installed-package 'smartie-package)))
+     (should (equal (file-name-nondirectory (epl-package-directory package))
+                    "smartie-package-1.2.3"))
+     (epl-package-delete package))))
+
+
+;;; Package database
+(ert-deftest epl-built-in-packages/catches-all ()
+  ;; Make sure that `package--builtins' is filled for our test
+  (package-built-in-p 'foo)
+  (should package--builtins)
+  (should (equal (length (epl-built-in-packages)) (length package--builtins))))
+
+
+;;; Package operations
 (ert-deftest epl-package-delete/should-not-be-installed ()
   (epl-test/with-sandbox
    (let ((smartie-package (epl-test-resource-file-name "smartie-package.el")))
      (epl-install-file smartie-package)
-     (let ((package (epl-find-installed-package 'smartie-package)))
+     (let ((package (car (epl-find-installed-packages 'smartie-package))))
        (should (epl-package-installed-p package))
        (epl-package-delete package)
        (should-not (epl-package-installed-p package))))))

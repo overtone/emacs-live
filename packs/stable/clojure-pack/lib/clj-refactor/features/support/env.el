@@ -28,12 +28,14 @@
      "_" "-" (mapconcat 'identity (cdr (split-string relative "/")) "."))))
 
 (Setup
+ (setq cljr-use-multiple-cursors t)
+ (yas-global-mode 1)
  (cljr-add-keybindings-with-prefix "C-!")
  (add-hook 'clojure-mode-hook (lambda () (clj-refactor-mode))))
 
 (Before
- ;; Before each scenario is run
- )
+ (save-all-buffers-dont-ask)
+ (kill-matching-buffers-dont-ask "clj"))
 
 (defun save-all-buffers-dont-ask ()
   (dolist (buffer (buffer-list))

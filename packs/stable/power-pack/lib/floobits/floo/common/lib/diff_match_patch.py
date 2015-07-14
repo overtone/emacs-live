@@ -1,5 +1,8 @@
-#!/usr/bin/python2.4
+import re
+import sys
+import time
 
+__author__ = 'fraser@google.com (Neil Fraser)'
 
 """Diff Match and Patch
 
@@ -25,20 +28,21 @@ Computes the difference between two texts to create a patch.
 Applies the patch onto another text, allowing for errors.
 """
 
-__author__ = 'fraser@google.com (Neil Fraser)'
-
-import re
-import sys
-import time
 try:
     from urllib import parse
     assert parse
-    unquote = lambda x: parse.unquote(x)
+
+    def unquote_py3(x):
+        return parse.unquote(x)
+    unquote = unquote_py3
     str_instances = str
     unichr = chr
 except ImportError:
     import urllib as parse
-    unquote = lambda x: parse.unquote(x.encode('utf-8')).decode('utf-8')
+
+    def unquote_py2(x):
+        return parse.unquote(x.encode('utf-8')).decode('utf-8')
+    unquote = unquote_py2
     import __builtin__
     str_instances = (str, __builtin__.basestring)
 
@@ -59,16 +63,19 @@ class diff_match_patch:
         # Cost of an empty edit operation in terms of edit characters.
         self.Diff_EditCost = 4
         # At what point is no match declared (0.0 = perfection, 1.0 = very loose).
-        self.Match_Threshold = 0.5
+        # self.Match_Threshold = 0.5
+        self.Match_Threshold = 0.375
         # How far to search for a match (0 = exact location, 1000+ = broad match).
         # A match this many characters away from the expected location will add
         # 1.0 to the score (0.0 is a perfect match).
-        self.Match_Distance = 1000
+        # self.Match_Distance = 1000
+        self.Match_Distance = 100
         # When deleting a large block of text (over ~64 characters), how close do
         # the contents have to be to match the expected contents. (0.0 = perfection,
         # 1.0 = very loose).  Note that Match_Threshold controls how closely the
         # end points of a delete need to match.
-        self.Patch_DeleteThreshold = 0.5
+        # self.Patch_DeleteThreshold = 0.5
+        self.Patch_DeleteThreshold = 0.375
         # Chunk size for context length.
         self.Patch_Margin = 4
 

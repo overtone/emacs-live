@@ -140,3 +140,31 @@ Feature: Sort ns form
                java.util.Calendar
                [org.joda.time DateTime]))
     """
+
+  Scenario: Sort ignores commented out section
+    When I insert:
+    """
+    (ns binomial.core
+      (:gen-class)
+      (:require [clojure.string :as   s]
+                [clojure.set :as set])
+      ;; (:import mage.interfaces.MageClient
+      ;;          mage.interfaces.MageServer)
+      )
+
+    (walk)
+    """
+    And I place the cursor before "walk"
+    And I press "C-! sn"
+    Then I should see:
+    """
+    (ns binomial.core
+      (:gen-class)
+      (:require [clojure.set :as set]
+                [clojure.string :as   s])
+      ;; (:import mage.interfaces.MageClient
+      ;;          mage.interfaces.MageServer)
+      )
+
+    (walk)
+    """

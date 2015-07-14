@@ -82,8 +82,6 @@ to `directory'."
 		;; in  heading - deactivate flyspell
 		(org-remove-flyspell-overlays-in (match-beginning 0)
 						 (match-end 0))
-		(add-text-properties (match-beginning 0) (match-end 0)
-				     '(org-no-flyspell t))
 		t)
 	    ;; this is a wiki link
 	    (org-remove-flyspell-overlays-in (match-beginning 0)
@@ -270,7 +268,6 @@ If there is no such wiki target, return nil."
 		    (car org-export-target-aliases))))
       (push (caar target-alist) (cdr a)))))
 
-(defvar org-current-export-file)
 (defun org-wikinodes-process-links-for-export ()
   "Process Wiki links in the export preprocess buffer.
 
@@ -296,12 +293,6 @@ with working links."
 	   ((eq org-wikinodes-scope 'file)
 	    ;; No match in file, and other files are not allowed
 	    (insert (format "%s" link)))
-	   ((setq file
-		  (and (org-string-nw-p org-current-export-file)
-		       (org-wikinodes-which-file
-			link (file-name-directory org-current-export-file))))
-	    ;; Match in another file in the current directory
-	    (insert (format "[[file:%s::%s][%s]]" file link link)))
 	   (t ;; No match for this link
 	    (insert (format "%s" link)))))))))
 
@@ -325,11 +316,10 @@ with working links."
 
 (defun org-wikinodes-add-to-font-lock-keywords ()
   "Add wikinode CamelCase highlighting to `org-font-lock-extra-keywords'."
-  (let ((m (member '(org-activate-plain-links) org-font-lock-extra-keywords)))
-    (if m
-	(setcdr m (cons '(org-wikinodes-activate-links) (cdr m)))
-      (message
-       "Failed to add wikinodes to `org-font-lock-extra-keywords'."))))
+  (let ((m (member '(org-activate-plain-links (0 'org-link t))
+		   org-font-lock-extra-keywords)))
+    (if m (push '(org-wikinodes-activate-links) (cdr m))
+      (message "Failed to add wikinodes to `org-font-lock-extra-keywords'."))))
 
 (add-hook 'org-font-lock-set-keywords-hook
 	  'org-wikinodes-add-to-font-lock-keywords)

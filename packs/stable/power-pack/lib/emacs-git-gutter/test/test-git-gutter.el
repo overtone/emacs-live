@@ -237,4 +237,15 @@ bar
     (should (= (nth 2 got) 200))
     (should (= (nth 3 got) 1))))
 
+(ert-deftest git-gutter-show-backends ()
+  "Show only handled backends."
+
+  (let ((git-gutter:handled-backends '(bzr))
+        (expected "Bzr"))
+    (should (string= (git-gutter:show-backends) expected)))
+
+  (let ((git-gutter:handled-backends '(git hg bzr))
+        (expected "Git/Hg/Bzr"))
+    (should (string= (git-gutter:show-backends) expected))))
+
 ;;; test-git-gutter.el end here

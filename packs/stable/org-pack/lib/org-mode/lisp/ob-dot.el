@@ -55,7 +55,9 @@
 	       (replace-regexp-in-string
 		(concat "\$" (regexp-quote name))
 		(if (stringp value) value (format "%S" value))
-		body))))
+		body
+		t
+		t))))
      vars)
     body))
 

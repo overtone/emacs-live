@@ -21,23 +21,27 @@
 
 (require 'ert)
 (require 'js2-mode)
+(require 'cl-lib)
 
-(defun js2-test-indent (content)
+(defun js2-test-indent (content keep-indent)
   (let ((s (replace-regexp-in-string "^ *|" "" content)))
     (with-temp-buffer
-      (insert (replace-regexp-in-string "^ *" "" s))
+      (insert
+       (if keep-indent
+           s
+         (replace-regexp-in-string "^ *" "" s)))
       (js2-mode)
       (indent-region (point-min) (point-max))
       (should (string= s (buffer-substring-no-properties
                           (point-min) (point)))))))
 
-(defmacro* js2-deftest-indent (name content &key bind)
+(cl-defmacro js2-deftest-indent (name content &key bind keep-indent)
   `(ert-deftest ,(intern (format "js2-%s" name)) ()
      (let ,(append '((js2-basic-offset 2)
                      (js2-pretty-multiline-declarations t)
                      (inhibit-point-motion-hooks t))
                    bind)
-       (js2-test-indent ,content))))
+       (js2-test-indent ,content ,keep-indent))))
 
 (put 'js2-deftest-indent 'lisp-indent-function 'defun)
 
@@ -101,3 +105,37 @@
   |  default: 'donkey',
   |  tee: 'ornery'
   |};")
+
+(js2-deftest-indent multiline-string-noop
+  "`multiline string
+  |       contents
+  |  are kept
+  |        unchanged!`"
+  :keep-indent t)
+
+(js2-deftest-indent no-multiline-decl-first-arg-function-dynamic
+  "var foo = function() {
+  |  return 7;
+  |};"
+  :bind ((js2-pretty-multiline-declarations 'dynamic)))
+
+(js2-deftest-indent multiline-decl-first-arg-function-indent-dynamic
+  "var foo = function() {
+  |      return 7;
+  |    },
+  |    bar = 8;"
+  :bind ((js2-pretty-multiline-declarations 'dynamic)))
+
+(js2-deftest-indent multiline-decl-first-arg-function-indent-dynamic-comment
+  "var foo = function() {
+  |      return 7;
+  |    }/* MUAHAHAHA, ah ha! */,
+  |    bar = 8;"
+  :bind ((js2-pretty-multiline-declarations 'dynamic)))
+
+(js2-deftest-indent multiline-decl-first-arg-function-indent-dynamic-scan-error
+  "var foo = function() {
+  |  return 7;
+  |  ,
+  |  bar = 8;"
+  :bind ((js2-pretty-multiline-declarations 'dynamic)))

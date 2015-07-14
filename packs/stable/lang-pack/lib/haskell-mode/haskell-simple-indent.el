@@ -82,60 +82,109 @@
 ;; Partly stolen from `indent-relative' in indent.el:
 (defun haskell-simple-indent ()
   "Space out to under next visible indent point.
-Indent points are positions of non-whitespace following whitespace in
-lines preceeding point.  A position is visible if it is to the left of
-the first non-whitespace of every nonblank line between the position and
-the current line.  If there is no visible indent point beyond the current
-column, `tab-to-tab-stop' is done instead."
+
+Indent points are positions of non-whitespace following
+whitespace in lines preceeding point. Example:
+
+func arg cx = when (isTrue) $ do
+                print 42
+^    ^   ^  ^ ^ ^     ^         ^       ^       ^
+
+A position is visible if it is to the left of the first
+non-whitespace (indentation) of every nonblank line between the
+position and the current line.  If there is no visible indent
+point beyond the current column, position given by
+`indent-next-tab-stop' is used instead."
   (interactive)
-  (let* ((start-column (current-column))
+  (let* ((start-column (or (save-excursion
+                             (back-to-indentation)
+                             (if (not (eolp))
+                                 (current-column)))
+                           (current-column)))
          (invisible-from nil)           ; `nil' means infinity here
-         (indent
-          (catch 'haskell-simple-indent-break
-            (save-excursion
-              (while (progn (beginning-of-line)
-                            (not (bobp)))
-                (forward-line -1)
-                (if (not (looking-at "[ \t]*\n"))
-                    (let ((this-indentation (current-indentation)))
-                      (if (or (not invisible-from)
-                              (< this-indentation invisible-from))
-                          (if (> this-indentation start-column)
-                              (setq invisible-from this-indentation)
-                            (let ((end (line-beginning-position 2)))
-                              (move-to-column start-column)
-                              ;; Is start-column inside a tab on this line?
-                              (if (> (current-column) start-column)
-                                  (backward-char 1))
-                              (or (looking-at "[ \t]")
-                                  (skip-chars-forward "^ \t" end))
-                              (skip-chars-forward " \t" end)
-                              (let ((col (current-column)))
-                                (throw 'haskell-simple-indent-break
-                                       (if (or (= (point) end)
-                                               (and invisible-from
-                                                    (> col invisible-from)))
-                                           invisible-from
-                                         col)))))))))))))
-    (if indent
-        (let ((opoint (point-marker)))
-          (indent-line-to indent)
-          (if (> opoint (point))
-              (goto-char opoint))
-          (set-marker opoint nil))
-      (tab-to-tab-stop))))
+         (found)
+         (indent))
+    (save-excursion
+      ;; Loop stops if there no more lines above this one or when has
+      ;; found a line starting at first column.
+      (while (and (not found)
+                  (or (not invisible-from)
+                      (not (zerop invisible-from)))
+                  (zerop (forward-line -1)))
+        ;; Ignore empty lines.
+        (if (not (looking-at "[ \t]*\n"))
+            (let ((this-indentation (current-indentation)))
+              ;; Is this line so indented that it cannot have
+              ;; influence on indentation points?
+              (if (or (not invisible-from)
+                      (< this-indentation invisible-from))
+                  (if (> this-indentation start-column)
+                      (setq invisible-from this-indentation)
+                    (let ((end (line-end-position)))
+                      (move-to-column start-column)
+                      ;; Is start-column inside a tab on this line?
+                      (if (> (current-column) start-column)
+                          (backward-char 1))
+                      ;; Skip to the end of non-whitespace.
+                      (skip-chars-forward "^ \t" end)
+                      ;; Skip over whitespace.
+                      (skip-chars-forward " \t" end)
+                      ;; Indentation point found if not at the end of
+                      ;; line and if not covered by any line below
+                      ;; this one. In that case use invisible-from.
+                      (setq indent (if (or (= (point) end)
+                                           (and invisible-from
+                                                (> (current-column) invisible-from)))
+                                       invisible-from
+                                     (current-column)))
+                      ;; Signal that solution is found.
+                      (setq found t))))))))
+
+
+    (let ((opoint (point-marker)))
+      ;; Indent to the calculated indent or last know invisible-from
+      ;; or use tab-to-tab-stop. Try hard to keep cursor in the same
+      ;; place or move it to the indentation if it was before it. And
+      ;; keep content of the line intact.
+      (setq indent (or indent
+		       invisible-from
+		       (if (fboundp 'indent-next-tab-stop)
+			   (indent-next-tab-stop start-column))
+		       (let ((tabs tab-stop-list))
+			 (while (and tabs (>= start-column (car tabs)))
+			   (setq tabs (cdr tabs)))
+			 (if tabs (car tabs)))
+		       (* (/ (+ start-column tab-width) tab-width) tab-width)))
+      (indent-line-to indent)
+      (if (> opoint (point))
+          (goto-char opoint))
+      (set-marker opoint nil))))
 
 (defun haskell-simple-indent-backtab ()
   "Indent backwards.  Dual to `haskell-simple-indent'."
   (interactive)
-  (let ((current-point (point))
+  (let ((saved-column (or (save-excursion
+                             (back-to-indentation)
+                             (if (not (eolp))
+                                 (current-column)))
+                           (current-column)))
         (i 0)
         (x 0))
-    (goto-char (line-beginning-position))
+
     (save-excursion
-      (while (< (point) current-point)
-        (haskell-simple-indent)
-        (setq i (+ i 1))))
+      (back-to-indentation)
+      (delete-region (line-beginning-position) (point)))
+    (while (< (or (save-excursion
+                             (back-to-indentation)
+                             (if (not (eolp))
+                                 (current-column)))
+                  (current-column)) saved-column)
+      (haskell-simple-indent)
+      (setq i (+ i 1)))
+
+    (save-excursion
+      (back-to-indentation)
+      (delete-region (line-beginning-position) (point)))
     (while (< x (- i 1))
       (haskell-simple-indent)
       (setq x (+ x 1)))))
@@ -163,6 +212,21 @@ column, `tab-to-tab-stop' is done instead."
   (haskell-simple-indent-newline-same-col)
   (insert (make-string haskell-indent-spaces ? )))
 
+(defun haskell-simple-indent-comment-indent-function ()
+  "Haskell version of `comment-indent-function'."
+  ;; This is required when filladapt is turned off.  Without it, when
+  ;; filladapt is not used, comments which start in column zero
+  ;; cascade one character to the right
+  (save-excursion
+    (beginning-of-line)
+    (let ((eol (line-end-position)))
+      (and comment-start-skip
+           (re-search-forward comment-start-skip eol t)
+           (setq eol (match-beginning 0)))
+      (goto-char eol)
+      (skip-chars-backward " \t")
+      (max comment-column (+ (current-column) (if (bolp) 0 1))))))
+
 ;;;###autoload
 (define-minor-mode haskell-simple-indent-mode
   "Simple Haskell indentation mode that uses simple heuristic.
@@ -177,8 +241,10 @@ Runs `haskell-simple-indent-hook' on activation."
   :lighter " Ind"
   :group 'haskell-simple-indent
   :keymap '(([backtab] . haskell-simple-indent-backtab))
+  (kill-local-variable 'comment-indent-function)
   (kill-local-variable 'indent-line-function)
   (when haskell-simple-indent-mode
+    (set (make-local-variable 'comment-indent-function) #'haskell-simple-indent-comment-indent-function)
     (set (make-local-variable 'indent-line-function) 'haskell-simple-indent)
     (run-hooks 'haskell-simple-indent-hook)))
 

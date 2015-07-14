@@ -22,11 +22,20 @@ do so.
 
 * Include any relevant code to the issue summary.
 
+### Reporting bugs
+
+When reporting bugs it's a good idea to go through the `Troubleshooting` section
+of the README.  Adding information like the backtrace and the nREPL messages to
+the bug report makes it easier to track down bugs. Some steps to reproduce a bug
+reliably would also make a huge difference.
+
 ## Pull requests
 
 * Read [how to properly contribute to open source projects on Github][2].
 * Use a topic branch to easily amend a pull request later, if necessary.
 * Write [good commit messages][3].
+* Mention related tickets in the commit messages (e.g. `[Fix #N] Add command ...`)
+* Update the [changelog][6].
 * Use the same coding conventions as the rest of the project.
 * Verify your Emacs Lisp code with `checkdoc` (<kbd>C-c ? d</kbd>).
 * Update the [changelog](CHANGELOG.md) accordingly.
@@ -39,3 +48,4 @@ do so.
 [3]: http://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html
 [4]: https://help.github.com/articles/using-pull-requests
 [5]: http://gitready.com/advanced/2009/02/10/squashing-commits-with-rebase.html
+[6]: https://github.com/clojure-emacs/cider/blob/master/CHANGELOG.md

@@ -8,12 +8,10 @@ templates. Bundled language templates include: C, C++, C#, Perl,
 Python, Ruby, SQL, LaTeX, HTML, CSS and more. The snippet syntax
 is inspired from [TextMate's][textmate-snippets] syntax, you can
 even [import](#import) most TextMate templates to
-YASnippet. Watch [a demo on YouTube][youtube-demo] or download a
-[higher resolution version][high-res-demo].
+YASnippet. Watch [a demo on YouTube][youtube-demo].
 
 [textmate-snippets]: http://manual.macromates.com/en/snippets
 [youtube-demo]: http://www.youtube.com/watch?v=ZCGmZK4V7Sg
-[high-res-demo]: http://yasnippet.googlecode.com/files/yas_demo.avi
 
 # Installation
 
@@ -41,18 +39,7 @@ In a recent emacs `M-x list-packages` is the recommended way to list and install
 ## Install with el-get
 
 El-get is a nice way to get the most recent version, too. See
-https://github.com/dimitri/el-get for instructions. Be sure to install the
-"master" branch since the 3.x series still use the old googlecode code, base.
-Consider using this "local" recipe.
-
-    (push '(:name yasnippet
-                  :website "https://github.com/capitaomorte/yasnippet.git"
-                  :description "YASnippet is a template system for Emacs."
-                  :type github
-                  :pkgname "capitaomorte/yasnippet"
-                  :features "yasnippet"
-                  :compile "yasnippet.el")
-          el-get-sources)
+https://github.com/dimitri/el-get for instructions.
 
 ## Use `yas-minor-mode` on a per-buffer basis
 
@@ -60,9 +47,7 @@ To use YASnippet as a non-global minor mode, replace `(yas-global-mode 1)` with
 `(yas-reload-all)` to load the snippet tables. Then add a call to
 `(yas-minor-mode)` to the major-modes where you to enable YASnippet.
 
-    (add-hook 'prog-mode-hook
-              '(lambda ()
-                 (yas-minor-mode)))
+    (add-hook 'prog-mode-hook #'yas-minor-mode)
 
 # Where are the snippets?
 

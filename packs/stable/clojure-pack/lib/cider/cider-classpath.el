@@ -1,6 +1,6 @@
 ;;; cider-classpath.el --- Basic Java classpath browser
 
-;; Copyright © 2014 Bozhidar Batsov
+;; Copyright © 2014-2015 Bozhidar Batsov
 
 ;; This program is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -31,9 +31,14 @@
 (defvar cider-classpath-mode-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map cider-popup-buffer-mode-map)
-    (define-key map [return] 'cider-classpath-operate-on-point)
-    (define-key map "n" 'next-line)
-    (define-key map "p" 'previous-line)
+    (define-key map [return] #'cider-classpath-operate-on-point)
+    (define-key map "n" #'next-line)
+    (define-key map "p" #'previous-line)
+    map))
+
+(defvar cider-classpath-mouse-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map [mouse-1] #'cider-classpath-handle-mouse)
     map))
 
 (define-derived-mode cider-classpath-mode special-mode "classpath"
@@ -95,9 +100,6 @@
   (interactive)
   (-when-let (entry (completing-read "Classpath entries: " (cider-sync-request:classpath)))
     (find-file-other-window entry)))
-
-(defvar cider-classpath-mouse-map (make-sparse-keymap))
-(define-key cider-classpath-mouse-map [mouse-1] 'cider-classpath-handle-mouse)
 
 (provide 'cider-classpath)
 

@@ -123,6 +123,7 @@ sure to add a set of basic tests around the functionality you're changing.
 * [Damien Cassou](https://github.com/DamienCassou) added option to continue expanding/contracting with fast keys after initial expand.
 * [Sylvain Rousseau](https://github.com/thisirs) fixed loads of little annoyances.
 * [Ryan Mulligan](https://github.com/ryantm) cleaned up a lot of byte compilation warnings.
+* [Lefteris Karapetsas](https://github.com/LefterisJP) added subword-mode expansions.
 
 ### Language specific contributions
 

@@ -4,7 +4,7 @@
 
 ;; Author: Yann Hodique <yann.hodique@gmail.com>
 ;; Keywords:
-;; Version: 0.2.4
+;; Version: 0.3.1
 ;; Package-Requires: ((eieio "1.3"))
 
 ;; This file is free software; you can redistribute it and/or modify
@@ -66,24 +66,35 @@
 
 (defconst pcache-default-save-delay 300)
 
-(defclass pcache-repository (eieio-persistent)
+(defconst pcache-version-constant "0.3")
+
+(defclass pcache-repository (eieio-persistent eieio-named)
   ((version :initarg :version :initform nil)
-   (version-constant :allocation :class :initform "0.2")
+   (version-constant :allocation :class)
    (entries :initarg :entries :initform (make-hash-table))
    (entry-cls :initarg :entry-cls :initform pcache-entry)
    (timestamp :initarg :timestamp :initform (float-time (current-time)))
    (save-delay :initarg :save-delay)))
 
 (oset-default 'pcache-repository :save-delay pcache-default-save-delay)
+(oset-default 'pcache-repository version-constant pcache-version-constant)
 
-(defmethod constructor :static ((cache pcache-repository) newname &rest args)
-  (let ((e (gethash newname *pcache-repositories*))
-        (path (concat pcache-directory newname)))
+(defvar *pcache-repository-name* nil)
+
+(defmethod constructor :static ((cache pcache-repository) &rest args)
+  (let* ((newname (or (and (stringp (car args)) (car args))
+		      (plist-get args :object-name)
+		      *pcache-repository-name*
+		      (symbol-name cache)))
+	 (e (gethash newname *pcache-repositories*))
+	 (path (concat pcache-directory newname)))
+    (setq args (append args (list :object-name newname)))
     (or e
         (and (not (boundp 'pcache-avoid-recursion))
              (file-exists-p path)
              (condition-case nil
                  (let* ((pcache-avoid-recursion t)
+			(*pcache-repository-name* newname)
                         (obj (eieio-persistent-read path 'pcache-repository t)))
                    (and (or (equal (oref obj :version)
                                    (oref-default (object-class obj) version-constant))
@@ -182,8 +193,11 @@
 (defun pcache-kill-emacs-hook ()
   (maphash #'(lambda (k v)
                (condition-case nil
-                   (pcache-save v t)
-                 (error nil)))
+                   (pcache-purge-invalid v)
+                 (error nil))
+	       (condition-case nil
+		   (pcache-save v t)
+		 (error nil)))
            *pcache-repositories*))
 
 (defun pcache-destroy-repository (name)

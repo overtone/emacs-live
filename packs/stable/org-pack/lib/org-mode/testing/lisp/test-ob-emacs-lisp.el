@@ -1,6 +1,6 @@
 ;;; test-ob-emacs-lisp.el
 
-;; Copyright (c) 2012, 2013, 2014 Free Software Foundation, Inc.
+;; Copyright (c) 2012-2015 Free Software Foundation, Inc.
 ;; Authors: Eric Schulte, Martyn Jago
 
 ;; This file is not part of GNU Emacs.
@@ -29,7 +29,7 @@
 ;;
 #+end_src"
     (org-babel-next-src-block)
-    (org-ctrl-c-ctrl-c)
+    (org-babel-execute-maybe)
     (should (re-search-forward "results:" nil t))
     (forward-line)
     (should
@@ -42,7 +42,7 @@
 #+end_src"
 
     (org-babel-next-src-block)
-    (org-ctrl-c-ctrl-c)
+    (org-babel-execute-maybe)
     (should (re-search-forward "results:" nil t))
     (forward-line)
     (should
@@ -56,7 +56,7 @@
 ;;
 #+end_src"
     (org-babel-next-src-block)
-    (org-ctrl-c-ctrl-c)
+    (org-babel-execute-maybe)
     (re-search-forward "results" nil t)
     (forward-line)
     (should (string=
@@ -69,7 +69,7 @@
 2;;
 #+end_src"
     (org-babel-next-src-block)
-    (org-ctrl-c-ctrl-c)
+    (org-babel-execute-maybe)
     (re-search-forward "results" nil t)
     (forward-line)
     (should (string=

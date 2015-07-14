@@ -4,7 +4,7 @@
 
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
 ;; Created: 20080830
-;; Package-Requires: ((cl-lib "0.5") (packed "0.3.5"))
+;; Package-Requires: ((cl-lib "0.5") (dash "2.1") (packed "0.3.5"))
 ;; Homepage: https://github.com/tarsius/auto-compile
 ;; Keywords: compile, convenience, lisp
 
@@ -55,10 +55,11 @@
 ;; set `load-prefer-newer' to t even before requiring `auto-compile'.
 ;; Then also enable `auto-compile-on-save-mode'.
 
-;;     ;;; init.el --- user init file  -*- no-byte-compile: t -*-
+;;     ;;; init.el --- user init file      -*- no-byte-compile: t -*-
+;;     (setq load-prefer-newer t)
+;;     (add-to-list 'load-path "/path/to/dash")
 ;;     (add-to-list 'load-path "/path/to/packed")
 ;;     (add-to-list 'load-path "/path/to/auto-compile")
-;;     (setq load-prefer-newer t)
 ;;     (require 'auto-compile)
 ;;     (auto-compile-on-load-mode 1)
 ;;     (auto-compile-on-save-mode 1)
@@ -100,6 +101,7 @@
 
 (require 'bytecomp)
 (require 'cl-lib)
+(require 'dash)
 (require 'packed)
 
 (declare-function autoload-rubric "autoload")
@@ -136,8 +138,8 @@ variant `auto-compile-on-save-mode'.  Also see the related
 `auto-compile-on-load-mode'."
   :lighter auto-compile-mode-lighter
   :group 'auto-compile
-  (or (derived-mode-p 'emacs-lisp-mode)
-      (error "This mode only makes sense with emacs-lisp-mode"))
+  (unless (derived-mode-p 'emacs-lisp-mode)
+    (user-error "This mode only makes sense with emacs-lisp-mode"))
   (if auto-compile-mode
       (add-hook  'after-save-hook 'auto-compile-byte-compile nil t)
     (remove-hook 'after-save-hook 'auto-compile-byte-compile t))
@@ -220,8 +222,8 @@ any of the hook functions returns non-nil, then do not compile."
 (defcustom auto-compile-verbose nil
   "Whether to print messages describing progress of byte-compiler.
 
-This overrides `byte-compile-verbose' and unlike that does not
-defaults to t; and thus avoids unnecessary echo area messages."
+This overrides `byte-compile-verbose' but unlike that does not
+default to t, and thus avoids unnecessary echo-area messages."
   :group 'auto-compile
   :type 'boolean)
 
@@ -280,7 +282,8 @@ to include `mode-line-auto-compile'."
 
 When turning on auto compilation for multiple files at once
 recompile source files even if their byte code file already
-exist and are up-to-date."
+exist and are up-to-date.  It's advisable to keep this enabled
+to ensure changes to macros are picked up."
   :group 'auto-compile
   :type 'boolean)
 
@@ -390,14 +393,13 @@ multiple files is toggled as follows:
                            (and file (file-name-nondirectory file)))
            action)))
   (if (file-regular-p file)
-      (cl-case action
-        (start (auto-compile-byte-compile file t))
-        (quit  (auto-compile-delete-dest (byte-compile-dest-file file))))
+      (pcase action
+        (`start (auto-compile-byte-compile file t))
+        (`quit  (auto-compile-delete-dest (byte-compile-dest-file file))))
     (when (called-interactively-p 'any)
-      (let ((log (get-buffer byte-compile-log-buffer)))
-        (when log
-          (kill-buffer log))))
-    (dolist (f (directory-files file t))
+      (--when-let (get-buffer byte-compile-log-buffer)
+        (kill-buffer it)))
+    (dolist (f (directory-files file t)) ; TODO --each
       (cond
        ((file-directory-p f)
         ;; TODO pass the package name if we are certain
@@ -433,7 +435,7 @@ multiple files is toggled as follows:
                      "Don't mark ")
                    "files that failed to compile as modified")))
 
-(defvar auto-compile-pretend-byte-compiled nil
+(defvar-local auto-compile-pretend-byte-compiled nil
   "Whether to try again to compile this file after a failed attempt.
 
 Command `auto-compile-byte-compile' sets this buffer local
@@ -442,7 +444,6 @@ visited in a buffer (or when variable `auto-compile-visit-failed'
 is non-nil for all files being compiled) causing it to try again
 when being called again. Command `toggle-auto-compile' will also
 pretend the byte code file exists.")
-(make-variable-buffer-local 'auto-compile-pretend-byte-compiled)
 
 (defvar auto-compile-file-buffer nil)
 (defvar-local auto-compile-warnings 0)
@@ -514,24 +515,23 @@ pretend the byte code file exists.")
             (error
              (message "Generating loaddefs for %s failed" file)
              (setq loaddefs nil))))
-        (cl-case success
-          (no-byte-compile)
-          ((t) (message "Wrote %s.{%s,%s}%s"
+        (pcase success
+          (`no-byte-compile)
+          (`t (message "Wrote %s.{%s,%s}%s"
                         (file-name-sans-extension
                          (file-name-sans-extension file))
                         (progn (string-match "\\(\\.[^./]+\\)+$" file)
                                (substring (match-string 0 file) 1))
                         (file-name-extension dest)
                         (if loaddefs " (+)" "")))
-          (t   (message "Wrote %s (byte-compiling failed)" file))))
+          (_  (message "Wrote %s (byte-compiling failed)" file))))
       success)))
 
 (defun auto-compile-delete-dest (dest &optional failurep)
   (unless failurep
-    (let ((buf (get-file-buffer (packed-el-file dest))))
-      (when buf
-        (with-current-buffer buf
-          (kill-local-variable 'auto-compile-pretend-byte-compiled)))))
+    (--when-let (get-file-buffer (packed-el-file dest))
+      (with-current-buffer it
+        (kill-local-variable 'auto-compile-pretend-byte-compiled))))
   (condition-case nil
       (when (file-exists-p dest)
         (message "Deleting %s..." dest)
@@ -602,8 +602,9 @@ This is especially useful during rebase sessions."
 
 ;;; Mode-Line
 
-(defvar mode-line-auto-compile
+(defvar-local mode-line-auto-compile
   '(auto-compile-mode (:eval (mode-line-auto-compile-control))))
+(put 'mode-line-auto-compile 'risky-local-variable t)
 
 (defun mode-line-auto-compile-control ()
   (let ((src (buffer-file-name))
@@ -667,16 +668,12 @@ This is especially useful during rebase sessions."
                                 'mouse-1
                                 #'mode-line-toggle-auto-compile)))))))))
 
-(put 'mode-line-auto-compile 'risky-local-variable t)
-(make-variable-buffer-local 'mode-line-auto-compile)
-
 (defun auto-compile-display-log ()
   "Display the *Compile-Log* buffer."
   (interactive)
-  (let ((buffer (get-buffer byte-compile-log-buffer)))
-    (if  buffer
-        (pop-to-buffer buffer)
-      (user-error "Buffer %s doesn't exist" byte-compile-log-buffer))))
+  (--if-let (get-buffer byte-compile-log-buffer)
+      (pop-to-buffer it)
+    (user-error "Buffer %s doesn't exist" byte-compile-log-buffer)))
 
 (defun mode-line-toggle-auto-compile (event)
   "Toggle automatic compilation from the mode-line."

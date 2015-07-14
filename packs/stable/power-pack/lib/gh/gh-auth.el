@@ -34,6 +34,7 @@
 
 (require 'gh-profile)
 (require 'gh-common)
+(require 'gh-url)
 
 (defgroup gh-auth nil
   "Github authentication."
@@ -100,10 +101,34 @@
         (oset obj :username (gh-auth-get-username)))
     obj))
 
+(defmethod gh-auth-modify-request ((auth gh-authenticator) req)
+  req)
+
+(defclass gh-auth-2fa-callback (gh-url-callback)
+  ((req :initarg :req :initform nil))
+  "2-factor callback")
+
+(defmethod gh-url-callback-run ((cb gh-auth-2fa-callback) resp)
+  (when (equal (oref resp :http-status) 401)
+    (let* ((otp-header "X-GitHub-OTP")
+           (h (assoc otp-header (oref resp :headers))))
+      (when (and h (string-prefix-p "required;" (cdr h)))
+        (let ((otp (read-from-minibuffer "Enter dual-factor auth code: "))
+              (req (oref cb :req)))
+          ;; reset resp
+          (oset resp :data nil)
+          (oset resp :data-received nil)
+
+          (object-add-to-list req :headers
+                              (cons otp-header otp))
+          (gh-url-run-request req resp))))))
+
 ;;;###autoload
 (defclass gh-password-authenticator (gh-authenticator)
   ((password :initarg :password :protection :private :initform nil)
-   (remember :allocation :class :initform t))
+   (remember :allocation :class :initform t)
+
+   (2fa-cls :initform gh-auth-2fa-callback :allocation :class))
   "Password-based authenticator")
 
 (defmethod constructor :static ((auth gh-password-authenticator) newname &rest args)
@@ -111,9 +136,6 @@
     (or (oref obj :password)
         (oset obj :password (gh-auth-get-password (oref obj remember))))
     obj))
-
-(defmethod gh-auth-modify-request ((auth gh-authenticator) req)
-  req)
 
 (defmethod gh-auth-modify-request ((auth gh-password-authenticator) req)
   (object-add-to-list req :headers
@@ -123,6 +145,8 @@
                                      (format "%s:%s" (oref auth :username)
                                              (encode-coding-string
                                               (oref auth :password) 'utf-8))))))
+  (object-add-to-list req :install-callbacks
+                      (make-instance (oref auth 2fa-cls) :req req))
   req)
 
 ;;;###autoload

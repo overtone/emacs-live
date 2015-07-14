@@ -26,6 +26,7 @@
 ;;; Code:
 
 (require 'haskell-mode)
+(require 'haskell-session)
 
 (define-derived-mode haskell-presentation-mode
   haskell-mode "Presentation"
@@ -33,30 +34,69 @@
           \\{hypertext-mode-map}"
   (setq case-fold-search nil))
 
-(define-key haskell-presentation-mode-map (kbd "q") 'quit-window)
+(defconst haskell-presentation-buffer-name
+  "*Haskell Presentation*"
+  "Haskell Presentation buffer name.")
 
-(defun haskell-present (name session code)
-  "Present CODE in a popup buffer suffixed with NAME and set
-SESSION as the current haskell-session."
-  (let* ((name (format "*Haskell Presentation%s*" name))
-         (buffer (get-buffer-create name)))
+(defconst haskell-presentation-hint-message
+  "-- Hit `q' to close this window; `c' to clear.\n\n"
+  "Hint message appered in Haskell Presentation buffer.")
+
+(easy-mmode-defmap
+ haskell-presentation-mode-map
+ `(("q" . quit-window)
+   ("c" . haskell-presentation-clear))
+ "The base key map for `haskell-presentation-mode'.")
+
+(defun haskell-presentation-buffer ()
+  "Return Haskell Presentaion buffer.
+Return current presenation buffer or create new one if absent.
+Never returns nil."
+  ;; TODO Provide interactive calling options: when called interactively make
+  ;; the presentation buffer current.
+  (let ((may-buffer (get-buffer haskell-presentation-buffer-name)))
+    (if may-buffer
+        may-buffer
+      (let ((buffer (generate-new-buffer haskell-presentation-buffer-name)))
+        (with-current-buffer buffer
+          (insert haskell-presentation-hint-message)
+          (haskell-presentation-mode)
+          (setq buffer-read-only t))
+          buffer))))
+
+(defun haskell-presentation-clear ()
+  "Clear Haskell Presentation buffer."
+  (interactive)
+  (let ((hp-buf (get-buffer haskell-presentation-buffer-name)))
+    (when hp-buf
+      (with-current-buffer hp-buf
+        (let ((buffer-read-only nil))
+          (erase-buffer)
+          (insert haskell-presentation-hint-message))))))
+
+(defun haskell-presentation-present (session code &optional clear)
+  "Present given code in a popup buffer.
+Creates temporal Haskell Presentation buffer and assigns it to
+given haskell SESSION; presented CODE will be fontified as
+haskell code.  Give an optional non-nil CLEAR arg to clear the
+buffer before presenting message."
+  (let ((buffer (haskell-presentation-buffer)))
     (with-current-buffer buffer
-      (haskell-presentation-mode)
-      (if (boundp 'shm-display-quarantine)
-          (set (make-local-variable 'shm-display-quarantine) nil))
-      (let ((buffer-read-only nil))
-        (erase-buffer)
-        (insert (propertize "-- Hit `q' to close this window.\n\n"
-                            'face
-                            'font-lock-comment-face))
-        (let ((point (point)))
-          (insert code "\n\n")
-          (font-lock-fontify-region point (point))
-          (goto-char point))))
-    (if (and (boundp 'haskell-presentation-mode)
-             haskell-presentation-mode)
-        (switch-to-buffer buffer)
-      (pop-to-buffer buffer))))
+
+      (when (boundp 'shm-display-quarantine)
+        (set (make-local-variable 'shm-display-quarantine) nil))
+
+      (when clear (haskell-presentation-clear))
+      (haskell-session-assign session)
+      (save-excursion
+        (let ((buffer-read-only nil))
+          (goto-char (point-min))
+          (forward-line 2)
+          (insert code "\n\n")))
+
+      (if (eq major-mode 'haskell-presentation-mode)
+          (switch-to-buffer buffer)
+        (pop-to-buffer buffer)))))
 
 (provide 'haskell-presentation-mode)
 

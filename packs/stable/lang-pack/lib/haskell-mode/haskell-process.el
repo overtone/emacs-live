@@ -26,9 +26,10 @@
 (require 'cl-lib)
 (require 'json)
 (require 'url-util)
+(require 'haskell-compat)
 (require 'haskell-session)
 (require 'haskell-customize)
-(require 'haskell-str)
+(require 'haskell-string)
 
 (defconst haskell-process-prompt-regex "\4"
   "Used for delimiting command replies. 4 is End of Transmission.")
@@ -78,28 +79,32 @@ HPTYPE is the result of calling `'haskell-process-type`' function."
   (let ((session-name (haskell-session-name session)))
     (cl-ecase hptype
       ('ghci
-       (append (list (format "Starting inferior GHCi process %s ..." haskell-process-path-ghci)
+       (append (list (format "Starting inferior GHCi process %s ..."
+                             haskell-process-path-ghci)
                      session-name
                      nil)
-               (apply haskell-process-wrapper-function (list (cons haskell-process-path-ghci haskell-process-args-ghci)))))
+               (apply haskell-process-wrapper-function
+                      (list
+                       (cons haskell-process-path-ghci haskell-process-args-ghci)))))
       ('cabal-repl
-       (append (list (format "Starting inferior `cabal repl' process using %s ..." haskell-process-path-cabal)
+       (append (list (format "Starting inferior `cabal repl' process using %s ..."
+                             haskell-process-path-cabal)
                      session-name
                      nil)
-               (apply haskell-process-wrapper-function (list (cons haskell-process-path-cabal (cons "repl" haskell-process-args-cabal-repl))))
-               (let ((target (haskell-session-target session)))
-                 (if target (list target) nil))))
+               (apply haskell-process-wrapper-function
+                      (list
+                       (append
+                        (list haskell-process-path-cabal "repl")
+                        haskell-process-args-cabal-repl
+                        (let ((target (haskell-session-target session)))
+                          (if target (list target) nil)))))))
       ('cabal-ghci
-       (append (list (format "Starting inferior cabal-ghci process using %s ..." haskell-process-path-cabal-ghci)
+       (append (list (format "Starting inferior cabal-ghci process using %s ..."
+                             haskell-process-path-cabal-ghci)
                      session-name
                      nil)
-               (apply haskell-process-wrapper-function (list (list haskell-process-path-cabal-ghci)))))
-      ('cabal-dev
-       (let ((dir (concat (haskell-session-cabal-dir session) "/cabal-dev")))
-         (append (list (format "Starting inferior cabal-dev process %s -s %s ..." haskell-process-path-cabal-dev dir)
-                       session-name
-                       nil)
-                 (apply haskell-process-wrapper-function (list (cons haskell-process-path-cabal-dev (list "ghci" "-s" dir))))))))))
+               (apply haskell-process-wrapper-function
+                      (list (list haskell-process-path-cabal-ghci))))))))
 
 (defun haskell-process-make (name)
   "Make an inferior Haskell process."
@@ -142,11 +147,30 @@ HPTYPE is the result of calling `'haskell-process-type`' function."
          (replace-regexp-in-string "\4" "" response))))))
 
 (defun haskell-process-log (msg)
-  "Write MSG to the process log (if enabled)."
+  "Effective append MSG to the process log (if enabled)."
   (when haskell-process-log
-    (with-current-buffer (get-buffer-create "*haskell-process-log*")
-      (goto-char (point-max))
-      (insert msg "\n"))))
+    (let* ((append-to (get-buffer-create "*haskell-process-log*"))
+           (windows (get-buffer-window-list append-to t t))
+           move-point-in-windows)
+      (with-current-buffer append-to
+        (setq buffer-read-only nil)
+        ;; record in which windows we should keep point at eob.
+        (dolist (window windows)
+          (when (= (window-point window) (point-max))
+            (push window move-point-in-windows)))
+        (let (return-to-position)
+          ;; decide whether we should reset point to return-to-position
+          ;; or leave it at eob.
+          (unless (= (point) (point-max))
+            (setq return-to-position (point))
+            (goto-char (point-max)))
+          (insert "\n" msg "\n")
+          (when return-to-position
+          (goto-char return-to-position)))
+        ;; advance to point-max in windows where it is needed
+        (dolist (window move-point-in-windows)
+          (set-window-point window (point-max)))
+        (setq buffer-read-only t)))))
 
 (defun haskell-process-project-by-proc (proc)
   "Find project by process."
@@ -217,6 +241,7 @@ the response."
           (haskell-process-send-string (car state)
                                        (cdr state))))))
 
+
 (defun haskell-process-queue-command (process command)
   "Add a command to the process command queue."
   (haskell-process-cmd-queue-add process command)
@@ -260,17 +285,17 @@ This uses `accept-process-output' internally."
 (defun haskell-process-get-repl-completions (process inputstr)
   "Perform `:complete repl ...' query for INPUTSTR using PROCESS."
   (let* ((reqstr (concat ":complete repl "
-                         (haskell-str-literal-encode inputstr)))
+                         (haskell-string-literal-encode inputstr)))
          (rawstr (haskell-process-queue-sync-request process reqstr)))
     (if (string-prefix-p "unknown command " rawstr)
-        (error "GHCi lacks `:complete' support")
+        (error "GHCi lacks `:complete' support (try installing 7.8 or ghci-ng)")
       (let* ((s1 (split-string rawstr "\r?\n" t))
-             (cs (mapcar #'haskell-str-literal-decode (cdr s1)))
+             (cs (mapcar #'haskell-string-literal-decode (cdr s1)))
              (h0 (car s1))) ;; "<cnt1> <cnt2> <quoted-str>"
         (unless (string-match "\\`\\([0-9]+\\) \\([0-9]+\\) \\(\".*\"\\)\\'" h0)
           (error "Invalid `:complete' response"))
         (let ((cnt1 (match-string 1 h0))
-              (h1 (haskell-str-literal-decode (match-string 3 h0))))
+              (h1 (haskell-string-literal-decode (match-string 3 h0))))
           (unless (= (string-to-number cnt1) (length cs))
             (error "Lengths inconsistent in `:complete' reponse"))
           (cons h1 cs))))))
@@ -452,26 +477,6 @@ function and remove this comment.
       (funcall live-func
                (haskell-command-state command)
                response))))
-
-(defvar interactive-haskell-mode-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-c C-l") 'haskell-process-load-or-reload)
-    (define-key map (kbd "C-c C-t") 'haskell-process-do-type)
-    (define-key map (kbd "C-c C-i") 'haskell-process-do-info)
-    (define-key map (kbd "M-.") 'haskell-mode-jump-to-def-or-tag)
-    (define-key map (kbd "C-c C-k") 'haskell-interactive-mode-clear)
-    (define-key map (kbd "C-c C-c") 'haskell-process-cabal-build)
-    (define-key map (kbd "C-c C-x") 'haskell-process-cabal)
-    (define-key map [?\C-c ?\C-b] 'haskell-interactive-switch)
-    (define-key map [?\C-c ?\C-z] 'haskell-interactive-switch)
-    map)
-  "Keymap for using haskell-interactive-mode.")
-
-;;;###autoload
-(define-minor-mode interactive-haskell-mode
-  "Minor mode for enabling haskell-process interaction."
-  :lighter " Interactive"
-  :keymap interactive-haskell-mode-map)
 
 (provide 'haskell-process)
 

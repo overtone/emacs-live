@@ -31,6 +31,13 @@ Use input file
     }
 #+end_src
 
+#+name: awk-table-input
+| a | b | c |
+
+#+begin_src awk :var a=awk-table-input
+  BEGIN{ print a; }
+#+end_src
+
 * Input data generators
 A code block to generate input stream
 #+name: genseq

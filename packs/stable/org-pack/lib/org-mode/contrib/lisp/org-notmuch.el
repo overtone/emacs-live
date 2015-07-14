@@ -41,6 +41,29 @@
 
 (require 'org)
 
+;; customisable notmuch open functions
+(defcustom org-notmuch-open-function
+  'org-notmuch-follow-link
+  "Function used to follow notmuch links.
+
+Should accept a notmuch search string as the sole argument."
+  :group 'org-notmuch
+  :version "24.4"
+  :package-version '(Org . "8.0")
+  :type 'function)
+
+(defcustom org-notmuch-search-open-function
+  'org-notmuch-search-follow-link
+  "Function used to follow notmuch-search links.
+
+Should accept a notmuch search string as the sole argument."
+  :group 'org-notmuch
+  :version "24.4"
+  :package-version '(Org . "8.0")
+  :type 'function)
+
+
+
 ;; Install the link type
 (org-add-link-type "notmuch" 'org-notmuch-open)
 (add-hook 'org-store-link-functions 'org-notmuch-store-link)
@@ -62,7 +85,7 @@
 
 (defun org-notmuch-open (path)
   "Follow a notmuch message link specified by PATH."
-  (org-notmuch-follow-link path))
+  (funcall org-notmuch-open-function path))
 
 (defun org-notmuch-follow-link (search)
   "Follow a notmuch link to SEARCH.
@@ -90,13 +113,20 @@ Can link to more than one message, if so all matching messages are shown."
 
 (defun org-notmuch-search-open (path)
   "Follow a notmuch message link specified by PATH."
-  (message path)
-  (org-notmuch-search-follow-link path))
+  (message "%s" path)
+  (funcall org-notmuch-search-open-function path))
 
 (defun org-notmuch-search-follow-link (search)
   "Follow a notmuch link by displaying SEARCH in notmuch-search mode."
   (require 'notmuch)
   (notmuch-search (org-link-unescape search)))
+
+
+
+(defun org-notmuch-tree-follow-link (search)
+  "Follow a notmuch link by displaying SEARCH in notmuch-tree mode."
+  (require 'notmuch)
+  (notmuch-tree (org-link-unescape search)))
 
 (provide 'org-notmuch)
 

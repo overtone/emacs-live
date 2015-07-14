@@ -64,4 +64,4 @@
 
 (provide 'cperl-mode-expansions)
 
-;; css-mode-expansions.el ends here
+;; cperl-mode-expansions.el ends here

@@ -28,6 +28,8 @@
 ;;
 ;; Lilypond documentation can be found at
 ;; http://lilypond.org/manuals.html
+;;
+;; This depends on epstopdf --- See http://www.ctan.org/pkg/epstopdf.
 
 ;;; Code:
 (require 'ob)
@@ -60,47 +62,64 @@ org-babel-lilypond-play-midi-post-tangle determines whether to automate the
 playing of the resultant midi file.  If the value is nil,
 the midi file is not automatically played.  Default value is t")
 
-(defvar org-babel-lilypond-OSX-ly-path
-  "/Applications/lilypond.app/Contents/Resources/bin/lilypond")
-(defvar org-babel-lilypond-OSX-pdf-path "open")
-(defvar org-babel-lilypond-OSX-midi-path "open")
-
-(defvar org-babel-lilypond-nix-ly-path "/usr/bin/lilypond")
-(defvar org-babel-lilypond-nix-pdf-path "evince")
-(defvar org-babel-lilypond-nix-midi-path "timidity")
-
-(defvar org-babel-lilypond-w32-ly-path "lilypond")
-(defvar org-babel-lilypond-w32-pdf-path "")
-(defvar org-babel-lilypond-w32-midi-path "")
+(defvar org-babel-lilypond-ly-command ""
+  "Command to execute lilypond on your system.
+Do not set it directly.  Customize `org-babel-lilypond-commands' instead.")
+(defvar org-babel-lilypond-pdf-command ""
+  "Command to show a PDF file on your system.
+Do not set it directly.  Customize `org-babel-lilypond-commands' instead.")
+(defvar org-babel-lilypond-midi-command ""
+  "Command to play a MIDI file on your system.
+Do not set it directly.  Customize `org-babel-lilypond-commands' instead.")
+(defcustom org-babel-lilypond-commands
+  (cond
+   ((eq system-type 'darwin)
+    '("/Applications/lilypond.app/Contents/Resources/bin/lilypond" "open" "open"))
+   ((eq system-type 'windows-nt)
+    '("lilypond" "" ""))
+   (t
+    '("lilypond" "xdg-open" "xdg-open")))
+  "Commands to run lilypond and view or play the results.
+These should be executables that take a filename as an argument.
+On some system it is possible to specify the filename directly
+and the viewer or player will be determined from the file type;
+you can leave the string empty on this case."
+  :group 'org-babel
+  :type '(list
+	  (string :tag "Lilypond   ")
+	  (string :tag "PDF Viewer ")
+	  (string :tag "MIDI Player"))
+  :version "24.3"
+  :package-version '(Org . "8.2.7")
+  :set
+  (lambda (symbol value)
+    (setq
+     org-babel-lilypond-ly-command   (nth 0 value)
+     org-babel-lilypond-pdf-command  (nth 1 value)
+     org-babel-lilypond-midi-command (nth 2 value))))
 
 (defvar org-babel-lilypond-gen-png nil
-  "Image generation (png) can be turned on by default by setting
-ORG-BABEL-LILYPOND-GEN-PNG to t")
+  "Non-nil means image generation (PNG) is turned on by default.")
 
 (defvar org-babel-lilypond-gen-svg nil
-  "Image generation (SVG) can be turned on by default by setting
-ORG-BABEL-LILYPOND-GEN-SVG to t")
+  "Non-nil means image generation (SVG) is be turned on by default.")
 
 (defvar org-babel-lilypond-gen-html nil
-  "HTML generation can be turned on by default by setting
-ORG-BABEL-LILYPOND-GEN-HTML to t")
+  "Non-nil means HTML generation is turned on by default.")
 
 (defvar org-babel-lilypond-gen-pdf nil
-  "PDF generation can be turned on by default by setting
-ORG-BABEL-LILYPOND-GEN-PDF to t")
+  "Non-nil means PDF generation is be turned on by default.")
 
 (defvar org-babel-lilypond-use-eps nil
-  "You can force the compiler to use the EPS backend by setting
-ORG-BABEL-LILYPOND-USE-EPS to t")
+  "Non-nil forces the compiler to use the EPS backend.")
 
 (defvar org-babel-lilypond-arrange-mode nil
-  "Arrange mode is turned on by setting ORG-BABEL-LILYPOND-ARRANGE-MODE
-to t.  In Arrange mode the following settings are altered
-from default...
+  "Non-nil turns Arrange mode on.
+In Arrange mode the following settings are altered from default:
 :tangle yes,    :noweb yes
 :results silent :comments yes.
 In addition lilypond block execution causes tangling of all lilypond
-blocks")
+blocks.")
 
 (defun org-babel-expand-body:lilypond (body params)
   "Expand BODY according to PARAMS, return the expanded body."
@@ -148,7 +167,7 @@ specific arguments to =org-babel-tangle="
       (insert (org-babel-expand-body:generic body params)))
     (org-babel-eval
      (concat
-      (org-babel-lilypond-determine-ly-path)
+      org-babel-lilypond-ly-command
       " -dbackend=eps "
       "-dno-gs-load-fonts "
       "-dinclude-eps-fonts "
@@ -175,29 +194,27 @@ If error in compilation, attempt to mark the error in lilypond org file"
                             (buffer-file-name) ".lilypond"))
           (org-babel-lilypond-temp-file (org-babel-lilypond-switch-extension
                          (buffer-file-name) ".ly")))
-      (if (file-exists-p org-babel-lilypond-tangled-file)
-          (progn
-            (when (file-exists-p org-babel-lilypond-temp-file)
-              (delete-file org-babel-lilypond-temp-file))
-            (rename-file org-babel-lilypond-tangled-file
-                         org-babel-lilypond-temp-file))
-        (error "Error: Tangle Failed!") t)
+      (if (not (file-exists-p org-babel-lilypond-tangled-file))
+	  (error "Error: Tangle Failed!")
+	(when (file-exists-p org-babel-lilypond-temp-file)
+	  (delete-file org-babel-lilypond-temp-file))
+	(rename-file org-babel-lilypond-tangled-file
+		     org-babel-lilypond-temp-file))
       (switch-to-buffer-other-window "*lilypond*")
       (erase-buffer)
       (org-babel-lilypond-compile-lilyfile org-babel-lilypond-temp-file)
       (goto-char (point-min))
-      (if (not (org-babel-lilypond-check-for-compile-error org-babel-lilypond-temp-file))
-          (progn
-            (other-window -1)
-            (org-babel-lilypond-attempt-to-open-pdf org-babel-lilypond-temp-file)
-            (org-babel-lilypond-attempt-to-play-midi org-babel-lilypond-temp-file))
-        (error "Error in Compilation!")))) nil)
+      (if (org-babel-lilypond-check-for-compile-error org-babel-lilypond-temp-file)
+	  (error "Error in Compilation!")
+	(other-window -1)
+	(org-babel-lilypond-attempt-to-open-pdf org-babel-lilypond-temp-file)
+	(org-babel-lilypond-attempt-to-play-midi org-babel-lilypond-temp-file)))))
 
 (defun org-babel-lilypond-compile-lilyfile (file-name &optional test)
   "Compile lilypond file and check for compile errors
 FILE-NAME is full path to lilypond (.ly) file"
   (message "Compiling LilyPond...")
-  (let ((arg-1 (org-babel-lilypond-determine-ly-path)) ;program
+  (let ((arg-1 org-babel-lilypond-ly-command) ;program
         (arg-2 nil)                    ;infile
         (arg-3 "*lilypond*")           ;buffer
 	(arg-4 t)                      ;display
@@ -223,11 +240,10 @@ FILE-NAME is full path to lilypond file.
 If TEST is t just return nil if no error found, and pass
 nil as file-name since it is unused in this context"
   (let ((is-error (search-forward "error:" nil t)))
-    (if (not test)
-        (if (not is-error)
-            nil
-          (org-babel-lilypond-process-compile-error file-name))
-      is-error)))
+    (if test
+	is-error
+      (when is-error
+	(org-babel-lilypond-process-compile-error file-name)))))
 
 (defun org-babel-lilypond-process-compile-error (file-name)
   "Process the compilation error that has occurred.
@@ -298,13 +314,13 @@ If TEST is non-nil, the shell command is returned and is not run"
     (let ((pdf-file (org-babel-lilypond-switch-extension file-name ".pdf")))
       (if (file-exists-p pdf-file)
           (let ((cmd-string
-                 (concat (org-babel-lilypond-determine-pdf-path) " " pdf-file)))
+                 (concat org-babel-lilypond-pdf-command " " pdf-file)))
             (if test
                 cmd-string
 	      (start-process
 	       "\"Audition pdf\""
 	       "*lilypond*"
-	       (org-babel-lilypond-determine-pdf-path)
+	       org-babel-lilypond-pdf-command
 	       pdf-file)))
 	(message  "No pdf file generated so can't display!")))))
 
@@ -316,48 +332,15 @@ If TEST is non-nil, the shell command is returned and is not run"
     (let ((midi-file (org-babel-lilypond-switch-extension file-name ".midi")))
       (if (file-exists-p midi-file)
           (let ((cmd-string
-                 (concat (org-babel-lilypond-determine-midi-path) " " midi-file)))
+                 (concat org-babel-lilypond-midi-command " " midi-file)))
             (if test
                 cmd-string
               (start-process
                "\"Audition midi\""
                "*lilypond*"
-               (org-babel-lilypond-determine-midi-path)
+               org-babel-lilypond-midi-command
                midi-file)))
         (message "No midi file generated so can't play!")))))
-
-(defun org-babel-lilypond-determine-ly-path (&optional test)
-  "Return correct path to ly binary depending on OS
-If TEST is non-nil, it contains a simulation of the OS for test purposes"
-  (let ((sys-type
-         (or test system-type)))
-    (cond ((string= sys-type  "darwin")
-           org-babel-lilypond-OSX-ly-path)
-          ((string= sys-type "windows-nt")
-           org-babel-lilypond-w32-ly-path)
-          (t org-babel-lilypond-nix-ly-path))))
-
-(defun org-babel-lilypond-determine-pdf-path (&optional test)
-  "Return correct path to pdf viewer depending on OS
-If TEST is non-nil, it contains a simulation of the OS for test purposes"
-  (let ((sys-type
-         (or test system-type)))
-    (cond ((string= sys-type  "darwin")
-           org-babel-lilypond-OSX-pdf-path)
-          ((string= sys-type "windows-nt")
-           org-babel-lilypond-w32-pdf-path)
-          (t org-babel-lilypond-nix-pdf-path))))
-
-(defun org-babel-lilypond-determine-midi-path (&optional test)
-  "Return correct path to midi player depending on OS
-If TEST is non-nil, it contains a simulation of the OS for test purposes"
-  (let ((sys-type
-         (or test test system-type)))
-    (cond ((string= sys-type  "darwin")
-           org-babel-lilypond-OSX-midi-path)
-          ((string= sys-type "windows-nt")
-           org-babel-lilypond-w32-midi-path)
-          (t org-babel-lilypond-nix-midi-path))))
 
 (defun org-babel-lilypond-toggle-midi-play ()
   "Toggle whether midi will be played following a successful compilation."

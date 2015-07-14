@@ -64,7 +64,7 @@
     (term       . :any))
   "Gnuplot specific header args.")
 
-(defvar org-babel-gnuplot-timestamp-fmt nil)
+(defvar org-babel-gnuplot-timestamp-fmt nil) ; Dynamically scoped.
 
 (defvar *org-babel-gnuplot-missing* nil)
 
@@ -118,14 +118,11 @@ code."
            (timefmt (cdr (assoc :timefmt params)))
            (time-ind (or (cdr (assoc :timeind params))
                          (when timefmt 1)))
-	   (missing (cdr (assoc :missing params)))
 	   (add-to-body (lambda (text) (setq body (concat text "\n" body))))
            output)
       ;; append header argument settings to body
       (when title (funcall add-to-body (format "set title '%s'" title)))
       (when lines (mapc (lambda (el) (funcall add-to-body el)) lines))
-      (when missing
-	(funcall add-to-body (format "set datafile missing '%s'" missing)))
       (when sets
 	(mapc (lambda (el) (funcall add-to-body (format "set %s" el))) sets))
       (when x-labels
@@ -267,15 +264,13 @@ then create one.  Return the initialized session.  The current
   "Export TABLE to DATA-FILE in a format readable by gnuplot.
 Pass PARAMS through to `orgtbl-to-generic' when exporting TABLE."
   (with-temp-file data-file
-    (make-local-variable 'org-babel-gnuplot-timestamp-fmt)
-    (setq org-babel-gnuplot-timestamp-fmt (or
-                                           (plist-get params :timefmt)
-                                           "%Y-%m-%d-%H:%M:%S"))
-    (insert (orgtbl-to-generic
-	     table
-	     (org-combine-plists
-	      '(:sep "\t" :fmt org-babel-gnuplot-quote-tsv-field)
-	      params))))
+    (insert (let ((org-babel-gnuplot-timestamp-fmt
+		   (or (plist-get params :timefmt) "%Y-%m-%d-%H:%M:%S")))
+	      (orgtbl-to-generic
+	       table
+	       (org-combine-plists
+		'(:sep "\t" :fmt org-babel-gnuplot-quote-tsv-field)
+		params)))))
   data-file)
 
 (provide 'ob-gnuplot)

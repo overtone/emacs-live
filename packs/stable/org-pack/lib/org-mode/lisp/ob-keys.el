@@ -89,6 +89,7 @@ functions which are assigned key bindings, and see
     ("h" . org-babel-describe-bindings)
     ("\C-x" . org-babel-do-key-sequence-in-edit-buffer)
     ("x" . org-babel-do-key-sequence-in-edit-buffer)
+    ("k" . org-babel-remove-result-one-or-many)
     ("\C-\M-h" . org-babel-mark-block))
   "Alist of key bindings and interactive Babel functions.
 This list associates interactive Babel functions

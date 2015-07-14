@@ -51,6 +51,7 @@ class FlooHandler(base.BaseHandler):
         self.owner = owner
         self.workspace = workspace
         self.action = action
+        self.upload_timeout = None
         self.reset()
 
     def _on_highlight(self, data):
@@ -111,6 +112,7 @@ class FlooHandler(base.BaseHandler):
 
     def on_connect(self):
         utils.reload_settings()
+        self.reset()
 
         req = {
             'username': self.username,
@@ -137,6 +139,7 @@ class FlooHandler(base.BaseHandler):
         self.paths_to_ids = {}
         self.save_on_get_bufs = set()
         self.on_load = collections.defaultdict(dict)
+        utils.cancel_timeout(self.upload_timeout)
         self.upload_timeout = None
 
     def _on_patch(self, data):
@@ -348,7 +351,6 @@ class FlooHandler(base.BaseHandler):
 
     @utils.inlined_callbacks
     def _on_room_info(self, data):
-        self.reset()
         self.joined_workspace = True
         self.workspace_info = data
         G.PERMS = data['perms']
@@ -741,8 +743,7 @@ class FlooHandler(base.BaseHandler):
         return size
 
     def stop(self):
-        if self.upload_timeout is not None:
-            utils.cancel_timeout(self.upload_timeout)
-            self.upload_timeout = None
+        utils.cancel_timeout(self.upload_timeout)
+        self.upload_timeout = None
 
         super(FlooHandler, self).stop()

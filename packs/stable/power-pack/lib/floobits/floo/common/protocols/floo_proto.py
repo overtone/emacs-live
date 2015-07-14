@@ -50,6 +50,7 @@ class FlooProtocol(base.BaseProtocol):
 
     def __init__(self, host, port, secure=True):
         super(FlooProtocol, self).__init__(host, port, secure)
+        self._handling = False
         self.connected = False
         self._needs_handshake = bool(secure)
         self._sock = None
@@ -90,10 +91,13 @@ class FlooProtocol(base.BaseProtocol):
 
     def _handle(self, data):
         self._buf_in += data
+        if self._handling:
+            return
+        self._handling = True
         while True:
             before, sep, after = self._buf_in.partition(b'\n')
             if not sep:
-                return
+                break
             try:
                 # Node.js sends invalid utf8 even though we're calling write(string, "utf8")
                 # Python 2 can figure it out, but python 3 hates it and will die here with some byte sequences
@@ -108,6 +112,7 @@ class FlooProtocol(base.BaseProtocol):
                 continue
 
             name = data.get('name')
+            self._buf_in = after
             try:
                 msg.debug('got data ' + (name or 'no name'))
                 self.emit('data', name, data)
@@ -116,7 +121,7 @@ class FlooProtocol(base.BaseProtocol):
                 if name == 'room_info':
                     editor.error_message('Error joining workspace: %s' % str_e(e))
                     self.stop()
-            self._buf_in = after
+        self._handling = False
 
     def _connect(self, host, port, attempts=0):
         if attempts > (self.proxy and 500 or 500):
@@ -173,6 +178,9 @@ class FlooProtocol(base.BaseProtocol):
         port = self._port
 
         self._empty_selects = 0
+
+        # Only use proxy.floobits.com if we're trying to connect to floobits.com
+        G.OUTBOUND_FILTERING = G.OUTBOUND_FILTERING and self.host == 'floobits.com'
 
         # TODO: Horrible code here
         if self.proxy:
@@ -279,9 +287,15 @@ class FlooProtocol(base.BaseProtocol):
                 if not d:
                     break
                 buf += d
-            except (AttributeError):
+                # ST2 on Windows with Package Control 3 support!
+                # (socket.recv blocks for some damn reason)
+                if G.SOCK_SINGLE_READ:
+                    break
+            except AttributeError:
+                sock_debug('_sock is None')
                 return self.reconnect()
-            except (socket.error, TypeError):
+            except (socket.error, TypeError) as e:
+                sock_debug('Socket error:', e)
                 break
 
         if buf:
@@ -318,9 +332,8 @@ class FlooProtocol(base.BaseProtocol):
         elif self._retries == 0:
             editor.error_message('Floobits Error! Too many reconnect failures. Giving up.')
 
-        if self.host == 'floobits.com':
-            # Only use proxy.floobits.com if we're trying to connect to floobits.com
-            G.OUTBOUND_FILTERING = self._retries % 4 == 0
+        # Only use proxy.floobits.com if we're trying to connect to floobits.com
+        G.OUTBOUND_FILTERING = self.host == 'floobits.com' and self._retries % 4 == 0
         self._retries -= 1
 
     def reset_retries(self):

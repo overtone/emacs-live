@@ -1,8 +1,8 @@
 ;;; popwin-pp.el --- Popwin Pp
 
-;; Copyright (C) 2012  Tomohiro Matsuyama
+;; Copyright (C) 2012-2015  Tomohiro Matsuyama
 
-;; Author: Tomohiro Matsuyama <tomo@cx4a.org>
+;; Author: Tomohiro Matsuyama <m2ym.pub@gmail.com>
 ;; Keywords: 
 
 ;; This program is free software; you can redistribute it and/or modify

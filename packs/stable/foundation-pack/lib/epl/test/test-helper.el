@@ -1,10 +1,10 @@
 ;;; test-helper.el --- EPL: Non interactive unit test initialization -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2013, 2014  Sebastian Wiesner
+;; Copyright (C) 2013-2015  Sebastian Wiesner
 
-;; Author: Sebastian Wiesner <lunaryorn@gmail.com>
+;; Author: Sebastian Wiesner <swiesner@lunaryorn.com>
 ;; Maintainer: Johan Andersson <johan.rejeep@gmail.com>
-;;     Sebastian Wiesner <lunaryorn@gmail.com>
+;;     Sebastian Wiesner <swiesner@lunaryorn.com>
 ;; URL: http://github.com/cask/epl
 
 ;; This file is NOT part of GNU Emacs.
@@ -31,8 +31,6 @@
 (let* ((current-file (if load-in-progress load-file-name (buffer-file-name)))
        (source-directory (locate-dominating-file current-file "Cask"))
        (pkg-rel-dir (format ".cask/%s/elpa" emacs-version)))
-  (load (expand-file-name "compat/load.el") nil 'no-message)
-
   (setq package-user-dir (expand-file-name pkg-rel-dir source-directory))
   (package-initialize)
 

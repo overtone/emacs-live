@@ -10,7 +10,7 @@ Feature: nxml-mode expansions
     And I place the cursor after "my"
     And I press "C-@"
     Then the region should be "myAttr"
-
+  
   Scenario: Mark xml attribute with quotes
     Given I turn on nxml-mode
     And there is no region selected
@@ -19,7 +19,26 @@ Feature: nxml-mode expansions
     And I press "C-@"
     And I press "C-@"
     Then the region should be ""myAttr""
-    
+
+  Scenario: Mark xml attribute with xpath inside quotes
+    Given I turn on nxml-mode
+    And there is no region selected
+    When I insert "<tag id="a/b/c">"
+    And I place the cursor after "a/"
+    And I press "C-@"
+    And I press "C-@"
+    Then the region should be "a/b/c"
+
+  Scenario: Mark xml attribute with xpath inside quotes
+    Given I turn on nxml-mode
+    And there is no region selected
+    When I insert "<tag id="a/b/c">"
+    And I place the cursor after "a/"
+    And I press "C-@"
+    And I press "C-@"
+    And I press "C-@"
+    Then the region should be ""a/b/c""
+
   Scenario: Mark xml attribute from start
     Given I turn on nxml-mode
     And there is no region selected

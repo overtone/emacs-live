@@ -60,14 +60,6 @@ called by `org-babel-execute-src-block'"
      (org-babel-pick-name
       (cdr (assoc :rowname-names params)) (cdr (assoc :rownames params))))))
 
-
-(defun org-babel-scala-table-or-string (results)
-  "Convert RESULTS into an appropriate elisp value.
-If RESULTS look like a table, then convert them into an
-Emacs-lisp table, otherwise return the results as a string."
-  (org-babel-script-escape results))
-
-
 (defvar org-babel-scala-wrapper-method
 
 "var str_result :String = null;
@@ -104,7 +96,7 @@ in BODY as elisp."
                    (concat org-babel-scala-command " " src-file) "")))
          (org-babel-result-cond result-params
 	   raw
-           (org-babel-scala-table-or-string raw)))))))
+           (org-babel-script-escape raw)))))))
 
 
 (defun org-babel-prep-session:scala (session params)

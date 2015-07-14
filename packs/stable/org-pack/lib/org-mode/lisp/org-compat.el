@@ -1,6 +1,6 @@
 ;;; org-compat.el --- Compatibility code for Org-mode
 
-;; Copyright (C) 2004-2014 Free Software Foundation, Inc.
+;; Copyright (C) 2004-2015 Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -287,17 +287,8 @@ Works on both Emacs and XEmacs."
 	     (> (point) (region-beginning)))
     (exchange-point-and-mark)))
 
-;; Emacs 22 misses `activate-mark'
-(if (fboundp 'activate-mark)
-    (defalias 'org-activate-mark 'activate-mark)
-  (defun org-activate-mark ()
-    (when (mark t)
-      (setq mark-active t)
-      (when (and (boundp 'transient-mark-mode)
-		 (not transient-mark-mode))
-	(setq transient-mark-mode 'lambda))
-      (when (boundp 'zmacs-regions)
-	(setq zmacs-regions t)))))
+;; Old alias for emacs 22 compatibility, now dropped
+(define-obsolete-function-alias 'org-activate-mark 'activate-mark)
 
 ;; Invisibility compatibility
 
@@ -421,6 +412,10 @@ TIME defaults to the current time."
 ;; `user-error' is only available from 24.2.50 on
 (unless (fboundp 'user-error)
   (defalias 'user-error 'error))
+
+;; `font-lock-ensure' is only available from 24.4.50 on
+(unless (fboundp 'font-lock-ensure)
+  (defalias 'font-lock-ensure 'font-lock-fontify-buffer))
 
 (defmacro org-no-popups (&rest body)
   "Suppress popup windows.

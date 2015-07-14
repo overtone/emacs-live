@@ -57,6 +57,13 @@ STDERR with `org-babel-eval-error-notify'."
 	  (progn
 	    (with-current-buffer err-buff
 	      (org-babel-eval-error-notify exit-code (buffer-string)))
+	    (save-excursion
+	      (when (get-buffer org-babel-error-buffer-name)
+		(with-current-buffer org-babel-error-buffer-name
+		  (unless (derived-mode-p 'compilation-mode)
+		    (compilation-mode))
+		  ;; Compilation-mode enforces read-only, but Babel expects the buffer modifiable.
+		  (setq buffer-read-only nil))))
 	    nil)
 	(buffer-string)))))
 

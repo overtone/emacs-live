@@ -1,6 +1,6 @@
 ;;; org-pcomplete.el --- In-buffer completion code
 
-;; Copyright (C) 2004-2014 Free Software Foundation, Inc.
+;; Copyright (C) 2004-2015 Free Software Foundation, Inc.
 ;;
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;;         John Wiegley <johnw at gnu dot org>
@@ -272,7 +272,7 @@ When completing for #+STARTUP, for example, this function returns
 	    ;; OPTION items from registered back-ends.
 	    (let (items)
 	      (dolist (backend (org-bound-and-true-p
-				org-export--registered-backends))
+				org-export-registered-backends))
 		(dolist (option (org-export-backend-options backend))
 		  (let ((item (nth 2 option)))
 		    (when item (push (concat item ":") items)))))
@@ -362,25 +362,6 @@ This needs more work, to handle headings with lots of spaces in them."
 	       (setq lst (delete (car prop) lst)))
 	     lst))
    (substring pcomplete-stub 1)))
-
-(defvar org-drawers)
-
-(defun pcomplete/org-mode/drawer ()
-  "Complete a drawer name."
-  (let ((spc (save-excursion
-	       (move-beginning-of-line 1)
-	       (looking-at "^\\([ \t]*\\):")
-	       (match-string 1)))
-	(cpllist (mapcar (lambda (x) (concat x ": ")) org-drawers)))
-    (pcomplete-here cpllist
-		    (substring pcomplete-stub 1)
-		    (unless (or (not (delq
-				      nil
-				      (mapcar (lambda(x)
-						(string-match (substring pcomplete-stub 1) x))
-					      cpllist)))
-				(looking-at "[ \t]*\n.*:END:"))
-		      (save-excursion (insert "\n" spc ":END:"))))))
 
 (defun pcomplete/org-mode/block-option/src ()
   "Complete the arguments of a begin_src block.

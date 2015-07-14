@@ -2,6 +2,7 @@
 
 #+TITLE: Org maintainer tasks
 #+STARTUP: noindent
+#+OPTIONS: ^:nil
 
 This document describes the tasks the Org-mode maintainer has to do
 and how they are performed.

@@ -31,10 +31,11 @@ before the package manager.  If your Emacs supports it, then also
 set `load-prefer-newer` to t even before requiring `auto-compile`.
 Then also enable `auto-compile-on-save-mode`.
 
-    ;;; init.el --- user init file  -*- no-byte-compile: t -*-
+    ;;; init.el --- user init file      -*- no-byte-compile: t -*-
+    (setq load-prefer-newer t)
+    (add-to-list 'load-path "/path/to/dash")
     (add-to-list 'load-path "/path/to/packed")
     (add-to-list 'load-path "/path/to/auto-compile")
-    (setq load-prefer-newer t)
     (require 'auto-compile)
     (auto-compile-on-load-mode 1)
     (auto-compile-on-save-mode 1)

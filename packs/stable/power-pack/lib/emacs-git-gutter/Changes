@@ -1,5 +1,19 @@
 Revision history for git-gutter.el
 
+Revision 0.83 2015/05/01
+    - Fix narrow region issue in staging hunk
+
+Revision 0.82 2015/04/01
+    - Fix git-gutter command when git-gutter-mode is disabled
+
+Revision 0.81 2015/03/28
+    - Implement live update feature
+    - Support Subversion(Thanks alpha22jp)
+    - Improve log message
+
+Revision 0.80 2014/12/21
+    - Add flag variable for always showing separator
+
 Revision 0.79 2014/11/13
     [Incompatible Change]
      - mercurial is not default backend now

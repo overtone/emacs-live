@@ -9,10 +9,16 @@
   <img src="https://raw.github.com/clojure-emacs/cider/master/logo/cider-logo-w640.png" alt="CIDER Logo"/>
 </p>
 
-`CIDER` (formerly `nrepl.el`) is the Clojure IDE and REPL for Emacs, built on top of
+`CIDER` (formerly `nrepl.el`) is the **C**lojure **I**nteractive **D**evelopment **E**nvironment that **R**ocks for Emacs, built on top of
 [nREPL](https://github.com/clojure/tools.nrepl), the Clojure networked
 REPL server. It's a great alternative to the now deprecated combination
 of SLIME + [swank-clojure](https://github.com/technomancy/swank-clojure).
+
+If you're interested in details about CIDER's history and architecture you can
+check out the Clojure/conj presentation
+[The Evolution of the Emacs tooling for Clojure](https://www.youtube.com/watch?v=4X-1fJm25Ww&list=PLZdCLR02grLoc322bYirANEso3mmzvCiI&index=6).
+
+[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/clojure-emacs/cider?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 CIDER packs plenty of features. Here are some of them (in no particular order):
 
@@ -25,10 +31,11 @@ CIDER packs plenty of features. Here are some of them (in no particular order):
 * Documentation lookup
 * Resource lookup
 * Apropos
+* Debugger
 * Value inspector
 * Function tracing
 * Interactive macroexpansion
-* [Grimoire](http://grimoire.arrdem.com/) integration
+* [Grimoire](http://conj.io/) integration
 * `clojure.test` integration
 * Classpath browser
 * Namespace browser
@@ -37,38 +44,65 @@ CIDER packs plenty of features. Here are some of them (in no particular order):
 * Minibuffer code evaluation
 * Integration with [company-mode](http://company-mode.github.io/) and [auto-complete-mode](https://github.com/clojure-emacs/ac-cider)
 
-![CIDER Screenshot](https://github.com/clojure-emacs/cider/raw/master/screenshots/cider-overview.png)
+![CIDER Screenshot](screenshots/cider-overview.png)
 
 ***
 
 - [Installation](#installation)
-	- [Prerequisites](#prerequisites)
-	- [Installation via package.el](#installation-via-packageel)
+  - [Prerequisites](#prerequisites)
+  - [Installation via package.el](#installation-via-packageel)
+- [CIDER nREPL middleware](#cider-nrepl-middleware)
+  - [Using Leiningen](#using-leiningen)
+  - [Using Boot](#using-boot)
+  - [Using embedded nREPL server](#using-embedded-nrepl-server)
 - [Configuration](#configuration)
+  - [Basic configuration](#basic-configuration)
+  - [Running tests](#running-tests)
+  - [REPL history](#repl-history)
+  - [Minibuffer completion](#minibuffer-completion)
+  - [Auto-completion](#auto-completion)
+  - [Integration with other modes](#integration-with-other-modes)
 - [Basic Usage](#basic-usage)
-	- [Setting up a Leiningen project (optional)](#setting-up-a-leiningen-project-optional)
-	- [Launch a nREPL server and client from Emacs](#launch-a-nrepl-server-and-client-from-emacs)
-	- [Connect to a running nREPL server](#connect-to-a-running-nrepl-server)
-	- [Using the cider minor mode](#using-the-cider-minor-mode)
-	- [Pretty printing in the REPL](#pretty-printing-in-the-repl)
-    - [Limiting printed output in the REPL](#limiting-printed-output-in-the-repl)
+  - [Setting up a Leiningen or Boot project (optional)](#setting-up-a-leiningen-or-boot-project-optional)
+  - [Launch a nREPL server and client from Emacs](#launch-a-nrepl-server-and-client-from-emacs)
+  - [Connect to a running nREPL server](#connect-to-a-running-nrepl-server)
+  - [Using the cider minor mode](#using-the-cider-minor-mode)
+  - [Pretty printing in the REPL](#pretty-printing-in-the-repl)
+  - [Limiting printed output in the REPL](#limiting-printed-output-in-the-repl)
+  - [ClojureScript usage](#clojurescript-usage)
 - [Keyboard shortcuts](#keyboard-shortcuts)
-	- [cider-mode](#cider-mode)
-	- [cider-repl-mode](#cider-repl-mode)
-	- [cider-macroexpansion-mode](#cider-macroexpansion-mode)
-    - [cider-inspector-mode](#cider-inspector-mode)
-	- [Managing multiple sessions](#managing-multiple-sessions)
+  - [cider-mode](#cider-mode)
+  - [cider-repl-mode](#cider-repl-mode)
+  - [cider-macroexpansion-mode](#cider-macroexpansion-mode)
+  - [cider-inspector-mode](#cider-inspector-mode)
+  - [cider-test-report-mode](#cider-test-report-mode)
+  - [cider-stacktrace-mode](#cider-stacktrace-mode)
+  - [Managing multiple sessions](#managing-multiple-sessions)
 - [Requirements](#requirements)
 - [Caveats](#caveats)
+  - [Var Metadata](#var-metadata)
+  - [ClojureScript limitations](#clojurescript-limitations)
+  - [Microsoft Windows](#microsoft-windows)
+  - [powershell.el](#powershell-el)
+- [Troubleshooting](#troubleshooting)
 - [Documentation](#documentation)
 - [Changelog](#changelog)
 - [Team](#team)
+- [Release policy](#release-policy)
+- [Logo](#logo)
 - [Contributing](#contributing)
+  - [Discussion](#discussion)
+  - [Issues](#issues)
+  - [Patches](#patches)
+  - [Documentation](#documentation)
+  - [Donations](#donations)
+  - [Running the tests in batch mode](#running-the-tests-in-batch-mode)
 - [License](#license)
 
 ## Installation
 
-The canonical way to install cider is using `package.el`, but you can choose other possibilities available for your emacs/operating system (see [wiki](https://github.com/clojure-emacs/cider/wiki/Installation)).
+The canonical way to install CIDER is via `package.el`, but plenty of other
+options exist. (see [wiki](https://github.com/clojure-emacs/cider/wiki/Installation)).
 
 ### Prerequisites
 
@@ -96,16 +130,17 @@ sometimes interferes with CIDER's REPL initialization.
 
 `package.el` is the built-in package manager in Emacs.
 
-`CIDER` is available on two major `package.el` community
+`CIDER` is available on all major `package.el` community
 maintained repos -
-[MELPA Stable](http://stable.melpa.org) and
-[MELPA](http://melpa.org).
+[MELPA Stable](http://stable.melpa.org),
+[MELPA](http://melpa.org) and [Marmalade](https://marmalade-repo.org/).
 
 You can install `CIDER` with the following command:
 
 <kbd>M-x package-install [RET] cider [RET]</kbd>
 
-or by adding this bit of Emacs Lisp code to your Emacs initialization file (`.emacs` or `init.el`):
+or by adding this bit of Emacs Lisp code to your Emacs initialization file
+(`.emacs` or `init.el`):
 
 ```el
 (unless (package-installed-p 'cider)
@@ -122,8 +157,8 @@ time. Never-the-less, installing from MELPA is the recommended way of
 obtaining CIDER, as the `master` branch is normally quite stable and
 "stable" (tagged) builds are released somewhat infrequently.
 
-With the most recent builds of Emacs, you can pin CIDER to always
-use MELPA Stable by adding this to your Emacs initialization:
+With the most recent builds of Emacs, you can pin CIDER to always use MELPA
+Stable (or Marmalade) by adding this to your Emacs initialization:
 
 ```el
 (add-to-list 'package-pinned-packages '(cider . "melpa-stable") t)
@@ -150,8 +185,25 @@ Use the convenient plugin for defaults, either in your project's
 A minimal `profiles.clj` for CIDER would be:
 
 ```clojure
-{:user {:plugins [[cider/cider-nrepl "0.8.1"]]}}
+{:user {:plugins [[cider/cider-nrepl "0.9.1"]]}}
 ```
+
+### Using Boot
+
+Boot users can configure the tool to include the middleware automatically in
+all of their projects using a `~/.boot/profile.boot` file like so:
+
+```clojure
+(require 'boot.repl)
+
+(swap! boot.repl/*default-dependencies*
+       concat '[[cider/cider-nrepl "0.9.1"]])
+
+(swap! boot.repl/*default-middleware*
+       conj 'cider.nrepl/cider-middleware)
+```
+
+For more information visit [boot-clj wiki](https://github.com/boot-clj/boot/wiki/Cider-REPL).
 
 ### Using embedded nREPL server
 
@@ -190,8 +242,20 @@ experience.
 * Enable `eldoc` in Clojure buffers:
 
 ```el
-(add-hook 'cider-mode-hook 'cider-turn-on-eldoc-mode)
+(add-hook 'cider-mode-hook #'eldoc-mode)
 ```
+
+* Suppress auto-enabling of `cider-mode` in `clojure-mode` buffers, when starting
+  CIDER:
+
+```el
+(setq cider-auto-mode nil)
+```
+
+By default CIDER will enable `cider-mode` in all `clojure-mode` buffers when the
+first CIDER connection is established. It will also add a `clojure-mode` hook to
+enable it on newly created `clojure-mode` buffers. The configuration snippet
+above allows you to override this (somewhat non-standard) behavior.
 
 * Log communication with the nREPL server (**extremely useful for debugging CIDER problems**):
 
@@ -213,6 +277,11 @@ When using `switch-to-buffer`, pressing <kbd>SPC</kbd> after the command will
 make the hidden buffers visible. They'll always be visible in
 `list-buffers` (<kbd>C-x C-b</kbd>).
 
+* By default, interactive commands that require a symbol will prompt for the
+  symbol, with the prompt defaulting to the symbol at point. You can set
+  `cider-prompt-for-symbol` to nil to instead try the command with the symbol at
+  point first, and only prompt if that fails.
+
 * You can control the <kbd>TAB</kbd> key behavior in the REPL via the
 `cider-repl-tab-command` variable.  While the default command
 `cider-repl-indent-and-complete-symbol` should be an adequate choice for
@@ -222,7 +291,7 @@ because you're used to completing with <kbd>M-TAB</kbd>) use the
 following snippet:
 
 ```el
-(setq cider-repl-tab-command 'indent-for-tab-command)
+(setq cider-repl-tab-command #'indent-for-tab-command)
 ```
 
 * To prefer local resources to remote (tramp) ones when both are available:
@@ -346,7 +415,7 @@ where CIDER will not attempt to match the correct REPL buffer based on
 underlying project directories:
 
 ```el
-(setq cider-switch-to-repl-command 'cider-switch-to-current-repl-buffer)
+(setq cider-switch-to-repl-command #'cider-switch-to-current-repl-buffer)
 ```
 
 * You can configure known endpoints used by the cider command offered via a
@@ -357,6 +426,20 @@ helpful for identifying each host.
 ```el
 (setq cider-known-endpoints '(("host-a" "10.10.10.1" "7888") ("host-b" "7888")))
 ```
+
+* If you are targeting the JVM and prefer a local copy of the JDK API documentation over Oracle's official copy (e.g., for [JavaSE 8](http://docs.oracle.com/javase/8/docs/api/)), per nREPL's [`javadoc-info` logic (accurate as of 29 Dec 2014)](http://docs.oracle.com/javase/8/docs/api/), you can arrange your project to include the **root** path of the local API doc (i.e., where the `index.html` is located) to be included on your classpath (i.e., where the doc HTML files can be located by `clojure.java.io/resource`). For example, for Leiningen, with the local API path being `/usr/share/doc/java/api/`, put the following line in `project.clj`:
+
+```clj
+:dev {:resource-paths ["/usr/share/doc/java/api/"]}
+```
+
+**or** the following line in `$HOME/.lein/profiles.clj`:
+
+```clj
+:user {:resource-paths ["/usr/share/doc/java/api/"]}
+```
+
+More detail can be found [here](https://github.com/clojure-emacs/cider/issues/930).
 
 ### Running tests
 
@@ -372,7 +455,7 @@ passed or failed:
 (setq cider-test-show-report-on-success t)
 ```
 
-### REPL History
+### REPL history
 
 * To make the REPL history wrap around when its end is reached:
 
@@ -403,7 +486,7 @@ upon the standard completion if you wish to.
 
 #### icomplete
 
-`icomplete` is bundled with Emacs and enhances the default minubuffer completion:
+`icomplete` is bundled with Emacs and enhances the default minibuffer completion:
 
 ```el
 (require 'icomplete)
@@ -428,8 +511,8 @@ inside of source code and REPL buffers. This can be done globally, like so --
 -- or through mode-specific hooks:
 
 ```el
-(add-hook 'cider-repl-mode-hook 'company-mode)
-(add-hook 'cider-mode-hook 'company-mode)
+(add-hook 'cider-repl-mode-hook #'company-mode)
+(add-hook 'cider-mode-hook #'company-mode)
 ```
 
 When `company-mode` is thus enabled, it will receive completion information
@@ -441,6 +524,22 @@ from `cider-complete-at-point`, and requires no additional setup or plugins.
 
 * Remove `cider-mode` and `cider-repl-mode` from the `ac-modes` list
 
+#### Completion annotations
+
+Completion candidates will be annotated by default with an abbreviation
+corresponding to their type, and (contextually) their ns. The function used to
+format the annotation can be configured by `cider-annotate-completion-function.`
+The abbreviations used are configured by `cider-completion-annotations-alist`
+and the context in which their namespace is included is configured by
+`cider-completion-annotations-include-ns.`
+
+Completion annotations can be disabled by setting
+`cider-annotate-completion-candidates` to nil.
+
+<p align="center">
+  <img src="screenshots/completion-annotations.png" width="400" />
+</p>
+
 ### Integration with other modes
 
 * Enabling `CamelCase` support for editing commands(like
@@ -449,7 +548,7 @@ we often have to deal with Java class and method names. The built-in
 Emacs minor mode `subword-mode` provides such functionality:
 
 ```el
-(add-hook 'cider-repl-mode-hook 'subword-mode)
+(add-hook 'cider-repl-mode-hook #'subword-mode)
 ```
 
 * The use of [paredit](http://mumble.net/~campbell/emacs/paredit.html)
@@ -459,7 +558,7 @@ buffers (if you're not you probably should). You might also want to
 enable `paredit` in the REPL buffer as well:
 
 ```el
-(add-hook 'cider-repl-mode-hook 'paredit-mode)
+(add-hook 'cider-repl-mode-hook #'paredit-mode)
 ```
 
 * [smartparens](https://github.com/Fuco1/smartparens) is an excellent
@@ -468,10 +567,10 @@ enable `paredit` in the REPL buffer as well:
   `smartparens` in the REPL buffer use the following code:
 
 ```el
-(add-hook 'cider-repl-mode-hook 'smartparens-strict-mode)
+(add-hook 'cider-repl-mode-hook #'smartparens-strict-mode)
 ```
 
-* [RainbowDelimiters](https://github.com/jlr/rainbow-delimiters) is a
+* [RainbowDelimiters](https://github.com/Fanael/rainbow-delimiters) is a
   minor mode which highlights parentheses, brackets, and braces
   according to their depth. Each successive level is highlighted in a
   different color. This makes it easy to spot matching delimiters,
@@ -480,7 +579,7 @@ enable `paredit` in the REPL buffer as well:
   enable it in the REPL like this:
 
 ```el
-(add-hook 'cider-repl-mode-hook 'rainbow-delimiters-mode)
+(add-hook 'cider-repl-mode-hook #'rainbow-delimiters-mode)
 ```
 
 * [auto-complete](http://cx4a.org/software/auto-complete/) is a popular Emacs
@@ -488,25 +587,35 @@ enable `paredit` in the REPL buffer as well:
   provides a completion source for auto-complete-mode, including, where CIDER provides it,
   pop-up documentation for completed symbols.
 
+* [eval-sexp-fu](https://github.com/hchbaw/eval-sexp-fu.el) provides some visual
+feedback when evaluating expressions. [cider-eval-sexp-fu](https://github.com/clojure-emacs/cider-eval-sexp-fu) provides
+CIDER integration for `eval-sexp-fu`.
+
+```el
+(require 'cider-eval-sexp-fu)
+```
+
 ## Basic Usage
 
 The only requirement to use CIDER is to have a nREPL server to
-which it may connect. Many Clojurians favour the use of the Leiningen tool
-to start a nREPL server, but the use of Leiningen is not a prerequisite to use
-CIDER (but it's required if you want to use the `cider-jack-in` command).
+which it may connect. Many Clojurians favour the use of the Leiningen or Boot tools
+to start an nREPL server, but the use of Leiningen or Boot is not a prerequisite to use
+CIDER (but it *is* required if you want to use the `cider-jack-in` command).
 
-### Setting up a Leiningen project (optional)
+### Setting up a Leiningen or Boot project (optional)
 
-[Leiningen](http://leiningen.org/) is the de facto standard
-build/project management tool for Clojure.  It has a similar scope to
-the Maven build tool favoured by Java developers (Leiningen actually
-reuses many things from the Maven ecosystem).
+[Leiningen](http://leiningen.org/) is the de facto standard build/project
+management tool for Clojure. [Boot](http://boot-clj.com/) is a newer build tool
+offering abstractions and libraries to construct more complex build
+scenarios. Both have a similar scope to the Maven build tool favoured by Java
+developers (and they actually reuse many things from the Maven ecosystem).
 
 CIDER features a command called `cider-jack-in` that will start an nREPL server
-for a particular Leiningen project and connect to it automatically.  This
-functionality depends on Leiningen 2.x (preferably 2.5+). Older versions are not
-supported. Follow the installation instructions on Leiningen's web site to get
-it up and running and afterwards create a project like this:
+for a particular Leiningen or Boot project and connect to it automatically.
+This functionality depends on Leiningen 2.x (preferably 2.5+) or Boot
+2.0.0+. Older versions are not supported. For Leiningen, follow the installation
+instructions on its web site to get it up and running and afterwards create a
+project like this:
 
 ```
 $ lein new demo
@@ -516,12 +625,12 @@ The two main ways to obtain an nREPL connection are discussed in the following s
 
 ### Launch a nREPL server and client from Emacs
 
-Simply open in Emacs a file belonging to your `lein` project (like
+Simply open in Emacs a file belonging to your `lein` or `boot` project (like
 `foo.clj`) and type <kbd>M-x cider-jack-in</kbd>. This will start a nREPL with
-all the deps loaded in, plus an `CIDER` client connected to it.
+all the deps loaded in, plus a `CIDER` client connected to it.
 
 Alternative you can use <kbd>C-u M-x cider-jack-in</kbd> to specify the name of
-a lein project, without having to visit any file in it.
+a `lein` or `boot` project, without having to visit any file in it.
 
 ### Connect to a running nREPL server
 
@@ -530,6 +639,12 @@ You can go to your project's dir in a terminal and type there
 
 ```
 $ lein repl
+```
+
+Or with Boot:
+
+```
+$ boot repl wait
 ```
 
 Alternatively you can start nREPL either manually or by the facilities provided by your
@@ -567,6 +682,56 @@ section of your Leiningen project's configuration.
 :global-vars {*print-length* 100}
 ```
 
+### ClojureScript usage
+
+ClojureScript support relies on the
+[piggieback](https://github.com/cemerick/piggieback) nREPL middleware being
+present in your REPL session. Version 0.2.0 or higher is recommended, and the
+below examples assume this, but version 0.1.5 is currently also supported.
+
+* Example usage of a non-browser connected Node.js REPL:
+
+  - At the Clojure REPL:
+
+    ```clojure
+    (require '[cemerick.piggieback :as piggieback])
+    (require '[cljs.repl.node :as node])
+    (piggieback/cljs-repl (node/repl-env))
+    ```
+
+* Example usage of browser-connected Weasel REPL (requires
+e.g. `[weasel "0.6.0"]` in your project's `:dependencies`):
+
+  - At the Clojure REPL:
+
+    ```clojure
+    (require '[cemerick.piggieback :as piggieback])
+    (require '[weasel.repl.websocket :as weasel])
+    (piggieback/cljs-repl (weasel/repl-env :ip "127.0.0.1"
+                                           :port 9001))
+    ```
+
+  - and in your ClojureScript:
+
+    ```clojure
+    (ns my.cljs.core
+      (:require [weasel.repl :as repl]))
+
+    (repl/connect "ws://localhost:9001")
+    ```
+
+The [clojure-quick-repls](https://github.com/symfrog/clojure-quick-repls)
+library provides helper functions to automate REPL creation for both Clojure and
+Clojurescript, and will also automatically route requests to the correct REPL
+according to the file extension of the current buffer (note that CIDER does not
+provide the latter functionality out-of-the-box).
+
+Provided that a Piggieback-enabled ClojureScript environment is active in your
+REPL session, code loading and evaluation will work seamlessly regardless of the
+presence of the `cider-nrepl` middleware. If the middleware is present then most
+other features of CIDER will also be enabled (including code completion,
+documentation lookup, the namespace browser, and macroexpansion).
+
 ## Keyboard shortcuts
 
 * <kbd>M-x cider-jack-in</kbd>: Launch an nREPL server and a REPL client.
@@ -587,7 +752,8 @@ Keyboard shortcut                    | Description
 <kbd>C-c M-p</kbd>                   | Load the form preceding point in the REPL buffer.
 <kbd>C-c C-p</kbd>                   | Evaluate the form preceding point and pretty-print the result in a popup buffer.
 <kbd>C-c C-f</kbd>                   | Evaluate the top level form under point and pretty-print the result in a popup buffer.
-<kbd>C-M-x</kbd> <kbd>C-c C-c</kbd>  | Evaluate the top level form under point and display the result in the echo area.  If invoked with a prefix argument, insert the result into the current buffer.
+<kbd>C-M-x</kbd> <kbd>C-c C-c</kbd>  | Evaluate the top level form under point and display the result in the echo area.
+<kbd>C-u C-M-x</kbd> <kbd>C-u C-c C-c</kbd>  | Debug the top level form under point and walk through its evaluation
 <kbd>C-c C-r</kbd>                   | Evaluate the region and display the result in the echo area.
 <kbd>C-c C-b</kbd>                   | Interrupt any pending evaluations.
 <kbd>C-c C-m</kbd>                   | Invoke `macroexpand-1` on the form at point and display the result in a macroexpansion buffer.  If invoked with a prefix argument, `macroexpand` is used instead of `macroexpand-1`.
@@ -604,7 +770,8 @@ Keyboard shortcut                    | Description
 <kbd>C-c C-d d</kbd>                   | Display doc string for the symbol at point.  If invoked with a prefix argument, or no symbol is found at point, prompt for a symbol.
 <kbd>C-c C-d j</kbd>                   | Display JavaDoc (in your default browser) for the symbol at point.  If invoked with a prefix argument, or no symbol is found at point, prompt for a symbol.
 <kbd>C-c M-i</kbd>                   | Inspect expression. Will act on expression at point if present.
-<kbd>C-c M-t</kbd>                   | Toggle var tracing.
+<kbd>C-c M-t v</kbd>                 | Toggle var tracing.
+<kbd>C-c M-t n</kbd>                 | Toggle namespace tracing.
 <kbd>C-c C-u</kbd>                   | Undefine a symbol. If invoked with a prefix argument, or no symbol is found at point, prompt for a symbol.
 <kbd>C-c ,</kbd>                     | Run tests for namespace.
 <kbd>C-c C-,</kbd>                   | Re-run test failures/errors for namespace.
@@ -612,9 +779,10 @@ Keyboard shortcut                    | Description
 <kbd>C-c C-t</kbd>                   | Show the test report buffer.
 <kbd>M-.</kbd>                       | Jump to the definition of a symbol.  If invoked with a prefix argument, or no symbol is found at point, prompt for a symbol.
 <kbd>C-c M-.</kbd>                   | Jump to the resource referenced by the string at point.
+<kbd>C-c C-.</kbd>                   | Jump to some namespace on the classpath.
 <kbd>M-,</kbd>                       | Return to your pre-jump location.
 <kbd>M-TAB</kbd>                     | Complete the symbol at point.
-<kbd>C-c C-d g</kbd>                 | Lookup symbol in Grimoire.
+<kbd>C-c C-d r</kbd>                 | Lookup symbol in Grimoire.
 <kbd>C-c C-d a</kbd>                 | Apropos search for functions/vars.
 <kbd>C-c C-d A</kbd>                 | Apropos search for documentation.
 
@@ -636,14 +804,16 @@ Keyboard shortcut                    | Description
 <kbd>TAB</kbd> | Complete symbol at point.
 <kbd>C-c C-d d</kbd> | Display doc string for the symbol at point.  If invoked with a prefix argument, or no symbol is found at point, prompt for a symbol
 <kbd>C-c C-d j</kbd> | Display JavaDoc (in your default browser) for the symbol at point.  If invoked with a prefix argument, or no symbol is found at point, prompt for a symbol.
-<kbd>C-c C-d g</kbd> | Lookup symbol in Grimoire.
+<kbd>C-c C-d r</kbd> | Lookup symbol in Grimoire.
 <kbd>C-c C-d a</kbd> | Apropos search for functions/vars.
 <kbd>C-c C-d A</kbd> | Apropos search for documentation.
 <kbd>C-c C-z</kbd> | Switch to the previous Clojure buffer. This complements <kbd>C-c C-z</kbd> used in cider-mode.
-<kbd>C-c M-f</kbd> | Select a function from the current namespace and insert into the REPL buffer.
 <kbd>C-c M-i</kbd> | Inspect expression. Will act on expression at point if present.
 <kbd>C-c M-n</kbd> | Select a namespace and switch to it.
-<kbd>C-c M-t</kbd> | Toggle var tracing.
+<kbd>C-c C-.</kbd> | Jump to some namespace on the classpath.
+<kbd>C-c M-t v</kbd> | Toggle var tracing.
+<kbd>C-c M-t n</kbd> | Toggle namespace tracing.
+
 
 
 In the REPL you can also use "shortcut commands" by pressing `,` at the beginning of a REPL line. You'll be presented with a list of commands you can quickly run (like quitting, displaying some info, clearing the REPL, etc). The character used to trigger the shortcuts is configurable via `cider-repl-shortcut-dispatch-char`. Here's how you can change it to `:`:
@@ -704,6 +874,27 @@ Keyboard shortcut               | Description
 <kbd>d</kbd> | toggle display of duplicate frames
 <kbd>a</kbd> | toggle display of all frames
 
+### cider-debug
+<!-- Technically this is not a mode (yet), but let's not burden the user with that knowledge. -->
+
+`cider-debug` (invoked with <kbd>C-u C-M-x</kbd>) tries to be consistent with
+[Edebug](http://www.gnu.org/software/emacs/manual/html_node/elisp/Edebug.html). So
+it makes available the following bindings while stepping through code.
+
+Keyboard shortcut               | Description
+--------------------------------|-------------------------------
+<kbd>n</kbd> | Next step
+<kbd>c</kbd> | Continue without stopping
+<kbd>o</kbd> | Move out of the current sexp (like `up-list`)
+<kbd>i</kbd> | Inject a value into running code
+<kbd>e</kbd> | Eval code in current context
+<kbd>l</kbd> | List local variables
+<kbd>q</kbd> | Quit execution
+
+To uninstrument a form, after having instrumented it with <kbd>C-u C-M-x</kbd>
+you just have to evaluate the form again as you'd normally do (e.g. with
+<kbd>C-M-x</kbd>).
+
 ### Managing multiple sessions
 
 You can connect to multiple nREPL servers using <kbd>M-x
@@ -719,7 +910,7 @@ against the default connection.
 You can display the default nREPL connection using <kbd>C-c M-d</kbd>
 and rotate the default connection using <kbd>C-c M-r</kbd>. Another
 option for setting the default connection is to execute the command
-<kbd>M-x nrepl-make-repl-connection-default</kbd> in the appropriate
+<kbd>M-x nrepl-make-connection-default</kbd> in the appropriate
 REPL buffer.
 
 To switch to the relevant REPL buffer based on the Clojure namespace
@@ -746,19 +937,40 @@ change `*cider-repl localhost*` to `*cider-repl foo*`.
 ## Requirements
 
 * [Leiningen](http://leiningen.org) 2.x (only for `cider-jack-in`)
-* [GNU Emacs](http://www.gnu.org/software/emacs/emacs.html) 24.1+.
+* [GNU Emacs](http://www.gnu.org/software/emacs/emacs.html) 24.3+.
 * [Clojure](http://clojure.org) 1.5.0+
 
 ## Caveats
 
-### Completion
+### Var Metadata
 
-ClojureScript completion is provided by the
-[cider-nrepl](https://github.com/clojure-emacs/cider-nrepl) 'complete'
-implementation middleware which relies on
-[piggieback](https://github.com/cemerick/piggieback).  Include it in
-your project middlewares and call `(cemerick.piggieback/cljs-repl)` or
-another method to start up the ClojureScript REPL.
+Currently var metadata about the location of the var's definition within the
+source code (file, line & column) is set only when evaluating the entire source
+buffer (<kbd>C-c C-k</kbd>). All other interactive code evaluation commands
+(e.g. <kbd>C-c C-e</kbd>) don't set this metadata and you won't be able to use
+commands like `find-var` on such vars.  That's a
+[limitation of nREPL](http://dev.clojure.org/jira/browse/NREPL-59), that's
+beyond CIDER. If you want to see interactive evaluation working properly in
+CIDER you'll have to push for the aforementioned nREPL issue to be resolved.
+
+### ClojureScript limitations
+
+Currently, the following features are not supported for ClojureScript
+development:
+
+* Grimoire lookup
+* Reloading
+* Running tests
+* Tracing
+
+There is currently no support for both Clojure and ClojureScript evaluation in
+the same nREPL session. If Piggieback is active, code evaluation and all
+features will assume ClojureScript.
+
+The aforementioned
+[clojure-quick-repls](https://github.com/symfrog/clojure-quick-repls) aids this
+situation by routing requests to the correct REPL according to the file
+extension of the current buffer.
 
 ### Microsoft Windows
 
@@ -784,6 +996,71 @@ loaded. As a workaround remove
 ```
 
 from your Emacs config.
+
+## Troubleshooting
+
+In case you run into issues here are a few tips that can help you diagnose the
+problem.
+
+Generally, it's not a bad idea to configure Emacs to spit the backtrace on error
+(instead of just logging the error in the `*Messages*` buffer. You can toggle
+this behavior by using `M-x toggle-debug-on-error`.
+
+### REPL not starting
+
+Make sure that your `CIDER` version matches your `cider-nrepl` version. Check
+the contents of the `*Messages*` buffer for `CIDER`-related errors. You should
+also check the nREPL messages passed between CIDER and nREPL in
+`*nrepl-messages*`. If you don't see anything useful there it's time to bring
+out the big guns.
+
+#### Debugging the REPL init
+
+Emacs features a super powerful built-in
+[Emacs Lisp debugger](http://www.gnu.org/software/emacs/manual/html_node/elisp/Edebug.html)
+and using it is the best way to diagnose problems of any kind. To debug CIDER's
+REPL initialization it's a good idea to hook into one of its entry points. Add a
+breakpoint to `cider-make-repl` (`C-u C-M-x`, while its body). Next time you
+start CIDER you'll be dropped in the debugger and you can step forward until you
+find the problem.
+
+Here's a [great crash course](https://www.youtube.com/watch?v=odkYXXYOxpo) on
+using the debugger.
+
+### Missing `*nrepl-messages*` buffer
+
+Check the value of `nrepl-log-messages`. It should be non-nil.
+
+### `cider-debug` complains that it “failed to instrument ...”
+
+In the REPL buffer, issue the following.
+
+    your.namespace> (ns cider.nrepl.middleware.util.instrument)
+    cider.nrepl.middleware.util.instrument> (def verbose-debug true)
+
+This will cause cider to print extensive information on the REPL buffer when you try to debug an expression (e.g., with `C-u C-M-x`). [File an issue](https://github.com/clojure-emacs/cider-repl/issues/new) and copy this information.
+
+### Warning saying you have to use nREPL 0.2.7+
+
+CIDER currently requires at least nREPL 0.2.7 to work properly (there were some
+nasty bugs in 0.2.6). Unfortunately the latest `leiningen` (2.5.1) pulls in exactly
+0.2.6, so you if you're a lein user you'll have to do a bit of manual work. Just
+add this to your `profiles.clj`:
+
+```clojure
+{:user {:dependencies [[org.clojure/tools.nrepl "0.2.10"]]}}
+```
+
+Make sure you add the newer nREPL dependency to the `:dependencies` key instead
+of `:plugins` (where `cider-nrepl` Lein plugin resides). That's a pretty common
+mistake.
+
+Generally you're advised to use the newest nREPL with CIDER, as bugs get fixed
+in pretty much every release.
+
+Note, that running `cider-jack-in` from outside the scope of a project will
+result in the **older (0.2.6) nREPL dependency being used** (at least on Leiningen
+2.5.1). This is likely a Leiningen bug.
 
 ## Documentation
 
@@ -832,7 +1109,7 @@ The logo is licensed under a
 ### Discussion
 
 For questions, suggestions and support refer to our [official mailing list](https://groups.google.com/forum/#!forum/cider-emacs)
-or the Freenode channel `#clojure-emacs`.
+, the Freenode channel `#clojure-emacs`, `#cider` on [slack](https://clojurians.slack.com/) or our [gitter channel](https://gitter.im/clojure-emacs/cider).
 Please, don't report issues there, as this makes them harder to track.
 
 ### Issues
@@ -841,6 +1118,9 @@ Report issues and suggest features and improvements on the
 [GitHub issue tracker](https://github.com/clojure-emacs/cider/issues). Don't ask
 questions on the issue tracker - the mailing list and the IRC channel are the
 places for questions.
+
+If you want to file a bug, please clone this repo and provide sufficient details to reproduce the issue. Start by running `make run-cider`.
+This will bring up Emacs with only the latest version of CIDER loaded. By starting fresh, with the latest code, we can ensure that the problem at hand isn't already fixed or caused by interactions with other packages.
 
 ### Patches
 
@@ -878,9 +1158,12 @@ Run all tests with:
 $ make test
 ```
 
+(Note: tests may not run correctly inside Emacs' shell-mode buffers. Running
+in a terminal is recommended.)
+
 ## License
 
-Copyright © 2012-2014 Tim King, Phil Hagelberg, Bozhidar Batsov, Hugo
+Copyright © 2012-2015 Tim King, Phil Hagelberg, Bozhidar Batsov, Hugo
 Duncan, Steve Purcell and
 [contributors](https://github.com/clojure-emacs/cider/contributors).
 

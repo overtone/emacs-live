@@ -41,3 +41,7 @@
     (js2-mode)
     (should (equal (js2-get-jslint-globals)
                    '("quux" "tee" "$")))))
+
+;;;TODO
+;; ensure that any symbols bound with the import syntax are added to the extern list
+;; ensure that any symbols bound with the export syntax exist in the file scope

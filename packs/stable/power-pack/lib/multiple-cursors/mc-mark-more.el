@@ -107,19 +107,17 @@ Use like case-fold-search, don't recommend setting it globally.")
         (match-point-getter (ecase direction
                               (forwards 'match-beginning)
                               (backwards 'match-end))))
-    (if (and skip-last (not furthest-cursor))
-        (error "No cursors to be skipped")
-      (mc/save-excursion
-       (goto-char start-char)
-       (when skip-last
-         (mc/remove-fake-cursor furthest-cursor))
-       (if (funcall search-function re nil t)
-           (progn
-             (push-mark (funcall match-point-getter 0))
-             (when point-out-of-order
-               (exchange-point-and-mark))
-             (mc/create-fake-cursor-at-point))
-         (error "no more matches found."))))))
+    (mc/save-excursion
+     (goto-char start-char)
+     (when skip-last
+       (mc/remove-fake-cursor furthest-cursor))
+     (if (funcall search-function re nil t)
+         (progn
+           (push-mark (funcall match-point-getter 0))
+           (when point-out-of-order
+             (exchange-point-and-mark))
+           (mc/create-fake-cursor-at-point))
+       (error "no more matches found.")))))
 
 ;;;###autoload
 (defun mc/mark-next-like-this (arg)
@@ -129,10 +127,7 @@ With zero ARG, skip the last one and mark next."
   (interactive "p")
   (if (region-active-p)
       (if (< arg 0)
-          (let ((cursor (mc/furthest-cursor-after-point)))
-            (if cursor
-                (mc/remove-fake-cursor cursor)
-              (error "No cursors to be unmarked")))
+          (mc/remove-fake-cursor (mc/furthest-cursor-after-point))
         (mc/mark-more-like-this (= arg 0) 'forwards))
     (mc/mark-lines arg 'forwards))
   (mc/maybe-multiple-cursors-mode))
@@ -157,10 +152,7 @@ With zero ARG, skip the last one and mark next."
   (interactive "p")
   (if (region-active-p)
       (if (< arg 0)
-          (let ((cursor (mc/furthest-cursor-before-point)))
-            (if cursor
-                (mc/remove-fake-cursor cursor)
-              (error "No cursors to be unmarked")))
+          (mc/remove-fake-cursor (mc/furthest-cursor-before-point))
         (mc/mark-more-like-this (= arg 0) 'backwards))
     (mc/mark-lines arg 'backwards))
   (mc/maybe-multiple-cursors-mode))
@@ -282,28 +274,6 @@ With zero ARG, skip the last one and mark next."
         (mc/remove-fake-cursors)
         (goto-char beg)
         (while (search-forward search end t)
-          (push-mark (match-beginning 0))
-          (mc/create-fake-cursor-at-point))
-        (let ((first (mc/furthest-cursor-before-point)))
-          (if (not first)
-              (error "Search failed for %S" search)
-            (mc/pop-state-from-overlay first)))
-        (if (> (mc/num-cursors) 1)
-            (multiple-cursors-mode 1)
-          (multiple-cursors-mode 0))))))
-
-;;;###autoload
-(defun mc/mark-all-in-region-regexp (beg end)
-  "Find and mark all the parts in the region matching the given regexp"
-  (interactive "r")
-  (let ((search (read-regexp "Mark regexp in region: "))
-        (case-fold-search nil))
-    (if (string= search "")
-        (message "Mark aborted")
-      (progn
-        (mc/remove-fake-cursors)
-        (goto-char beg)
-        (while (search-forward-regexp search end t)
           (push-mark (match-beginning 0))
           (mc/create-fake-cursor-at-point))
         (let ((first (mc/furthest-cursor-before-point)))
@@ -449,7 +419,6 @@ With prefix, it behaves the same as original `mc/mark-all-like-this'"
         (when (<= (mc/num-cursors) before)
           (mc/mark-all-like-this))))))
 
-;;;###autoload
 (defun mc/mark-all-dwim (arg)
   "Tries even harder to guess what you want to mark all of.
 

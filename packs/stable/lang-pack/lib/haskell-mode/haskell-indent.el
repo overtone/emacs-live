@@ -6,7 +6,6 @@
 ;; Author: 1997-1998 Guy Lapalme <lapalme@iro.umontreal.ca>
 
 ;; Keywords: indentation Haskell layout-rule
-;; Version: 1.2
 ;; URL: http://www.iro.umontreal.ca/~lapalme/layout/index.html
 
 ;; This file is not part of GNU Emacs.
@@ -102,16 +101,19 @@
 (defcustom haskell-indent-offset 4
   "Indentation of Haskell statements with respect to containing block."
   :type 'integer
+  :safe #'natnump
   :group 'haskell-indent)
 
 (defcustom haskell-indent-literate-Bird-default-offset 1
   "Default number of blanks after > in a Bird style literate script."
   :type 'integer
+  :safe #'natnump
   :group 'haskell-indent)
 
 (defcustom haskell-indent-rhs-align-column 0
   "Column on which to align right-hand sides (use 0 for ad-hoc alignment)."
   :type 'integer
+  :safe #'natnump
   :group 'haskell-indent)
 
 (defun haskell-indent-point-to-col (apoint)
@@ -324,6 +326,7 @@ It deals with both Bird style and non Bird-style scripts."
 (defcustom haskell-indent-look-past-empty-line t
   "If nil, indentation engine will not look past an empty line for layout points."
   :group 'haskell-indent
+  :safe #'booleanp
   :type 'boolean)
 
 (defun haskell-indent-start-of-def ()
@@ -396,7 +399,7 @@ Returns the location of the start of the comment, nil otherwise."
    ((looking-at "\\(\\([[:alpha:]]\\(\\sw\\|'\\)*\\)\\|_\\)[ \t\n]*")
     'ident)
    ((looking-at "\\(|[^|]\\)[ \t\n]*") 'guard)
-   ((looking-at "\\(=[^>=]\\|::\\|->\\|<-\\)[ \t\n]*") 'rhs)
+   ((looking-at "\\(=[^>=]\\|::\\|∷\\|→\\|←\\|->\\|<-\\)[ \t\n]*") 'rhs)
    (t 'other)))
 
 (defvar haskell-indent-current-line-first-ident ""
@@ -655,8 +658,8 @@ Returns the location of the start of the comment, nil otherwise."
           (string-match "where[ \t]*" haskell-indent-current-line-first-ident))
          (diff-first                 ; not a function def with the same name
           (or (null valname-string)
-              (not (string= (haskell-trim valname-string)
-                            (haskell-trim haskell-indent-current-line-first-ident)))))
+              (not (string= (haskell-string-trim valname-string)
+                            (haskell-string-trim haskell-indent-current-line-first-ident)))))
 
          ;; (is-type-def
          ;;  (and rhs-sign (eq (char-after rhs-sign) ?\:)))
@@ -1020,6 +1023,7 @@ OPEN is the start position of the comment in which point is."
 This is necessary in the \"do\" layout under Haskell-98.
 See http://hackage.haskell.org/trac/haskell-prime/wiki/DoAndIfThenElse"
   :group 'haskell-indent
+  :safe #'booleanp
   :type 'integer)
 
 (defun haskell-indent-closing-keyword (start)
@@ -1534,6 +1538,7 @@ One indentation cycle is used."
 (defun turn-off-haskell-indent ()
   "Turn off ``intelligent'' Haskell indentation mode."
   (kill-local-variable 'indent-line-function)
+  (kill-local-variable 'indent-region-function)
   ;; Remove haskell-indent-map from the local map.
   (let ((map (current-local-map)))
     (while map

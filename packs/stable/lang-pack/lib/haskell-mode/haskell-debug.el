@@ -70,6 +70,7 @@
 
 (define-key haskell-debug-mode-map (kbd "g") 'haskell-debug/refresh)
 (define-key haskell-debug-mode-map (kbd "s") 'haskell-debug/step)
+(define-key haskell-debug-mode-map (kbd "t") 'haskell-debug/trace)
 (define-key haskell-debug-mode-map (kbd "d") 'haskell-debug/delete)
 (define-key haskell-debug-mode-map (kbd "b") 'haskell-debug/break-on-function)
 (define-key haskell-debug-mode-map (kbd "a") 'haskell-debug/abandon)
@@ -184,6 +185,7 @@
   "Refresh the debugger buffer."
   (interactive)
   (with-current-buffer (haskell-debug-buffer-name (haskell-debug-session))
+    (cd (haskell-session-current-dir (haskell-debug-session)))
     (let ((inhibit-read-only t)
           (p (point)))
       (erase-buffer)
@@ -221,6 +223,19 @@
          (format ":delete %d"
                  (plist-get break :number)))
         (haskell-debug/refresh))))))
+
+(defun haskell-debug/trace ()
+  "Trace the expression."
+  (interactive)
+  (haskell-debug-with-modules
+   (haskell-debug-with-breakpoints
+    (let ((expr (read-from-minibuffer "Expression to trace: "
+                                      (haskell-ident-at-point))))
+      (haskell-process-queue-sync-request
+       (haskell-debug-process)
+       (concat ":trace " expr))
+      (message "Tracing expression: %s" expr)
+      (haskell-debug/refresh)))))
 
 (defun haskell-debug/step (&optional expr)
   "Step into the next function."
@@ -332,7 +347,8 @@
 (defun haskell-debug-insert-bindings (modules breakpoints context)
   "Insert a list of bindings."
   (if breakpoints
-      (progn (haskell-debug-insert-binding "s" "step into an expression")
+      (progn (haskell-debug-insert-binding "t" "trace an expression")
+             (haskell-debug-insert-binding "s" "step into an expression")
              (haskell-debug-insert-binding "b" "breakpoint" t))
     (progn
       (when modules
@@ -360,9 +376,9 @@
 
 (defun haskell-debug-insert-breakpoints (breakpoints)
   "insert the list of breakpoints."
-  (haskell-debug-insert-header "breakpoints")
+  (haskell-debug-insert-header "Breakpoints")
   (if (null breakpoints)
-      (haskell-debug-insert-muted "no active breakpoints.")
+      (haskell-debug-insert-muted "No active breakpoints.")
     (cl-loop for break in breakpoints
              do (insert (propertize (format "%d"
                                             (plist-get break :number))

@@ -27,6 +27,8 @@ clojure-mode (version 2.1.1)
 * Read [how to properly contribute to open source projects on Github][2].
 * Use a topic branch to easily amend a pull request later, if necessary.
 * Write [good commit messages][3].
+* Mention related tickets in the commit messages (e.g. `[Fix #N] Font-lock properly ...`)
+* Update the [changelog][6].
 * Use the same coding conventions as the rest of the project.
 * Verify your Emacs Lisp code with `checkdoc` (<kbd>C-c ? d</kbd>).
 * [Squash related commits together][5].
@@ -39,3 +41,4 @@ and description in grammatically correct, complete sentences.
 [3]: http://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html
 [4]: https://help.github.com/articles/using-pull-requests
 [5]: http://gitready.com/advanced/2009/02/10/squashing-commits-with-rebase.html
+[6]: https://github.com/clojure-emacs/clojure-mode/blob/master/CHANGELOG.md

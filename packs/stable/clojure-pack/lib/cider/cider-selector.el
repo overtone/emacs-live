@@ -1,7 +1,7 @@
 ;;; cider-selector.el --- Buffer selection command inspired by SLIME's selector -*- lexical-binding: t -*-
 
-;; Copyright © 2012-2014 Tim King, Phil Hagelberg
-;; Copyright © 2013-2014 Bozhidar Batsov, Hugo Duncan, Steve Purcell
+;; Copyright © 2012-2015 Tim King, Phil Hagelberg
+;; Copyright © 2013-2015 Bozhidar Batsov, Hugo Duncan, Steve Purcell
 ;;
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Phil Hagelberg <technomancy@gmail.com>
@@ -50,7 +50,7 @@ DESCRIPTION is a one-line description of what the key selects.")
 Only considers buffers that are not already visible."
   (cl-loop for buffer in (buffer-list)
            when (and (with-current-buffer buffer (eq major-mode mode))
-                     (not (string-match "^ " (buffer-name buffer)))
+                     (not (string-match-p "^ " (buffer-name buffer)))
                      (null (get-buffer-window buffer 'visible)))
            return buffer
            finally (error "Can't find unshown buffer in %S" mode)))
@@ -105,7 +105,7 @@ is chosen.  The returned buffer is selected with
     `(setq cider-selector-methods
            (cl-sort (cons (list ,key ,description ,method)
                           (cl-remove ,key cider-selector-methods :key #'car))
-                  #'< :key #'car))))
+                    #'< :key #'car))))
 
 (def-cider-selector-method ?? "Selector help buffer."
   (ignore-errors (kill-buffer cider-selector-help-buffer))
@@ -151,9 +151,9 @@ is chosen.  The returned buffer is selected with
   cider-error-buffer)
 
 (def-cider-selector-method ?s
- "Cycle to the next CIDER connection's REPL."
- (cider-rotate-connection)
- (cider-get-repl-buffer))
+  "Cycle to the next CIDER connection's REPL."
+  (cider-rotate-connection)
+  (cider-get-repl-buffer))
 
 (provide 'cider-selector)
 

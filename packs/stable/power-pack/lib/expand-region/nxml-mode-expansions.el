@@ -68,41 +68,35 @@
     (nxml-backward-up-element)
     (nxml-forward-balanced-item 1)))
 
-(defun er/mark-nxml-attribute-string ()
-  "Marks an attribute string."
-  (interactive)
-  (when (or (er/looking-back-exact "\"")
-            (er/looking-back-exact "'"))
-    (backward-char 1))
-  ;; Using syntax highlighting is a hack, but I can't figure out how
-  ;; to use nxml-mode functions to do it.
-  (font-lock-fontify-buffer)
-  (when (member (get-char-property (point) 'face)
-                '((nxml-attribute-value)
-                  (nxml-attribute-value-delimiter)))
-    (while (member (get-char-property (point) 'face)
-                   '((nxml-attribute-value)
-                     (nxml-attribute-value-delimiter)))
-      (backward-char 1))
-    (set-mark (point))
-    (forward-sexp 1)
-    (exchange-point-and-mark)
-    ;; move past the '='
-    (forward-char 1)))
+(defun er/inside-nxml-attribute-string? ()
+  "Returns the attribute from `xmltok-attributes' array that
+point is in, or otherwise nil"
+  (save-excursion 
+    (forward-char 1)
+    (nxml-token-before))
+  (let ((attr (find-if (lambda (att) 
+                           (and (<= (xmltok-attribute-value-start att) (point))
+                                (>= (xmltok-attribute-value-end att) (point)))) 
+                         xmltok-attributes)))
+    attr))
 
-(defun er/mark-nxml-attribute-inside-string ()
+(defun er/mark-nxml-attribute-inner-string ()
+  "Marks an attribute string"
+  (interactive)
+  (let ((attr (er/inside-nxml-attribute-string?)))
+    (when attr
+      (set-mark (xmltok-attribute-value-start attr))
+      (goto-char (xmltok-attribute-value-end attr))
+      (exchange-point-and-mark))))
+
+(defun er/mark-nxml-attribute-string ()
   "Marks an attribute string inside quotes."
   (interactive)
-  (font-lock-fontify-buffer)
-  (when (member (get-char-property (point) 'face)
-                '((nxml-attribute-value)))
-    (while (member (get-char-property (point) 'face)
-                   '((nxml-attribute-value)))
-      (backward-char 1))
-    (forward-char 1)
-    (set-mark (point))
-    (forward-sexp 1)
-    (exchange-point-and-mark)))
+  (let ((attr (er/inside-nxml-attribute-string?)))
+    (when attr      
+      (set-mark (1- (xmltok-attribute-value-start attr)))
+      (goto-char (1+ (xmltok-attribute-value-end attr)))
+      (exchange-point-and-mark))))
 
 (defun er/add-nxml-mode-expansions ()
   "Adds Nxml-specific expansions for buffers in nxml-mode"

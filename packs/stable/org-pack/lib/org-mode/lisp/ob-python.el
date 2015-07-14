@@ -1,6 +1,6 @@
 ;;; ob-python.el --- org-babel functions for python evaluation
 
-;; Copyright (C) 2009-2014 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2015 Free Software Foundation, Inc.
 
 ;; Authors: Eric Schulte
 ;;	 Dan Davison
@@ -80,6 +80,8 @@ This function is called by `org-babel-execute-src-block'."
 	 (return-val (when (and (eq result-type 'value) (not session))
 		       (cdr (assoc :return params))))
 	 (preamble (cdr (assoc :preamble params)))
+	 (org-babel-python-command
+	  (or (cdr (assoc :python params)) org-babel-python-command))
          (full-body
 	  (org-babel-expand-body:generic
 	   (concat body (if return-val (format "\nreturn %s" return-val) ""))
@@ -222,13 +224,13 @@ then create.  Return the initialized session."
 
 (defvar org-babel-python-eoe-indicator "'org_babel_python_eoe'"
   "A string to indicate that evaluation has completed.")
-(defvar org-babel-python-wrapper-method
+(defconst org-babel-python-wrapper-method
   "
 def main():
 %s
 
 open('%s', 'w').write( str(main()) )")
-(defvar org-babel-python-pp-wrapper-method
+(defconst org-babel-python-pp-wrapper-method
   "
 import pprint
 def main():

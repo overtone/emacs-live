@@ -2,7 +2,7 @@
 
 ;; Copyright (C) 2012, 2014 Sébastien Delafond
 
-;; Author: Sébastien Delafond <sdelafond at gmx dot net>
+;; Author: Sébastien Delafond <sdelafond@gmail.com>
 ;; Keywords: outlines, confluence, wiki
 
 ;; This file is not part of GNU Emacs.
@@ -45,7 +45,9 @@
 		     (footnote-reference . org-confluence-empty)
 		     (headline . org-confluence-headline)
 		     (italic . org-confluence-italic)
+                     (item . org-confluence-item)
 		     (link . org-confluence-link)
+		     (property-drawer . org-confluence-property-drawer)
 		     (section . org-confluence-section)
 		     (src-block . org-confluence-src-block)
 		     (strike-through . org-confluence-strike-through)
@@ -70,6 +72,11 @@
 (defun org-confluence-italic (italic contents info)
   (format "_%s_" contents))
 
+(defun org-confluence-item (item contents info)
+  (concat (make-string (1+ (org-confluence--li-depth item)) ?\-)
+          " "
+          (org-trim contents)))
+
 (defun org-confluence-fixed-width (fixed-width contents info)
   (format "\{\{%s\}\}" contents))
 
@@ -93,6 +100,11 @@
              (t
               raw-link))
             "]")))
+
+(defun org-confluence-property-drawer (property-drawer contents info)
+  (and (org-string-nw-p contents)
+       (format "\{\{%s\}\}" contents)))
+
 (defun org-confluence-section (section contents info)
   contents)
 
@@ -137,6 +149,22 @@
           "}\n"
           contents
           "\{code\}\n"))
+
+(defun org-confluence--li-depth (item)
+  "Return depth of a list item; -1 means not a list item"
+  ;; FIXME check whether it's worth it to cache depth
+  ;;       (it gets recalculated quite a few times while
+  ;;       traversing a list)
+  (let ((depth -1)
+        (tag))
+    (while (and item
+                (setq tag (car item))
+                (or (eq tag 'item) ; list items interleave with plain-list
+                    (eq tag 'plain-list)))
+      (when (eq tag 'item)
+        (incf depth))
+      (setq item (org-export-get-parent item)))
+    depth))
 
 ;; main interactive entrypoint
 (defun org-confluence-export-as-confluence

@@ -35,7 +35,8 @@ If you have [el-get](https://github.com/dimitri/el-get), simply `M-x el-get-inst
       "secret": "your_api_secret_not_your_password"
     }
   }
-}```
+}
+```
 
 ## Usage
 

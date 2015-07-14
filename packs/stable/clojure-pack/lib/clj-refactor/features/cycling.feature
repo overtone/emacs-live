@@ -19,6 +19,20 @@ Feature: Code Cycling
       (+ a b))
     """
 
+  Scenario: Cycling Privacy (from the front)
+    When I insert:
+    """
+    (defn- add [a b]
+      (+ a b))
+    """
+    And I press "C-M-b"
+    And I press "C-! cp"
+    Then I should see:
+    """
+    (defn add [a b]
+      (+ a b))
+    """
+
   Scenario: Cycling Privacy (defn -> defn ^:private)
     When I insert:
     """

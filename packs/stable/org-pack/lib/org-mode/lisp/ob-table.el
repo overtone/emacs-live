@@ -47,7 +47,10 @@
 ;; |        7 |        |
 ;; |        8 |        |
 ;; |        9 |        |
-;; #+TBLFM: $2='(org-sbe 'fibbd (n $1))
+;; #+TBLFM: $2='(org-sbe "fibbd" (n $1))
+
+;; NOTE: The quotation marks around the function name, 'fibbd' here,
+;; are optional.
 
 ;;; Code:
 (require 'ob-core)
@@ -62,23 +65,30 @@ character and replace it with ellipses."
 
 (defmacro org-sbe (source-block &rest variables)
   "Return the results of calling SOURCE-BLOCK with VARIABLES.
-Each element of VARIABLES should be a two
-element list, whose first element is the name of the variable and
-second element is a string of its value.  The following call to
-`org-sbe' would be equivalent to the following source code block.
 
- (org-sbe 'source-block (n $2) (m 3))
+Each element of VARIABLES should be a list of two elements: the
+first element is the name of the variable and second element is a
+string of its value.
 
-#+begin_src emacs-lisp :var results=source-block(n=val_at_col_2, m=3) :results silent
-results
-#+end_src
+So this `org-sbe' construct
 
-NOTE: by default string variable names are interpreted as
+ (org-sbe \"source-block\" (n $2) (m 3))
+
+is the equivalent of the following source code block:
+
+ #+begin_src emacs-lisp :var results=source-block(n=val_at_col_2, m=3) :results silent
+ results
+ #+end_src
+
+NOTE: The quotation marks around the function name,
+'source-block', are optional.
+
+NOTE: By default, string variable names are interpreted as
 references to source-code blocks, to force interpretation of a
 cell's value as a string, prefix the identifier a \"$\" (e.g.,
 \"$$2\" instead of \"$2\" or \"$@2$2\" instead of \"@2$2\").
 
-NOTE: it is also possible to pass header arguments to the code
+NOTE: It is also possible to pass header arguments to the code
 block.  In this case a table cell should hold the string value of
 the header argument which can then be passed before all variables
 as shown in the example below.

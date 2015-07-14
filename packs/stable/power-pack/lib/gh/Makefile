@@ -1,5 +1,5 @@
 PKGNAME = gh
-VERSION = 0.8.0
+VERSION = 0.9.2
 SNAPDIR = $(PKGNAME)-$(VERSION)
 
 PKGDEF    = $(PKGNAME)-pkg.el
@@ -65,7 +65,7 @@ elpa: info
 	rm -f $(ELPA)/$(PKGNAME)-$(VERSION).tar
 	mkdir -p $(ELPA)/$(SNAPDIR) && chmod 0755 $(ELPA)/$(SNAPDIR)
 	cp $(SOURCE) $(ELPA)/$(SNAPDIR)
-	pandoc -f markdown_github -t plain $(README) | tail +3 > $(ELPA)/$(SNAPDIR)/README
+	pandoc -f markdown_github -t plain $(README) | tail -n +3 > $(ELPA)/$(SNAPDIR)/README
 	cp docs/build/texinfo/$(PKGNAME).info $(ELPA)/$(SNAPDIR)
 	sed -e "s/%VERSION%/$(VERSION)/g" < $(PKGDEF) \
 		> $(ELPA)/$(SNAPDIR)/$(PKGDEF)

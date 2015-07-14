@@ -116,29 +116,21 @@
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.cabal\\'" . haskell-cabal-mode))
 
-(defvar haskell-cabal-mode-map (make-sparse-keymap))
-(define-key haskell-cabal-mode-map  (kbd "C-c s")
-  'haskell-cabal-subsection-arrange-lines)
-(define-key haskell-cabal-mode-map  (kbd "C-M-n") 'haskell-cabal-next-section)
-(define-key haskell-cabal-mode-map  (kbd "C-M-p")
-  'haskell-cabal-previous-section)
-(define-key haskell-cabal-mode-map  (kbd "M-n") 'haskell-cabal-next-subsection)
-(define-key haskell-cabal-mode-map  (kbd "M-p")
-  'haskell-cabal-previous-subsection)
-(define-key haskell-cabal-mode-map  (kbd "C-<down>")
-  'haskell-cabal-next-subsection)
-(define-key haskell-cabal-mode-map  (kbd "C-<up>")
-  'haskell-cabal-previous-subsection)
-(define-key haskell-cabal-mode-map  (kbd "C-c f")
-  'haskell-cabal-find-or-create-source-file)
-(define-key haskell-cabal-mode-map  (kbd "M-g l")
-  'haskell-cabal-goto-library-section)
-(define-key haskell-cabal-mode-map  (kbd "M-g e")
-  'haskell-cabal-goto-executable-section)
-(define-key haskell-cabal-mode-map  (kbd "M-g b")
-  'haskell-cabal-goto-benchmark-section)
-(define-key haskell-cabal-mode-map  (kbd "M-g t")
-  'haskell-cabal-goto-test-suite-section)
+(defvar haskell-cabal-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-s") 'haskell-cabal-subsection-arrange-lines)
+    (define-key map (kbd "C-M-n") 'haskell-cabal-next-section)
+    (define-key map (kbd "C-M-p") 'haskell-cabal-previous-section)
+    (define-key map (kbd "M-n") 'haskell-cabal-next-subsection)
+    (define-key map (kbd "M-p") 'haskell-cabal-previous-subsection)
+    (define-key map (kbd "C-<down>") 'haskell-cabal-next-subsection)
+    (define-key map (kbd "C-<up>") 'haskell-cabal-previous-subsection)
+    (define-key map (kbd "C-c C-f") 'haskell-cabal-find-or-create-source-file)
+    (define-key map (kbd "M-g l") 'haskell-cabal-goto-library-section)
+    (define-key map (kbd "M-g e") 'haskell-cabal-goto-executable-section)
+    (define-key map (kbd "M-g b") 'haskell-cabal-goto-benchmark-section)
+    (define-key map (kbd "M-g t") 'haskell-cabal-goto-test-suite-section)
+    map))
 
 ;;;###autoload
 (define-derived-mode haskell-cabal-mode fundamental-mode "Haskell-Cabal"
@@ -180,6 +172,20 @@
           val)))))
 
 ;;;###autoload
+(defun haskell-cabal-guess-setting (name)
+  "Guess the specified setting of this project.
+If there is no valid .cabal file to get the setting from (or
+there is no corresponding setting with that name in the .cabal
+file), then this function returns nil."
+  (interactive)
+  (when (and name buffer-file-name)
+    (let ((cabal-file (haskell-cabal-find-file)))
+      (when (and cabal-file (file-readable-p cabal-file))
+        (with-temp-buffer
+          (insert-file-contents cabal-file)
+          (haskell-cabal-get-setting name))))))
+
+;;;###autoload
 (defun haskell-cabal-get-dir ()
   "Get the Cabal dir for a new project. Various ways of figuring this out,
    and indeed just prompting the user. Do them all."
@@ -204,21 +210,25 @@ Return nil if no Cabal description file could be located via
 If DIR is nil, `default-directory' is used as starting point for
 directory traversal.  Upward traversal is aborted if file owner
 changes.  Uses`haskell-cabal-find-pkg-desc' internally."
-  (catch 'found
-    (let ((user (nth 2 (file-attributes (or dir default-directory))))
-          ;; Abbreviate, so as to stop when we cross ~/.
-          (root (abbreviate-file-name (or dir default-directory))))
-      ;; traverse current dir up to root as long as file owner doesn't change
-      (while (and root (equal user (nth 2 (file-attributes root))))
-        (let ((cabal-file (haskell-cabal-find-pkg-desc root)))
-          (when cabal-file
-            (throw 'found cabal-file)))
+  (let ((use-dir (or dir default-directory)))
+    (while (and use-dir (not (file-directory-p use-dir)))
+      (setq use-dir (file-name-directory (directory-file-name use-dir))))
+    (when use-dir
+      (catch 'found
+        (let ((user (nth 2 (file-attributes use-dir)))
+              ;; Abbreviate, so as to stop when we cross ~/.
+              (root (abbreviate-file-name use-dir)))
+          ;; traverse current dir up to root as long as file owner doesn't change
+          (while (and root (equal user (nth 2 (file-attributes root))))
+            (let ((cabal-file (haskell-cabal-find-pkg-desc root)))
+              (when cabal-file
+                (throw 'found cabal-file)))
 
-        (let ((proot (file-name-directory (directory-file-name root))))
-          (if (equal proot root) ;; fix-point reached?
-              (throw 'found nil)
-            (setq root proot))))
-      nil)))
+            (let ((proot (file-name-directory (directory-file-name root))))
+              (if (equal proot root) ;; fix-point reached?
+                  (throw 'found nil)
+                (setq root proot))))
+          nil)))))
 
 (defun haskell-cabal-find-pkg-desc (dir &optional allow-multiple)
   "Find a package description file in the directory DIR.
@@ -288,7 +298,8 @@ OTHER-WINDOW use `find-file-other-window'."
     "hscolour"
     "register"
     "test"
-    "help"))
+    "help"
+    "run"))
 
 
 (defgroup haskell-cabal nil
@@ -450,6 +461,7 @@ resultung buffer-content"
        (save-excursion
          (prog1
              (with-temp-buffer
+               (setq indent-tabs-mode nil)
                (indent-to ,start-col)
                (insert ,section-data)
                (goto-char (point-min))
@@ -869,7 +881,9 @@ Source names from main-is and c-sources sections are left untouched
          (indent-line-to indent)
          (beginning-of-line)
          (when (looking-at "[ ]*\\([ ]\\{2\\},[ ]*\\)")
-           (replace-match ", " t t nil 1))))))
+           (replace-match ", " t t nil 1)))))
+    (empty
+     (indent-relative)))
   (haskell-cabal-forward-to-line-entry))
 
 (defun haskell-cabal-map-sections (fun)

@@ -1,0 +1,33 @@
+@charset "UTF-8";
+@import url("http://fonts.googleapis.com/css?family=Lato:400,400italic,700,700italic&subset=latin,latin-ext");
+@import url("http://fonts.googleapis.com/css?family=Source Code Pro");
+
+body {font-family: Lato, Arial, sans-serif; font-feature-settings: "kern", "liga", "clig", "calt"; font-size: 14pt; line-height: 1.35; }
+body {width: 800px; margin: 0 auto;}
+table.menu {width: 700px; margin-left: 50px; }
+/* makeinfo 5.2 */
+div.header p {margin: 0; text-align: right;}
+div.header {background-color: #9a98bd; background: linear-gradient(#CDCCDE,#A9A7CD);}
+/* makeinfo 4.8 */
+div.node {background-color: #9a98bd; background: linear-gradient(#CDCCDE,#A9A7CD);}
+div.node p {margin: 0; text-align: right;}
+div.node hr {margin: 0;}
+
+div.footnote h3 {display: inline; font-size: normal;}
+/* makeinfo up to 5.2 cannot pass on unicode characters without messing them up */
+a[rel="up"]:before {content: " \2191 "; /* ↑ */}
+a[rel="prev"]:before {content: " \2190 "; /* ← */}
+a[rel="next"]:before {content: " \2192 "; /* → */}
+code, kbd, samp, pre { font-family: "Source Code Pro", Menlo, Inconsolata, monospace;}
+kbd {font-style:normal}
+div.background {
+    position: fixed;
+    right: 30px;
+    bottom: 0px;
+    width: 256px;
+    height: 256px;
+    opacity: 0.3;
+    background-image: url("haskell-mode.svg");
+    background-repeat: no-repeat;
+    background-size: 256px 256px;
+}

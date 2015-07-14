@@ -4,7 +4,6 @@
 ;; Keywords: navigation slime elisp emacs-lisp
 ;; URL: https://github.com/purcell/elisp-slime-nav
 ;; Version: DEV
-;; Package-Requires: ((cl-lib "0.2"))
 ;;
 ;;; Commentary:
 ;;
@@ -30,7 +29,6 @@
 ;;
 ;;; Code:
 
-(eval-when-compile (require 'cl-lib))
 (require 'etags)
 (require 'help-mode)
 
@@ -54,9 +52,12 @@
 
 (defun elisp-slime-nav--all-navigable-symbol-names ()
   "Return a list of strings for the symbols to which navigation is possible."
-  (cl-loop for x being the symbols
-           if (or (fboundp x) (boundp x) (symbol-plist x) (facep x))
-           collect (symbol-name x)))
+  (let ((result '()))
+    (mapatoms
+     (lambda (x)
+       (when (or (fboundp x) (boundp x) (symbol-plist x) (facep x))
+         (push (symbol-name x) result))))
+    result))
 
 (defun elisp-slime-nav--read-symbol-at-point ()
   "Return the symbol at point as a string.
@@ -80,19 +81,20 @@ Argument SYM-NAME is the thing to find."
   (interactive (list (elisp-slime-nav--read-symbol-at-point)))
   (when sym-name
     (let ((sym (intern sym-name)))
-      (message "Searching for %s..." (pp-to-string sym))
+      (message "Searching for %s..." sym-name)
       (ring-insert find-tag-marker-ring (point-marker))
       (cond
-       ((fboundp sym) (find-function sym))
-       ((boundp sym) (find-variable sym))
+       ((fboundp sym)
+        (find-function sym))
+       ((boundp sym)
+        (find-variable sym))
        ((or (featurep sym) (locate-library sym-name))
         (find-library sym-name))
        ((facep sym)
         (find-face-definition sym))
-       (:else
-        (progn
-          (pop-tag-mark)
-          (error "Don't know how to find '%s'" sym)))))))
+       (t
+        (pop-tag-mark)
+        (error "Don't know how to find '%s'" sym))))))
 
 ;;;###autoload
 (defun elisp-slime-nav-describe-elisp-thing-at-point (sym-name)

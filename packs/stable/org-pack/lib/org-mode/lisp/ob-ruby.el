@@ -209,21 +209,32 @@ return the value of the last statement in BODY, as elisp."
     ;; comint session evaluation
     (case result-type
       (output
-       (mapconcat
-	#'identity
-	(butlast
-	 (split-string
-	  (mapconcat
-	   #'org-babel-trim
-	   (butlast
-	    (org-babel-comint-with-output
-		(buffer org-babel-ruby-eoe-indicator t body)
-	      (mapc
-	       (lambda (line)
-		 (insert (org-babel-chomp line)) (comint-send-input nil t))
-	       (list body org-babel-ruby-eoe-indicator))
-	      (comint-send-input nil t)) 2)
-	   "\n") "[\r\n]")) "\n"))
+       (let ((eoe-string (format "puts \"%s\"" org-babel-ruby-eoe-indicator)))
+	 ;; Force the session to be ready before the actual session
+	 ;; code is run.  There is some problem in comint that will
+	 ;; sometimes show the prompt after the the input has already
+	 ;; been inserted and that throws off the extraction of the
+	 ;; result for Babel.
+	 (org-babel-comint-with-output
+	     (buffer org-babel-ruby-eoe-indicator t eoe-string)
+	   (insert eoe-string) (comint-send-input nil t))
+	 ;; Now we can start the evaluation.
+	 (mapconcat
+	  #'identity
+	  (butlast
+	   (split-string
+	    (mapconcat
+	     #'org-babel-trim
+	     (org-babel-comint-with-output
+		 (buffer org-babel-ruby-eoe-indicator t body)
+	       (mapc
+		(lambda (line)
+		  (insert (org-babel-chomp line)) (comint-send-input nil t))
+		(list "conf.echo=false;_org_prompt_mode=conf.prompt_mode;conf.prompt_mode=:NULL"
+		      body
+		      "conf.prompt_mode=_org_prompt_mode;conf.echo=true"
+		      eoe-string)))
+	     "\n") "[\r\n]") 4) "\n")))
       (value
        (let* ((tmp-file (org-babel-temp-file "ruby-"))
 	      (ppp (or (member "code" result-params)

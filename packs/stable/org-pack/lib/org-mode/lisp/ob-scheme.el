@@ -118,6 +118,22 @@ org-babel-scheme-execute-with-geiser will use a temporary session."
 	       (name))))
     result))
 
+(defmacro org-babel-scheme-capture-current-message (&rest body)
+  "Capture current message in both interactive and noninteractive mode"
+  `(if noninteractive
+       (let ((original-message (symbol-function 'message))
+             (current-message nil))
+         (unwind-protect
+             (progn
+               (defun message (&rest args)
+                 (setq current-message (apply original-message args)))
+               ,@body
+               current-message)
+           (fset 'message original-message)))
+     (progn
+       ,@body
+       (current-message))))
+
 (defun org-babel-scheme-execute-with-geiser (code output impl repl)
   "Execute code in specified REPL. If the REPL doesn't exist, create it
 using the given scheme implementation.
@@ -142,10 +158,11 @@ is true; otherwise returns the last value."
 			     (current-buffer)))))
 	(setq geiser-repl--repl repl-buffer)
 	(setq geiser-impl--implementation nil)
-	(geiser-eval-region (point-min) (point-max))
+	(setq result (org-babel-scheme-capture-current-message
+		      (geiser-eval-region (point-min) (point-max))))
 	(setq result
-	      (if (equal (substring (current-message) 0 3) "=> ")
-		  (replace-regexp-in-string "^=> " "" (current-message))
+	      (if (and (stringp result) (equal (substring result 0 3) "=> "))
+		  (replace-regexp-in-string "^=> " "" result)
 		"\"An error occurred.\""))
 	(when (not repl)
 	  (save-current-buffer (set-buffer repl-buffer)

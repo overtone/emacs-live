@@ -493,6 +493,20 @@
       (read-event nil nil (+ popwin:close-popup-window-timer-interval 0.5)))
     (should (popwin:popup-window-live-p))))
 
+(when (fboundp 'display-buffer-in-side-window)
+  (ert-deftest popwin-side-window ()
+    (popwin-test:common
+     (let* ((side-buf (get-buffer-create "*side-buf*"))
+            (side-win (display-buffer-in-side-window side-buf nil)))
+       (should (eq (length (window-list)) 2))
+       (popwin:popup-buffer buf2)
+       (should (popwin-test:front-buffer-p buf2))
+       (should (eq (length (window-list)) 3))
+       (popwin:close-popup-window)
+       (should (popwin-test:front-buffer-p buf1))
+       (should (eq (length (window-list)) 2))
+       (should (window-live-p side-win))))))
+
 ;; test-case M-x occur and M-x next-error
 ;; test-case M-x dired and o
 ;; test-case fixed size popwin

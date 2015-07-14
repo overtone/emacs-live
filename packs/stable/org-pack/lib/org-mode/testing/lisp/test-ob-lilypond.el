@@ -52,7 +52,7 @@
 
 (ert-deftest ob-lilypond/ly-compile-lilyfile ()
   (should (equal
-           `(,(org-babel-lilypond-determine-ly-path)    ;program
+           `(,org-babel-lilypond-ly-command    ;program
              nil                        ;infile
              "*lilypond*"               ;buffer
              t                          ;display
@@ -74,41 +74,84 @@
 (ert-deftest ob-lilypond/ly-play-midi-post-tangle ()
   (should (boundp 'org-babel-lilypond-play-midi-post-tangle)))
 
-(ert-deftest ob-lilypond/ly-OSX-ly-path ()
-  (should (boundp 'org-babel-lilypond-OSX-ly-path))
-  (should (stringp org-babel-lilypond-OSX-ly-path)))
+(ert-deftest ob-lilypond/ly-command-ly/bound ()
+  (should (boundp 'org-babel-lilypond-ly-command)))
+(ert-deftest ob-lilypond/ly-command-ly/stringp ()
+  (should (stringp org-babel-lilypond-ly-command)))
+(ert-deftest ob-lilypond/ly-command-pdf/bound ()
+  (should (boundp 'org-babel-lilypond-pdf-command)))
+(ert-deftest ob-lilypond/ly-command-pdf/stringp ()
+  (should (stringp org-babel-lilypond-pdf-command)))
+(ert-deftest ob-lilypond/ly-command-midi/bound ()
+  (should (boundp 'org-babel-lilypond-midi-command)))
+(ert-deftest ob-lilypond/ly-command-midi/stringp ()
+  (should (stringp org-babel-lilypond-midi-command)))
+(ert-deftest ob-lilypond/ly-commands/darwin ()
+  (let ((system-type 'darwin)
+	org-babel-lilypond-ly-command
+	org-babel-lilypond-pdf-command
+	org-babel-lilypond-midi-command)
+    (custom-reevaluate-setting 'org-babel-lilypond-commands)
+    (should (equal
+	     (list
+	      org-babel-lilypond-ly-command
+	      org-babel-lilypond-pdf-command
+	      org-babel-lilypond-midi-command)
+	     (list
+	      "/Applications/lilypond.app/Contents/Resources/bin/lilypond"
+	      "open"
+	      "open"))))
+  (custom-reevaluate-setting 'org-babel-lilypond-commands))
+(ert-deftest ob-lilypond/ly-commands/windows-nt ()
+  (let ((system-type 'windows-nt)
+	org-babel-lilypond-ly-command
+	org-babel-lilypond-pdf-command
+	org-babel-lilypond-midi-command)
+    (custom-reevaluate-setting 'org-babel-lilypond-commands)
+    (should (equal
+	     (list
+	      org-babel-lilypond-ly-command
+	      org-babel-lilypond-pdf-command
+	      org-babel-lilypond-midi-command)
+	     (list
+	      "lilypond"
+	      ""
+	      ""))))
+  (custom-reevaluate-setting 'org-babel-lilypond-commands))
+(ert-deftest ob-lilypond/ly-commands/other ()
+  (let ((system-type 'other)
+	org-babel-lilypond-ly-command
+	org-babel-lilypond-pdf-command
+	org-babel-lilypond-midi-command)
+    (custom-reevaluate-setting 'org-babel-lilypond-commands)
+    (should (equal
+	     (list
+	      org-babel-lilypond-ly-command
+	      org-babel-lilypond-pdf-command
+	      org-babel-lilypond-midi-command)
+	     (list
+	      "lilypond"
+	      "xdg-open"
+	      "xdg-open"))))
+  (custom-reevaluate-setting 'org-babel-lilypond-commands))
 
-(ert-deftest ob-lilypond/ly-OSX-pdf-path ()
-  (should (boundp 'org-babel-lilypond-OSX-pdf-path))
-  (should (stringp org-babel-lilypond-OSX-pdf-path)))
-
-(ert-deftest ob-lilypond/ly-OSX-midi-path ()
-  (should (boundp 'org-babel-lilypond-OSX-midi-path))
-  (should (stringp org-babel-lilypond-OSX-midi-path)))
-
-(ert-deftest ob-lilypond/ly-nix-ly-path ()
-  (should (boundp 'org-babel-lilypond-nix-ly-path))
-  (should (stringp org-babel-lilypond-nix-ly-path)))
-
-(ert-deftest ob-lilypond/ly-nix-pdf-path ()
-  (should (boundp 'org-babel-lilypond-nix-pdf-path))
-  (should (stringp org-babel-lilypond-nix-pdf-path)))
-
-(ert-deftest ob-lilypond/ly-nix-midi-path ()
-  (should (boundp 'org-babel-lilypond-nix-midi-path))
-  (should (stringp org-babel-lilypond-nix-midi-path)))
-
-(ert-deftest ob-lilypond/ly-w32-ly-path ()
-  (should (boundp 'org-babel-lilypond-w32-ly-path))
-  (should (stringp org-babel-lilypond-w32-ly-path)))
-
-(ert-deftest ob-lilypond/ly-w32-pdf-path ()
-  (should (boundp 'org-babel-lilypond-w32-pdf-path))
-  (should (stringp org-babel-lilypond-w32-pdf-path)))
-
-(ert-deftest ob-lilypond/ly-w32-midi-path ()
-  (should (boundp 'org-babel-lilypond-w32-midi-path))
-  (should (stringp org-babel-lilypond-w32-midi-path)))
+(ert-deftest ob-lilypond/ly-commands/customize ()
+  (let ((system-type 'other)
+	org-babel-lilypond-ly-command
+	org-babel-lilypond-pdf-command
+	org-babel-lilypond-midi-command)
+    (custom-initialize-reset 'org-babel-lilypond-commands
+			     '(list "nonsense" "bla" "fasel"))
+    (should (equal
+	     (list
+	      org-babel-lilypond-ly-command
+	      org-babel-lilypond-pdf-command
+	      org-babel-lilypond-midi-command)
+	     (list
+	      "nonsense"
+	      "bla"
+	      "fasel"))))
+  (custom-reevaluate-setting 'org-babel-lilypond-commands))
 
 (ert-deftest ob-lilypond/ly-gen-png ()
   (should (boundp 'org-babel-lilypond-gen-png)))
@@ -222,7 +265,7 @@
       (write-file pdf-file))
     (should (equal
              (concat
-              (org-babel-lilypond-determine-pdf-path) " " pdf-file)
+              org-babel-lilypond-pdf-command " " pdf-file)
              (org-babel-lilypond-attempt-to-open-pdf org-babel-lilypond-file t)))
     (delete-file pdf-file)
     (kill-buffer (file-name-nondirectory pdf-file))
@@ -245,7 +288,7 @@
       (write-file midi-file))
     (should (equal
              (concat
-              (org-babel-lilypond-determine-midi-path) " " midi-file)
+              org-babel-lilypond-midi-command " " midi-file)
              (org-babel-lilypond-attempt-to-play-midi org-babel-lilypond-file t)))
     (delete-file midi-file)
     (kill-buffer (file-name-nondirectory midi-file))
@@ -253,30 +296,6 @@
              "No midi file generated so can't play!"
              (org-babel-lilypond-attempt-to-play-midi midi-file)))
     (setq org-babel-lilypond-play-midi-post-tangle post-tangle)))
-
-(ert-deftest ob-lilypond/ly-determine-ly-path ()
-  (should (equal org-babel-lilypond-OSX-ly-path
-                 (org-babel-lilypond-determine-ly-path "darwin")))
-  (should (equal org-babel-lilypond-w32-ly-path
-                 (org-babel-lilypond-determine-ly-path "windows-nt")))
-  (should (equal org-babel-lilypond-nix-ly-path
-                 (org-babel-lilypond-determine-ly-path "nix"))))
-
-(ert-deftest ob-lilypond/ly-determine-pdf-path ()
-  (should (equal org-babel-lilypond-OSX-pdf-path
-                 (org-babel-lilypond-determine-pdf-path "darwin")))
-  (should (equal org-babel-lilypond-w32-pdf-path
-                 (org-babel-lilypond-determine-pdf-path "windows-nt")))
-  (should (equal org-babel-lilypond-nix-pdf-path
-                 (org-babel-lilypond-determine-pdf-path "nix"))))
-
-(ert-deftest ob-lilypond/ly-determine-midi-path ()
-  (should (equal org-babel-lilypond-OSX-midi-path
-                 (org-babel-lilypond-determine-midi-path "darwin")))
-  (should (equal org-babel-lilypond-w32-midi-path
-                 (org-babel-lilypond-determine-midi-path "windows-nt")))
-  (should (equal org-babel-lilypond-nix-midi-path
-                 (org-babel-lilypond-determine-midi-path "nix"))))
 
 (ert-deftest ob-lilypond/ly-toggle-midi-play-toggles-flag ()
   (if org-babel-lilypond-play-midi-post-tangle

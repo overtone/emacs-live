@@ -28,11 +28,8 @@
 ;;; Code:
 (require 'ob)
 
-(defvar org-babel-default-header-args:emacs-lisp
-  '((:hlines . "yes") (:colnames . "no"))
+(defvar org-babel-default-header-args:emacs-lisp nil
   "Default arguments for evaluating an emacs-lisp source block.")
-
-(declare-function orgtbl-to-generic "org-table" (table params))
 
 (defun org-babel-expand-body:emacs-lisp (body params)
   "Expand BODY according to PARAMS, return the expanded body."

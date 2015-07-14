@@ -1,73 +1,34 @@
-PREFIX  ?= /usr/local
-datarootdir ?= $(PREFIX)/share
-lispdir ?= $(datarootdir)/emacs/site-lisp/magit
-infodir ?= $(datarootdir)/info
-docdir  ?= $(datarootdir)/doc/magit
-execdir ?= $(PREFIX)/bin
+include default.mk
+-include config.mk
 
-LOADDEFS_FILE ?= magit-autoloads.el
-LOADDEFS_DIR  ?= $(lispdir)
+.PHONY: lisp \
+	install install-lisp install-docs install-info \
+	test test-interactive \
+	clean clean-lisp clean-docs \
+	genstats \
+	dist magit-$(VERSION).tar.gz elpa $(ELPA_ARCHIVES)
 
-ELS  = magit.el
-ELS += magit-blame.el
-ELS += magit-key-mode.el
-ELS += magit-stgit.el
-ELS += magit-svn.el
-ELS += magit-topgit.el
-ELS += magit-wip.el
-ELCS = $(ELS:.el=.elc)
-
-CP    ?= install -p -m 644
-CPBIN ?= install -p -m 755
-MKDIR ?= install -p -m 755 -d
-RMDIR ?= rm -rf
-
-MAKEINFO     ?= makeinfo
-INSTALL_INFO ?= install-info
-
-EFLAGS ?= -L ../git-modes -L ../cl-lib
-EMACS  ?= emacs
-BATCH   = $(EMACS) $(EFLAGS) -batch -Q -L .
-BATCHE  = $(BATCH) -eval
-BATCHC  = $(BATCH) -f batch-byte-compile
-
-VERSION=$(shell \
-  test -e .git && git describe --tags --dirty 2> /dev/null || \
-  $(BATCHE) "(progn\
-  (require 'cl)\
-  (flet ((message (&rest _) _))\
-    (load-file \"magit-version.el\"))\
-  (princ magit-version))")
-
-.PHONY: lisp
-lisp: $(ELCS) magit-version.el loaddefs
-
-.PHONY: all
 all: lisp docs
 
-.PHONY: help
 help:
-	$(info Getting Help)
-	$(info ============)
 	$(info )
-	$(info make help             - show brief help)
+	$(info Current version: magit-$(VERSION))
 	$(info )
 	$(info Build)
 	$(info =====)
 	$(info )
-	$(info make                  - build elisp files)
-	$(info make lisp             - ditto)
-	$(info make all              - build elisp files and documentation)
-	$(info make docs             - generate documentation)
+	$(info make [all]            - compile elisp and documentation)
+	$(info make lisp             - compile elisp)
+	$(info make docs             - generate info manuals)
+	$(info make info             - generate info manuals)
 	$(info )
 	$(info Install)
 	$(info =======)
 	$(info )
-	$(info make install          - install elisp files and documentation)
-	$(info make install-lisp     - install elisp files)
-	$(info make install-docs     - install documentation)
-	$(info make install-script   - install shell script)
-	$(info make install-all      - install elisp files, script, and docs)
+	$(info make install          - install elisp and documentation)
+	$(info make install-lisp     - install elisp)
+	$(info make install-docs     - install all documentation)
+	$(info make install-info     - install info manuals only)
 	$(info )
 	$(info Test)
 	$(info ====)
@@ -78,215 +39,167 @@ help:
 	$(info Release Managment)
 	$(info =================)
 	$(info )
-	$(info make authors          - regenerate the AUTHORS.md file)
-	$(info make dist             - create old-school tarball)
-	$(info make marmalade        - create marmalade tarball)
+	$(info make texi             - regenerate texi from org)
+	$(info make genstats         - regenerate statistics)
+	$(info make authors          - regenerate AUTHORS.md)
+	$(info make dist             - create tarballs)
+	$(info make elpa             - create elpa tarballs)
+	$(info make marmalade        - upload elpa tarballs to marmalade)
 	@printf "\n"
 
-%.elc: %.el
-	@$(BATCHC) $<
+lisp:
+	@$(RM) $(ELCS) $(ELGS) # temporary cleanup kludge
+	@$(MAKE) -C lisp lisp
 
-# Not a phony target, but needs to run *every* time.
-.PHONY: magit-version.el
-magit-version.el:
-	@printf "Generating magit-version.el\n"
-	@printf ";;; magit-version.el --- the Magit version you are using\n\n" > $@
-	@printf "(setq magit-version \""$(VERSION)"\")\n\n" >> $@
-	@printf "(provide 'magit-version)\n\n" >> $@
-	@printf ";; Local Variables:\n" >> $@
-	@printf ";; version-control: never\n" >> $@
-	@printf ";; no-byte-compile: t\n" >> $@
-	@printf ";; no-update-autoloads: t\n" >> $@
-	@printf ";; coding: utf-8\n" >> $@
-	@printf ";; End:\n" >> $@
-	@printf ";;; magit-version.el ends here\n" >> $@
+docs:
+	@$(MAKE) -C Documentation all
 
-# Not a phony target, but needs to run *every* time.
-.PHONY: magit-pkg.el
-magit-pkg.el:
-	@printf "Generating magit-pkg.el\n"
-	@printf "(define-package \"magit\" \""$(VERSION)"\"\n" > $@
-	@printf "  \"Control Git from Emacs.\"\n"      >> $@
-	@printf "  '((cl-lib \"0.3\")\n"               >> $@
-	@printf "    (git-commit-mode \"0.14.0\")\n"   >> $@
-	@printf "    (git-rebase-mode \"0.14.0\")))\n" >> $@
+info:
+	@$(MAKE) -C Documentation info
 
-.PHONY: loaddefs
-loaddefs: $(LOADDEFS_FILE)
+texi:
+	@$(MAKE) -C Documentation texi
 
-$(LOADDEFS_FILE): $(ELS)
-	@$(BATCHE) "(progn\
-	(setq vc-handled-backends nil)\
-	(defvar generated-autoload-file nil)\
-	(let ((generated-autoload-file \"$(CURDIR)/$(LOADDEFS_FILE)\")\
-	      (make-backup-files nil))\
-	  (update-directory-autoloads \".\")))"
-
-.PHONY: docs
-docs: magit.info dir
-
-%.info: %.texi
-	$(MAKEINFO) $< -o $@
-
-dir: magit.info
-	$(INSTALL_INFO) --dir=$@ $<
-
-define MAILMAP
-Alex Ott <alexott@gmail.com> <ott@flash.lan>
-Seong-Kook Shin <cinsky@gmail.com>
-David Abrahams <dave@boostpro.com>
-Dennis Paskorz <dennis@walltowall.com>
-Evgkeni Sampelnikof <esabof@gmail.com> <faceoffuture@yahoo.gr>
-Evgkeni Sampelnikof <esabof@gmail.com> <sabof@example.com>
-Graham Clark <grclark@gmail.com> <gcla@moria.(none)>
-Jesse Alama <jesse.alama@gmail.com> <alama@stanford.edu>
-Jonas Bernoulli <jonas@bernoul.li> <jonasbernoulli@gmail.com>
-Leo Liu <sdl.web@gmail.com>
-Marc Herbert <marc.herbert@gmail.com> <marc.herbert+git@gmail.com>
-Marc Herbert <marc.herbert@gmail.com> <Marc.Herbert+git@gmail.com>
-Marcel Wolf <mwolf@ml1.net> marcel-wolf
-Marius Vollmer <marius.vollmer@gmail.com> <marius.vollmer@nokia.com>
-Marius Vollmer <marius.vollmer@gmail.com> <marius.vollmer@uni-dortmund.de>
-Marius Vollmer <marius.vollmer@gmail.com> <mvo@bright.(none)>
-Marius Vollmer <marius.vollmer@gmail.com> <mvo@esdhcp03984.research.nokia.com>
-Marius Vollmer <marius.vollmer@gmail.com> <mvo@manamana.(none)>
-Noam Postavsky <npostavs@users.sourceforge.net>
-Óscar Fuentes <ofv@wanadoo.es> Oscar Fuentes <ofv@wanadoo.es>
-Óscar Fuentes <ofv@wanadoo.es> <oscar@nc10>
-Óscar Fuentes <ofv@wanadoo.es> <oscar@qcore>
-Peter J. Weisberg <pj@irregularexpressions.net>
-Philippe Vaucher <philippe.vaucher@gmail.com> <philippe@stvs.ch>
-Rémi Vanicat <vanicat@debian.org> <github.20.vanicat@mamber.net>
-Sébastien Gross <seb@chezwam.org> <seb•ɑƬ•chezwam•ɖɵʈ•org>
-Yann Hodique <yann.hodique@gmail.com> <hodiquey@vmware.com>
-Yann Hodique <yann.hodique@gmail.com> <yann.hodique@bromium.com>
-Yann Hodique <yann.hodique@gmail.com> <yhodique@vmware.com>
-endef
-export MAILMAP
-
-# Not a phony target, but needs to run *every* time.
-.PHONY: .mailmap
-.mailmap:
-	@printf "Generating .mailmap..."
-	@printf "$$MAILMAP\n" > $@
-	@printf "done\n"
-
-CONTRIBUTORS_URL = https://github.com/magit/magit/graphs/contributors
-define AUTHORS_HEADER
-Authors
-=======
-
-Also see $(CONTRIBUTORS_URL).
-Names below are sorted alphabetically.
-
-Author
-------
-
-- Marius Vollmer <marius.vollmer@gmail.com>
-
-Maintainer
-----------
-
-- Jonas Bernoulli <jonas@bernoul.li>
-
-Retired Maintainers
--------------------
-
-- Nicolas Dudebout <nicolas.dudebout@gatech.edu>
-- Peter J. Weisberg <pj@irregularexpressions.net>
-- Phil Jackson <phil@shellarchive.co.uk>
-- Rémi Vanicat <vanicat@debian.org>
-- Yann Hodique <yann.hodique@gmail.com>
-
-Contributors
-------------
-
-endef
-export AUTHORS_HEADER
-
-# Not a phony target, but needs to run *every* time.
-.PHONY: AUTHORS.md
-AUTHORS.md: .mailmap
-	@printf "Generating AUTHORS.md..."
-	@test -d .git \
-		&& (printf "$$AUTHORS_HEADER\n" > $@ \
-			&& git log --pretty=format:'- %aN <%aE>' | sort -u >> $@ \
-			&& printf "done\n" ; ) \
-		|| printf "FAILED (non-fatal)\n"
-
-.PHONY: authors
-authors: AUTHORS.md
-
-.PHONY: install
 install: install-lisp install-docs
 
-.PHONY: install-all
-install-all: install-lisp install-docs install-script
-
-.PHONY: install-lisp
 install-lisp: lisp
-	$(MKDIR) $(DESTDIR)$(lispdir)
-	$(CP) $(ELS) $(ELCS) magit-version.el $(DESTDIR)$(lispdir)
-	$(MKDIR) $(DESTDIR)$(LOADDEFS_DIR)
-	$(CP) $(LOADDEFS_FILE) $(DESTDIR)$(LOADDEFS_DIR)/$(LOADDEFS_FILE)
+	@$(MAKE) -C lisp install
 
-.PHONY: install-docs
 install-docs: docs
-	$(MKDIR) $(DESTDIR)$(infodir)
-	$(CP) magit.info $(DESTDIR)$(infodir)
-	$(INSTALL_INFO) --info-dir=$(DESTDIR)$(infodir) $(DESTDIR)$(infodir)/magit.info
-	$(MKDIR) $(DESTDIR)$(docdir)
-	$(CP) AUTHORS.md $(DESTDIR)$(docdir)
+	@$(MAKE) -C Documentation install-docs
 
-.PHONY: install-script
-install-script: bin/magit
-	$(MKDIR) $(DESTDIR)$(execdir)
-	$(CPBIN) bin/magit $(DESTDIR)$(execdir)
+install-info: info
+	@$(MAKE) -C Documentation install-info
 
-.PHONY: test
-test: $(ELCS)
-	@$(BATCHE) "(progn\
-	(require 'cl) \
-	(put 'flet 'byte-obsolete-info nil))" \
-	-l tests/magit-tests.el -f ert-run-tests-batch-and-exit
+test:
+	@$(BATCH) --eval "(progn\
+	(load-file \"t/magit-tests.el\")\
+	(ert-run-tests-batch-and-exit))"
 
-.PHONY: test-interactive
-test-interactive: $(ELCS)
-	@$(EMACS) $(EFLAGS) -Q -L "." --eval "(progn\
-	(require 'cl)\
-	(put 'flet 'byte-obsolete-info nil)\
-	(load-file \"tests/magit-tests.el\")\
+test-interactive:
+	@$(EMACSBIN) -Q $(LOAD_PATH) --eval "(progn\
+	(load-file \"t/magit-tests.el\")\
 	(ert t))"
 
-.PHONY: clean
-clean:
-	@echo "Cleaning..."
-	@$(RM) $(ELCS) $(LOADDEFS_FILE) magit-version.el *.tar.gz *.tar .mailmap
+clean: clean-lisp clean-docs
+	@printf "Cleaning...\n"
+	@$(RM) $(ELCS) $(ELGS) # temporary cleanup kludge
+	@$(RM) git-commit-*.el *.tar.gz *.tar Documentation/*.texi~
 	@$(RMDIR) magit-$(VERSION)
-	@test ! -e .git || $(RM) magit.info
 
-DIST_FILES  = $(ELS) magit-version.el Makefile AUTHORS.md
-DIST_FILES += README.md magit.texi magit.info dir
-DIST_FILES_BIN  = bin/magit
+clean-lisp:
+	@$(MAKE) -C lisp clean
 
-ELPA_FILES = $(ELS) magit.info dir AUTHORS.md
+clean-docs:
+	@$(MAKE) -C Documentation clean
 
-.PHONY: dist
+# Release management
+
+genstats:
+	@printf "Generating stats\n"
+	@gitstats -c style=/css/stats.css -c max_authors=200 . $(statsdir)
+
+authors:
+	@$(MAKE) -C Documentation authors
+
 dist: magit-$(VERSION).tar.gz
 
-magit-$(VERSION).tar.gz: $(DIST_FILES)
-	$(MKDIR) magit-$(VERSION)/bin
-	$(CP) $(DIST_FILES) magit-$(VERSION)
-	$(CPBIN) $(DIST_FILES_BIN) magit-$(VERSION)/bin
-	tar -cvz --mtime=./magit-$(VERSION) -f magit-$(VERSION).tar.gz magit-$(VERSION)
-	$(RMDIR) magit-$(VERSION)
+DIST_ROOT_FILES = COPYING default.mk Makefile README.md
+DIST_LISP_FILES = $(addprefix lisp/,$(ELS) magit-version.el Makefile)
+DIST_DOCS_FILES = $(addprefix Documentation/,$(TEXIPAGES) AUTHORS.md Makefile)
+ifneq ("$(wildcard RelNotes/$(VERSION).txt)","")
+  DIST_DOCS_FILES += RelNotes/$(VERSION).txt
+endif
 
-.PHONY: marmalade
-marmalade: magit-$(VERSION).tar
+magit-$(VERSION).tar.gz: lisp info
+	@printf "Packing $@\n"
+	@$(MKDIR) magit-$(VERSION)
+	@$(CP) $(DIST_ROOT_FILES) magit-$(VERSION)
+	@$(MKDIR) magit-$(VERSION)/lisp
+	@$(CP) $(DIST_LISP_FILES) magit-$(VERSION)/lisp
+	@$(MKDIR) magit-$(VERSION)/Documentation
+	@$(CP) $(DIST_DOCS_FILES) magit-$(VERSION)/Documentation
+	@$(TAR) cz --mtime=./magit-$(VERSION) -f magit-$(VERSION).tar.gz magit-$(VERSION)
+	@$(RMDIR) magit-$(VERSION)
 
-magit-$(VERSION).tar: $(ELPA_FILES) magit-pkg.el
-	$(MKDIR) magit-$(VERSION)
-	$(CP) $(ELPA_FILES) magit-$(VERSION)
-	$(CP) magit-pkg.el magit-$(VERSION)
-	tar -cv --mtime=./magit-$(VERSION) -f magit-$(VERSION).tar magit-$(VERSION)
-	$(RMDIR) magit-$(VERSION)
+marmalade: elpa
+	@printf "Uploading with-editor-$(VERSION)\n"
+	@marmalade-upload with-editor-$(VERSION).tar
+	@printf "Uploading git-commit-$(VERSION)\n"
+	@marmalade-upload git-commit-$(VERSION).tar
+	@printf "Uploading magit-popup-$(VERSION)\n"
+	@marmalade-upload magit-popup-$(VERSION).tar
+	@printf "Uploading magit-$(VERSION)\n"
+	@marmalade-upload magit-$(VERSION).tar
+
+ELPA_ARCHIVES  = with-editor-$(VERSION).tar
+ELPA_ARCHIVES += git-commit-$(VERSION).el
+ELPA_ARCHIVES += magit-popup-$(VERSION).tar
+ELPA_ARCHIVES += magit-$(VERSION).tar
+
+elpa: $(ELPA_ARCHIVES)
+
+define with_editor_pkg
+(define-package "with-editor" "$(VERSION)"
+  "Use the Emacsclient as $$EDITOR"
+  '((emacs "24.4")
+    (dash "2.10.0")))
+endef
+# '
+export with_editor_pkg
+with-editor-$(VERSION).tar: info
+	@printf "Packing $@\n"
+	@$(MKDIR) with-editor-$(VERSION)
+	@printf "$$with_editor_pkg\n" > with-editor-$(VERSION)/with-editor-pkg.el
+	@$(CP) lisp/with-editor.el with-editor-$(VERSION)
+	@$(CP) Documentation/with-editor.info Documentation/dir with-editor-$(VERSION)
+	@$(TAR) c --mtime=./with-editor-$(VERSION) \
+	  -f with-editor-$(VERSION).tar with-editor-$(VERSION)
+	@$(RMDIR) with-editor-$(VERSION)
+
+git-commit-$(VERSION).el:
+	@printf "Packing $@\n"
+	@$(CP) lisp/git-commit.el git-commit-$(VERSION).el
+
+define magit_popup_pkg
+(define-package "magit-popup" "$(VERSION)"
+  "Define prefix-infix-suffix command combos"
+  '((emacs "24.4")
+    (dash "2.10.0")))
+endef
+# '
+export magit_popup_pkg
+magit-popup-$(VERSION).tar: info
+	@printf "Packing $@\n"
+	@$(MKDIR) magit-popup-$(VERSION)
+	@printf "$$magit_popup_pkg\n" > magit-popup-$(VERSION)/magit-popup-pkg.el
+	@$(CP) lisp/magit-popup.el magit-popup-$(VERSION)
+	@$(CP) Documentation/magit-popup.info Documentation/dir magit-popup-$(VERSION)
+	@$(TAR) c --mtime=./magit-popup-$(VERSION) \
+	  -f magit-popup-$(VERSION).tar magit-popup-$(VERSION)
+	@$(RMDIR) magit-popup-$(VERSION)
+
+ELPA_ROOT_FILES = COPYING
+ELPA_LISP_FILES = $(addprefix lisp/,$(ELMS) magit-version.el)
+ELPA_DOCS_FILES = $(addprefix Documentation/,AUTHORS.md dir magit.info)
+
+define magit_pkg
+(define-package "magit" "$(VERSION)"
+  "A Git porcelain inside Emacs"
+  '((emacs "24.4")
+    (dash "2.10.0")
+    (with-editor "2.1.0")
+    (git-commit "2.1.0")
+    (magit-popup "2.1.0")))
+endef
+# '
+export magit_pkg
+magit-$(VERSION).tar: lisp info
+	@printf "Packing $@\n"
+	@$(MKDIR) magit-$(VERSION)
+	@printf "$$magit_pkg\n" > magit-$(VERSION)/magit-pkg.el
+	@$(CP) $(ELPA_ROOT_FILES) magit-$(VERSION)
+	@$(CP) $(ELPA_LISP_FILES) magit-$(VERSION)
+	@$(CP) $(ELPA_DOCS_FILES) magit-$(VERSION)
+	@$(TAR) c --mtime=./magit-$(VERSION) -f magit-$(VERSION).tar magit-$(VERSION)
+	@$(RMDIR) magit-$(VERSION)

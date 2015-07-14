@@ -1,3 +1,24 @@
+2015-05-18 Andrew Burgess <andrew.burgess@embecosm.com>
+	Restore the mode name to "Kill Ring" if the filter regexp is
+	removed.
+
+2015-05-18 Andrew Burgess <andrew.burgess@embecosm.com>
+	The default for `browse-kill-ring-occur' is now to remove the
+	regexp that is currently in place, restoring all item in the
+	kill-ring to the display.  Previous regexp are still available in
+	the history ring if needed.
+
+2015-04-27 Andrew Burgess <andrew.burgess@embecosm.com>
+	Remove `browse-kill-ring-no-duplicates'.  This functionality was
+	never related to browsing the kill-ring, and would be better moved
+	in to a different package.
+
+2015-01-02 Andrew Burgess <andrew.burgess@embecosm.com>
+	Unify tail of `browse-kill-ring-finish' and
+	`browse-kill-ring-abort' to increase code reuse.  Improve use of
+	`brose-kill-ring-edit-target' to track when the user is making an
+	edit.
+
 2014-11-04 Toon Claes <toon@tonotdo.com>
 	v2.0 release:
 	Legacy code is removed, README is converted and

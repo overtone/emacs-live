@@ -22,11 +22,11 @@ Screenshots
 
 **Before Popup Window**
 
-![](http://cx4a.org/software/popwin/popwin1.png)
+![](https://raw.githubusercontent.com/m2ym/popwin-el/master/etc/images/popwin1.png)
 
 **After Popup Window**
 
-![](http://cx4a.org/software/popwin/popwin2.png)
+![](https://raw.githubusercontent.com/m2ym/popwin-el/master/etc/images/popwin2.png)
 
 Installation
 ------------
@@ -59,17 +59,17 @@ buffers will be shown in a popup window. Try `M-x find-file` and type
 
 **File Name Completion**
 
-![](http://cx4a.org/software/popwin/popwin-find-file.png)
+![](https://raw.githubusercontent.com/m2ym/popwin-el/master/etc/images/popwin-find-file.png)
 
 Let me show other examples.
 
 **`M-x occur`**
 
-![](http://cx4a.org/software/popwin/popwin-occur.png)
+![](https://raw.githubusercontent.com/m2ym/popwin-el/master/etc/images/popwin-occur.png)
 
 **`M-x compile`**
 
-![](http://cx4a.org/software/popwin/popwin-compile.png)
+![](https://raw.githubusercontent.com/m2ym/popwin-el/master/etc/images/popwin-compile.png)
 
 Customization
 -------------
@@ -325,4 +325,4 @@ is on developers.
 
 ----
 
-Copyright (C) 2011, 2012  Tomohiro Matsuyama <<tomo@cx4a.org>>
+Copyright (C) 2011-2015  Tomohiro Matsuyama <<m2ym.pub@gmail.com>>

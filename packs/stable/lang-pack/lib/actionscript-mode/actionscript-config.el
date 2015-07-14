@@ -64,12 +64,16 @@ have been replaced with newchar."
 	"When we open a new AS file, automatically insert some boilerplate
 code. This function expects that your AS root starts
 with a directory named 'as' from which it builds package names."
-	(when (string= (file-name-extension filename) "as")
-		(let ((className (as-get-classname))
-					(package-string (as-get-package)))
-			(insert (concat "package " package-string "{\n\n  public class " className "{\n\n    public function " className "(){\n\n    }\n\n    public function toString():String{\n      return \"<< " className " >>\";\n    }\n  }\n}\n")))))
+        (let ((className (as-get-classname))
+              (package-string (as-get-package)))
+          (insert (concat "package " package-string "{\n\n  public class " className "{\n\n    public function " className "(){\n\n    }\n\n    public function toString():String{\n      return \"<< " className " >>\";\n    }\n  }\n}\n"))))
 
-(add-hook 'find-file-not-found-hooks 'insert-flash-boilerplate)
+(defun as-empty-buffer-template-hook ()
+  "If the current buffer is empty, some AS boilerplate from `insert-flash-boilerplate'."
+  (when (= (buffer-size (current-buffer)) 0)
+    (insert-flash-boilerplate)))
+
+(add-hook 'actionscript-mode-hook 'as-empty-buffer-template-hook)
 
 (defun as-print-func-info()
 	"Insert a print statement immediately after the nearest function definition before point."

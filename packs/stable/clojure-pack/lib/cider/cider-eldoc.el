@@ -1,7 +1,7 @@
 ;;; cider-eldoc.el --- eldoc support for Clojure -*- lexical-binding: t -*-
 
-;; Copyright © 2012-2014 Tim King, Phil Hagelberg
-;; Copyright © 2013-2014 Bozhidar Batsov, Hugo Duncan, Steve Purcell
+;; Copyright © 2012-2015 Tim King, Phil Hagelberg
+;; Copyright © 2013-2015 Bozhidar Batsov, Hugo Duncan, Steve Purcell
 ;;
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Phil Hagelberg <technomancy@gmail.com>
@@ -149,11 +149,12 @@ Return the number of nested sexp the point was over or after. "
                 (cider-eldoc-format-thing thing)
                 (cider-eldoc-format-arglist value pos))))))
 
-(defun cider-turn-on-eldoc-mode ()
+(defun cider-eldoc-setup ()
   "Turn on eldoc mode in the current buffer."
-  (setq-local eldoc-documentation-function 'cider-eldoc)
-  (apply 'eldoc-add-command cider-extra-eldoc-commands)
-  (eldoc-mode +1))
+  (setq-local eldoc-documentation-function #'cider-eldoc)
+  (apply #'eldoc-add-command cider-extra-eldoc-commands))
+
+(define-obsolete-function-alias 'cider-turn-on-eldoc-mode 'eldoc-mode)
 
 (provide 'cider-eldoc)
 

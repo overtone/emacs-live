@@ -119,9 +119,15 @@ information."
 	      (const :tag "Outline path" olpath)
 	      (const :tag "Local tags" ltags)))
 
+(defvar org-archive-hook nil
+  "Hook run after successfully archiving a subtree.
+Hook functions are called with point on the subtree in the
+original file.  At this stage, the subtree has been added to the
+archive location, but not yet deleted from the original file.")
+
 (defun org-get-local-archive-location ()
   "Get the archive location applicable at point."
-  (let ((re "^#\\+ARCHIVE:[ \t]+\\(\\S-.*\\S-\\)[ \t]*$")
+  (let ((re "^[ \t]*#\\+ARCHIVE:[ \t]+\\(\\S-.*\\S-\\)[ \t]*$")
 	prop)
     (save-excursion
       (save-restriction
@@ -158,7 +164,7 @@ archive file is."
       (save-restriction
 	(goto-char (point-min))
 	(while (re-search-forward
-		"^\\(#\\+\\|[ \t]*:\\)ARCHIVE:[ \t]+\\(.*\\)"
+		"^[ \t]*\\(#\\+\\|:\\)ARCHIVE:[ \t]+\\(.*\\)"
 		nil t)
 	  (setq file (org-extract-archive-file
 		      (org-match-string-no-properties 2)))
@@ -198,9 +204,11 @@ The archive can be a certain top-level heading in the current file, or in
 a different file.  The tree will be moved to that location, the subtree
 heading be marked DONE, and the current time will be added.
 
-When called with prefix argument FIND-DONE, find whole trees without any
+When called with a single prefix argument FIND-DONE, find whole trees without any
 open TODO items and archive them (after getting confirmation from the user).
-If the cursor is not at a headline when this command is called, try all level
+When called with a double prefix argument, find whole trees with timestamps before
+today and archive them (after getting confirmation from the user).
+If the cursor is not at a headline when these commands are called, try all level
 1 trees.  If the cursor is on a headline, only try the direct children of
 this heading."
   (interactive "P")
@@ -213,8 +221,10 @@ this heading."
 		 (org-archive-subtree ,find-done))
 	 org-loop-over-headlines-in-active-region
 	 cl (if (outline-invisible-p) (org-end-of-subtree nil t))))
-    (if find-done
-	(org-archive-all-done)
+    (cond
+     ((equal find-done '(4))  (org-archive-all-done))
+     ((equal find-done '(16)) (org-archive-all-old))
+     (t
       ;; Save all relevant TODO keyword-relatex variables
       (let ((tr-org-todo-line-regexp org-todo-line-regexp) ; keep despite compiler
 	    (tr-org-todo-keywords-1 org-todo-keywords-1)
@@ -366,8 +376,10 @@ this heading."
 	    ;; Save and kill the buffer, if it is not the same buffer.
 	    (when (not (eq this-buffer buffer))
 	      (save-buffer))))
-	;; Here we are back in the original buffer.  Everything seems to have
-	;; worked.  So now cut the tree and finish up.
+	;; Here we are back in the original buffer.  Everything seems
+	;; to have worked.  So now run hooks, cut the tree and finish
+	;; up.
+	(run-hooks 'org-archive-hook)
 	(let (this-command) (org-cut-subtree))
 	(when (featurep 'org-inlinetask)
 	  (org-inlinetask-remove-END-maybe))
@@ -375,7 +387,7 @@ this heading."
 	(message "Subtree archived %s"
 		 (if (eq this-buffer buffer)
 		     (concat "under heading: " heading)
-		   (concat "in file: " (abbreviate-file-name afile))))))
+		   (concat "in file: " (abbreviate-file-name afile)))))))
     (org-reveal)
     (if (looking-at "^[ \t]*$")
 	(outline-next-visible-heading 1))))
@@ -456,13 +468,50 @@ sibling does not exist, it will be created at the end of the subtree."
 If the cursor is not on a headline, try all level 1 trees.  If
 it is on a headline, try all direct children.
 When TAG is non-nil, don't move trees, but mark them with the ARCHIVE tag."
-  (let ((re org-not-done-heading-regexp) re1
-	(rea (concat ".*:" org-archive-tag ":"))
+  (org-archive-all-matches
+   (lambda (beg end)
+     (unless (re-search-forward org-not-done-heading-regexp end t)
+       "no open TODO items"))
+   tag))
+
+(defun org-archive-all-old (&optional tag)
+  "Archive sublevels of the current tree with timestamps prior to today.
+If the cursor is not on a headline, try all level 1 trees.  If
+it is on a headline, try all direct children.
+When TAG is non-nil, don't move trees, but mark them with the ARCHIVE tag."
+  (org-archive-all-matches
+   (lambda (beg end)
+     (let (ts)
+       (and (re-search-forward org-ts-regexp end t)
+	    (setq ts (match-string 0))
+	    (< (org-time-stamp-to-now ts) 0)
+	    (if (not (looking-at
+		      (concat "--\\(" org-ts-regexp "\\)")))
+		(concat "old timestamp " ts)
+	      (setq ts (concat "old timestamp " ts (match-string 0)))
+	      (and (< (org-time-stamp-to-now (match-string 1)) 0)
+		   ts)))))
+   tag))
+
+(defun org-archive-all-matches (predicate &optional tag)
+  "Archive sublevels of the current tree that match PREDICATE.
+
+PREDICATE is a function of two arguments, BEG and END, which
+specify the beginning and end of the headline being considered.
+It is called with point positioned at BEG.  The headline will be
+archived if PREDICATE returns non-nil.  If the return value of
+PREDICATE is a string, it should describe the reason for
+archiving the heading.
+
+If the cursor is not on a headline, try all level 1 trees.  If it
+is on a headline, try all direct children.  When TAG is non-nil,
+don't move trees, but mark them with the ARCHIVE tag."
+  (let ((rea (concat ".*:" org-archive-tag ":")) re1
 	(begm (make-marker))
 	(endm (make-marker))
-	(question (if tag "Set ARCHIVE tag (no open TODO items)? "
-		    "Move subtree to archive (no open TODO items)? "))
-	beg end (cntarch 0))
+	(question (if tag "Set ARCHIVE tag? "
+		    "Move subtree to archive? "))
+	reason beg end (cntarch 0))
     (if (org-at-heading-p)
 	(progn
 	  (setq re1 (concat "^" (regexp-quote
@@ -482,11 +531,14 @@ When TAG is non-nil, don't move trees, but mark them with the ARCHIVE tag."
 	(setq beg (match-beginning 0)
 	      end (save-excursion (org-end-of-subtree t) (point)))
 	(goto-char beg)
-	(if (re-search-forward re end t)
+	(if (not (setq reason (funcall predicate beg end)))
 	    (goto-char end)
 	  (goto-char beg)
 	  (if (and (or (not tag) (not (looking-at rea)))
-		   (y-or-n-p question))
+		   (y-or-n-p
+		    (if (stringp reason)
+			(concat question "(" reason ")")
+		      question)))
 	      (progn
 		(if tag
 		    (org-toggle-tag org-archive-tag 'on)

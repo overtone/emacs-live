@@ -40,7 +40,7 @@
 (defvar Info-current-node)
 
 ;; Install the link type
-(org-add-link-type "info" 'org-info-open)
+(org-add-link-type "info" 'org-info-open 'org-info-export)
 (add-hook 'org-store-link-functions 'org-info-store-link)
 
 ;; Implementation
@@ -67,12 +67,32 @@
   "Follow an Info file and node link specified by NAME."
   (if (or (string-match "\\(.*\\)[#:]:?\\(.*\\)" name)
           (string-match "\\(.*\\)" name))
-      (progn
+      (let ((filename (match-string 1 name))
+	    (nodename-or-index (or (match-string 2 name) "Top")))
 	(require 'info)
-        (if (match-string 2 name) ; If there isn't a node, choose "Top"
-            (Info-find-node (match-string 1 name) (match-string 2 name))
-          (Info-find-node (match-string 1 name) "Top")))
-    (message "Could not open: %s" name)))
+	;; If nodename-or-index is invalid node name, then look it up
+	;; in the index.
+	(condition-case nil
+	    (Info-find-node filename nodename-or-index)
+	  (user-error (Info-find-node filename "Top")
+		      (condition-case nil
+			  (Info-index nodename-or-index)
+			(user-error "Could not find '%s' node or index entry"
+				    nodename-or-index)))))
+    (user-error "Could not open: %s" name)))
+
+(defun org-info-export (path desc format)
+  "Export an info link.
+See `org-add-link-type' for details about PATH, DESC and FORMAT."
+  (when (eq format 'html)
+    (or (string-match "\\(.*\\)[#:]:?\\(.*\\)" path)
+	(string-match "\\(.*\\)" path))
+    (let ((filename (match-string 1 path))
+	  (node (or (match-string 2 path) "Top")))
+      (format "<a href=\"%s.html#%s\">%s</a>"
+	      filename
+	      (replace-regexp-in-string " " "-" node)
+	      (or desc path)))))
 
 (provide 'org-info)
 

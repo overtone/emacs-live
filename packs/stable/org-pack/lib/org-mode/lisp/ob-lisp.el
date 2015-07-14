@@ -44,7 +44,7 @@
 (defvar org-babel-header-args:lisp '((package . :any)))
 
 (defcustom org-babel-lisp-dir-fmt
-  "(let ((*default-pathname-defaults* #P%S)) %%s)"
+  "(let ((*default-pathname-defaults* #P%S\n)) %%s\n)"
   "Format string used to wrap code bodies to set the current directory.
 For example a value of \"(progn ;; %s\\n   %%s)\" would ignore the
 current directory string."
@@ -76,23 +76,25 @@ current directory string."
   (require 'slime)
   (org-babel-reassemble-table
    (let ((result
-          (with-temp-buffer
-            (insert (org-babel-expand-body:lisp body params))
-            (slime-eval `(swank:eval-and-grab-output
-                          ,(let ((dir (if (assoc :dir params)
-                                          (cdr (assoc :dir params))
-                                        default-directory)))
-                             (format
-                              (if dir (format org-babel-lisp-dir-fmt dir)
-                                "(progn %s)")
-                              (buffer-substring-no-properties
-                               (point-min) (point-max)))))
-                        (cdr (assoc :package params))))))
+	  (funcall (if (member "output" (cdr (assoc :result-params params)))
+		       #'car #'cadr)
+		   (with-temp-buffer
+		     (insert (org-babel-expand-body:lisp body params))
+		     (slime-eval `(swank:eval-and-grab-output
+				   ,(let ((dir (if (assoc :dir params)
+						   (cdr (assoc :dir params))
+						 default-directory)))
+				      (format
+				       (if dir (format org-babel-lisp-dir-fmt dir)
+					 "(progn %s\n)")
+				       (buffer-substring-no-properties
+					(point-min) (point-max)))))
+				 (cdr (assoc :package params)))))))
      (org-babel-result-cond (cdr (assoc :result-params params))
-       (car result)
+       result
        (condition-case nil
-           (read (org-babel-lisp-vector-to-list (cadr result)))
-         (error (cadr result)))))
+           (read (org-babel-lisp-vector-to-list result))
+         (error result))))
    (org-babel-pick-name (cdr (assoc :colname-names params))
 			(cdr (assoc :colnames params)))
    (org-babel-pick-name (cdr (assoc :rowname-names params))

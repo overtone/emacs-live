@@ -3,14 +3,425 @@ ORG NEWS -- history of user-visible changes.           -*- org -*-
 #+LINK: doc http://orgmode.org/worg/doc.html#%s
 #+LINK: git http://orgmode.org/w/?p=org-mode.git;a=commit;h=%s
 
-Copyright (C) 2012-2013 Free Software Foundation, Inc.
+Copyright (C) 2012-2015 Free Software Foundation, Inc.
 See the end of the file for license conditions.
 
 Please send Org bug reports to emacs-orgmode@gnu.org.
 
+* Version 8.3
+** Incompatible changes
+*** Properties drawers syntax changes
+Properties drawers are now required to be located right after
+a headline and its planning line, when applicable.
+
+It will break some documents as TODO states changes were sometimes
+logged before the property drawer.  The following function will repair
+them.
+
+#+BEGIN_SRC emacs-lisp
+(defun org-repair-property-drawers ()
+  "Fix properties drawers in current buffer.
+ Ignore non Org buffers."
+  (when (eq major-mode 'org-mode)
+    (org-with-wide-buffer
+     (goto-char (point-min))
+     (let ((case-fold-search t)
+           (inline-re (and (featurep 'org-inlinetask)
+                           (concat (org-inlinetask-outline-regexp)
+                                   "END[ \t]*$"))))
+       (org-map-entries
+        (lambda ()
+          (unless (and inline-re (org-looking-at-p inline-re))
+            (save-excursion
+              (let ((end (save-excursion (outline-next-heading) (point))))
+                (forward-line)
+                (when (org-looking-at-p org-planning-line-re) (forward-line))
+                (when (and (< (point) end)
+                           (not (org-looking-at-p org-property-drawer-re))
+                           (save-excursion
+                             (and (re-search-forward org-property-drawer-re end t)
+                                  (eq (org-element-type
+                                       (save-match-data (org-element-at-point)))
+                                      'drawer))))
+                  (insert (delete-and-extract-region
+                           (match-beginning 0)
+                           (min (1+ (match-end 0)) end)))
+                  (unless (bolp) (insert "\n"))))))))))))
+#+END_SRC 
+*** =#+CATEGORY= keywords no longer apply partially to document
+It was possible to use several such keywords and have them apply to
+the text below until the next one, but strongly deprecated since Org
+5.14 (2008).
+
+=#+CATEGORY= keywords are now global to the document.  You can use
+node properties to set category for a subtree, e.g.,
+
+#+BEGIN_SRC org
+,* Headline
+   :PROPERTIES:
+   :CATEGORY: some category
+   :END:
+#+END_SRC
+*** New variable to control visibility when revealing a location
+~org-show-following-heading~, ~org-show-siblings~,
+~org-show-entry-below~ and ~org-show-hierarchy-above~ no longer exist.
+Instead, visibility is controlled through a single variable:
+~org-show-context-detail~, which see.
+*** Replace disputed keys again when reading a date
+~org-replace-disputed-keys~ has been ignored when reading date since
+version 8.1, but the former behavior is restored again.
+
+Keybinding for reading date can be customized with a new variable
+~org-read-date-minibuffer-local-map~.
+*** No default title is provided when =TITLE= keyword is missing
+Skipping =TITLE= keyword no longer provides the current file name, or
+buffer name, as the title. Instead, simply ignore the title.
+*** Signature changes
+The following functions require an additional argument.  See their
+docstring for more information.
+- ~org-export-collect-footnote-definitions~
+- ~org-html-format-headline-function~
+- ~org-html-format-inlinetask-function~
+- ~org-latex-format-headline-function~
+- ~org-latex-format-inlinetask-function~
+*** Default bindings of =C-c C-n= and =C-c C-p= changed
+The key sequences =C-c C-n= and =C-c C-p= are now bound to
+~org-next-visible-heading~ and ~org-next-visible-heading~
+respectively, rather than the =outline-mode= versions of these
+functions.  The Org version of these functions skips over inline tasks
+(and even-level headlines when ~org-odd-levels-only~ is set).
+*** ~org-element-context~ no longer return objects in keywords
+~org-element-context~ used to return objects on some keywords, i.e.,
+=TITLE=, =DATE= and =AUTHOR=.  It now returns only the keyword.
+*** Behavior of ~org-return~ changed
+If point is before or after the headline title, insert newline without
+changing the headline.
+** Removed functions
+*** Removed function ~org-translate-time~
+Use ~org-timestamp-translate~ instead.
+*** Removed function ~org-beamer-insert-options-template~
+This function inserted a Beamer specific template at point or in
+current subtree.  Use ~org-export-insert-default-template~ instead, as
+it provides more features and covers all export back-ends.  It is also
+accessible from the export dispatcher.
+*** Removed function ~org-timer-cancel-timer~
+~org-timer-stop~ now stops both relative and countdown timers.
+*** Removed function ~org-export-solidify-link-text~
+This function, being non-bijective, introduced bug in internal
+references.  Use ~org-export-get-reference~ instead.
+*** Removed function ~org-end-of-meta-data-and-drawers~
+The function is superseded by ~org-end-of-meta-data~, called with an
+optional argument.
+** Removed options
+*** ~org-list-empty-line-terminates-plain-lists~ is deprecated
+It will be kept in code base until next release, for backward
+compatibility.
+
+If you need to separate consecutive lists with blank lines, always use
+two of them, as if this option was nil (default value).
+*** ~org-export-with-creator~ is a boolean
+Special ~comment~ value is no longer allowed.  It is possible to use
+a body filter to add comments about the creator at the end of the
+document instead.
+*** Removed option =org-babel-sh-command=
+This undocumented option defaulted to the value of =shell-file-name=
+at the time of loading =ob-shell=.  The new behaviour is to use the
+value of =shell-file-name= directly when the shell langage is =shell=.
+To chose a different shell, either customize =shell-file-name= or bind
+this variable locally.
+*** Removed option =org-babel-sh-var-quote-fmt=
+This undocumented option was supposed to provide different quoting
+styles when changing the shell type.  Changing the shell type can now
+be done directly from the source block and the quoting style has to be
+compatible across all shells, so a customization doesn't make sense
+anymore.  The chosen hard coded quoting style conforms to POSIX.
+*** Removed option ~org-insert-labeled-timestamps-at-point~
+Setting this option to anything else that the default value (nil)
+would create invalid planning info.  This dangerous option is now
+removed.
+*** Removed option ~org-koma-letter-use-title~
+Use org-export-with-title instead.  See also below.
+*** Removed option ~org-entities-ascii-explanatory~
+This variable had no effect since Org 8.0.
+*** Removed MathML-related options from ~org-html-mathjax-options~
+MathJax automatically chooses the best display technology based on the
+end-users browser.  You may force initial usage of MathML via
+~org-html-mathjax-template~ or by setting the ~path~ property of
+~org-html-mathjax-options~.
+*** Removed comment-related filters
+~org-export-filter-comment-functions~ and
+~org-export-filter-comment-block-functions~ variables do not exist
+anymore.
+** New features
+*** Hierarchies of tags
+The functionality of nesting tags in hierarchies is added to org-mode.
+This is the generalization of what was previously called "Tag groups"
+in the manual.  That term is now changed to "Tag hierarchy".
+
+The following in-buffer definition:
+#+BEGIN_SRC org
+  ,#+TAGS: [ Group : SubOne SubTwo ]
+  ,#+TAGS: [ SubOne : SubOne1 SubOne2 ]
+  ,#+TAGS: [ SubTwo : SubTwo1 SubTwo2 ]
+#+END_SRC
+
+Should be seen as the following tree of tags:
+- Group
+  - SubOne
+    - SubOne1
+    - SubOne2
+  - SubTwo
+    - SubTwo1
+    - SubTwo2
+
+Searching for "Group" should return all tags defined above.  Filtering
+on SubOne filters also it's sub-tags.  Etc.
+
+There is no limit on the depth for the tag hierarchy.
+
+*** Additional syntax for non-unique grouptags
+Additional syntax is defined for grouptags if the tags in the group
+don't have to be distinct on a heading.
+
+Grouptags had to previously be defined with { }.  This syntax is
+already used for exclusive tags and Grouptags need their own,
+non-exclusive syntax.  This behaviour is achieved with [ ].  Note: {
+} can still be used also for Grouptags but then only one of the
+given tags can be used on the headline at the same time.  Example:
+
+[ group : sub1 sub2 ]
+
+#+BEGIN_SRC org
+  ,* Test                                                            :sub1:sub2:
+#+END_SRC
+
+This is a more general case than the already existing syntax for
+grouptags; { }.
+
+*** Define regular expression patterns as tags
+Tags can be defined as grouptags with regular expressions as
+"sub-tags".
+
+The regular expressions in the group must be marked up within { }.
+Example use:
+
+: #+TAGS: [ Project : {P@.+} ]
+
+Searching for the tag Project will now list all tags also including
+regular expression matches for P@.+.  Good for example if tags for a
+certain project is tagged with a common project-identifier,
+i.e. P@2014_OrgTags.
+
+*** Filtering in the agenda on grouptags (Tag hierarchies)
+Filtering in the agenda on grouptags filter all of the related tags.
+Exception if filter is applied with a (double) prefix-argument.
+
+Filtering in the agenda on subcategories does not filter the "above"
+levels anymore.
+
+If a grouptag contains a regular expression the regular expression
+is also used as a filter.
+
+*** Minor refactoring of ~org-agenda-filter-by-tag~
+Now uses the argument arg and optional argument exclude instead of
+strip and narrow.  ARG because the argument has multiple purposes and
+makes more sense than strip now.  The term narrowing is changed to
+exclude.
+
+The main purpose is for the function to make more logical sense when
+filtering on tags now when tags can be structured in hierarchies.
+
+*** New behaviour for `org-toggle-latex-fragment'.
+The new behaviour is the following:
+
+- With a double prefix argument or with a single prefix argument
+  when point is before the first headline, toggle overlays in the
+  whole buffer;
+
+- With a single prefix argument, toggle overlays in the current
+  subtree;
+
+- On latex code, toggle overlay at point;
+
+- Otherwise, toggle overlays in the current section.
+
+*** Additional markup with =#+INCLUDE= keyword
+The content of the included file can now be optionally marked up, for
+instance as HTML.  See the documentation for details.
+*** File links with =#+INCLUDE= keyword
+Objects can be extracted via =#+INCLUDE= using file links.  It is
+possible to include only the contents of the object.  See manual for
+more information.
+*** Additional =:hline= processing to ob-shell
+If the argument =:hlines yes= is present in a babel call, an optional
+argument =:hlines-string= can be used to define a string to use as a
+representation for the lisp symbol ='hline= in the shell program.  The
+default is =hline=.
+*** Drawers do not need anymore to be referenced in =#+DRAWERS=
+One can use a drawer without listing it in the =#+DRAWERS= keyword,
+which is now obsolete.  As a consequence, this change also deprecates
+~org-drawers~ variable.
+*** ~org-edit-special~  can edit export blocks
+Using C-c ' on an export block now opens a sub-editing buffer.  Major
+mode in that buffer is determined by export backend name (e.g.,
+"latex" \to "latex-mode").  You can define exceptions to this rule by
+configuring ~org-src-lang-modes~, which see.
+*** Markdown export supports switches in source blocks
+For example, it is now possible to number lines using the =-n= switch
+in a source block.
+*** New option in ASCII export
+Plain lists can have an extra margin by setting
+~org-ascii-list-margin~ variable to an appopriate integer.
+*** New blocks in ASCII export
+ASCII export now supports =#+BEGIN_JUSTIFYRIGHT= and
+=#+BEGIN_JUSTIFYLEFT= blocks.  See documentation for details.
+*** More back-end specific publishing options
+The number of publishing options specific to each back-end has been
+increased.  See manual for details.
+*** Export inline source blocks
+Inline source code was used to be removed upon exporting.  They are
+now handled as standard code blocks, i.e., the source code can appear
+in the output, depending on the parameters.
+*** Extend ~org-export-first-sibling-p~ and ~org-export-last-sibling-p~
+These functions now support any element or object, not only headlines.
+*** New function: ~org-export-table-row-in-header-p~
+*** New function: ~org-export-get-reference~
+*** New function: ~org-element-lineage~
+This function deprecates ~org-export-get-genealogy~.  It also provides
+more features.  See docstring for details.
+*** New function: ~org-element-copy~
+*** New filter: ~org-export-filter-body-functions~
+Functions in this filter are applied on the body of the exported
+document, befor wrapping it within the template.
+*** Improve radio tables
+Radio tables feature now relies on Org's export framework ("ox.el").
+~:no-escape~ parameter no longer exists, but additional global
+parameters are now supported: ~:raw~, ~:backend~.  Moreover, there are
+new parameters specific to some pre-defined translators, e.g.,
+~:environment~ and ~:booktabs~ for ~orgtbl-to-latex~.  See translators
+docstrings (including ~orgtbl-to-generic~) for details.
+*** Non-floating minted listings in Latex export
+It is not possible to specify =#+attr_latex: :float nil= in conjunction with
+source blocks exported by the minted package.
+*** Field formulas can now create columns as needed
+Previously, evaluating formulas that referenced out-of-bounds columns
+would throw an error. A new variable
+~org-table-formula-create-columns~ was added to adjust this
+behavior. It is now possible to silently add new columns, to do so
+with a warning or to explicitly ask the user each time.
+*** ASCII plot
+Ability to plot values in a column through ASCII-art bars.  See manual
+for details.
+*** New hook: ~org-archive-hook~
+This hook is called after successfully archiving a subtree, with point
+on the original subtree, not yet deleted.
+*** New option: ~org-attach-archive-delete~
+When non-nil, attachments from archived subtrees are removed.
+*** New option: ~org-latex-caption-above~
+This variable generalizes ~org-latex-table-caption-above~, which is
+now deprecated.  In addition to tables, it applies to source blocks,
+special blocks and images.  See docstring for more information.
+*** New option: ~org-latex-prefer-user-labels~
+See docstring for more information.
+*** Export unnumbered headlines
+Headlines, for which the property ~UNNUMBERED~ is non-nil, are now
+exported without section numbers irrespective of their levels.  The
+property is inherited by children.
+*** Tables can be sorted with an arbitrary function
+It is now possible to specify a function, both programatically,
+through a new optional argument, and interactively with ~f~ or ~F~
+keys, to sort a table.
+*** Table of contents can be local to a section
+The ~TOC~ keywords now accepts an optional ~local~ parameter.  See
+manual for details.
+*** Countdown timers can now be paused.
+~org-timer-pause-time~ now pauses and restarts both relative and
+countdown timers.
+*** New option ~only-window~ for ~org-agenda-window-setup~
+When ~org-agenda-window-setup~ is set to ~only-window~, the agenda is
+displayed as the sole window of the current frame.
+*** ~{{{date}}}~ macro supports optional formatting argument
+It is now possible to supply and optional formatting argument to
+~{{{date}}}~. See manual for details.
+*** ~{{{property}}}~ macro supports optional search argument
+It is now possible to supply an optional search option to
+~{{{property}}}~ in order to retrieve remote properties optional.  See
+manual for details.
+*** New option ~org-export-with-title~
+It is possible to suppress the title insertion with ~#+OPTIONS:
+title:nil~ or globally using the variable ~org-export-with-title~.
+*** New entities family: "\_ "
+"\_ " are used to insert up to 20 contiguous spaces in various
+back-ends.  In particular, this family can be used to introduce
+leading spaces within table cells.
+*** New MathJax configuration options.
+Org uses the MathJax CDN by default.  See the manual and the docstring
+of ~org-html-mathjax-options~ for details.
+*** New behaviour in `org-export-options-alist'
+When defining a back-end, it is now possible to specify to give
+`parse' behaviour on a keyword.  It is equivalent to call
+`org-element-parse-secondary-string' on the value.
+
+However, parsed =KEYWORD= is automatically associated to an
+=:EXPORT_KEYWORD:= property, which can be used to override the keyword
+value during a subtree export.  Moreover, macros are expanded in such
+keywords and properties.
+*** Viewport support in html export
+Viewport for mobile-optimized website is now automatically inserted
+when exporting to html.  See ~org-html-viewport~ for details.
+*** New ~#+SUBTITLE~ export keyword
+Org can typeset a subtitle in some export backends.  See the manual
+for details.
+*** Edit remotely a footnote definition
+Calling ~org-edit-footnote-reference~ (C-c ') on a footnote reference
+allows to edit its definition, as long as it is not anonymous, in
+a dedicated buffer.  It works even if buffer is currently narrowed.
+*** New function ~org-delete-indentation~ bound to ~M-^~
+Work as ~delete-indentation~ unless at heading, in which case text is
+added to headline text.
+*** Support for images in Texinfo export
+~Texinfo~ back-end now handles images.  See manual for details.
+*** Support for captions in Texinfo export
+Tables and source blocks can now have captions.  Additionally, lists
+of tables and lists of listings can be inserted in the document with
+=#+TOC= keyword.
+** Miscellaneous
+*** Strip all meta data from ITEM special property
+ITEM special property does not contain TODO, priority or tags anymore.
+*** File names in links accept are now compatible with URI syntax
+Absolute file names can now start with =///= in addition to =/=. E.g.,
+=[[file:///home/me/unicorn.jpg]]=.
+*** Footnotes in included files are now local to the file
+As a consequence, it is possible to include multiple Org files with
+footnotes in a master document without being concerned about footnote
+labels colliding.
+*** Mailto links now use regular URI syntax
+This change deprecates old Org syntax for mailto links:
+=mailto:user@domain::Subject=.
+*** =QUOTE= keywords do not exist anymore
+=QUOTE= keywords have been deprecated since Org 8.2.
+*** Select tests to perform with the build system
+The build system has been enhanced to allow test selection with a
+regular expression by defining =BTEST_RE= during the test invocation.
+This is especially useful during bisection to find just when a
+particular test failure was introduced.
+*** Exact heading search for external links ignore spaces and cookies
+Exact heading search for links now ignore spaces and cookies. This is
+the case for links of the form ~file:projects.org::*task title~, as
+well as links of the form ~file:projects.org::some words~
+when ~org-link-search-must-match-exact-headline~ is not nil.
+*** ~org-latex-hyperref-template~, ~org-latex-title-command~ formatting
+New formatting keys are supported.  See the respective docstrings.
+Note, ~org-latex-hyperref-template~ has a new default value.
 * Version 8.2
 
 ** Incompatible changes
+*** =ob-sh.el= renamed to =ob-shell=
+This may require two changes in user config.
+
+1. In =org-babel-do-load-languages=, change =(sh . t)= to =(shell . t)=.
+2. Edit =local.mk= files to change the value of =BTEST_OB_LANGUAGES=
+   to remove "sh" and include "shell".
 
 *** Combine org-mac-message.el and org-mac-link-grabber into org-mac-link.el
 
@@ -37,7 +448,7 @@ So you need to replace
 
 : #+HTML_INCLUDE_STYLE: t
 
-by 
+by
 
 : #+OPTIONS: :html-include-style t
 
@@ -91,13 +502,13 @@ of the list.
   now use =amssymb= symbols by default instead.
 
 *** New functions for paragraph motion
-    
+
     The commands =C-down= and =C-up= now invoke special commands
     that use knowledge from the org-elements parser to move the cursor
     in a paragraph-like way.
 
 *** New entities in =org-entities.el=
-    
+
 Add support for ell, imath, jmath, varphi, varpi, aleph, gimel, beth,
 dalet, cdots, S (§), dag, ddag, colon, therefore, because, triangleq,
 leq, geq, lessgtr, lesseqgtr, ll, lll, gg, ggg, prec, preceq,
@@ -205,7 +616,7 @@ instructions:
 - when updating through ELPA (either from GNU ELPA or from Org ELPA),
   you have to install Org's ELPA package in a session where no Org
   function has been called already.
-  
+
 When in doubt, run =M-x org-version RET= and see if you have a mixed-up
 installation.
 

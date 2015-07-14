@@ -26,4 +26,4 @@ $(PKGDIR):
 	touch $(PKGDIR)
 
 %.elc: %.el $(PKGDIR)
-	$(CASK) exec $(EMACS) -l compat/load.el -Q --batch -f batch-byte-compile $<
+	$(CASK) exec $(EMACS) -Q --batch -f batch-byte-compile $<

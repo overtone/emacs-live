@@ -17,8 +17,8 @@ You can also install the latest development version from
 Emacs 22 and 23
 ===============
 
-This version requires Emacs 24. For a backward compatible version,
-check out the branch
+This version requires Emacs 24 and `cl-lib` (either built-in or from GNU ELPA above).
+For a backward compatible version, check out the branch
 [emacs23](https://github.com/mooz/js2-mode/tree/emacs23).
 
 Bugs

@@ -32,6 +32,8 @@
 
 (require 'comint)
 (require 'shell)             ; For directory tracking.
+(require 'etags)
+(require 'haskell-compat)
 (require 'compile)
 (require 'haskell-mode)
 (require 'haskell-decl-scan)
@@ -488,7 +490,7 @@ in the buffer.  This can be done interactively with the \\[universal-argument] p
 The returned info is cached for reuse by `haskell-doc-mode'."
   (interactive
    (let ((sym (haskell-ident-at-point)))
-     (list (read-string (if (> (length sym) 0)
+     (list (read-string (if sym
                             (format "Show type of (default %s): " sym)
                           "Show type of: ")
                         nil nil sym)
@@ -496,7 +498,7 @@ The returned info is cached for reuse by `haskell-doc-mode'."
   (if (string-match "\\`\\s_+\\'" expr) (setq expr (concat "(" expr ")")))
   (let ((type (inferior-haskell-get-result (concat ":type " expr))))
     (if (not (string-match (concat "^\\(" (regexp-quote expr)
-                                   "[ \t\n]+::[ \t\n]*\\(.\\|\n\\)*\\)")
+                                   "[ \t\n]+\\(::\\|∷\\)[ \t\n]*\\(.\\|\n\\)*\\)")
                            type))
         (error "No type info: %s" type)
       (progn
@@ -505,7 +507,7 @@ The returned info is cached for reuse by `haskell-doc-mode'."
         (when (and (boundp 'haskell-doc-mode) haskell-doc-mode
                    (boundp 'haskell-doc-user-defined-ids)
                    ;; Haskell-doc only works for idents, not arbitrary expr.
-                   (string-match "\\`(?\\(\\s_+\\|\\(\\sw\\|\\s'\\)+\\)?[ \t]*::[ \t]*"
+                   (string-match "\\`(?\\(\\s_+\\|\\(\\sw\\|\\s'\\)+\\)?[ \t]*\\(::\\|∷\\)[ \t]*"
                                  type))
           (let ((sym (match-string 1 type)))
             (setq haskell-doc-user-defined-ids
@@ -524,7 +526,7 @@ The returned info is cached for reuse by `haskell-doc-mode'."
   "Query the haskell process for the kind of the given expression."
   (interactive
    (let ((type (haskell-ident-at-point)))
-     (list (read-string (if (> (length type) 0)
+     (list (read-string (if type
                             (format "Show kind of (default %s): " type)
                           "Show kind of: ")
                         nil nil type))))
@@ -537,7 +539,7 @@ The returned info is cached for reuse by `haskell-doc-mode'."
   "Query the haskell process for the info of the given expression."
   (interactive
    (let ((sym (haskell-ident-at-point)))
-     (list (read-string (if (> (length sym) 0)
+     (list (read-string (if sym
                             (format "Show info of (default %s): " sym)
                           "Show info of: ")
                         nil nil sym))))
@@ -550,7 +552,7 @@ The returned info is cached for reuse by `haskell-doc-mode'."
   "Attempt to locate and jump to the definition of the given expression."
   (interactive
    (let ((sym (haskell-ident-at-point)))
-     (list (read-string (if (> (length sym) 0)
+     (list (read-string (if sym
                             (format "Find definition of (default %s): " sym)
                           "Find definition of: ")
                         nil nil sym))))
@@ -568,7 +570,7 @@ The returned info is cached for reuse by `haskell-doc-mode'."
             (setq file (expand-file-name file)))
           ;; Push current location marker on the ring used by `find-tag'
           (require 'etags)
-          (ring-insert find-tag-marker-ring (point-marker))
+          (xref-push-marker-stack)
           (pop-to-buffer (find-file-noselect file))
           (when line
             (goto-char (point-min))
@@ -769,7 +771,7 @@ see if this is newer than `haskell-package-conf-file' every time
 we load it."
   (interactive
    (let ((sym (haskell-ident-at-point)))
-     (list (read-string (if (> (length sym) 0)
+     (list (read-string (if sym
                             (format "Find documentation of (default %s): " sym)
                           "Find documentation of: ")
                         nil nil sym))))

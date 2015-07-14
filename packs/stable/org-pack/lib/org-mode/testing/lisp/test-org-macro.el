@@ -74,7 +74,64 @@
 		org-test-dir)
       (org-macro-initialize-templates)
       (org-macro-replace-all org-macro-templates)
-      (buffer-string)))))
+      (buffer-string))))
+  ;; Test special "property" macro.  With only one argument, retrieve
+  ;; property from current headline.  Otherwise, the second argument
+  ;; is a search option to get the property from another headline.
+  (should
+   (equal "1"
+	  (org-test-with-temp-text
+	      "* H\n:PROPERTIES:\n:A: 1\n:END:\n{{{property(A)}}}<point>"
+	    (org-macro-initialize-templates)
+	    (org-macro-replace-all org-macro-templates)
+	    (buffer-substring-no-properties
+	     (line-beginning-position) (line-end-position)))))
+  (should
+   (equal "1"
+	  (org-test-with-temp-text
+	      "* H\n:PROPERTIES:\n:A: 1\n:END:\n{{{property(A,)}}}<point>"
+	    (org-macro-initialize-templates)
+	    (org-macro-replace-all org-macro-templates)
+	    (buffer-substring-no-properties
+	     (line-beginning-position) (line-end-position)))))
+  (should
+   (equal
+    "1"
+    (org-test-with-temp-text
+	"* H1\n:PROPERTIES:\n:A: 1\n:END:\n* H2\n{{{property(A,*H1)}}}<point>"
+      (org-macro-initialize-templates)
+      (org-macro-replace-all org-macro-templates)
+      (buffer-substring-no-properties
+       (line-beginning-position) (line-end-position)))))
+  (should-error
+   (org-test-with-temp-text
+       "* H1\n:PROPERTIES:\n:A: 1\n:END:\n* H2\n{{{property(A,*???)}}}<point>"
+     (org-macro-initialize-templates)
+     (org-macro-replace-all org-macro-templates))))
+
+(ert-deftest test-org-macro/escape-arguments ()
+  "Test `org-macro-escape-arguments' specifications."
+  ;; Regular tests.
+  (should (equal "a" (org-macro-escape-arguments "a")))
+  (should (equal "a,b" (org-macro-escape-arguments "a" "b")))
+  ;; Handle empty arguments.
+  (should (equal "a,,b" (org-macro-escape-arguments "a" "" "b")))
+  ;; Properly escape commas and backslashes preceding them.
+  (should (equal "a\\,b" (org-macro-escape-arguments "a,b")))
+  (should (equal "a\\\\,b" (org-macro-escape-arguments "a\\" "b")))
+  (should (equal "a\\\\\\,b" (org-macro-escape-arguments "a\\,b"))))
+
+(ert-deftest test-org-macro/extract-arguments ()
+  "Test `org-macro-extract-arguments' specifications."
+  ;; Regular tests.
+  (should (equal '("a") (org-macro-extract-arguments "a")))
+  (should (equal '("a" "b") (org-macro-extract-arguments "a,b")))
+  ;; Handle empty arguments.
+  (should (equal '("a" "" "b") (org-macro-extract-arguments "a,,b")))
+  ;; Handle escaped commas and backslashes.
+  (should (equal '("a,b") (org-macro-extract-arguments "a\\,b")))
+  (should (equal '("a\\" "b") (org-macro-extract-arguments "a\\\\,b")))
+  (should (equal '("a\\,b") (org-macro-extract-arguments "a\\\\\\,b"))))
 
 
 (provide 'test-org-macro)

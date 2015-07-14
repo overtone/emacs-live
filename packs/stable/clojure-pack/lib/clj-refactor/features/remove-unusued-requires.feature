@@ -321,7 +321,7 @@ Feature: remove unused require
     """
     (ns cljr.core
       (:require [clj-time.core]
-                [clojure string 
+                [clojure string
                  [set :as st]]))
 
     (defn use-time []
@@ -349,7 +349,7 @@ Feature: remove unused require
     """
     (ns cljr.core
       (:require [clj-time.core]
-                [clojure string 
+                [clojure string
                  [set :refer [difference]]]))
 
     (defn use-time []
@@ -377,7 +377,7 @@ Feature: remove unused require
     """
     (ns cljr.core
       (:require [clj-time.core]
-                [clojure string 
+                [clojure string
                  [set :refer [difference]]]))
 
     (defn use-time []
@@ -405,7 +405,7 @@ Feature: remove unused require
     """
     (ns cljr.core
       (:require [clj-time.core :refer :all]
-                [clojure string 
+                [clojure string
                  [set :refer :all]]))
 
     (defn use-time []
@@ -433,7 +433,7 @@ Feature: remove unused require
     """
     (ns cljr.core
       (:require [clj-time.core :as tc :refer :all]
-                [clojure string 
+                [clojure string
                  [set :as s :refer :all]]))
 
     (defn use-time []
@@ -460,7 +460,7 @@ Feature: remove unused require
     Then I should see:
     """
     (ns cljr.core
-      (:require [clojure string 
+      (:require [clojure string
                  [set :as st]]
                 [clj-time.core]))
 
@@ -524,11 +524,11 @@ Feature: remove unused require
     (str/join "+" ["a" "b" "c"])
     """
 
-  Scenario: Also sorts ns if auto-sort is on
+  Scenario: Removes own namespace
     When I insert:
     """
     (ns cljr.core
-      (:require [clojure.string :as s]
+      (:require [cljr.core :refer [use-time]]
                 [clojure.set :as st]
                 [clj-time.core :as t]))
 
@@ -537,13 +537,12 @@ Feature: remove unused require
       (st/difference #{:a :b} #{:a :c}))
     """
     And I place the cursor before "now"
-    And I switch auto-sort on
     And I press "C-! rr"
     Then I should see:
     """
     (ns cljr.core
-      (:require [clj-time.core :as t]
-                [clojure.set :as st]))
+      (:require [clojure.set :as st]
+                [clj-time.core :as t]))
 
     (defn use-time []
       (t/now)

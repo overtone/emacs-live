@@ -1,6 +1,6 @@
 ;;;; org-test.el --- Tests for Org-mode
 
-;; Copyright (c) 2010-2014 Sebastian Rose, Eric Schulte
+;; Copyright (c) 2010-2015 Sebastian Rose, Eric Schulte
 ;; Authors:
 ;;     Sebastian Rose, Hannover, Germany, sebastian_rose gmx de
 ;;     Eric Schulte, Santa Fe, New Mexico, USA, schulte.eric gmail com
@@ -52,7 +52,7 @@
       (require 'org-id)
       (require 'ox)
       (org-babel-do-load-languages
-       'org-babel-load-languages '((sh . t) (org . t))))
+       'org-babel-load-languages '((shell . t) (org . t))))
 
     (let* ((load-path (cons
 		       org-test-dir
@@ -205,7 +205,8 @@ mode holding TEXT.  If the string \"<point>\" appears in TEXT
 then remove it and place the point there before running BODY,
 otherwise place the point at the beginning of the inserted text."
   (declare (indent 1))
-  `(let ((inside-text (if (stringp ,text) ,text (eval ,text))))
+  `(let ((inside-text (if (stringp ,text) ,text (eval ,text)))
+	 (org-mode-hook nil))
      (with-temp-buffer
        (org-mode)
        (let ((point (string-match "<point>" inside-text)))
@@ -254,6 +255,7 @@ or temporarily substitute the `org-test-with-temp-text' of this
 function with `org-test-with-temp-text-in-file'.  Also consider
 setting `pp-escape-newlines' to nil manually."
   (require 'pp)
+  (require 'ert)
   (let ((back pp-escape-newlines) (current-tblfm))
     (unless tblfm
       (should-not laps)
@@ -421,10 +423,11 @@ Load all test files first."
   (let ((org-id-track-globally t)
 	(org-test-selector
 	 (if org-test-selector org-test-selector "\\(org\\|ob\\)"))
-	org-confirm-babel-evaluate vc-handled-backends)
+	org-confirm-babel-evaluate org-startup-folded vc-handled-backends)
     (org-test-touch-all-examples)
     (org-test-update-id-locations)
     (org-test-load)
+    (message "selected tests: %s" org-test-selector)
     (ert-run-tests-batch-and-exit org-test-selector)))
 
 (defun org-test-run-all-tests ()
@@ -432,6 +435,7 @@ Load all test files first."
 Load all test files first."
   (interactive)
   (org-test-touch-all-examples)
+  (org-test-update-id-locations)
   (org-test-load)
   (ert "\\(org\\|ob\\)")
   (org-test-kill-all-examples))

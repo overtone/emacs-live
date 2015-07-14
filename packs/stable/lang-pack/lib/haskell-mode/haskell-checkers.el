@@ -29,40 +29,40 @@
 
 (defgroup haskell-checkers nil
   "Run HLint as inferior of Emacs, parse error messages."
-  :group 'tools
   :group 'haskell)
 
-(defcustom hs-lint-command "hlint"
+;;;###autoload
+(defcustom haskell-lint-command "hlint"
   "The default lint command for \\[hlint]."
   :type 'string
   :group 'haskell-checkers)
 
-(defcustom hs-scan-command "scan"
-  "The default scan command for \\[hs-scan]."
+(defcustom haskell-scan-command "scan"
+  "The default scan command for \\[haskell-scan]."
   :type 'string
   :group 'haskell-checkers)
 
-(defcustom hs-scan-options ""
-  "The default options for \\[hs-scan]."
+(defcustom haskell-scan-options ""
+  "The default options for \\[haskell-scan]."
   :type 'string
   :group 'haskell-checkers)
 
-(defcustom hs-lint-options ""
+(defcustom haskell-lint-options ""
   "The default options for \\[hlint]."
   :type 'string
   :group 'haskell-checkers)
 
-(defcustom hs-checkers-save-files t
+(defcustom haskell-checkers-save-files t
   "Save modified files when run checker or not (ask user)"
   :type 'boolean
   :group 'haskell-checkers)
 
-(defcustom hs-checkers-replace-with-suggestions nil
+(defcustom haskell-checkers-replace-with-suggestions nil
   "Replace user's code with suggested replacements (hlint only)"
   :type 'boolean
   :group 'haskell-checkers)
 
-(defcustom hs-checkers-replace-without-ask nil
+(defcustom haskell-checkers-replace-without-ask nil
   "Replace user's code with suggested replacements automatically (hlint only)"
   :type 'boolean
   :group 'haskell-checkers)
@@ -75,26 +75,26 @@
 ;; Why not:
 ;; \s +\(.*\)
 
-(defvar hs-lint-regex
+(defvar haskell-lint-regex
   "^\\(.*?\\):\\([0-9]+\\):\\([0-9]+\\): .*[\n\C-m]Found:[\n\C-m]\\s +\\(.*\\)[\n\C-m]Why not:[\n\C-m]\\s +\\(.*\\)[\n\C-m]"
   "Regex for HLint messages")
 
-(defun hs-checkers-make-short-string (str maxlen)
+(defun haskell-checkers-make-short-string (str maxlen)
   (if (< (length str) maxlen)
       str
     (concat (substring str 0 (- maxlen 3)) "...")))
 
-;; TODO: check, is it possible to adopt it for hs-scan?
-(defun hs-lint-replace-suggestions ()
+;; TODO: check, is it possible to adopt it for haskell-scan?
+(defun haskell-lint-replace-suggestions ()
   "Perform actual replacement of HLint's suggestions"
   (goto-char (point-min))
-  (while (re-search-forward hs-lint-regex nil t)
+  (while (re-search-forward haskell-lint-regex nil t)
     (let* ((fname (match-string 1))
            (fline (string-to-number (match-string 2)))
            (old-code (match-string 4))
            (new-code (match-string 5))
-           (msg (concat "Replace '" (hs-checkers-make-short-string old-code 30)
-                        "' with '" (hs-checkers-make-short-string new-code 30) "'"))
+           (msg (concat "Replace '" (haskell-checkers-make-short-string old-code 30)
+                        "' with '" (haskell-checkers-make-short-string new-code 30) "'"))
            (bline 0)
            (eline 0)
            (spos 0)
@@ -104,46 +104,46 @@
         (goto-char (point-min))
         (forward-line (1- fline))
         (beginning-of-line)
-        (setf bline (point))
-        (when (or hs-checkers-replace-without-ask
+        (setq bline (point))
+        (when (or haskell-checkers-replace-without-ask
                   (yes-or-no-p msg))
           (end-of-line)
-          (setf eline (point))
+          (setq eline (point))
           (beginning-of-line)
-          (setf old-code (regexp-quote old-code))
+          (setq old-code (regexp-quote old-code))
           (while (string-match "\\\\ " old-code spos)
-            (setf new-old-code (concat new-old-code
+            (setq new-old-code (concat new-old-code
                                        (substring old-code spos (match-beginning 0))
                                        "\\ *"))
-            (setf spos (match-end 0)))
-          (setf new-old-code (concat new-old-code (substring old-code spos)))
+            (setq spos (match-end 0)))
+          (setq new-old-code (concat new-old-code (substring old-code spos)))
           (remove-text-properties bline eline '(composition nil))
           (when (re-search-forward new-old-code eline t)
             (replace-match new-code nil t)))))))
 
-(defun hs-lint-finish-hook (buf msg)
+(defun haskell-lint-finish-hook (buf msg)
   "Function, that is executed at the end of HLint or scan execution"
-  (if hs-checkers-replace-with-suggestions
-      (hs-lint-replace-suggestions)
+  (if haskell-checkers-replace-with-suggestions
+      (haskell-lint-replace-suggestions)
     (next-error 1 t)))
 
-(defun hs-scan-finish-hook (buf msg)
-  "Function, that is executed at the end of hs-scan execution"
+(defun haskell-scan-finish-hook (buf msg)
+  "Function, that is executed at the end of haskell-scan execution"
   (next-error 1 t))
 
-(defun hs-scan-make-command (file)
+(defun haskell-scan-make-command (file)
   "Generates command line for scan"
-  (concat hs-scan-command " " hs-scan-options " \"" file "\""))
+  (concat haskell-scan-command " " haskell-scan-options " \"" file "\""))
 
-(defun hs-lint-make-command (file)
+(defun haskell-lint-make-command (file)
   "Generates command line for scan"
-  (concat hs-lint-command  " \"" file "\"" " " hs-lint-options))
+  (concat haskell-lint-command  " \"/" file "/\"" " " haskell-lint-options))
 
-(defmacro hs-checkers-setup (type name)
+(defmacro haskell-checkers-setup (type name)
   "Performs setup of corresponding checker. Receives two arguments:
 type - checker's type (lint or scan) that is expanded into functions and hooks names
 name - user visible name for this mode"
-  (let ((nm (concat "hs-" (symbol-name type))))
+  (let ((nm (concat "haskell-" (symbol-name type))))
     `(progn
 ;;;###autoload
        (defvar ,(intern (concat nm "-setup-hook")) nil
@@ -164,13 +164,13 @@ name - user visible name for this mode"
        (defun ,(intern nm) ()
          ,(concat "Run " name " for current buffer with haskell source")
          (interactive)
-         (save-some-buffers hs-checkers-save-files)
+         (save-some-buffers haskell-checkers-save-files)
          (compilation-start (,(intern (concat nm "-make-command")) buffer-file-name)
                             ',(intern (concat nm "-mode")))))
     ))
 
-(hs-checkers-setup lint "HLint")
-(hs-checkers-setup scan "HScan")
+(haskell-checkers-setup lint "HLint")
+(haskell-checkers-setup scan "HScan")
 
 (provide 'haskell-checkers)
 

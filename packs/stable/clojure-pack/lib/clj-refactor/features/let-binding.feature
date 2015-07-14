@@ -157,6 +157,24 @@ Feature: Let bindings
          :body body}))
     """
 
+  Scenario: Introduce let if let does not exist
+    When I insert:
+    """
+    (defn handle-request
+      {:status (or status 500)
+       :body body})
+    """
+    And I place the cursor before "(or status 500)"
+    And I press "C-! ml"
+    And I type "status"
+    Then I should see:
+    """
+    (defn handle-request
+      {:status (let [status (or status 500)]
+                 status)
+       :body body})
+    """
+
   Scenario: Move to let, multiple occurance
     When I insert:
     """

@@ -2,6 +2,143 @@
 
 ## master (unreleased)
 
+## 0.9.1 / 2015-06-24
+
+### New features
+
+* [#1155](https://github.com/clojure-emacs/cider/pull/1155): The debugger displays overlays highlighting the current sexp and its return value.
+
+### Bugs fixed
+
+* [#1142](https://github.com/clojure-emacs/cider/issues/1142): Don't retrive nrepl ports when `cider-known-endpoints` entry already contains the port.
+* [#1153](https://github.com/clojure-emacs/cider/pull/1153): Fix behavior of `cider-switch-to-current-repl-buffer`.
+* [#1139](https://github.com/clojure-emacs/cider/issues/1139): Fix evaluation of ns forms and of forms with unevaluated namespaces.
+* Replace `assert` with `cl-assert` (we don't use anything from `cl` now).
+* [#1135](https://github.com/clojure-emacs/cider/pull/1135): Fix a corner case with locals display in the debugger.
+* [#1129](https://github.com/clojure-emacs/cider/issues/1129): Fix occasional `(wrong-type-argument stringp nil)` on clojure-android.
+* [#1122](https://github.com/clojure-emacs/cider/issues/1122): Run client initialization in new client buffer.
+* [#1143](https://github.com/clojure-emacs/cider/issues/1143): Handle tests without location metadata.
+
+## 0.9.0 / 2015-06-16
+
+### New features
+
+* [#1109](https://github.com/clojure-emacs/cider/issues/1109): New defcustom `cider-auto-mode`.
+On by default, when `nil` don't automatically enable `cider-mode` in all Clojure buffers.
+* [#1061](https://github.com/clojure-emacs/cider/issues/1061): New command `cider-find-ns`, bound to <kbd>C-c C-.</kbd>, which prompts for an ns and jumps to the corresponding source file.
+* [#1019](https://github.com/clojure-emacs/cider/pull/1019): New file, cider-debug.el.
+  Provides a new command, `cider-debug-defun-at-point`, bound to <kbd>C-u C-M-x</kbd>.
+  Interactively debug top-level clojure forms.
+* New defcustom, `cider-auto-select-test-report-buffer` (boolean).
+  Controls whether the test report buffer is selected after running a test. Defaults to true.
+* Trigger Grimoire doc lookup from doc buffers by pressing <kbd>g</kbd> (in Emacs) and <kbd>G</kbd> (in browser).
+* [#903](https://github.com/clojure-emacs/cider/pull/903): Isolate
+  `nrepl-client` connection logic from CIDER. New hooks `cider-connected-hook`
+  and `cider-disconnected-hook`.
+* [#920](https://github.com/clojure-emacs/cider/issues/920): Support `cider-jack-in` for boot-based projects.
+* [#949](https://github.com/clojure-emacs/cider/issues/949): New custom var: `cider-default-repl-command`.
+* New code formatting commands - `cider-format-buffer`, `cider-format-region` and `cider-format-defun`.
+* New data formatting commands - `cider-format-edn-buffer` and `cider-format-edn-region`.
+* New insert region in REPL command - `cider-insert-region-in-repl`.
+* Pretty printing functionality moved to middleware, adding support for ClojureScript.
+  - New command to eval and pprint result: `cider-interactive-pprint-eval`.
+  - `cider-format-pprint-eval` has been removed.
+* Warn when used with incompatible nREPL server.
+* Allow the prompt to be tailored by adding `cider-repl-prompt-function` and `cider-repl-default-prompt`.
+* Support for middleware-annotated completion candidates.
+  - `cider-annotate-completion-function` controls how the annotations are formatted.
+  - `cider-completion-annotations-alist` controls the abbreviations used in annotations.
+  - `cider-completion-annotations-include-ns` controls when to include the candidate namespace in annotations.
+* Inspector middleware now relies on `eval` middleware, adding support for ClojureScript.
+* Better printing of large amounts of exception cause data in the error buffer.
+  - New defcustom, `cider-stacktrace-print-length` (boolean).
+* [#958](https://github.com/clojure-emacs/cider/pull/958): Reuse existing repl
+  buffers with dead processes. Users are now informed about existing zombie repl
+  buffers and are offered the choice to reuse those for new connections.
+* New defcustom, `cider-prompt-for-symbol`. Controls whether to prompt for
+  symbol when interactive commands require one. Defaults to t, which always
+  prompts. Currently applies to all documentation and source lookup commands.
+* [#1032](https://github.com/clojure-emacs/cider/issues/1032): New functions, `cider-find-dwim` and
+  `cider-find-dwim-other-window`. These functions combine the functionality of `cider-jump-to-var` and
+  `cider-jump-to-resource`. Which are now renamed to `cider-find-var` and `cider-find-resource` respectively.
+* [#1014](https://github.com/clojure-emacs/cider/issues/1014): A prefix of <kbd>-</kbd> causes `cider-find-var` and
+  `cider-find-resource` to show results in other window. Additionally, a double prefix argument <kbd>C-u C-u</kbd>
+  inverts the meaning of `cider-prompt-for-symbol` and shows the results in other window.
+* [#1062](https://github.com/clojure-emacs/cider/issues/1062): Added completion candidates to `cider-find-resource`.
+* Middleware support for Piggieback 0.2.x.
+* In the namespace browser, `d` and `s` are now bound to show the documentation
+  or the source respectively for the symbol at point.
+* [#1090](https://github.com/clojure-emacs/cider/issues/1090): New defcustom,
+  `cider-macroexpansion-print-metadata` (boolean). Controls whether metadata of
+  forms is included in macroexpansion results. Defaults to nil.
+
+### Changes
+
+* Display the current connection instead of the current namespace in `cider-mode`'s modeline.
+* [#1078](https://github.com/clojure-emacs/cider/issues/1078): Removed
+  `cider-load-fn-into-repl-buffer`, previously bound to `C-c M-f` in the REPL.
+* [#1019](https://github.com/clojure-emacs/cider/pull/1019):
+  <kbd>C-u C-M-x</kbd> no longer does `eval-defun`+print-result. Instead it debugs the form at point.
+* [#854](https://github.com/clojure-emacs/cider/pull/854): Error navigation now
+  favors line information reported by the stacktrace, being more detailed than
+  the info reported by `info` middleware.
+* [#854](https://github.com/clojure-emacs/cider/pull/854): Add `nrepl-dict` constructor.
+* [#934](https://github.com/clojure-emacs/cider/issues/934): Remove
+  `cider-turn-on-eldoc-mode` in favor of simply using `eldoc-mode`.
+* [#953](https://github.com/clojure-emacs/cider/pull/953): Use `sshx` instead of `ssh` in `cider-select-endpoint`.
+* [#956](https://github.com/clojure-emacs/cider/pull/956): Eval full ns form only when needed.
+* Enable annotated completion candidates by default.
+* [#1031](https://github.com/clojure-emacs/cider/pull/1031): Interactive functions prompt with
+  symbol at point as a default value.
+* Remapped `cider-grimoire` to <kbd>C-c C-d r</kbd> & <kbd>C-c C-d C-r</kbd>
+to avoid conflicts with <kbd>C-g</kbd>.
+* [#1088](https://github.com/clojure-emacs/cider/issues/1088): Kill the
+source-tracking evaluation hack as it wasn't compatible with ClojureScript.
+* Removed `clojure-enable-cider` and `clojure-disable-cider`.
+
+### Bugs fixed
+
+* [#921](https://github.com/clojure-emacs/cider/issues/921): Fixed
+non-functioning `cider-test-jump` from test reports.
+* [#962](https://github.com/clojure-emacs/cider/pull/962): On error don't auto-jump to tooling files.
+* [#909](https://github.com/clojure-emacs/cider/issues/909): Fixed
+`cider-repl-set-ns`'s behavior for ClojureScript.
+* [#950](https://github.com/clojure-emacs/cider/issues/950): Eval `ns` form in the
+`user` namespace when using `cider-interactive-eval`.
+* [#954](https://github.com/clojure-emacs/cider/issues/954): Detect properly a project's root
+when in buffer that's not visiting a file (e.g. a REPL buffer).
+* [#977](https://github.com/clojure-emacs/cider/issues/977): `cider-format-region` now respects indentation of the region start position.
+* [#979](https://github.com/clojure-emacs/cider/issues/979): Fixed the inspector buffer popping up needlessly.
+* [#981](https://github.com/clojure-emacs/cider/issues/981): Updated `cider-find-file` to use `find-buffer-visiting` instead of `get-file-buffer`.
+* [#1004](https://github.com/clojure-emacs/cider/issues/1004): `:repl-env` key is now filtered from exception causes, as it contains unprintably large strings of compiled javascript when using ClojureScript.
+* Tunneled ssh connection now deals correctly with the ssh password request.
+* [#1033](https://github.com/clojure-emacs/cider/issues/1033): Removed erroneous underlining from stacktrace frames and disabled frame filters in the error buffer.
+* The error buffer no longer pops up when there is no error to display.
+* `cider-find-resource` now correctly throws an error when no path is provided.
+* [#946](https://github.com/clojure-emacs/cider/issues/946): `cider-stacktrace-mode` is now enabled before the error buffer is displayed.
+* [#1077](https://github.com/clojure-emacs/cider/issues/1077): Respect `cider-repl-display-in-current-window` in `cider-switch-to-last-clojure-buffer`.
+
+## 0.8.2 / 2014-12-21
+
+### Bugs fixed
+
+* [#867](https://github.com/clojure-emacs/cider/issues/867): Update Grimoire URL to fix (cider-grimoire-lookup) regression due to HTTP 301 (Moved Permanently).
+* [#883](https://github.com/clojure-emacs/cider/issues/883): Encode properly the javadoc url.
+* [#824](https://github.com/clojure-emacs/cider/issues/824): Fix REPL font-locking.
+* [#888](https://github.com/clojure-emacs/cider/issues/888): Handle comments in `cider-repl-mode`.
+* [#830](https://github.com/clojure-emacs/cider/issues/830): Stop using `load-file` for most interactive evaluation commands.
+* [#885](https://github.com/clojure-emacs/cider/issues/885): Translate nREPL-delivered map keys to symbols before adding as text properties.
+* Fix tab completion in `cider-read-from-minibuffer`.
+* [#894](https://github.com/clojure-emacs/cider/issues/894): Make it possible to enter any symbol with `cider-read-symbol-name`.
+* Report Clojure's version including its qualifier (e.g. `alpha4`) if present.
+* Use the `field` text property to make move-beginning-of-line respect the repl prompt instead of writing our own beginning-of-line commands.
+
+## 0.8.1 / 2014-11-20
+
+### Bugs fixed
+
+* Fixed version mismatch warning on CIDER startup (the actual bug was in `cider-nrepl`).
+
 ## 0.8.0 / 2014-11-20
 
 ### New features

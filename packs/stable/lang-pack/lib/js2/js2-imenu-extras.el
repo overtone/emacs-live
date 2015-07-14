@@ -37,7 +37,7 @@
 
 (require 'js2-mode)
 
-(defconst js2-imenu-extension-styles
+(defvar js2-imenu-extension-styles
   `((:framework jquery
      :call-re   "\\_<\\(?:jQuery\\|\\$\\|_\\)\\.extend\\s-*("
      :recorder  js2-imenu-record-jquery-extend)

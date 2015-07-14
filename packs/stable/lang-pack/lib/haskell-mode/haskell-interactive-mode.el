@@ -32,7 +32,6 @@
 (require 'haskell-process)
 (require 'haskell-collapse)
 (require 'haskell-session)
-(require 'haskell-show)
 (require 'haskell-font-lock)
 (require 'haskell-presentation-mode)
 
@@ -76,6 +75,8 @@ interference with prompts that look like haskell expressions."
     (define-key map (kbd "C-c C-z") 'haskell-interactive-switch-back)
     (define-key map (kbd "M-p") 'haskell-interactive-mode-history-previous)
     (define-key map (kbd "M-n") 'haskell-interactive-mode-history-next)
+    (define-key map (kbd "C-c C-p") 'haskell-interactive-mode-prompt-previous)
+    (define-key map (kbd "C-c C-n") 'haskell-interactive-mode-prompt-next)
     (define-key map (kbd "C-<up>") 'haskell-interactive-mode-history-previous)
     (define-key map (kbd "C-<down>") 'haskell-interactive-mode-history-next)
     (define-key map (kbd "TAB") 'haskell-interactive-mode-tab)
@@ -414,7 +415,7 @@ SESSION, otherwise operate on the current buffer.
       (message "%s"
                (concat (car lines)
                        (if (and (cdr lines) (stringp (cadr lines)))
-                           (format " [ %s .. ]" (haskell-string-take (haskell-trim (cadr lines)) 10))
+                           (format " [ %s .. ]" (haskell-string-take (haskell-string-trim (cadr lines)) 10))
                          ""))))))
 
 (defun haskell-interactive-mode-tab ()
@@ -558,7 +559,10 @@ FILE-NAME only."
            (format "Add `%s' to %s?"
                    package-name
                    cabal-file))
-      (haskell-cabal-add-dependency package-name version nil t))))
+      (haskell-cabal-add-dependency package-name version nil t)
+      (when (y-or-n-p (format "Enable -package %s in the GHCi session?" package-name))
+        (haskell-process-queue-without-filters (haskell-session-process session)
+                                               (format ":set -package %s" package-name))))))
 
 (defun haskell-process-suggest-remove-import (session file import line)
   "Suggest removing or commenting out IMPORT on LINE."
@@ -960,6 +964,21 @@ don't care when the thing completes as long as it's soonish."
       (setq haskell-interactive-mode-history-index 0)
       (haskell-interactive-mode-history-toggle -1))))
 
+(defun haskell-interactive-mode-prompt-previous ()
+  "Jump to the previous prompt."
+  (interactive)
+  (let ((prev-prompt-pos
+         (save-excursion
+           (beginning-of-line) ;; otherwise prompt at current line matches
+           (and (search-backward-regexp (haskell-interactive-prompt-regex) nil t)
+                (match-end 0)))))
+    (when prev-prompt-pos (goto-char prev-prompt-pos))))
+
+(defun haskell-interactive-mode-prompt-next ()
+  "Jump to the next prompt."
+  (interactive)
+  (search-forward-regexp (haskell-interactive-prompt-regex) nil t))
+
 (defun haskell-interactive-mode-clear ()
   "Clear the screen and put any current input into the history."
   (interactive)
@@ -1037,14 +1056,31 @@ don't care when the thing completes as long as it's soonish."
                             'read-only t
                             'rear-nonsticky t))))))
 
+(defun haskell-interactive-mode-splices-buffer (session)
+  "Get the splices buffer for the current session."
+  (get-buffer-create (haskell-interactive-mode-splices-buffer-name session)))
+
+(defun haskell-interactive-mode-splices-buffer-name (session)
+  (format "*%s:splices*" (haskell-session-name session)))
+
 (defun haskell-interactive-mode-compile-splice (session message)
   "Echo a compiler splice."
-  (with-current-buffer (haskell-session-interactive-buffer session)
-    (setq next-error-last-buffer (current-buffer))
-    (save-excursion
-      (haskell-interactive-mode-goto-end-point)
-      (insert (haskell-fontify-as-mode message 'haskell-mode)
-              "\n"))))
+  (with-current-buffer (haskell-interactive-mode-splices-buffer session)
+    (unless (eq major-mode 'haskell-mode)
+      (haskell-mode))
+    (let* ((parts (split-string message "\n  ======>\n"))
+           (file-and-decl-lines (split-string (nth 0 parts) "\n"))
+           (file (nth 0 file-and-decl-lines))
+           (decl (mapconcat #'identity (cdr file-and-decl-lines) "\n"))
+           (output (nth 1 parts)))
+      (insert "-- " file "\n")
+      (let ((start (point)))
+        (insert decl "\n")
+        (indent-rigidly start (point) -4))
+      (insert "-- =>\n")
+      (let ((start (point)))
+        (insert output "\n")
+        (indent-rigidly start (point) -4)))))
 
 (defun haskell-interactive-mode-insert-garbage (session message)
   "Echo a read only piece of text before the prompt."
@@ -1057,30 +1093,23 @@ don't care when the thing completes as long as it's soonish."
                           'rear-nonsticky t)))))
 
 ;;;###autoload
-(defun haskell-process-do-simple-echo (line &optional mode)
-  "Send LINE to the GHCi process and echo the result in some
-fashion, such as printing in the minibuffer, or using
-haskell-present, depending on configuration."
+(defun haskell-process-show-repl-response (line)
+  "Send LINE to the GHCi process and echo the result in some fashion.
+Result will be printed in the minibuffer or presented using
+function `haskell-presentation-present', depending on variable
+`haskell-process-use-presentation-mode'."
   (let ((process (haskell-interactive-process)))
     (haskell-process-queue-command
      process
      (make-haskell-command
-      :state (list process line mode)
+      :state (cons process line)
       :go (lambda (state)
-            (haskell-process-send-string (car state) (cadr state)))
+            (haskell-process-send-string (car state) (cdr state)))
       :complete (lambda (state response)
-                  ;; TODO: TBD: don't do this if
-                  ;; `haskell-process-use-presentation-mode' is t.
-                  (haskell-interactive-mode-echo
-                   (haskell-process-session (car state))
-                   response
-                   (cl-caddr state))
                   (if haskell-process-use-presentation-mode
-                      (progn (haskell-present (cadr state)
-                                              (haskell-process-session (car state))
-                                              response)
-                             (haskell-session-assign
-                              (haskell-process-session (car state))))
+                      (haskell-presentation-present
+                       (haskell-process-session (car state))
+                       response)
                     (haskell-mode-message-line response)))))))
 
 (provide 'haskell-interactive-mode)
