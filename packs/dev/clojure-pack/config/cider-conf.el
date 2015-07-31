@@ -48,6 +48,7 @@
 
 
 ;; Pull in the awesome clj-refactor lib by magnars
+(live-add-pack-lib "jump-el")
 (live-add-pack-lib "clj-refactor")
 (require 'clj-refactor)
 (add-hook 'clojure-mode-hook (lambda ()

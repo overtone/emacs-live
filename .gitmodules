@@ -167,3 +167,6 @@
 [submodule "packs/dev/clojure-pack/vendor/submodules/flycheck-pos-tip"]
 	path = packs/dev/clojure-pack/vendor/submodules/flycheck-pos-tip
 	url = git@github.com:flycheck/flycheck-pos-tip.git
+[submodule "packs/dev/clojure-pack/vendor/submodules/jump-el"]
+	path = packs/dev/clojure-pack/vendor/submodules/jump-el
+	url = git@github.com:eschulte/jump.el.git
