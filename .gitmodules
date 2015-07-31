@@ -161,3 +161,6 @@
 [submodule "packs/dev/clojure-pack/vendor/submodules/rainbow-delimiters"]
 	path = packs/dev/clojure-pack/vendor/submodules/rainbow-delimiters
 	url = https://github.com/Fanael/rainbow-delimiters
+[submodule "packs/dev/clojure-pack/vendor/submodules/jump-el"]
+	path = packs/dev/clojure-pack/vendor/submodules/jump-el
+	url = git@github.com:eschulte/jump.el.git
