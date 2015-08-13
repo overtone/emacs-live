@@ -1,3 +1,4 @@
+
 <img src="http://github.com/downloads/overtone/emacs-live/emacs-live.png" />
 
 <!--
@@ -53,9 +54,9 @@ in battle against the evil friction of poor text editor workflows.
     "Power of the horse, full force!"
                  The Space Stallions.
 
-### Requires Emacs 24.3
+### Requires Emacs 24.4
 
-Emacs Live is only compatible with Emacs 24.3 and above.
+Emacs Live is only compatible with Emacs 24.4 and above.
 
 ### Easy Install
 
