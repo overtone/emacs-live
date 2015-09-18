@@ -1,4 +1,5 @@
 (live-add-pack-lib "cider")
+(live-add-pack-lib "spinner-el")
 (require 'cider)
 (require 'cider-apropos)
 (require 'cider-macroexpansion)
@@ -36,13 +37,16 @@
 (eval-after-load "auto-complete"
   '(add-to-list 'ac-modes 'cider-mode))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; AR - see https://github.com/overtone/emacs-live/issues/219 ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Specify the print length to be 100 to stop infinite sequences killing
 ;; things. This might be dangerous for some people relying on
 ;; *print-length* being larger. Consider a work around
-(defun live-nrepl-set-print-length ()
-  (nrepl-send-string-sync "(set! *print-length* 100)" "clojure.core"))
+;; (defun live-nrepl-set-print-length ()
+  ;; (nrepl-send-string-sync "(set! *print-length* 100)" "clojure.core"))
 
-(add-hook 'nrepl-connected-hook 'live-nrepl-set-print-length)
+;; (add-hook 'nrepl-connected-hook 'live-nrepl-set-print-length)
 
 (setq nrepl-port "4555")
 

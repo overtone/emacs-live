@@ -164,3 +164,6 @@
 [submodule "packs/dev/clojure-pack/vendor/submodules/jump-el"]
 	path = packs/dev/clojure-pack/vendor/submodules/jump-el
 	url = git@github.com:eschulte/jump.el.git
+[submodule "packs/dev/clojure-pack/vendor/submodules/spinner-el"]
+	path = packs/dev/clojure-pack/vendor/submodules/spinner-el
+	url = git@github.com:Malabarba/spinner.el.git
