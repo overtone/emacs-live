@@ -161,3 +161,9 @@
 [submodule "packs/dev/clojure-pack/vendor/submodules/rainbow-delimiters"]
 	path = packs/dev/clojure-pack/vendor/submodules/rainbow-delimiters
 	url = https://github.com/Fanael/rainbow-delimiters
+[submodule "packs/dev/clojure-pack/vendor/submodules/spinner.el"]
+	path = packs/dev/clojure-pack/vendor/submodules/spinner.el
+	url = git://github.com/Malabarba/spinner.el.git
+[submodule "packs/dev/foundation-pack/vendor/submodules/hydra"]
+	path = packs/dev/foundation-pack/vendor/submodules/hydra
+	url = git://github.com/abo-abo/hydra.git

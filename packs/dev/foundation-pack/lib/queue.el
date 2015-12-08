@@ -50,10 +50,10 @@
 (defstruct (queue
             ;; A tagged list is the pre-defstruct representation.
             ;; (:type list)
-            :named
-            (:constructor nil)
-            (:constructor queue-create ())
-            (:copier nil))
+	    :named
+	    (:constructor nil)
+	    (:constructor queue-create ())
+	    (:copier nil))
   head tail)
 
 
@@ -66,9 +66,9 @@
   "Append an ELEMENT to the end of the QUEUE."
   (if (queue-head queue)
       (setcdr (queue-tail queue)
-              (setf (queue-tail queue) (cons element nil)))
+	      (setf (queue-tail queue) (cons element nil)))
     (setf (queue-head queue)
-          (setf (queue-tail queue) (cons element nil)))))
+	  (setf (queue-tail queue) (cons element nil)))))
 
 (defalias 'queue-append 'queue-enqueue)
 
@@ -78,7 +78,7 @@
   (if (queue-head queue)
       (push element (queue-head queue))
     (setf (queue-head queue)
-          (setf (queue-tail queue) (cons element nil)))))
+	  (setf (queue-tail queue) (cons element nil)))))
 
 
 (defun queue-dequeue (queue)
@@ -123,13 +123,13 @@ The oldest element in the queue is the first in the list."
 The new queue contains the elements of QUEUE in the same
 order. The elements themselves are *not* copied."
   (let ((q (queue-create))
-        (list (queue-head queue)))
+	(list (queue-head queue)))
     (when (queue-head queue)
       (setf (queue-head q) (cons (car (queue-head queue)) nil)
-            (queue-tail q) (queue-head q))
+	    (queue-tail q) (queue-head q))
       (while (setq list (cdr list))
-        (setf (queue-tail q)
-              (setcdr (queue-tail q) (cons (car list) nil)))))
+	(setf (queue-tail q)
+	      (setcdr (queue-tail q) (cons (car list) nil)))))
     q))
 
 
@@ -141,7 +141,7 @@ order. The elements themselves are *not* copied."
 (defun queue-clear (queue)
   "Remove all elements from QUEUE."
   (setf (queue-head queue) nil
-        (queue-tail queue) nil))
+	(queue-tail queue) nil))
 
 
 (provide 'queue)

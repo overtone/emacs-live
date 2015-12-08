@@ -1,3 +1,4 @@
+(live-add-pack-lib "spinner.el")
 (live-add-pack-lib "cider")
 (require 'cider)
 (require 'cider-apropos)

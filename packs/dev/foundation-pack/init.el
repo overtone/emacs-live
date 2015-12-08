@@ -1,3 +1,5 @@
+(require 'queue)
+(require 'seq)
 (live-add-pack-lib "dash")
 (require 'dash)
 
@@ -17,6 +19,8 @@
 (require 'epl)
 (live-add-pack-lib "pkg-info")
 (require 'pkg-info)
+
+(live-add-pack-lib "hydra")
 
 (live-load-config-file "backup-dir-conf.el")
 (live-load-config-file "util-fns.el")
