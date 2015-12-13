@@ -176,3 +176,6 @@
 [submodule "packs/dev/clojure-pack/vendor/submodules/hydra"]
 	path = packs/dev/clojure-pack/vendor/submodules/hydra
 	url = git@github.com:abo-abo/hydra.git
+[submodule "packs/dev/clojure-pack/vendor/submodules/pos-tip"]
+	path = packs/dev/clojure-pack/vendor/submodules/pos-tip
+	url = git@github.com:syohex/pos-tip.git

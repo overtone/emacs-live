@@ -2,6 +2,7 @@
 (live-add-pack-lib "squiggly-clojure/elisp/typed-clojure")
 (live-add-pack-lib "let-alist")
 (live-add-pack-lib "flycheck")
+(live-add-pack-lib "pos-tip")
 (live-add-pack-lib "flycheck-pos-tip")
 
 (require 'let-alist)
