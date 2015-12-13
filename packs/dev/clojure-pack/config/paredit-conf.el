@@ -32,20 +32,20 @@
         (backward-sexp))
     (paredit-forward)))
 
-(defun live-paredit-forward-slurp-sexp-neatly ()
-  (interactive)
+(defun live-paredit-forward-slurp-sexp-neatly (&optional arg)
+  (interactive "P")
   (save-excursion
     (cond ((or (paredit-in-comment-p)
                (paredit-in-char-p))
            (error "Invalid context for slurping S-expressions."))
           ((paredit-in-string-p)
-           (paredit-forward-slurp-into-string))
+           (paredit-forward-slurp-into-string arg))
           (t
 
            (save-excursion
              (paredit-forward-up)
              (paredit-backward-down)
-             (paredit-forward-slurp-sexp)
+             (paredit-forward-slurp-sexp arg)
              (just-one-space)))))
   (when (not (save-excursion
                (ignore-errors
