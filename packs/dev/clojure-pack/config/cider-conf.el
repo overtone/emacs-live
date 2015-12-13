@@ -1,8 +1,14 @@
 (live-add-pack-lib "cider")
 (live-add-pack-lib "spinner-el")
+(live-add-pack-lib "seq-el")
+;; Current deps:
+;; clojure-mode 5.0.0 / emacs 24.3 / pkg-info 0.4 / queue 0.1.1 / seq 1.9 / spinner 1.4
+;; The dependency queue is loaded in another pack
+
 (require 'cider)
 (require 'cider-apropos)
 (require 'cider-macroexpansion)
+(require 'cider-browse-ns)
 
 (defun live-windows-hide-eol ()
  "Do not show ^M in files containing mixed UNIX and DOS line endings."
