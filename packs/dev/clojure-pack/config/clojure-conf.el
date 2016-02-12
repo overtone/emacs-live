@@ -36,11 +36,6 @@
           (lambda ()
             (setq buffer-save-without-query t)))
 
-;;command to align let statements
-;;To use: M-x align-cljlet
-(live-add-pack-lib "align-cljlet")
-(require 'align-cljlet)
-
 ;;Treat hyphens as a word character when transposing words
 (defvar clojure-mode-with-hyphens-as-word-sep-syntax-table
   (let ((st (make-syntax-table clojure-mode-syntax-table)))

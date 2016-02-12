@@ -6,10 +6,6 @@
         path = packs/dev/foundation-pack/vendor/submodules/smex
         url = git://github.com/nonsequitur/smex.git
         ignore = untracked
-[submodule "packs/dev/clojure-pack/vendor/submodules/align-cljlet"]
-        path = packs/dev/clojure-pack/vendor/submodules/align-cljlet
-        url = git://github.com/gstamp/align-cljlet.git
-        ignore = untracked
 [submodule "packs/dev/power-pack/vendor/submodules/volatile-highlights"]
         path = packs/dev/power-pack/vendor/submodules/volatile-highlights
         url = git://github.com/k-talo/volatile-highlights.el.git
