@@ -2,7 +2,7 @@
 (live-add-pack-lib "spinner-el")
 (live-add-pack-lib "seq-el")
 ;; Current deps:
-;; clojure-mode 5.0.0 / emacs 24.3 / pkg-info 0.4 / queue 0.1.1 / seq 1.9 / spinner 1.4
+;; clojure-mode 5.3.0 / emacs 24.3 / pkg-info 0.4 / queue 0.1.1 / seq 1.9 / spinner 1.4
 ;; The dependency queue is loaded in another pack
 
 (require 'cider)
@@ -19,15 +19,10 @@
 (when (eq system-type 'windows-nt)
   (add-hook 'nrepl-mode-hook 'live-windows-hide-eol ))
 
-(add-hook 'cider-repl-mode-hook
-          (lambda ()
-            (cider-turn-on-eldoc-mode)
-            (paredit-mode 1)))
-
-(add-hook 'cider-mode-hook
-           (lambda ()
-             (cider-turn-on-eldoc-mode)
-             (paredit-mode 1)))
+(add-hook 'cider-mode-hook 'eldoc-mode)
+(add-hook 'cider-mode-hook 'paredit-mode)
+(add-hook 'cider-repl-mode-hook 'paredit-mode)
+(add-hook 'cider-repl-mode-hook 'eldoc-mode)
 
 (setq cider-popup-stacktraces t)
 (setq cider-popup-stacktraces-in-repl t)

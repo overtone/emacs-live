@@ -92,7 +92,7 @@
     (eval-sexp-fu-flash (live-bounds-of-cider-last-sexp)))
 
   (define-eval-sexp-fu-flash-command cider-eval-defun-at-point
-    (eval-sexp-fu-flash (let ((bounds (cider--region-for-defun-at-point)))
+    (eval-sexp-fu-flash (let ((bounds (cider-defun-at-point 'bounds)))
                           (cons (first bounds) (second bounds)))))
 
 
