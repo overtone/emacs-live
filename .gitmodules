@@ -43,15 +43,15 @@
         url = git://github.com/purcell/elisp-slime-nav.git
         ignore = untracked
 [submodule "packs/dev/power-pack/vendor/submodules/gist"]
-        path = packs/dev/power-pack/vendor/submodules/gist
+	path = packs/dev/git-pack/vendor/submodules/gist
         url = git://github.com/defunkt/gist.el.git
         ignore = untracked
 [submodule "packs/dev/power-pack/vendor/submodules/gh"]
-        path = packs/dev/power-pack/vendor/submodules/gh
+	path = packs/dev/git-pack/vendor/submodules/gh
         url = git://github.com/sigma/gh.el.git
         ignore = untracked
 [submodule "packs/dev/power-pack/vendor/submodules/pcache"]
-        path = packs/dev/power-pack/vendor/submodules/pcache
+	path = packs/dev/git-pack/vendor/submodules/pcache
         url = git://github.com/sigma/pcache.git
         ignore = untracked
 [submodule "packs/dev/power-pack/vendor/submodules/logito"]
@@ -99,7 +99,7 @@
         path = packs/dev/power-pack/vendor/submodules/multiple-cursors
         url = git://github.com/magnars/multiple-cursors.el.git
 [submodule "packs/dev/power-pack/vendor/submodules/emacs-git-gutter"]
-	path = packs/dev/power-pack/vendor/submodules/emacs-git-gutter
+	path = packs/dev/git-pack/vendor/submodules/emacs-git-gutter
 	url = git://github.com/syohex/emacs-git-gutter.git
 [submodule "packs/dev/lang-pack/vendor/submodules/glsl-mode"]
 	path = packs/dev/lang-pack/vendor/submodules/glsl-mode
