@@ -94,11 +94,8 @@ Make sure you create a profile in `~/.lein/profiles.clj`. It should
 contain the following:
 
 ```
-{:user {
- :plugins [[cider/cider-nrepl "0.9.1"]
-           [refactor-nrepl "1.1.0"]]
- :dependencies [[org.clojure/tools.nrepl "0.2.7"]]
- }}
+{:user {:plugins [[cider/cider-nrepl "0.12.0"]
+                  [refactor-nrepl    "2.2.0"]]}}
 ```
 
 Now you're ready to start a repl in a Clojure project with `lein repl`
