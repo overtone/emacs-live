@@ -104,9 +104,9 @@ host and the correct port) for full Emacs REPL/autocompletion joy.
 
 ### Screenshots
 
-![Screenshot 1](https://github.com/downloads/overtone/live-coding-emacs/live-coding-config-in-use.png "Live Coding Config Screenshot 1")
+![Screenshot 1](screenshots/live-coding-config-in-use.png "Live Coding Config Screenshot 1")
 
-![Screenshot 2](https://github.com/downloads/overtone/live-coding-emacs/live-coding-config-in-use-2.png "Live Coding Config Screenshot 2")
+![Screenshot 2](screenshots/live-coding-config-in-use-2.png "Live Coding Config Screenshot 2")
 
 ### Video
 
@@ -199,7 +199,7 @@ By default, Emacs live will load the packs in the following order:
 6. `org-pack`
 7. `clojure-pack`
 8. `bindings-pack`
- 
+
 However, you may create a `~/.emacs-live.el` file to override this
 behaviour. Simply set the var live-packs to a list of symbols
 representing the packs you'd like to load up (the order will be
