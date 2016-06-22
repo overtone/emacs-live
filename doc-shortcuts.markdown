@@ -152,8 +152,8 @@ The tutorial covers many of these and more, so give it a read through and get ha
 
 There's a lot to love in Emacs Live. One interesting place to start
 exploring is in the
-[default key bindings](https://github.com/overtone/emacs-live/blob/master/packs/live/bindings-pack/config/default-bindings.el)
-in `packs/live/bindings-pack/config/default-bindings.el`. Have a look
+[default key bindings](https://github.com/overtone/emacs-live/blob/master/packs/stable/bindings-pack/config/default-bindings.el)
+in `packs/stable/bindings-pack/config/default-bindings.el`. Have a look
 around and you may find something interesting.
 
 # --> And on to Clojure
