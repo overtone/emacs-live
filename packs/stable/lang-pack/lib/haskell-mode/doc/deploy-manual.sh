@@ -46,6 +46,9 @@ git clone --quiet --branch=gh-pages "git@github.com:haskell/haskell-mode.git" gh
 cd gh-pages-deploy
 git rm -qr manual/latest
 cp -r ../html manual/latest
+find manual/latest -name '*.html' -exec sed -i -e '/^<\/head>$/i\
+<script src="../../index.js"> </script>
+' \{} \;
 git add manual/latest
 (git commit -m "Update manual from haskell/haskell-mode@${HEAD_COMMIT}" && git push origin gh-pages) || true
 cd ..

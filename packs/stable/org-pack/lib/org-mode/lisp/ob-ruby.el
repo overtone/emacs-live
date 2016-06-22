@@ -1,6 +1,6 @@
 ;;; ob-ruby.el --- org-babel functions for ruby evaluation
 
-;; Copyright (C) 2009-2014 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2016 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;; Keywords: literate programming, reproducible research
@@ -58,7 +58,7 @@
   :type 'string)
 
 (defcustom org-babel-ruby-nil-to 'hline
-  "Replace 'nil' in ruby tables with this before returning."
+  "Replace nil in ruby tables with this before returning."
   :group 'org-babel
   :version "24.4"
   :package-version '(Org . "8.0")
@@ -187,8 +187,8 @@ end
 (defun org-babel-ruby-evaluate
   (buffer body &optional result-type result-params)
   "Pass BODY to the Ruby process in BUFFER.
-If RESULT-TYPE equals 'output then return a list of the outputs
-of the statements in BODY, if RESULT-TYPE equals 'value then
+If RESULT-TYPE equals `output' then return a list of the outputs
+of the statements in BODY, if RESULT-TYPE equals `value' then
 return the value of the last statement in BODY, as elisp."
   (if (not buffer)
       ;; external process evaluation
@@ -201,11 +201,7 @@ return the value of the last statement in BODY, as elisp."
 			      org-babel-ruby-pp-wrapper-method
 			    org-babel-ruby-wrapper-method)
 			  body (org-babel-process-file-name tmp-file 'noquote)))
-		 (let ((raw (org-babel-eval-read-file tmp-file)))
-                   (if (or (member "code" result-params)
-                           (member "pp" result-params))
-                       raw
-                     (org-babel-ruby-table-or-string raw))))))
+		 (org-babel-eval-read-file tmp-file))))
     ;; comint session evaluation
     (case result-type
       (output

@@ -1,6 +1,6 @@
 ;;; test-git-gutter.el --- Test for git-gutter.el
 
-;; Copyright (C) 2014 by Syohei YOSHIDA
+;; Copyright (C) 2016 by Syohei YOSHIDA
 
 ;; Author: Syohei YOSHIDA <syohex@gmail.com>
 
@@ -34,22 +34,6 @@
     (should (= got1 1))
     (should (= got2 10))))
 
-(ert-deftest git-gutter:select-face ()
-  "helper function `git-gutter:select-face'"
-  (cl-loop for (type . expected) in '((added . git-gutter:added)
-                                      (modified . git-gutter:modified)
-                                      (deleted . git-gutter:deleted))
-           do
-           (should (eq (git-gutter:select-face type) expected)))
-  (should-not (git-gutter:select-face 'not-found)))
-
-(ert-deftest git-gutter:select-sign ()
-  "helper function `git-gutter:select-sign'"
-  (cl-loop for (type . expected) in '((added . "+") (modified . "=") (deleted . "-"))
-           do
-           (should (string= (git-gutter:select-sign type) expected)))
-  (should-not (git-gutter:select-sign 'not-found)))
-
 (ert-deftest git-gutter:propertized-sign ()
   "helper function `git-gutter:propertized-sign'"
   (should (string= (git-gutter:propertized-sign 'added) "+")))
@@ -58,21 +42,6 @@
   "helper function `git-gutter:changes-to-number'"
   (should (= (git-gutter:changes-to-number "") 1))
   (should (= (git-gutter:changes-to-number "123") 123)))
-
-(ert-deftest git-gutter:make-diffinfo ()
-  "helper function `git-gutter:make-diffinfo'"
-  (let ((diffinfo1 (git-gutter:make-diffinfo 'added "diff1" 10 20))
-        (diffinfo2 (git-gutter:make-diffinfo 'deleted "diff2" 5 nil)))
-    (cl-loop for (prop . expected) in '((:type . added)
-                                        (:start-line . 10) (:end-line . 20))
-             do
-             (should (eql (plist-get diffinfo1 prop) expected)))
-    (should (string= (plist-get diffinfo1 :content) "diff1"))
-    (cl-loop for (prop . expected) in '((:type . deleted)
-                                        (:start-line . 5) (:end-line . nil))
-             do
-             (should (eql (plist-get diffinfo2 prop) expected)))
-    (should (string= (plist-get diffinfo2 :content) "diff2"))))
 
 (ert-deftest git-gutter:in-git-repository-p ()
   "Should return nil if default-directory does not exist"
@@ -214,13 +183,6 @@ bar
     (let* ((git-gutter:start-revision "30000")
            (got (git-gutter:bzr-diff-arguments file)))
       (should (equal got '("-a" "-b" "-c" "-r" "30000" "git-gutter.el"))))))
-
-(ert-deftest git-gutter-vcs-check-functions ()
-  "Check function of VCS"
-
-  (should (eq (git-gutter:vcs-check-function 'git) 'git-gutter:in-git-repository-p))
-  (should (eq (git-gutter:vcs-check-function 'hg) 'git-gutter:in-hg-repository-p))
-  (should (eq (git-gutter:vcs-check-function 'bzr) 'git-gutter:in-bzr-repository-p)))
 
 (ert-deftest git-gutter-read-header ()
   "Read header of diff hunk"

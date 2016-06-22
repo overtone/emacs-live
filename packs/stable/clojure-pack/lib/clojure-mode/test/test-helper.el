@@ -1,6 +1,6 @@
 ;;; test-helper.el --- Clojure Mode: Non-interactive unit-test setup  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2014-2015 Bozhidar Batsov <bozhidar@batsov.com>
+;; Copyright (C) 2014-2016 Bozhidar Batsov <bozhidar@batsov.com>
 
 ;; This file is not part of GNU Emacs.
 
@@ -31,9 +31,5 @@
        (load-prefer-newer t))
   ;; Load the file under test
   (load (expand-file-name "clojure-mode" source-directory)))
-
-;; Local Variables:
-;; indent-tabs-mode: nil
-;; End:
 
 ;;; test-helper.el ends here

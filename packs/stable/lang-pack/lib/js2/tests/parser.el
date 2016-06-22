@@ -35,14 +35,18 @@
              ,@body)
          (fundamental-mode)))))
 
+(defun js2-mode--and-parse ()
+  (js2-mode)
+  (js2-reparse))
+
 (defun js2-test-string-to-ast (s)
   (insert s)
-  (js2-mode)
+  (js2-mode--and-parse)
   (should (null js2-mode-buffer-dirty-p))
   js2-mode-ast)
 
 (cl-defun js2-test-parse-string (code-string &key syntax-error errors-count
-                                             reference)
+                                             reference warnings-count)
   (ert-with-test-buffer (:name 'origin)
     (let ((ast (js2-test-string-to-ast code-string)))
       (if syntax-error
@@ -57,10 +61,13 @@
           (skip-chars-backward " \t\n")
           (should (string= (or reference code-string)
                            (buffer-substring-no-properties
-                            (point-min) (point)))))))))
+                            (point-min) (point)))))
+        (when warnings-count
+          (should (= warnings-count
+                     (length (js2-ast-root-warnings ast)))))))))
 
 (cl-defmacro js2-deftest-parse (name code-string &key bind syntax-error errors-count
-                                     reference)
+                                     reference warnings-count)
   "Parse CODE-STRING.  If SYNTAX-ERROR is nil, print syntax tree
 with `js2-print-tree' and assert the result to be equal to
 REFERENCE, if present, or the original string.  If SYNTAX-ERROR
@@ -73,6 +80,7 @@ the test."
        (js2-test-parse-string ,code-string
                               :syntax-error ,syntax-error
                               :errors-count ,errors-count
+                              :warnings-count ,warnings-count
                               :reference ,reference))))
 
 ;;; Basics
@@ -126,6 +134,9 @@ the test."
 (js2-deftest-parse let-expression-statement
   "let (x = 42) x;")
 
+(js2-deftest-parse void
+  "void 0;")
+
 ;;; Callers of `js2-valid-prop-name-token'
 
 (js2-deftest-parse parse-property-access-when-not-keyword
@@ -158,6 +169,12 @@ the test."
 (js2-deftest-parse parse-for-of
   "for (var a of []) {\n}")
 
+(js2-deftest-parse of-can-be-name
+  "void of;")
+
+(js2-deftest-parse of-can-be-object-name
+  "of.z;")
+
 (js2-deftest-parse of-can-be-var-name
   "var of = 3;")
 
@@ -167,16 +184,49 @@ the test."
 ;;; Destructuring binding
 
 (js2-deftest-parse destruct-in-declaration
-  "var {a, b} = {a: 1, b: 2};")
+  "var {a, b} = {a: 1, b: 2};"
+  :warnings-count 0)
 
 (js2-deftest-parse destruct-in-arguments
-  "function f({a: aa, b: bb}) {\n}")
+  "function f({a: aa, b: bb}) {\n}"
+  :warnings-count 0)
 
 (js2-deftest-parse destruct-in-array-comp-loop
   "[a + b for ([a, b] in [[0, 1], [1, 2]])];")
 
 (js2-deftest-parse destruct-in-catch-clause
-  "try {\n} catch ({a, b}) {\n  a + b;\n}")
+  "try {\n} catch ({a, b}) {\n  a + b;\n}"
+  :warnings-count 0)
+
+(js2-deftest-parse destruct-with-initializer-in-object
+  "var {a, b = 2, c} = {};\nb;"
+  :warnings-count 0)
+
+(js2-deftest-parse destruct-with-initializer-in-array
+  "var [a, b = 2, c] = [];\nb;"
+  :warnings-count 0)
+
+(js2-deftest-parse destruct-non-name-target-is-error
+  "var {1=1} = {};" :syntax-error "1" :errors-count 1)
+
+(js2-deftest-parse destruct-with-initializer-in-function-params
+  "function f({a, b = 1, c}, [d, e = 1, f]) {\n}")
+
+(js2-deftest-parse destruct-with-default-in-function-params
+  "function f({x = 1, y = 2} = {}, [x, y] = [1, 2]) {\n}")
+
+(js2-deftest-parse destruct-name-conflict-is-error-in-object
+  "\"use strict\";\nvar {a=1,a=2} = {};" :syntax-error "a" :errors-count 1)
+
+(js2-deftest destruct-name-conflict-is-warning-in-array "\"use strict\";\nvar [a=1,a=2] = [];"
+  (js2-mode--and-parse)
+  (should (equal '("msg.var.redecl" "a")
+                 (caar js2-parsed-warnings))))
+
+(js2-deftest initializer-outside-destruct-is-error "({a=1});"
+  (js2-mode--and-parse)
+  (should (equal "msg.init.no.destruct"
+                 (car (caar js2-parsed-errors)))))
 
 ;;; Object literals
 
@@ -188,6 +238,11 @@ the test."
 
 (js2-deftest-parse object-literal-method
   "var x = {f(y) {  return y;\n}};")
+
+(js2-deftest object-literal-method-own-name-in-scope "({f(){f();}});"
+  (js2-mode--and-parse)
+  (should (equal '("msg.undeclared.variable" "f")
+                 (caar js2-parsed-warnings))))
 
 (js2-deftest-parse object-literal-getter-method
   "var x = {get f() {  return 42;\n}};")
@@ -205,7 +260,7 @@ the test."
   "var x = {get [foo + bar]() {  return 42;\n}};")
 
 (js2-deftest-parse object-literal-generator
-  "var x = {*foo() {  yield 42;\n}};")
+  "var x = {*foo() {  yield* 42;\n}};")
 
 (js2-deftest-parse object-literal-computed-generator-key
   "var x = {*[foo + bar]() {  yield 42;\n}};")
@@ -213,11 +268,11 @@ the test."
 ;;; Function definition
 
 (js2-deftest function-redeclaring-var "var gen = 3; function gen() {};"
-  (js2-mode)
+  (js2-mode--and-parse)
   (should (= (length (js2-ast-root-warnings js2-mode-ast)) 1)))
 
 (js2-deftest function-expression-var-same-name "var gen = function gen() {};"
-  (js2-mode)
+  (js2-mode--and-parse)
   (should (null (js2-ast-root-warnings js2-mode-ast))))
 
 ;;; Function parameters
@@ -226,12 +281,10 @@ the test."
   "function foo(a = 1, b = a + 1) {\n}")
 
 (js2-deftest-parse function-with-no-default-after-default
-  "function foo(a = 1, b) {\n}"
-  :syntax-error "b")
+  "function foo(a = 1, b) {\n}")
 
 (js2-deftest-parse function-with-destruct-after-default
-  "function foo(a = 1, {b, c}) {\n}"
-  :syntax-error "{")
+  "function foo(a = 1, {b, c}) {\n}")
 
 (js2-deftest-parse function-with-rest-parameter
   "function foo(a, b, ...rest) {\n}")
@@ -247,6 +300,74 @@ the test."
 (js2-deftest-parse function-with-rest-after-default-parameter
   "function foo(a = 1, ...rest) {\n}")
 
+;;; Strict mode errors
+
+(js2-deftest-parse function-bad-strict-parameters
+  "'use strict';\nfunction foo(eval, {arguments}, bar) {\n}"
+  :syntax-error "eval" :errors-count 2)
+
+(js2-deftest-parse function-retroactive-bad-strict-parameters
+  "function foo(arguments) {'use strict';}"
+  :syntax-error "arguments" :errors-count 1)
+
+(js2-deftest-parse function-duplicate-strict-parameters
+  "'use strict';\nfunction foo(a, a) {\n}"
+  :syntax-error "a" :errors-count 1)
+
+(js2-deftest-parse function-bad-strict-function-name
+  "'use strict';\nfunction eval() {\n}"
+  :syntax-error "eval" :errors-count 1)
+
+(js2-deftest-parse function-bad-retroactive-strict-function-name
+  "function arguments() {'use strict';}"
+  :syntax-error "arguments" :errors-count 1)
+
+(js2-deftest-parse function-bad-strict-catch-name
+  "'use strict';\ntry {} catch (eval) {}"
+  :syntax-error "eval" :errors-count 1)
+
+(js2-deftest-parse function-bad-strict-variable-name
+  "'use strict';\nvar eval = 'kekeke';"
+  :syntax-error "eval" :errors-count 1)
+
+(js2-deftest-parse function-bad-strict-assignment
+  "'use strict';\narguments = 'fufufu';"
+  :syntax-error "arguments" :errors-count 1)
+
+(js2-deftest-parse function-property-strict-assignment
+  "'use strict';\narguments.okay = 'alright';")
+
+(js2-deftest-parse function-strict-with
+  "'use strict';\nwith ({}) {}"
+  :syntax-error "with" :errors-count 1)
+
+(js2-deftest-parse function-strict-octal
+  "'use strict';\nvar number = 0644;"
+  :syntax-error "0644" :errors-count 1)
+
+(js2-deftest-parse function-strict-octal-allow-0o
+  "'use strict';\n0o644;" :reference "'use strict';\n420;")
+
+(js2-deftest-parse function-strict-duplicate-keys
+  "'use strict';\nvar object = {a: 1, a: 2, 'a': 3, ['a']: 4, 1: 5, '1': 6, [1 + 1]: 7};"
+  :syntax-error "a" :errors-count 4) ; "a" has 3 dupes, "1" has 1 dupe.
+
+(js2-deftest-parse function-strict-duplicate-getter
+  "'use strict';\nvar a = {get x() {}, get x() {}};"
+  :syntax-error "x" :errors-count 1)
+
+(js2-deftest-parse function-strict-duplicate-setter
+  "'use strict';\nvar a = {set x() {}, set x() {}};"
+  :syntax-error "x" :errors-count 1)
+
+;;; Lack of errors in strict mode
+
+(js2-deftest-parse function-strict-const-scope
+  "'use strict';\nconst a;\nif (1) {\n  const a;\n}")
+
+(js2-deftest-parse function-strict-no-getter-setter-duplicate
+  "'use strict';\nvar a = {get x() {}, set x() {}};")
+
 ;;; Spread operator
 
 (js2-deftest-parse spread-in-array-literal
@@ -254,6 +375,26 @@ the test."
 
 (js2-deftest-parse spread-in-function-call
   "f(3, ...[t(2), t(3)], 42, ...[t(4)]);")
+
+(js2-deftest-parse rest-in-array-destructure
+  "let [x, y, z, ...w] = [1, ...a, ...b, c];")
+
+(js2-deftest-parse comma-after-rest-in-array
+  "let [...x,] = [1, 2, 3];"
+  :syntax-error "," :errors-count 1)
+
+(js2-deftest-parse elem-after-rest-in-array
+  "let [...x, y] = [1, 2, 3];"
+  :syntax-error "," :errors-count 2)
+
+(js2-deftest-parse array-destructure-expr-default
+  "let [[x] = [3]] = y;")
+
+(js2-deftest-parse spread-in-object-literal
+  "f({x, y, ...z});")
+
+(js2-deftest-parse rest-in-object-literal
+  "const {x, y, ...z} = f();")
 
 ;;; Arrow functions
 
@@ -293,7 +434,7 @@ the test."
 
 (js2-deftest no-label-node-inside-expr "x = y:"
   (let (js2-parse-interruptable-p)
-    (js2-mode))
+    (js2-mode--and-parse))
   (let ((assignment (js2-expr-stmt-node-expr (car (js2-scope-kids js2-mode-ast)))))
     (should (js2-name-node-p (js2-assign-node-right assignment)))))
 
@@ -335,6 +476,79 @@ the test."
 
 (js2-deftest-parse parse-generator-comp-with-yield-inside-function-is-ok
   "(for (x of []) function*() {  yield x;\n});")
+
+;;; Async
+
+(js2-deftest-parse async-function-statement
+  "async function foo() {\n}")
+
+(js2-deftest-parse async-function-statement-inside-block
+  "if (true) {\n  async function foo() {\n  }\n}")
+
+(js2-deftest-parse async-function-expression-statements-are-verboten
+  "async function() {}" :syntax-error "(")
+
+(js2-deftest-parse async-named-function-expression
+  "a = async function b() {};")
+
+(js2-deftest-parse async-arrow-function-expression
+  "a = async (b) => {  b;\n};")
+
+(js2-deftest-parse async-method-in-object-literal
+  "({async f() {}});")
+
+(js2-deftest-parse async-method-in-class-body
+  "class C {\n  async foo() {}\n}")
+
+(js2-deftest-parse static-async-method-in-class-body
+  "class C {\n  static async foo() {}\n}")
+
+(js2-deftest-parse async-method-allow-await
+  "({async f() {  await x;\n}});")
+
+;;; Await
+
+(js2-deftest-parse await-is-ok "async function foo() {\n  await bar();\n}")
+
+(js2-deftest-parse await-inside-assignment-is-ok
+                   "async function foo() {\n  var result = await bar();\n}")
+
+(js2-deftest-parse await-inside-array-is-ok
+                   "async function foo() {\n  var results = [await bar(), await baz()];\n}")
+
+(js2-deftest-parse await-inside-non-async-function-is-not-ok
+                   "function foo() {\n  await bar();\n}"
+                   :syntax-error "await")
+
+(js2-deftest-parse await-inside-non-async-arrow-function-is-not-ok
+                   "a = () => {  await bar();\n}"
+                   :syntax-error "await")
+
+;;; 'async' and 'await' are contextual keywords
+
+(js2-deftest-parse async-can-be-name
+  "void async;")
+
+(js2-deftest-parse async-can-be-object-name
+  "async.z;")
+
+(js2-deftest-parse async-can-be-var-name
+  "var async = 3;")
+
+(js2-deftest-parse async-can-be-function-name
+  "function async() {\n}")
+
+(js2-deftest-parse await-can-be-name
+  "void await;")
+
+(js2-deftest-parse await-can-be-object-name
+  "await.z;")
+
+(js2-deftest-parse await-can-be-var-name
+  "var await = 3;")
+
+(js2-deftest-parse await-can-be-function-name
+  "function await() {\n}")
 
 ;;; Numbers
 
@@ -588,7 +802,7 @@ the test."
     (should export-node)
     (should (js2-var-decl-node-p (js2-export-node-declaration export-node)))))
 
-(js2-deftest export-class-declaration "export class Foo {};"
+(js2-deftest export-class-declaration "export class Foo {}"
   (js2-init-scanner)
   (js2-push-scope (make-js2-scope :pos 0))
   (should (js2-match-token js2-EXPORT))
@@ -596,7 +810,7 @@ the test."
     (should export-node)
     (should (js2-class-node-p (js2-export-node-declaration export-node)))))
 
-(js2-deftest export-function-declaration "export default function doStuff() {};"
+(js2-deftest export-function-declaration "export default function doStuff() {}"
   (js2-init-scanner)
   (js2-push-scope (make-js2-scope :pos 0))
   (should (js2-match-token js2-EXPORT))
@@ -604,7 +818,7 @@ the test."
     (should export-node)
     (should (js2-export-node-default export-node))))
 
-(js2-deftest export-generator-declaration "export default function* one() {};"
+(js2-deftest export-generator-declaration "export default function* one() {}"
   (js2-init-scanner)
   (js2-push-scope (make-js2-scope :pos 0))
   (should (js2-match-token js2-EXPORT))
@@ -621,23 +835,42 @@ the test."
     (should (js2-export-node-default export-node))))
 
 (js2-deftest export-function-no-semicolon "export default function foo() {}"
-  (js2-mode)
+  (js2-mode--and-parse)
   (should (equal nil js2-parsed-warnings)))
 (js2-deftest export-default-function-no-semicolon "export function foo() {}"
-  (js2-mode)
+  (js2-mode--and-parse)
   (should (equal nil js2-parsed-warnings)))
 (js2-deftest export-anything-else-does-require-a-semicolon "export var obj = {}"
-  (js2-mode)
+  (js2-mode--and-parse)
   (should (not (equal nil js2-parsed-warnings))))
+
+(js2-deftest export-default-async-function-no-semicolon "export default async function foo() {}"
+  (js2-mode--and-parse)
+  (should (equal nil js2-parsed-warnings)))
+(js2-deftest export-async-function-no-semicolon "export async function foo() {}"
+  (js2-mode--and-parse)
+  (should (equal nil js2-parsed-warnings)))
 
 (js2-deftest-parse parse-export-rexport "export * from 'other/lib';")
 (js2-deftest-parse parse-export-export-named-list "export {foo, bar as bang};")
 (js2-deftest-parse parse-re-export-named-list "export {foo, bar as bang} from 'other/lib';")
 (js2-deftest-parse parse-export-const-declaration "export const PI = Math.PI;")
 (js2-deftest-parse parse-export-let-declaration "export let foo = [1];")
-(js2-deftest-parse parse-export-function-declaration "export default function doStuff() {};")
-(js2-deftest-parse parse-export-generator-declaration "export default function* one() {};")
+(js2-deftest-parse parse-export-function-declaration "export default function doStuff() {\n}")
+(js2-deftest-parse parse-export-generator-declaration "export default function* one() {\n}")
 (js2-deftest-parse parse-export-assignment-expression "export default a = b;")
+
+(js2-deftest-parse parse-export-function-declaration-no-semi
+  "export function f() {\n}")
+
+(js2-deftest-parse parse-export-class-declaration-no-semi
+  "export class C {\n}")
+
+(js2-deftest-parse parse-export-async-function-allow-await
+  "export async function f() {\n  await f();\n}")
+
+(js2-deftest-parse parse-export-default-async-function-allow-await
+  "export default async function f() {\n  await f();\n}")
 
 ;;; Strings
 
@@ -698,10 +931,13 @@ the test."
 (js2-deftest-parse parse-class-keywordlike-method
   "class C {\n  delete() {}\n  if() {}\n}")
 
+(js2-deftest-parse parse-harmony-class-allow-semicolon-element
+  "class Foo {;}" :reference "class Foo {\n}")
+
 ;;; Scopes
 
 (js2-deftest ast-symbol-table-includes-fn-node "function foo() {}"
-  (js2-mode)
+  (js2-mode--and-parse)
   (let ((entry (js2-scope-get-symbol js2-mode-ast 'foo)))
     (should (= (js2-symbol-decl-type entry) js2-FUNCTION))
     (should (equal (js2-symbol-name entry) "foo"))
@@ -711,7 +947,7 @@ the test."
   function bar() {}
   var x;
 }"
-  (js2-mode)
+  (js2-mode--and-parse)
   (let* ((scope (js2-node-at-point (point-min)))
          (fn-entry (js2-scope-get-symbol scope 'bar))
          (var-entry (js2-scope-get-symbol scope 'x)))
@@ -721,23 +957,34 @@ the test."
     (should (= (js2-symbol-decl-type var-entry) js2-VAR))
     (should (js2-name-node-p (js2-symbol-ast-node var-entry)))))
 
-(js2-deftest for-node-is-declaration-scope "for (let i = 0; i; ++i) {};"
-  (js2-mode)
-  (search-forward "i")
+(defun js2-test-scope-of-nth-variable-satisifies-predicate (variable nth predicate)
+  (goto-char (point-min))
+  (dotimes (n (1+ nth)) (search-forward variable))
   (forward-char -1)
   (let ((scope (js2-node-get-enclosing-scope (js2-node-at-point))))
-    (should (js2-for-node-p (js2-get-defining-scope scope "i")))))
+    (should (funcall predicate (js2-get-defining-scope scope variable)))))
+
+(js2-deftest for-node-is-declaration-scope "for (let i = 0; i; ++i) {};"
+  (js2-mode--and-parse)
+  (js2-test-scope-of-nth-variable-satisifies-predicate "i" 0 #'js2-for-node-p))
+
+(js2-deftest const-scope-inside-script "{ const a; } a;"
+  (js2-mode--and-parse)
+  (js2-test-scope-of-nth-variable-satisifies-predicate "a" 0 #'js2-block-node-p)
+  (js2-test-scope-of-nth-variable-satisifies-predicate "a" 1 #'null))
+
+(js2-deftest const-scope-inside-function "function f() { { const a; } a; }"
+  (js2-mode--and-parse)
+  (js2-test-scope-of-nth-variable-satisifies-predicate "a" 0 #'js2-block-node-p)
+  (js2-test-scope-of-nth-variable-satisifies-predicate "a" 1 #'null))
 
 (js2-deftest array-comp-is-result-scope "[x * 2 for (x in y)];"
-  (js2-mode)
-  (search-forward "x")
-  (forward-char -1)
-  (let ((scope (js2-node-get-enclosing-scope (js2-node-at-point))))
-    (should (js2-comp-loop-node-p (js2-get-defining-scope scope "x")))))
+  (js2-mode--and-parse)
+  (js2-test-scope-of-nth-variable-satisifies-predicate "x" 0 #'js2-comp-loop-node-p))
 
 (js2-deftest array-comp-has-parent-scope
              "var a,b=[for (i of [[1,2]]) for (j of i) j * a];"
-  (js2-mode)
+  (js2-mode--and-parse)
   (search-forward "for")
   (forward-char -3)
   (let ((node (js2-node-at-point)))
@@ -807,23 +1054,23 @@ the test."
 ;;; Error handling
 
 (js2-deftest for-node-with-error-len "for "
-  (js2-mode)
+  (js2-mode--and-parse)
   (let ((node (js2-node-at-point (point-min))))
     (should (= (js2-node-len (js2-node-parent node)) 4))))
 
 (js2-deftest function-without-parens-error "function b {}"
   ;; Should finish the parse.
-  (js2-mode))
+  (js2-mode--and-parse))
 
 ;;; Comments
 
 (js2-deftest comment-node-length "//"
-  (js2-mode)
+  (js2-mode--and-parse)
   (let ((node (js2-node-at-point (point-min))))
     (should (= (js2-node-len node) 2))))
 
 (js2-deftest comment-node-length-newline "//\n"
-  (js2-mode)
+  (js2-mode--and-parse)
   (let ((node (js2-node-at-point (point-min))))
     (should (= (js2-node-len node) 3))))
 
@@ -862,7 +1109,7 @@ the test."
          (insert ,buffer-contents))
        (unwind-protect
            (progn
-             (js2-mode)
+             (js2-mode--and-parse)
              (should (equal ,summary (js2--variables-summary
                                       (js2--classify-variables)))))
          (fundamental-mode)))))

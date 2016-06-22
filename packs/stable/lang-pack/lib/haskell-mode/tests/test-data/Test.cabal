@@ -1,0 +1,74 @@
+Name:               Test
+Version:            2999.18.0.1
+Stability:          Beta
+Synopsis:           Testing haskell-mode
+Description: {
+  This is test .cabal file
+}
+
+Build-Type:         Simple
+Tested-With:        GHC == 7.10.2
+Cabal-Version:      >= 1.14
+Extra-Source-Files: TODO.md
+                    Changelog.md
+                    README.md
+                    FAQ.md
+                    utils/AttributeGenerator.hs
+
+Source-Repository head
+    Type:         git
+    Location:     git://github.com/haskell-mode
+
+Flag some-flag
+     Description: This is a flag
+     Default:     False
+
+Library
+        Default-Language:  Haskell2010
+
+        Build-Depends:     base == 4.*,
+                           containers,
+                           process,
+                           directory,
+        Exposed-Modules:   Some.Module
+        Other-Modules:     Some.Other.Module
+        Ghc-Options: -Wall
+
+
+Test-Suite test-1 {
+        Default-Language:  Haskell2010
+        Type:              exitcode-stdio-1.0
+        Build-Depends:     base,
+                           containers,
+                           fgl,
+                           fgl-arbitrary == 0.2.*,
+                           filepath,
+                           text,
+                           QuickCheck >= 2.3 && < 2.9
+        hs-Source-Dirs:    tests
+        Main-Is:           RunTests.hs
+        Other-Modules:       Some.Module
+        Ghc-Options: -O -Wall
+}
+
+Benchmark bench-1 {
+        Default-Language: Haskell2010
+        Type:             exitcode-stdio-1.0
+        Build-Depends:    base,
+                          deepseq,
+                          text,
+                          criterion >= 0.5 && < 1.2
+        hs-Source-Dirs:   utils
+        Main-Is:          Benchmark.hs
+}
+
+Executable bin-1
+        Default-Language: Haskell2010
+        hs-Source-Dirs:   utils
+        Main-Is:          TestParsing.hs
+        Build-Depends:    base,
+                          bytestring,
+                          directory,
+                          filepath,
+                          text
+        Ghc-Options: -O -Wall

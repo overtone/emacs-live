@@ -1,6 +1,6 @@
 ;;; org-id.el --- Global identifiers for Org-mode entries
 ;;
-;; Copyright (C) 2008-2014 Free Software Foundation, Inc.
+;; Copyright (C) 2008-2016 Free Software Foundation, Inc.
 ;;
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -87,6 +87,7 @@
   'org-link-to-org-use-id 'org-id-link-to-org-use-id "24.3")
 (defcustom org-id-link-to-org-use-id nil
   "Non-nil means storing a link to an Org file will use entry IDs.
+\\<org-mode-map>\
 
 The variable can have the following values:
 
@@ -101,7 +102,7 @@ create-if-interactive
       call `org-capture' that automatically and preemptively creates a
       link.  If you do want to get an ID link in a capture template to
       an entry not having an ID, create it first by explicitly creating
-      a link to it, using `C-c C-l' first.
+      a link to it, using `\\[org-insert-link]' first.
 
 create-if-interactive-and-no-custom-id
       Like create-if-interactive, but do not create an ID if there is

@@ -15,7 +15,7 @@ all: $(ELCS)
 clean:
 	$(RM) $(ELCS) $(TEST_ELCS)
 
-show-version: show-version
+show-version:
 	echo "*** Emacs version ***"
 	echo "EMACS = `which ${EMACS}`"
 	${EMACS} --version

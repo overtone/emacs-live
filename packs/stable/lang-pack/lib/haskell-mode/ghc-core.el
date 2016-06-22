@@ -1,4 +1,4 @@
-;;; ghc-core.el --- Syntax highlighting module for GHC Core
+;;; ghc-core.el --- Syntax highlighting module for GHC Core -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2010  Johan Tibell
 
@@ -32,6 +32,7 @@
 (require 'haskell-mode)
 (require 'haskell-font-lock)
 
+;;;###autoload
 (defgroup ghc-core nil
   "Major mode for viewing pretty printed GHC Core output."
   :link '(custom-manual "(haskell-mode)")

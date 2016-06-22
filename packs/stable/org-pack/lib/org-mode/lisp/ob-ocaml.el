@@ -1,6 +1,6 @@
 ;;; ob-ocaml.el --- org-babel functions for ocaml evaluation
 
-;; Copyright (C) 2009-2015 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2016 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;; Keywords: literate programming, reproducible research
@@ -83,9 +83,9 @@
 				   (mapcar #'org-babel-trim (reverse raw)))))))
 	 (raw (org-babel-trim clean))
 	 (result-params (cdr (assoc :result-params params)))
-	 (parsed 
-	  (string-match 
-	   "\\(\\(.*\n\\)*\\)[^:\n]+ : \\([^=\n]+\\) =\\(\n\\| \\)\\(.+\\)$" 
+	 (parsed
+	  (string-match
+	   "\\(\\(.*\n\\)*\\)[^:\n]+ : \\([^=\n]+\\) =\\(\n\\| \\)\\(.+\\)$"
 	   raw))
 	 (output (match-string 1 raw))
 	 (type (match-string 3 raw))

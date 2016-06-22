@@ -46,12 +46,12 @@
 
 (ert-deftest haskell-string-literal-decode-empty ()
   (dolist (s0 (list "\"\""
-		    "\"\\&\""
-		    "\"\\&\\&\\&\""
-		    "\"\\	   \\\""
-		    "\"\\	  \\\\	  \\\""
-		    "\"\\&\\     \\\""
-		    "\"\\ \\\\&\\	  \\\""))
+                  "\"\\&\""
+                  "\"\\&\\&\\&\""
+                  "\"\\          \\\""
+                  "\"\\         \\\\         \\\""
+                  "\"\\&\\     \\\""
+                  "\"\\ \\\\&\\         \\\""))
     (should (string= "" (haskell-string-literal-decode s0)))
     (should (string= "" (haskell-string-literal-decode (substring s0 1 -1) t)))))
 
@@ -67,7 +67,18 @@
                     (cons "\\n" "\n")
                     (cons "\\'" "'")
                     (cons "\\\"" "\"")
-                    (cons "\\SOH" "\x01")))
+                    (cons "\\SOH" "\x01")
+                    (cons "\\1114111" "\x10ffff")
+                    (cons "\\o4177777" "\x10ffff")
+                    (cons "\\x10ffff" "\x10ffff")
+                    (cons "\\^@" "\x00")
+                    (cons "\\^A" "\x01")
+                    (cons "\\^Z" "\x1A")
+                    (cons "\\^[" "\x1B")
+                    (cons "\\^\\" "\x1C")
+                    (cons "\\^]" "\x1D")
+                    (cons "\\^^" "\x1E")
+                    (cons "\\^_" "\x1F")))
     (should (string= (cdr cs)
                      (haskell-string-literal-decode (concat "\"" (car cs) "\""))))
     (should (string= (cdr cs)
@@ -84,23 +95,23 @@
   (random "c7430a4")
   ;; some edge cases
   (dolist (s0 (list "\x0e\x48" ;; '\SO' 'H'
-		    "\x01"     ;; '\SOH'
-		    "\x00df\x30" ;; '\223' '0'
-		    "'"
-            "\'"
-		    "\""
-		    "\x0e&H"
-		    "\\"
-		    " \\   \\"
-		    "\\\\\""
-            (string 40 945 8322 946 8323 8743 947 178 949 178 41)
-            "x"
-            "xy"
-            "\\x123"
-            "\\ \\x123"
-            " "
-            "  "
-		    ""))
+                  "\x01"     ;; '\SOH'
+                  "\x00df\x30" ;; '\223' '0'
+                  "'"
+                    "\'"
+                  "\""
+                  "\x0e&H"
+                  "\\"
+                  " \\   \\"
+                  "\\\\\""
+                    (string 40 945 8322 946 8323 8743 947 178 949 178 41)
+                    "x"
+                    "xy"
+                    "\\x123"
+                    "\\ \\x123"
+                    " "
+                    "  "
+                  ""))
     (should (string= s0 (haskell-string-literal-decode (haskell-string-literal-encode s0))))
     (should (string= s0 (haskell-string-literal-decode (haskell-string-literal-encode s0 t) t))))
 
@@ -112,3 +123,9 @@
              (s2 (haskell-string-literal-decode (haskell-string-literal-encode s0 t) t)))
         (should (string= s0 s1))
         (should (string= s0 s2))))))
+
+(ert-deftest haskell-string-test-trim ()
+  (should (equal "saf \t  sdsaf"
+                 (haskell-string-trim "\r\n saf \t  sdsaf \t\v\n   \f")))
+  (should (haskell-string-only-spaces-p "\r\n \t  \t\v\n   \f"))
+  (should-not (haskell-string-only-spaces-p "\r\n \t  x  \t\v\n   \f")))

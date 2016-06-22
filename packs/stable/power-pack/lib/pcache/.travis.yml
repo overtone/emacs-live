@@ -1,0 +1,16 @@
+language: emacs-lisp
+sudo: false
+env:
+- EVM_EMACS=emacs-24.1-travis
+- EVM_EMACS=emacs-24.2-travis
+- EVM_EMACS=emacs-24.3-travis
+- EVM_EMACS=emacs-24.4-travis
+- EVM_EMACS=emacs-24.5-travis
+before_install:
+- curl -fsSkL https://gist.github.com/rejeep/ebcd57c3af83b049833b/raw > travis.sh
+  && source ./travis.sh
+- evm install "$EVM_EMACS" --use --skip
+script: make travis-ci
+notifications:
+  slack:
+    secure: NsPQXEMcLOcDrBi2qfycKGcbwmLvpvvi5vuIjiPKXuoEjU2J2J6t4gqtkSMzTqgD/jbTainjwKmdlKRPjjUtb8US0jI1xoBIugAAQISE7CaGhclCUId4zy3ojQIq6e8ZFRGFePCyFPn+5zlRWh8K2pQ+RSoH769Y7wuUbtloD2o=

@@ -1,6 +1,6 @@
 ;;; ob-shell.el --- org-babel functions for shell evaluation
 
-;; Copyright (C) 2009-2014 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2016 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;; Keywords: literate programming, reproducible research
@@ -36,7 +36,7 @@
 (declare-function org-babel-comint-with-output "ob-comint" (meta &rest body))
 (declare-function orgtbl-to-generic "org-table" (table params))
 
-(defvar org-babel-default-header-args:sh '())
+(defvar org-babel-default-header-args:shell '())
 
 (defcustom org-babel-shell-names
   '("sh" "bash" "csh" "ash" "dash" "ksh" "mksh" "posh")
@@ -64,7 +64,7 @@ This function is called by `org-babel-execute-src-block'."
                                (org-babel-ref-resolve stdin)))))
 	 (cmdline (cdr (assoc :cmdline params)))
          (full-body (org-babel-expand-body:generic
-		     body params (org-babel-variable-assignments:sh params))))
+		     body params (org-babel-variable-assignments:shell params))))
     (org-babel-reassemble-table
      (org-babel-sh-evaluate session full-body params stdin cmdline)
      (org-babel-pick-name
@@ -72,20 +72,20 @@ This function is called by `org-babel-execute-src-block'."
      (org-babel-pick-name
       (cdr (assoc :rowname-names params)) (cdr (assoc :rownames params))))))
 
-(defun org-babel-prep-session:sh (session params)
+(defun org-babel-prep-session:shell (session params)
   "Prepare SESSION according to the header arguments specified in PARAMS."
   (let* ((session (org-babel-sh-initiate-session session))
-	 (var-lines (org-babel-variable-assignments:sh params)))
+	 (var-lines (org-babel-variable-assignments:shell params)))
     (org-babel-comint-in-buffer session
       (mapc (lambda (var)
               (insert var) (comint-send-input nil t)
               (org-babel-comint-wait-for-output session)) var-lines))
     session))
 
-(defun org-babel-load-session:sh (session body params)
+(defun org-babel-load-session:shell (session body params)
   "Load BODY into SESSION."
   (save-window-excursion
-    (let ((buffer (org-babel-prep-session:sh session params)))
+    (let ((buffer (org-babel-prep-session:shell session params)))
       (with-current-buffer buffer
         (goto-char (process-mark (get-buffer-process (current-buffer))))
         (insert (org-babel-chomp body)))
@@ -129,7 +129,7 @@ This function is called by `org-babel-execute-src-block'."
 	(org-babel-variable-assignments:bash_assoc varname values sep hline))
     (org-babel-variable-assignments:sh-generic varname values sep hline)))
 
-(defun org-babel-variable-assignments:sh (params)
+(defun org-babel-variable-assignments:shell (params)
   "Return list of shell statements assigning the block's variables."
   (let ((sep (cdr (assoc :separator params)))
 	(hline (when (string= "yes" (cdr (assoc :hlines params)))
@@ -184,8 +184,8 @@ var of the same value."
 
 (defun org-babel-sh-evaluate (session body &optional params stdin cmdline)
   "Pass BODY to the Shell process in BUFFER.
-If RESULT-TYPE equals 'output then return a list of the outputs
-of the statements in BODY, if RESULT-TYPE equals 'value then
+If RESULT-TYPE equals `output' then return a list of the outputs
+of the statements in BODY, if RESULT-TYPE equals `value' then
 return the value of the last statement in BODY."
   (let ((results
          (cond

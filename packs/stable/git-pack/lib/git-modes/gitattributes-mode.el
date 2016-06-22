@@ -1,8 +1,8 @@
 ;;; gitattributes-mode.el --- Major mode for editing .gitattributes files -*- lexical-binding: t -*-
 
-;; Copyright (C) 2013-2015  The Magit Project Developers
+;; Copyright (C) 2013-2016  The Magit Project Contributors
 
-;; Author: Rüdiger Sonderfeld <ruediger@c-plusplus.de>
+;; Author: Rüdiger Sonderfeld <ruediger@c-plusplus.net>
 ;; Maintainer: Jonas Bernoulli <jonas@bernoul.li>
 ;; Homepage: https://github.com/magit/git-modes
 ;; Keywords: convenience vc git
@@ -141,7 +141,7 @@ If NO-STATE is non-nil then do not print state."
      (let ((old-limit limit))
        (save-excursion
          (beginning-of-line)
-         (while (looking-at "^\\s-*$")
+         (while (and (not (eobp)) (looking-at "^\\s-*$"))
            (forward-line))
          (when (re-search-forward "[[:space:]]" limit 'noerror)
            (setq limit (point))))
@@ -216,7 +216,7 @@ If ARG is omitted or nil, move point backward one field."
 
 ;;;###autoload
 (dolist (pattern '("/\\.gitattributes\\'"
-                   "/\\.git/info/attributes\\'"
+                   "/info/attributes\\'"
                    "/git/attributes\\'"))
   (add-to-list 'auto-mode-alist (cons pattern #'gitattributes-mode)))
 

@@ -1,6 +1,6 @@
 ;;; ob-fortran.el --- org-babel functions for fortran
 
-;; Copyright (C) 2011-2014 Free Software Foundation, Inc.
+;; Copyright (C) 2011-2016 Free Software Foundation, Inc.
 
 ;; Authors: Sergey Litvinov
 ;;       Eric Schulte
@@ -79,7 +79,7 @@
 
 (defun org-babel-expand-body:fortran (body params)
   "Expand a block of fortran or fortran code with org-babel according to
-it's header arguments."
+its header arguments."
   (let ((vars (mapcar #'cdr (org-babel-get-header params :var)))
         (main-p (not (string= (cdr (assoc :main params)) "no")))
         (includes (or (cdr (assoc :includes params))
@@ -110,7 +110,7 @@ it's header arguments."
   "Wrap body in a \"program ... end program\" block if none exists."
   (if (string-match "^[ \t]*program[ \t]*.*" (capitalize body))
       (let ((vars (mapcar #'cdr (org-babel-get-header params :var))))
-	(if vars (error "Cannot use :vars if 'program' statement is present"))
+	(if vars (error "Cannot use :vars if `program' statement is present"))
 	body)
     (format "program main\n%s\nend program main\n" body)))
 
@@ -149,15 +149,14 @@ of the same value."
      ;; val is a matrix
      ((and (listp val) (org-every #'listp val))
       (format "real, parameter :: %S(%d,%d) = transpose( reshape( %s , (/ %d, %d /) ) )\n"
-	      var (length val) (length (car val)) 
+	      var (length val) (length (car val))
 	      (org-babel-fortran-transform-list val)
 	      (length (car val)) (length val)))
      ((listp val)
       (format "real, parameter :: %S(%d) = %s\n"
 	      var (length val) (org-babel-fortran-transform-list val)))
      (t
-      (error (format "the type of parameter %s is not supported by ob-fortran"
-		     var))))))
+      (error "the type of parameter %s is not supported by ob-fortran" var)))))
 
 (defun org-babel-fortran-transform-list (val)
   "Return a fortran representation of enclose syntactic lists."

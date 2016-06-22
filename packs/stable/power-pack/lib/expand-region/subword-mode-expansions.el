@@ -29,6 +29,7 @@
 ;;; Code:
 
 (require 'expand-region-core)
+(require 'subword)
 
 (defun er/mark-subword ()
   "Mark a subword, a part of a CamelCase identifier."

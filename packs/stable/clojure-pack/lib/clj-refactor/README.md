@@ -1,6 +1,6 @@
 [![MELPA](http://melpa.org/packages/clj-refactor-badge.svg)](http://melpa.org/#/clj-refactor)
 [![MELPA Stable](http://stable.melpa.org/packages/clj-refactor-badge.svg)](http://stable.melpa.org/#/clj-refactor)
-[![Build Status](https://secure.travis-ci.org/clojure-emacs/clj-refactor.el.png)](http://travis-ci.org/clojure-emacs/clj-refactor.el)
+[![Build Status](https://secure.travis-ci.org/clojure-emacs/clj-refactor.el.png?branch=master)](http://travis-ci.org/clojure-emacs/clj-refactor.el)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/clojure-emacs/refactor-nrepl?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 # clj-refactor.el
@@ -15,8 +15,7 @@ Here's a small teaser, helping you add a missing libspec:
 
 I highly recommend installing clj-refactor through elpa.
 
-It's available on [marmalade](http://marmalade-repo.org/) and
-[melpa](http://melpa.org/):
+It's available on [melpa](http://melpa.org/) and [melpa-stable](http://stable.melpa.org/):
 
     M-x package-install clj-refactor
 
@@ -27,24 +26,40 @@ It's available on [marmalade](http://marmalade-repo.org/) and
 
 (defun my-clojure-mode-hook ()
     (clj-refactor-mode 1)
-    (yas-minor-mode 1) ; for adding require/use/import
+    (yas-minor-mode 1) ; for adding require/use/import statements
+    ;; This choice of keybinding leaves cider-macroexpand-1 unbound
     (cljr-add-keybindings-with-prefix "C-c C-m"))
 
 (add-hook 'clojure-mode-hook #'my-clojure-mode-hook)
 ```
 
-The more advanced refactorings require our nREPL middleware [refactor-nrepl](https://github.com/clojure-emacs/refactor-nrepl).
+The more advanced refactorings require our nREPL middleware [refactor-nrepl](https://github.com/clojure-emacs/refactor-nrepl). From version *2.2.0* onwards if `cider-jack-in` is used it is injected automatically.
 
-To install it add the following, either in your project's `project.clj` or in the `:user`
+**`profiles.clj` or `profile.boot` don't need to be modified anymore for the above usecase!**
+
+On the other hand if a standalone REPL or an embedded nREPL server is used you will need to manually add this dependency (see below).
+
+Either in your project's `project.clj` or in the `:user`
 profile found at `~/.lein/profiles.clj`:
 
 ```clojure
-:plugins [[refactor-nrepl "1.1.0"]]
+:plugins [[refactor-nrepl "2.2.0"]
+          [cider/cider-nrepl "0.11.0"]]
 ```
 
-That's it!
-
 Check out the much longer [installation](https://github.com/clojure-emacs/clj-refactor.el/wiki/installation) page in the wiki for a less opinionated approach.
+
+cljr-refactor has quite a few settings you can tweak to change the
+behavior of various commands.  You can read more about that
+[here](https://github.com/clojure-emacs/clj-refactor.el/wiki#customization).
+
+### In case `refactor-nrepl` used for advanced refactorings
+
+The [analyzer](https://github.com/clojure/tools.analyzer) `refactor-nrepl` uses needs to eval the code too in order to be able to build the AST we can work with. If that causes side effects like writing files, opening connections to servers, modifying databases, etc. performing certain refactoring functions on your code will do that, too.
+
+By default the user is warned about this when an AST dependent feature is invoked. If this warning is an annoyance and the project can be evalled without any risks set `cljr-warn-on-eval` to nil so `cljr-eagerly-build-asts-on-startup` can take effect.
+
+We create ASTs for all the namespaces at REPL start up if `cljr-warn-on-eval` is set to nil. If that is not desired set `cljr-eagerly-build-asts-on-startup` to `nil` in your emacs configuration. AST dependent features at the moment are `find usages`, `rename symbol`, `extract function`, `inline symbol`, `rename file or dir`, `change function signature`, `promote function`.
 
 ## Usage
 
@@ -52,14 +67,19 @@ All functions in clj-refactor have a two-letter mnemonic shortcut. E.g. `rs` for
 
 See the wiki for a complete [list of available refactorings] (https://github.com/clojure-emacs/clj-refactor.el/wiki), demonstrations and customization points.
 
+If you're having trouble remembering the mnenmic shortcuts, check out
+the [hydra](https://github.com/abo-abo/hydra) powered popup menus.
+They are described
+[here](https://github.com/clojure-emacs/clj-refactor.el/wiki/Hydra).
+
 ## Changelog
 
 An extensive changelog is available [here](CHANGELOG.md).
 
 ## Contribute
 
-Yes, please do. There's a suite of tests, so remember to add tests for your
-specific feature, or I might break it later.
+Yes, please do. There's a suite of tests, so remember to add tests for
+your specific feature, or we might break it later.
 
 You'll find the repo at:
 
@@ -77,7 +97,7 @@ Run the tests with:
     $ ./run-tests.sh
 
 
-Before submitting a patch or a pull request make sure all tests are
+Before submitting a patch, or a pull request, make sure all tests are
 passing and that your patch is in line with the [contribution
 guidelines](CONTRIBUTING.md).
 

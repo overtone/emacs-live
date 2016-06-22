@@ -1,6 +1,6 @@
 ;;; ob-octave.el --- org-babel functions for octave and matlab evaluation
 
-;; Copyright (C) 2010-2014 Free Software Foundation, Inc.
+;; Copyright (C) 2010-2016 Free Software Foundation, Inc.
 
 ;; Author: Dan Davison
 ;; Keywords: literate programming, reproducible research
@@ -61,7 +61,7 @@ if ischar(ans), fid = fopen('%s', 'w'); fprintf(fid, '%%s\\n', ans); fclose(fid)
 else, dlmwrite('%s', ans, '\\t')
 end")
 
-(defvar org-babel-octave-eoe-indicator "\'org_babel_eoe\'")
+(defvar org-babel-octave-eoe-indicator "'org_babel_eoe'")
 
 (defvar org-babel-octave-eoe-output "ans = org_babel_eoe")
 
@@ -128,7 +128,7 @@ specifying a variable of the same value."
 			     (if (listp (car var)) "; " ",")) "]")
     (cond
      ((stringp var)
-      (format "\'%s\'" var))
+      (format "'%s'" var))
      (t
       (format "%s" var)))))
 
@@ -168,8 +168,8 @@ create.  Return the initialized session."
 (defun org-babel-octave-evaluate
   (session body result-type &optional matlabp)
   "Pass BODY to the octave process in SESSION.
-If RESULT-TYPE equals 'output then return the outputs of the
-statements in BODY, if RESULT-TYPE equals 'value then return the
+If RESULT-TYPE equals `output' then return the outputs of the
+statements in BODY, if RESULT-TYPE equals `value' then return the
 value of the last statement in BODY, as elisp."
   (if session
       (org-babel-octave-evaluate-session session body result-type matlabp)

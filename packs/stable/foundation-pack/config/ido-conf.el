@@ -9,8 +9,7 @@
       ido-create-new-buffer 'always
       ido-max-prospects 10
       ido-default-file-method 'selected-window
-      ido-everywhere 1
-      ido-save-directory-list-file (concat live-tmp-dir "ido.last"))
+      ido-everywhere 1)
 
 (icomplete-mode 1)
 

@@ -1,6 +1,6 @@
 ;;; ob-C.el --- org-babel functions for C and similar languages
 
-;; Copyright (C) 2010-2014 Free Software Foundation, Inc.
+;; Copyright (C) 2010-2016 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;;      Thierry Banel
@@ -81,7 +81,7 @@ This function calls `org-babel-execute:C++'."
   (org-babel-execute:C++ body params))
 
 (defun org-babel-expand-body:cpp (body params)
-  "Expand a block of C++ code with org-babel according to it's
+  "Expand a block of C++ code with org-babel according to its
 header arguments."
   (org-babel-expand-body:C++ body params))
 
@@ -91,7 +91,7 @@ This function is called by `org-babel-execute-src-block'."
   (let ((org-babel-c-variant 'cpp)) (org-babel-C-execute body params)))
 
 (defun org-babel-expand-body:C++ (body params)
-  "Expand a block of C++ code with org-babel according to it's
+  "Expand a block of C++ code with org-babel according to its
 header arguments."
   (let ((org-babel-c-variant 'cpp)) (org-babel-C-expand-C++ body params)))
 
@@ -101,7 +101,7 @@ This function is called by `org-babel-execute-src-block'."
   (let ((org-babel-c-variant 'd)) (org-babel-C-execute body params)))
 
 (defun org-babel-expand-body:D (body params)
-  "Expand a block of D code with org-babel according to it's
+  "Expand a block of D code with org-babel according to its
 header arguments."
   (let ((org-babel-c-variant 'd)) (org-babel-C-expand-D body params)))
 
@@ -111,7 +111,7 @@ This function is called by `org-babel-execute-src-block'."
   (let ((org-babel-c-variant 'c)) (org-babel-C-execute body params)))
 
 (defun org-babel-expand-body:C (body params)
-  "Expand a block of C code with org-babel according to it's
+  "Expand a block of C code with org-babel according to its
 header arguments."
   (let ((org-babel-c-variant 'c)) (org-babel-C-expand-C body params)))
 
@@ -175,12 +175,12 @@ or `org-babel-execute:C++' or `org-babel-execute:D'."
 
 (defun org-babel-C-expand-C++ (body params)
   "Expand a block of C or C++ code with org-babel according to
-it's header arguments."
+its header arguments."
   (org-babel-C-expand-C body params))
 
 (defun org-babel-C-expand-C (body params)
   "Expand a block of C or C++ code with org-babel according to
-it's header arguments."
+its header arguments."
   (let ((vars (mapcar #'cdr (org-babel-get-header params :var)))
 	(colnames (cdar (org-babel-get-header params :colname-names)))
 	(main-p (not (string= (cdr (assoc :main params)) "no")))
@@ -229,7 +229,7 @@ it's header arguments."
 
 (defun org-babel-C-expand-D (body params)
   "Expand a block of D code with org-babel according to
-it's header arguments."
+its header arguments."
   (let ((vars (mapcar #'cdr (org-babel-get-header params :var)))
 	(colnames (cdar (org-babel-get-header params :colname-names)))
 	(main-p (not (string= (cdr (assoc :main params)) "no")))
@@ -331,9 +331,9 @@ FORMAT can be either a format string or a function which is called with VAL."
 
 (defun org-babel-C-val-to-base-type (val)
   "Determine the base type of VAL which may be
-'integerp if all base values are integers
-'floatp if all base values are either floating points or integers
-'stringp otherwise."
+`integerp' if all base values are integers
+`floatp' if all base values are either floating points or integers
+`stringp' otherwise."
   (cond
    ((integerp val) 'integerp)
    ((floatp val) 'floatp)

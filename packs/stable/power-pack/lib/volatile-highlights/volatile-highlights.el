@@ -1,15 +1,15 @@
 ;;; volatile-highlights.el --- Minor mode for visual feedback on some operations.
 
-;; Copyright (C) 2001, 2010-2014 K-talo Miyazaki, all rights reserved.
+;; Copyright (C) 2001, 2010-2016 K-talo Miyazaki, all rights reserved.
 
 ;; Author: K-talo Miyazaki <Keitaro dot Miyazaki at gmail dot com>
 ;; Created: 03 October 2001. (as utility functions in my `.emacs' file.)
 ;;          14 March   2010. (re-written as library `volatile-highlights.el')
 ;; Keywords: emulations convenience wp
-;; Revision: $Id: 33de1bedfdf66672608de0f2b6c88655e15a5cd7 $
+;; Revision: $Id: cb468976642bf1d30cbb2070ee846c4736ee077d $
 ;; URL: http://www.emacswiki.org/emacs/download/volatile-highlights.el
 ;; GitHub: http://github.com/k-talo/volatile-highlights.el
-;; Version: 1.11
+;; Version: 1.15
 ;; Contributed by: Ryan Thompson and Le Wang.
 
 ;; This file is not part of GNU Emacs.
@@ -48,6 +48,7 @@
 ;;
 ;;    (require 'volatile-highlights)
 ;;    (volatile-highlights-mode t)
+;;
 ;;
 ;; USING
 ;; =====
@@ -96,10 +97,47 @@
 ;; via customization. Also check out the customization group
 ;;
 ;;   `M-x customize-group RET volatile-highlights RET'
+;;
+;;
+;; EXAMPLE SNIPPETS FOR USING VOLATILE HIGHLIGHTS WITH OTHER PACKAGES
+;; ==================================================================
+;;
+;; - vip-mode
+;;
+;;   (vhl/define-extension 'vip 'vip-yank)
+;;   (vhl/install-extension 'vip)
+;;   
+;; - evil-mode
+;;
+;;   (vhl/define-extension 'evil 'evil-paste-after 'evil-paste-before
+;;                         'evil-paste-pop 'evil-move)
+;;   (vhl/install-extension 'evil)
+;;
+;; - undo-tree
+;;
+;;   (vhl/define-extension 'undo-tree 'undo-tree-yank 'undo-tree-move)
+;;   (vhl/install-extension 'undo-tree)
 
 
 ;;; Change Log:
-
+;;
+;; v1.15 Sun Jun 12 10:40:31 2016 JST
+;;   - Update documents, example snippets for other packages,
+;;     regarding #14.
+;;
+;; v1.14 Sun Jun 12 10:12:30 2016 JST
+;;   - Update documents, especially supporting `evil-mode',
+;;     regarding #13.
+;;   - Fixed a bug #14, an extension won't be loaded properly
+;;     when it was installed by `vhl/install-extension'.
+;;
+;; v1.13 Sat May 21 11:02:36 2016 JST
+;;   - Fixed a bug that highlighting was not working with nested volatile
+;;     highlighting aware operations like `yak-pop'.
+;;
+;; v1.12  Sun Feb 21 19:09:29 2016 JST
+;;   - Added autoload cookie.
+;;
 ;; v1.11  Sun Oct  5 13:05:38 2014 JST
 ;;   - Fixed an error "Symbol's function definition is void: return",
 ;;     that occurs when highlight being created with `hideshow' commands.
@@ -216,6 +254,7 @@
 ;;;  Minor Mode Definition.
 ;;;
 ;;;============================================================================
+;;;###autoload
 (easy-mmode-define-minor-mode
  volatile-highlights-mode "Minor mode for visual feedback on some operations."
  :global t
@@ -379,8 +418,8 @@ Optional args are the same as `vhl/add-range'."
                     (set-default sym-to-set val)
                     (if val
                         (when volatile-highlights-mode
-                          (vhl/load-extension sym-to-set))
-                      (vhl/unload-extension sym-to-set)))))))
+                          (vhl/load-extension (quote ,sym)))
+                      (vhl/unload-extension (quote ,sym))))))))
 
 (defun vhl/load-extension (sym)
   (let ((fn-on  (intern (format "vhl/ext/%s/on" sym)))
@@ -411,6 +450,30 @@ Optional args are the same as `vhl/add-range'."
 ;;;  Utility functions/macros for extensions.
 ;;;
 ;;;============================================================================
+(defvar vhl/.after-change-hook-depth 0)
+
+(defun vhl/.push-to-after-change-hook (fn-name)
+  ;; Debug
+  ;; (if (zerop vhl/.after-change-hook-depth)
+  ;;     (message "vlh: push: %s" fn-name)
+  ;;   (message "vlh: skip push: %s" fn-name))
+  (when (zerop vhl/.after-change-hook-depth)
+    (add-hook 'after-change-functions
+              'vhl/.make-vhl-on-change))
+  (setq vhl/.after-change-hook-depth
+        (1+ vhl/.after-change-hook-depth)))
+
+(defun vhl/.pop-from-after-change-hook (fn-name)
+  (setq vhl/.after-change-hook-depth
+        (1- vhl/.after-change-hook-depth))
+  ;; Debug
+  ;; (if (zerop vhl/.after-change-hook-depth)
+  ;;     (message "vlh: pop: %s" fn-name)
+  ;;   (message "vlh: skip pop: %s" fn-name))
+  (when (zerop vhl/.after-change-hook-depth)
+    (remove-hook 'after-change-functions
+                 'vhl/.make-vhl-on-change)))
+
 (defun vhl/advice-defined-p (fn-name class ad-name)
   (and (ad-is-advised fn-name)
        (assq ad-name
@@ -438,12 +501,10 @@ Optional args are the same as `vhl/add-range'."
        (defadvice ,fn-name (around
                               ,ad-name
                               (&rest args))
-         (add-hook 'after-change-functions
-                   'vhl/.make-vhl-on-change)
+         (vhl/.push-to-after-change-hook (quote ,fn-name))
          (unwind-protect
              ad-do-it
-           (remove-hook 'after-change-functions
-                        'vhl/.make-vhl-on-change)))
+           (vhl/.pop-from-after-change-hook (quote ,fn-name))))
        ;; Enable advice.
        (ad-enable-advice (quote ,fn-name) 'around (quote ,ad-name))
        (ad-activate (quote ,fn-name)))))

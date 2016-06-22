@@ -184,6 +184,11 @@ def get_orgs_can_admin(host):
     return api_request(host, api_url)
 
 
+def request_review(host, owner, workspace, description):
+    api_url = 'https://%s/api/workspace/%s/%s/review' % (host, owner, workspace)
+    return api_request(host, api_url, data={'description': description})
+
+
 def send_error(description=None, exception=None):
     G.ERROR_COUNT += 1
     data = {
@@ -199,10 +204,14 @@ def send_error(description=None, exception=None):
         data['username'] = getattr(G.AGENT, "username", None)
         data['workspace'] = getattr(G.AGENT, "workspace", None)
     if exception:
+        exc_info = sys.exc_info()
         try:
-            stack = traceback.format_exc(exception)
+            stack = traceback.format_exception(*exc_info)
         except Exception:
-            stack = "Python is rtardd"
+            if exc_info[0] is None:
+                stack = 'No sys.exc_info()'
+            else:
+                stack = "Python is rtardd"
         try:
             description = str(exception)
         except Exception:

@@ -5,7 +5,7 @@
 ;; Author: Tomohiro Matsuyama <m2ym.pub@gmail.com>
 ;; URL: https://github.com/auto-complete/auto-complete
 ;; Keywords: completion, convenience
-;; Version: 1.5.0
+;; Version: 1.5.1
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -43,7 +43,7 @@
 
 
 
-(defconst ac-version "1.5.0"
+(defconst ac-version "1.5.1"
   "Version of auto-complete in string format.
 Use `version-to-list' to get version component.")
 
@@ -199,7 +199,7 @@ Use `version-to-list' to get version component.")
 (defcustom ac-modes
   '(emacs-lisp-mode lisp-mode lisp-interaction-mode
     slime-repl-mode
-    c-mode cc-mode c++-mode go-mode
+    nim-mode c-mode cc-mode c++-mode go-mode
     java-mode malabar-mode clojure-mode clojurescript-mode  scala-mode
     scheme-mode
     ocaml-mode tuareg-mode coq-mode haskell-mode agda-mode agda2-mode
@@ -210,7 +210,8 @@ Use `version-to-list' to get version component.")
     ts-mode
     sclang-mode
     verilog-mode
-    qml-mode)
+    qml-mode
+    apples-mode)
   "Major modes `auto-complete-mode' can run on."
   :type '(repeat symbol)
   :group 'auto-complete)
@@ -833,7 +834,7 @@ You can not use it in source definition like (prefix . `NAME')."
 (defun ac-menu-delete ()
   (when ac-menu
     (popup-delete ac-menu)
-    (setq ac-menu)))
+    (setq ac-menu nil)))
 
 (defsubst ac-inline-overlay ()
   (nth 0 ac-inline))
@@ -1642,7 +1643,7 @@ If given a prefix argument, select the previous candidate."
         t))))
 
 (defun ac-stop ()
-  "Stop completiong."
+  "Stop completing."
   (interactive)
   (setq ac-selected-candidate nil)
   (ac-abort))

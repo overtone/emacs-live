@@ -31,7 +31,8 @@
 
 (defun gh-orgs-tests:test-regular-org-stub (org)
   (should (equal (oref org :id) 1))
-  (should (equal (oref org :login) "github")))
+  (should (equal (oref org :login) "github"))
+  (should (equal "https://github.com/images/error/octocat_happy.gif" (oref org :avatar-url))))
 
 (defun gh-orgs-tests:test-regular-org (org)
   (gh-orgs-tests:test-regular-org-stub org)

@@ -1,7 +1,7 @@
 ;;; gitignore-mode.el --- Major mode for editing .gitignore files -*- lexical-binding: t; -*-
 
 ;; Copyright (c) 2012-2013  Sebastian Wiesner
-;; Copyright (C) 2012-2015  The Magit Project Developers
+;; Copyright (C) 2012-2016  The Magit Project Contributors
 
 ;; Author: Sebastian Wiesner <lunaryorn@gmail.com>
 ;; Maintainer: Jonas Bernoulli <jonas@bernoul.li>
@@ -49,7 +49,7 @@
 
 ;;;###autoload
 (dolist (pattern (list "/\\.gitignore\\'"
-                       "/\\.git/info/exclude\\'"
+                       "/info/exclude\\'"
                        "/git/ignore\\'"))
   (add-to-list 'auto-mode-alist (cons pattern 'gitignore-mode)))
 

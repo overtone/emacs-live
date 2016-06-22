@@ -21,6 +21,7 @@ class _Reactor(object):
     def __init__(self):
         self._protos = []
         self._handlers = []
+        self.on_stop = None
 
     def connect(self, factory, host, port, secure, conn=None):
         proto = factory.build_protocol(host, port, secure)
@@ -63,6 +64,8 @@ class _Reactor(object):
         self._handlers = []
         msg.log('Reactor shut down.')
         editor.status_message('Disconnected.')
+        if self.on_stop:
+            self.on_stop()
 
     def is_ready(self):
         if not self._handlers:

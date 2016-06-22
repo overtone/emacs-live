@@ -1,12 +1,12 @@
 ;;; flx.el --- fuzzy matching with good sorting
 
-;; Copyright © 2013 Le Wang
+;; Copyright © 2013, 2015 Le Wang
 
 ;; Author: Le Wang
 ;; Maintainer: Le Wang
 ;; Description: fuzzy matching with good sorting
 ;; Created: Wed Apr 17 01:01:41 2013 (+0800)
-;; Version: 0.5
+;; Version: 0.6.1
 ;; Package-Requires: ((cl-lib "0.3"))
 ;; URL: https://github.com/lewang/flx
 
@@ -52,6 +52,16 @@
 
 (require 'cl-lib)
 
+(defgroup flx nil
+  "Fuzzy matching with good sorting"
+  :group 'convenience
+  :prefix "flx-")
+
+(defcustom flx-word-separators '(?\  ?- ?_ ?: ?. ?/ ?\\)
+  "List of characters that act as word separators in flx"
+  :type '(repeat character)
+  :group 'flx)
+
 (defface flx-highlight-face  '((t (:inherit font-lock-variable-name-face :bold t :underline t)))
   "Face used by flx for highlighting flx match characters."
   :group 'flx)
@@ -60,7 +70,7 @@
 (defsubst flx-word-p (char)
   "Check if CHAR is a word character."
   (and char
-       (not (memq char '(?\  ?- ?_ ?: ?. ?/ ?\\)))))
+       (not (memq char flx-word-separators))))
 
 (defsubst flx-capital-p (char)
   "Check if CHAR is an uppercase character."
@@ -69,9 +79,9 @@
        (= char (upcase char))))
 
 (defsubst flx-boundary-p (last-char char)
-  "Check is LAST-CHAR is the end of a word and CHAR the start of the next.
+  "Check if LAST-CHAR is the end of a word and CHAR the start of the next.
 
-The function is camel-case aware."
+This function is camel-case aware."
   (or (null last-char)
       (and (not (flx-capital-p last-char))
            (flx-capital-p char))
@@ -79,9 +89,8 @@ The function is camel-case aware."
            (flx-word-p char))))
 
 (defsubst flx-inc-vec (vec &optional inc beg end)
-  "increment each element of vectory by INC(default=1)
-from BEG (inclusive) to end (not inclusive).
-"
+  "Increment each element of vectory by INC(default=1)
+from BEG (inclusive) to END (not inclusive)."
   (or inc
       (setq inc 1))
   (or beg
@@ -94,8 +103,8 @@ from BEG (inclusive) to end (not inclusive).
   vec)
 
 (defun flx-get-hash-for-string (str heatmap-func)
-  "Return hash-table for string where keys are characters value
-  is a sorted list of indexes for character occurrences."
+  "Return hash-table for string where keys are characters.
+Value is a sorted list of indexes for character occurrences."
   (let* ((res (make-hash-table :test 'eq :size 32))
          (str-len (length str))
          down-char)
@@ -114,7 +123,7 @@ from BEG (inclusive) to end (not inclusive).
 
 ;; So we store one fixnum per character.  Is this too memory inefficient?
 (defun flx-get-heatmap-str (str &optional group-separator)
-  "Generate heat map vector of string.
+  "Generate the heatmap vector of string.
 
 See documentation for logic."
   (let* ((str-len (length str))
@@ -211,7 +220,7 @@ See documentation for logic."
 
 
 (defsubst flx-bigger-sublist (sorted-list val)
-  "return sublist bigger than VAL from sorted SORTED-LIST
+  "Return sublist bigger than VAL from sorted SORTED-LIST
 
   if VAL is nil, return entire list."
   (if val
@@ -220,40 +229,12 @@ See documentation for logic."
                  (cl-return sub)))
       sorted-list))
 
-(defun flx-get-matches (hash query &optional greater-than q-index)
-  "Return list of all unique indexes into str where query can match.
-
-That is all character sequences of query that occur in str are returned.
-
-HASH accept as the cached analysis of str.
-sstr
-e.g. (\"aab\" \"ab\") returns
-       '((0 2) (1 2)
-"
-
-  (setq q-index (or q-index 0))
-  (let* ((q-char (aref query q-index))
-         (indexes (flx-bigger-sublist
-                   (gethash q-char hash) greater-than)))
-    (if (< q-index (1- (length query)))
-        (apply                        ; `mapcan'
-         'nconc
-         (mapcar
-          (lambda (index)
-            (let ((next-matches-for-rest (flx-get-matches hash query  index (1+ q-index))))
-              (when next-matches-for-rest
-                (mapcar (lambda (match)
-                          (cons index match))
-                        next-matches-for-rest))))
-          indexes))
-      (mapcar 'list indexes))))
-
 (defun flx-make-filename-cache ()
-  "Return cache hashtable appropraite for storeing filenames."
+  "Return cache hashtable appropraite for storing filenames."
   (flx-make-string-cache 'flx-get-heatmap-file))
 
 (defun flx-make-string-cache (&optional heat-func)
-  "Return cache hashtable appropraite for storeing strings."
+  "Return cache hashtable appropraite for storing strings."
   (let ((hash (make-hash-table :test 'equal
                                :size 4096)))
     (puthash 'heatmap-func (or heat-func 'flx-get-heatmap-str) hash)
@@ -273,43 +254,126 @@ e.g. (\"aab\" \"ab\") returns
             (puthash str res cache))
           res))))
 
+(defun flx-find-best-match (str-info
+                            heatmap
+                            greater-than
+                            query
+                            query-length
+                            q-index
+                            match-cache)
+  "Recursively compute the best match for a string, passed as STR-INFO and
+HEATMAP, according to QUERY.
+
+This function uses MATCH-CACHE to memoize its return values.
+For other parameters, see `flx-score'"
+
+  ;; Here, we use a simple N'ary hashing scheme
+  ;; You could use (/ hash-key query-length) to get greater-than
+  ;; Or, (mod hash-key query-length) to get q-index
+  ;; We use this instead of a cons key for the sake of efficiency
+  (let* ((hash-key (+ q-index
+                      (* (or greater-than 0)
+                         query-length)))
+         (hash-value (gethash hash-key match-cache)))
+    (if hash-value
+        ;; Here, we use the value 'no-match to distinguish a cache miss
+        ;; from a nil (i.e. non-matching) return value
+        (if (eq hash-value 'no-match)
+            nil
+          hash-value)
+      (let ((indexes (flx-bigger-sublist
+                       (gethash (aref query q-index) str-info)
+                       greater-than))
+            (match)
+            (temp-score)
+            (best-score most-negative-fixnum))
+
+        ;; Matches are of the form:
+        ;; ((match_indexes) . (score . contiguous-count))
+        (if (>= q-index (1- query-length))
+            ;; At the tail end of the recursion, simply
+            ;; generate all possible matches with their scores
+            ;; and return the list to parent.
+            (setq match (mapcar (lambda (index)
+                                  (cons (list index)
+                                        (cons (aref heatmap index) 0)))
+                                indexes))
+          (dolist (index indexes)
+            (dolist (elem (flx-find-best-match str-info
+                                               heatmap
+                                               index
+                                               query
+                                               query-length
+                                               (1+ q-index)
+                                               match-cache))
+              (setq temp-score
+                    (if (= (1- (caar elem)) index)
+                        (+ (cadr elem)
+                           (aref heatmap index)
+
+                           ;; boost contiguous matches
+                           (* (min (cddr elem)
+                                   3)
+                              15)
+                           60)
+                      (+ (cadr elem)
+                         (aref heatmap index))))
+
+              ;; We only care about the optimal match, so only
+              ;; forward the match with the best score to parent
+              (when (> temp-score best-score)
+                (setq best-score temp-score
+                      match (list (cons (cons index (car elem))
+                                        (cons temp-score
+                                              (if (= (1- (caar elem))
+                                                     index)
+                                                  (1+ (cddr elem))
+                                                0)))))))))
+
+        ;; Calls are cached to avoid exponential time complexity
+        (puthash hash-key
+                 (if match match 'no-match)
+                 match-cache)
+        match))))
 
 (defun flx-score (str query &optional cache)
-  "return best score matching QUERY against STR"
+  "Return best score matching QUERY against STR"
   (unless (or (zerop (length query))
               (zerop (length str)))
-    (let* ((info-hash (flx-process-cache str cache))
-           (heatmap (gethash 'heatmap info-hash))
-           (matches (flx-get-matches info-hash query))
-           (query-length (length query))
-           (full-match-boost (and (< query-length 5)
-                                  (> query-length 1)))
-           (best-score nil))
-      (mapc (lambda (match-positions)
-              (let ((score (if (and
-                                full-match-boost
-                                (= (length match-positions)
-                                   (length str)))
-                               10000
-                             0))
-                    (contiguous-count 0)
-                    last-match)
-                (cl-loop for index in match-positions
-                      do (progn
-                           (if (and last-match
-                                    (= (1+ last-match) index))
-                               (cl-incf contiguous-count)
-                             (setq contiguous-count 0))
-                           (cl-incf score (aref heatmap index))
-                           (when (> contiguous-count 0)
-                             (cl-incf score (+ 45 (* 15 (min contiguous-count 4)))))
-                           (setq last-match index)))
-                (if (or (null best-score)
-                        (> score (car best-score)))
-                    (setq best-score (cons score match-positions)))))
-            matches)
-      best-score)))
+    (let*
+        ((str-info (flx-process-cache str cache))
+         (heatmap (gethash 'heatmap str-info))
+         (query-length (length query))
+         (full-match-boost (and (< 1 query-length)
+                                (< query-length 5)))
 
+         ;; Raise recursion limit
+         (max-lisp-eval-depth 5000)
+         (max-specpdl-size 10000)
+
+         ;; Dynamic Programming table for memoizing flx-find-best-match
+         (match-cache (make-hash-table :test 'eql :size 10))
+
+         (optimal-match (flx-find-best-match str-info
+                                             heatmap
+                                             nil
+                                             query
+                                             query-length
+                                             0
+                                             match-cache)))
+      ;; Postprocess candidate
+      (and optimal-match
+           (cons
+            ;; This is the computed score, adjusted to boost the scores
+            ;; of exact matches.
+            (if (and full-match-boost
+                     (=  (length (caar optimal-match))
+                         (length str)))
+                (+ (cl-cadar optimal-match) 10000)
+              (cl-cadar optimal-match))
+
+            ;; This is the list of match positions
+            (caar optimal-match))))))
 
 (defun flx-propertize (obj score &optional add-score)
   "Return propertized copy of obj according to score.
@@ -321,14 +385,13 @@ SCORE of nil means to clear the properties."
                  (substring-no-properties (car obj))
                (substring-no-properties obj))))
 
-    (unless (null score)
-      (cl-loop for char in (cdr score)
-            do (progn
-                 (when (and last-char
-                            (not (= (1+ last-char) char)))
-                   (put-text-property block-started  (1+ last-char) 'face 'flx-highlight-face str)
-                   (setq block-started char))
-                 (setq last-char char)))
+    (when score
+      (dolist (char (cdr score))
+        (when (and last-char
+                   (not (= (1+ last-char) char)))
+          (put-text-property block-started  (1+ last-char) 'face 'flx-highlight-face str)
+          (setq block-started char))
+        (setq last-char char))
       (put-text-property block-started  (1+ last-char) 'face 'flx-highlight-face str)
       (when add-score
         (setq str (format "%s [%s]" str (car score)))))

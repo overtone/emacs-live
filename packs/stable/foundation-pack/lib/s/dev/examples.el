@@ -109,7 +109,12 @@
     (s-prepend "abc" "def") => "abcdef")
 
   (defexamples s-append
-    (s-append "abc" "def") => "defabc"))
+    (s-append "abc" "def") => "defabc")
+
+  (defexamples s-wrap
+    (s-wrap "[" "]" "foobar") => "[foobar]"
+    (s-wrap "(" "" "foobar") => "(foobar"
+    (s-wrap "" ")" "foobar") => "foobar)"))
 
 (def-example-group "To and from lists"
   (defexamples s-lines
@@ -131,8 +136,15 @@
   (defexamples s-match-strings-all
     (s-match-strings-all
      "{\\([^}]+\\)}" "x is {x} and y is {y}") => '(("{x}" "x") ("{y}" "y"))
-    (s-match-strings-all "ab." "abXabY") => '(("abX") ("abY"))
-    (s-match-strings-all "\\<" "foo bar baz") => '(("") ("") ("")))
+     (s-match-strings-all "ab." "abXabY") => '(("abX") ("abY"))
+     (s-match-strings-all "\\<" "foo bar baz") => '(("") ("") ("")))
+
+  (defexamples s-matched-positions-all
+    (s-matched-positions-all "l+"          "{{Hello}} World, {{Emacs}}!" 0) => '((4 . 6) (13 . 14))
+    (s-matched-positions-all "{{\\(.+?\\)}}" "{{Hello}} World, {{Emacs}}!" 0) => '((0 . 9) (17 . 26))
+    (s-matched-positions-all "{{\\(.+?\\)}}" "{{Hello}} World, {{Emacs}}!" 1) => '((2 . 7) (19 . 24))
+    (s-matched-positions-all "l"           "{{Hello}} World, {{Emacs}}!" 0) => '((4 . 5) (5 . 6) (13 . 14))
+    (s-matched-positions-all "abc"         "{{Hello}} World, {{Emacs}}!") => nil)
 
   (defexamples s-slice-at
     (s-slice-at "-" "abc") => '("abc")
@@ -158,7 +170,10 @@
     (s-split-up-to "\n" "z\nefg\n" 5) => '("z" "efg" "")
     (s-split-up-to "\n" "z\nefg\n" 5 t) => '("z" "efg")
     (s-split-up-to "|" "foo||bar|baz|qux" 10) => '("foo" "" "bar" "baz" "qux")
-    (s-split-up-to "|" "foo||bar|baz|qux" 10 t) => '("foo" "bar" "baz" "qux"))
+    (s-split-up-to "|" "foo||bar|baz|qux" 10 t) => '("foo" "bar" "baz" "qux")
+    (s-split-up-to "|" "foo|bar|baz|" 2) => '("foo" "bar" "baz|")
+    (s-split-up-to "|" "foo|bar|baz|" 2 t) => '("foo" "bar" "baz|")
+    (s-split-up-to "|" "foo|bar|baz|qux|" 2) => '("foo" "bar" "baz|qux|"))
 
   (defexamples s-join
     (s-join "+" '("abc" "def" "ghi")) => "abc+def+ghi"

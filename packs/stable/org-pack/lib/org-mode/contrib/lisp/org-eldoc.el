@@ -1,6 +1,6 @@
 ;;; org-eldoc.el --- display org header and src block info using eldoc
 
-;; Copyright (c) 2014 Free Software Foundation, Inc.
+;; Copyright (c) 2014-2016 Free Software Foundation, Inc.
 
 ;; Author: Łukasz Gruner <lukasz@gruner.lu>
 ;; Maintainer: Łukasz Gruner <lukasz@gruner.lu>

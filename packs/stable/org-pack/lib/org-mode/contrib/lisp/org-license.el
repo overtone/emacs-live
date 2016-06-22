@@ -1,6 +1,6 @@
 ;;; org-license.el --- Add a license to your org files
 
-;; Copyright (C) 2013 Free Software Foundation, Inc.
+;; Copyright (C) 2013-2016 Free Software Foundation, Inc.
 
 ;; Author: David Arroyo Menéndez <davidam@es.gnu.org>
 ;; Keywords: licenses, creative commons

@@ -45,3 +45,25 @@ Feature: Stop referring
     (+ (lib/a 1) (lib/b 2))
     (+ (A 1) (B 2))
     """
+
+  Scenario: With newline after :require, #208
+    When I insert:
+    """
+    (ns cljr.core
+      (:require
+        [my.lib :as lib :refer [a b]]))
+
+    (+ (a 1) (b 2))
+    (+ (A 1) (B 2))
+    """
+    And I place the cursor before "my.lib"
+    And I press "C-! sr"
+    Then I should see:
+    """
+    (ns cljr.core
+      (:require
+        [my.lib :as lib]))
+
+    (+ (lib/a 1) (lib/b 2))
+    (+ (A 1) (B 2))
+    """

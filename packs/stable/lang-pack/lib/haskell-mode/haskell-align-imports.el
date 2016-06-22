@@ -1,4 +1,4 @@
-;;; haskell-align-imports.el --- Align the import lines in a Haskell file
+;;; haskell-align-imports.el --- Align the import lines in a Haskell file -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2010  Chris Done
 
@@ -222,8 +222,9 @@
   "Are we after the imports list?"
   (save-excursion
     (goto-char (line-beginning-position))
-    (not (not (search-forward-regexp "\\( = \\|\\<instance\\>\\| :: \\| ∷ \\)"
-                                     (line-end-position) t 1)))))
+    (let ((case-fold-search nil))
+      (not (not (search-forward-regexp "\\( = \\|\\<instance\\>\\| :: \\| ∷ \\)"
+                                       (line-end-position) t 1))))))
 
 (provide 'haskell-align-imports)
 

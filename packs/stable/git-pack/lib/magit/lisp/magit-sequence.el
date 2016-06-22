@@ -1,6 +1,6 @@
-;;; magit-sequence.el --- history manipulation in Magit
+;;; magit-sequence.el --- history manipulation in Magit  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2011-2015  The Magit Project Contributors
+;; Copyright (C) 2011-2016  The Magit Project Contributors
 ;;
 ;; You should have received a copy of the AUTHORS.md file which
 ;; lists all contributors.  If not, see http://magit.vc/authors.
@@ -80,7 +80,7 @@
   "Resume the current cherry-pick or revert sequence."
   (interactive)
   (if (magit-sequencer-in-progress-p)
-      (if (magit-anything-unstaged-p)
+      (if (magit-anything-unstaged-p t)
           (user-error "Cannot continue due to unstaged changes")
         (magit-run-git-sequencer
          (if (magit-revert-in-progress-p) "revert" "cherry-pick") "--continue"))
@@ -114,14 +114,14 @@ This discards all changes made since the sequence started."
 ;;;###autoload (autoload 'magit-cherry-pick-popup "magit-sequence" nil t)
 (magit-define-popup magit-cherry-pick-popup
   "Popup console for cherry-pick commands."
-  'magit-commands 'magit-popup-sequence-mode
+  'magit-commands
   :man-page "git-cherry-pick"
   :switches '((?s "Add Signed-off-by lines"            "--signoff")
               (?e "Edit commit messages"               "--edit")
               (?x "Reference cherry in commit message" "-x")
               (?F "Attempt fast-forward"               "--ff")
               (?m "Reply merge relative to parent"     "--mainline="))
-  :options  '((?s "Strategy" "--strategy=" read-from-minibuffer))
+  :options  '((?s "Strategy" "--strategy="))
   :actions  '((?A "Cherry Pick"  magit-cherry-pick)
               (?a "Cherry Apply" magit-cherry-apply))
   :sequence-actions '((?A "Continue" magit-sequencer-continue)
@@ -154,7 +154,7 @@ without prompting."
 Prompt for a commit, defaulting to the commit at point.  If
 the region selects multiple commits, then apply all of them,
 without prompting."
-  (interactive (magit-cherry-pick-read-args "Apply commit"))
+  (interactive (magit-cherry-pick-read-args "Apply changes from commit"))
   (magit-assert-one-parent commit "cherry-pick")
   (magit-run-git-sequencer "cherry-pick" "--no-commit"
                            (remove "--ff" args) commit))
@@ -168,10 +168,10 @@ without prompting."
 ;;;###autoload (autoload 'magit-revert-popup "magit-sequence" nil t)
 (magit-define-popup magit-revert-popup
   "Popup console for revert commands."
-  'magit-commands 'magit-popup-sequence-mode
+  'magit-commands
   :man-page "git-revert"
   :switches '((?s "Add Signed-off-by lines" "--signoff"))
-  :options  '((?s "Strategy" "--strategy="  read-from-minibuffer))
+  :options  '((?s "Strategy" "--strategy="))
   :actions  '((?V "Revert commit(s)" magit-revert)
               (?v "Revert changes"   magit-revert-no-commit))
   :sequence-actions '((?V "Continue" magit-sequencer-continue)
@@ -213,7 +213,7 @@ without prompting."
 ;;;###autoload (autoload 'magit-am-popup "magit-sequence" nil t)
 (magit-define-popup magit-am-popup
   "Popup console for mailbox commands."
-  'magit-commands 'magit-popup-sequence-mode
+  'magit-commands
   :man-page "git-am"
   :switches '((?3 "Fall back on 3way merge"           "--3way")
               (?s "Add Signed-off-by lines"           "--signoff")
@@ -238,8 +238,12 @@ without prompting."
 (defun magit-am-apply-patches (&optional files args)
   "Apply the patches FILES."
   (interactive (list (or (magit-region-values 'file)
-                         (list (read-file-name "Apply patch: " nil
-                                               (magit-file-at-point))))
+                         (list (let ((default (magit-file-at-point)))
+                                 (read-file-name
+                                  (if default
+                                      (format "Apply patch (%s): " default)
+                                    "Apply patch: ")
+                                  nil default))))
                      (magit-am-arguments)))
   (magit-run-git-sequencer "am" args "--" (mapcar 'expand-file-name files)))
 
@@ -255,7 +259,7 @@ without prompting."
   "Resume the current patch applying sequence."
   (interactive)
   (if (magit-am-in-progress-p)
-      (if (magit-anything-unstaged-p)
+      (if (magit-anything-unstaged-p t)
           (error "Cannot continue due to unstaged changes")
         (magit-run-git-sequencer "am" "--continue"))
     (user-error "Not applying any patches")))
@@ -285,21 +289,32 @@ This discards all changes made since the sequence started."
 ;;;###autoload (autoload 'magit-rebase-popup "magit-sequence" nil t)
 (magit-define-popup magit-rebase-popup
   "Key menu for rebasing."
-  'magit-commands 'magit-popup-sequence-mode
+  'magit-commands
   :man-page "git-rebase"
-  :switches '((?k "Keep empty commits" "--keep-empty")
-              (?p "Preserve merges" "--preserve-merges")
+  :switches '((?k "Keep empty commits"    "--keep-empty")
+              (?p "Preserve merges"       "--preserve-merges")
               (?c "Lie about author date" "--committer-date-is-author-date")
-              (?a "Autosquash" "--autosquash")
-              (?A "Autostash" "--autostash"))
-  :actions  '((?r "Rebase"             magit-rebase)
-              (?f "Autosquash"         magit-rebase-autosquash)
-              (?o "Rebase subset"      magit-rebase-from)
-              nil
-              (?e "Rebase interactive" magit-rebase-interactive)
-              (?s "Edit commit"        magit-rebase-edit-commit)
-              (?l "Rebase unpushed"    magit-rebase-unpushed)
-              (?w "Reword commit"      magit-rebase-reword-commit))
+              (?a "Autosquash"            "--autosquash")
+              (?A "Autostash"             "--autostash")
+              (?i "Interactive"           "--interactive"))
+  :actions  '((lambda ()
+                (concat (propertize "Rebase " 'face 'magit-popup-heading)
+                        (propertize (or (magit-get-current-branch) "HEAD")
+                                    'face 'magit-branch-local)
+                        (propertize " onto" 'face 'magit-popup-heading)))
+              (?p (lambda ()
+                    (--when-let (magit-get-push-branch) (concat it "\n")))
+                  magit-rebase-onto-pushremote)
+              (?u (lambda ()
+                    (--when-let (magit-get-upstream-branch) (concat it "\n")))
+                  magit-rebase-onto-upstream)
+              (?e "elsewhere"               magit-rebase)
+              "Rebase"
+              (?i "interactively"      magit-rebase-interactive)
+              (?m "to edit a commit"   magit-rebase-edit-commit)
+              (?s "subset"             magit-rebase-subset)
+              (?w "to reword a commit" magit-rebase-reword-commit) nil
+              (?f "to autosquash"      magit-rebase-autosquash))
   :sequence-actions '((?r "Continue" magit-rebase-continue)
                       (?s "Skip"     magit-rebase-skip)
                       (?e "Edit"     magit-rebase-edit)
@@ -307,30 +322,51 @@ This discards all changes made since the sequence started."
   :sequence-predicate 'magit-rebase-in-progress-p
   :max-action-columns 2)
 
+(defun magit-git-rebase (target args)
+  (magit-run-git-sequencer "rebase" target args))
+
 ;;;###autoload
-(defun magit-rebase (upstream &optional args)
-  "Start a non-interactive rebase sequence.
-All commits not in UPSTREAM are rebased.
-\n(git rebase UPSTREAM[^] [ARGS])"
-  (interactive (list (magit-read-other-branch-or-commit
-                      "Rebase onto"
-                      (magit-get-current-branch)
-                      (magit-get-tracked-branch))
+(defun magit-rebase-onto-pushremote (args)
+  "Rebase the current branch onto `branch.<name>.pushRemote'.
+If that variable is unset, then rebase onto `remote.pushDefault'."
+  (interactive (list (magit-rebase-arguments)))
+  (--if-let (magit-get-current-branch)
+      (-if-let (remote (magit-get-push-remote it))
+          (if (member remote (magit-list-remotes))
+              (magit-git-rebase (concat remote "/" it) args)
+            (user-error "Remote `%s' doesn't exist" remote))
+        (user-error "No push-remote is configured for %s" it))
+    (user-error "No branch is checked out")))
+
+;;;###autoload
+(defun magit-rebase-onto-upstream (args)
+  "Rebase the current branch onto its upstream branch."
+  (interactive (list (magit-rebase-arguments)))
+  (--if-let (magit-get-current-branch)
+      (-if-let (target (magit-get-upstream-branch it))
+          (magit-git-rebase target args)
+        (user-error "No upstream is configured for %s" it))
+    (user-error "No branch is checked out")))
+
+;;;###autoload
+(defun magit-rebase (target args)
+  "Rebase the current branch onto a branch read in the minibuffer.
+All commits that are reachable from head but not from the
+selected branch TARGET are being rebased."
+  (interactive (list (magit-read-other-branch-or-commit "Rebase onto")
                      (magit-rebase-arguments)))
   (message "Rebasing...")
-  (magit-run-git-sequencer "rebase" upstream args)
+  (magit-git-rebase target args)
   (message "Rebasing...done"))
 
 ;;;###autoload
-(defun magit-rebase-from (newbase start &optional args)
-  "Start a non-interactive rebase sequence.
-Commits from START to `HEAD' onto NEWBASE.  START has to be
-selected from a list of recent commits.
-\n(git rebase --onto NEWBASE START[^] [ARGS])"
+(defun magit-rebase-subset (newbase start args)
+  "Rebase a subset of the current branches history onto a new base.
+Rebase commits from START to `HEAD' onto NEWBASE.
+START has to be selected from a list of recent commits."
   (interactive (list (magit-read-other-branch-or-commit
-                      "Rebase subset onto"
-                      (magit-get-current-branch)
-                      (magit-get-tracked-branch))
+                      "Rebase subset onto" nil
+                      (magit-get-upstream-branch))
                      nil
                      (magit-rebase-arguments)))
   (if start
@@ -339,97 +375,90 @@ selected from a list of recent commits.
              (message "Rebasing...done"))
     (magit-log-select
       `(lambda (commit)
-         (magit-rebase-from ,newbase (concat commit "^") (list ,@args)))
+         (magit-rebase-subset ,newbase (concat commit "^") (list ,@args)))
       (concat "Type %p on a commit to rebase it "
               "and commits above it onto " newbase ","))))
 
-;;;###autoload
-(defun magit-rebase-interactive (commit &optional args)
-  "Start an interactive rebase sequence.
-\n(git rebase -i COMMIT[^] [ARGS])"
-  (interactive (let ((commit (magit-commit-at-point)))
-                 (list (and commit (concat commit "^"))
-                       (magit-rebase-arguments))))
-  (if (setq commit (magit-rebase-interactive-assert commit))
-      (magit-run-git-sequencer "rebase" "-i" commit args)
-    (magit-log-select
-      `(lambda (commit)
-         (magit-rebase-interactive (concat commit "^") (list ,@args)))
-      "Type %p on a commit to interactively rebase it and all commits above it,")))
-
-(defun magit-rebase-unpushed (commit &optional args)
-  "Start an interactive rebase sequence of all unpushed commits.
-\n(git rebase -i UPSTREAM [ARGS])"
-  (interactive (list (magit-get-tracked-branch)
-                     (magit-rebase-arguments)))
-  (if (setq commit (magit-rebase-interactive-assert commit))
-      (magit-run-git-sequencer "rebase" "-i" commit args)
-    (magit-log-select
-      `(lambda (commit)
-         (magit-rebase-interactive (concat commit "^") (list ,@args)))
-      "Type %p on a commit to interactively rebase it and all commits above it,")))
-
-;;;###autoload
-(defun magit-rebase-autosquash (commit &optional args)
-  "Combine squash and fixup commits with their intended targets.
-\n(git rebase -i COMMIT[^] --autosquash [ARGS])"
-  (interactive (list (magit-get-tracked-branch) (magit-rebase-arguments)))
-  (if (setq commit (magit-rebase-interactive-assert commit))
+(defun magit-rebase-interactive-1 (commit args message &optional editor)
+  (declare (indent 2))
+  (when commit
+    (if (eq commit :merge-base)
+        (setq commit (--if-let (magit-get-upstream-branch)
+                         (magit-git-string "merge-base" it "HEAD")
+                       nil))
+      (when (magit-git-failure "merge-base" "--is-ancestor" commit "HEAD")
+        (user-error "%s isn't an ancestor of HEAD" commit))
+      (if (magit-commit-parents commit)
+          (setq commit (concat commit "^"))
+        (setq args (cons "--root" args)))))
+  (when (and commit
+             (magit-git-lines "rev-list" "--merges" (concat commit "..HEAD")))
+    (magit-read-char-case "Proceed despite merge in rebase range?  " nil
+      (?c "[c]ontinue")
+      (?s "[s]elect other" (setq commit nil))
+      (?a "[a]bort" (user-error "Quit"))))
+  (if commit
       (let ((process-environment process-environment))
-        (setenv "GIT_SEQUENCE_EDITOR" "true")
-        (magit-run-git-sequencer "rebase" "-i" commit "--autosquash" args))
+        (when editor
+          (push (concat "GIT_SEQUENCE_EDITOR=" editor) process-environment))
+        (magit-run-git-sequencer "rebase" "-i" args
+                                 (unless (member "--root" args) commit)))
     (magit-log-select
       `(lambda (commit)
-         (magit-rebase-autosquash (concat commit "^") (list ,@args)))
-      "Type %p on a commit to squash into it and commits above it,")))
+         (magit-rebase-interactive-1 commit (list ,@args) ,message ,editor))
+      message)))
 
 ;;;###autoload
-(defun magit-rebase-edit-commit (commit &optional args)
+(defun magit-rebase-interactive (commit args)
+  "Start an interactive rebase sequence."
+  (interactive (list (magit-commit-at-point)
+                     (magit-rebase-arguments)))
+  (magit-rebase-interactive-1 commit args
+    "Type %p on a commit to rebase it and all commits above it,"))
+
+;;;###autoload
+(defun magit-rebase-autosquash (args)
+  "Combine squash and fixup commits with their intended targets."
+  (interactive (list (magit-rebase-arguments)))
+  (magit-rebase-interactive-1 :merge-base (cons "--autosquash" args)
+    "Type %p on a commit to squash into it and then rebase as necessary,"
+    "true"))
+
+;;;###autoload
+(defun magit-rebase-edit-commit (commit args)
   "Edit a single older commit using rebase."
   (interactive (list (magit-commit-at-point)
                      (magit-rebase-arguments)))
-  (if (setq commit (magit-rebase-interactive-assert commit))
-      (let ((process-environment process-environment))
-        (setenv "GIT_SEQUENCE_EDITOR"
-                "perl -i -p -e '++$x if not $x and s/^pick/edit/'")
-        (magit-run-git-sequencer "rebase" "-i" (concat commit "^") args))
-    (magit-log-select
-      `(lambda (commit)
-         (magit-rebase-edit-commit commit (list ,@args)))
-      "Type %p on a commit to edit it,")))
+  (magit-rebase-interactive-1 commit args
+    "Type %p on a commit to edit it,"
+    "perl -i -p -e '++$x if not $x and s/^pick/edit/'"))
 
 ;;;###autoload
-(defun magit-rebase-reword-commit (commit &optional args)
+(defun magit-rebase-reword-commit (commit args)
   "Reword a single older commit using rebase."
   (interactive (list (magit-commit-at-point)
                      (magit-rebase-arguments)))
-  (if (setq commit (magit-rebase-interactive-assert commit))
-      (let ((process-environment process-environment))
-        (setenv "GIT_SEQUENCE_EDITOR"
-                "perl -i -p -e '++$x if not $x and s/^pick/reword/'")
-        (magit-run-git-sequencer "rebase" "-i" (concat commit "^") args))
-    (magit-log-select
-      `(lambda (commit)
-         (magit-rebase-reword-commit commit (list ,@args)))
-      "Type %p on a commit to reword its message,")))
-
-(defun magit-rebase-interactive-assert (commit)
-  (when commit
-    (if (magit-git-lines "rev-list" "--merges" (concat commit "..HEAD"))
-        (magit-read-char-case "Proceed despite merge in rebase range?  " nil
-          (?c "[c]ontinue" commit)
-          (?s "[s]elect other" nil)
-          (?a "[a]bort" (user-error "Quit")))
-      commit)))
+  (magit-rebase-interactive-1 commit args
+    "Type %p on a commit to reword its message,"
+    "perl -i -p -e '++$x if not $x and s/^pick/reword/'"))
 
 ;;;###autoload
-(defun magit-rebase-continue ()
-  "Restart the current rebasing operation."
-  (interactive)
+(defun magit-rebase-continue (&optional noedit)
+  "Restart the current rebasing operation.
+In some cases this pops up a commit message buffer for you do
+edit.  With a prefix argument the old message is reused as-is."
+  (interactive "P")
   (if (magit-rebase-in-progress-p)
-      (if (magit-anything-unstaged-p)
-          (error "Cannot continue rebase with unstaged changes")
-        (magit-run-git-sequencer "rebase" "--continue"))
+      (if (magit-anything-unstaged-p t)
+          (user-error "Cannot continue rebase with unstaged changes")
+        (if noedit
+            (let ((process-environment process-environment))
+              (push "GIT_EDITOR=true" process-environment)
+              (magit-run-git-async "rebase" "--continue")
+              (set-process-sentinel magit-this-process
+                                    #'magit-sequencer-process-sentinel)
+              magit-this-process)
+          (magit-run-git-sequencer "rebase" "--continue")))
     (user-error "No rebase in progress")))
 
 ;;;###autoload
@@ -491,24 +520,31 @@ If no such sequence is in progress, do nothing."
   (when (magit-am-in-progress-p)
     (magit-insert-section (rebase-sequence)
       (magit-insert-heading "Applying patches")
-      (let* ((patches (magit-rebase-patches))
-             (stop (magit-file-line (car patches))))
-        (if (string-match "^From \\([^ ]\\{40\\}\\)" stop)
-            (progn (setq stop (match-string 1 stop))
-                   (magit-rebase-insert-apply-sequence)
-                   (magit-sequence-insert-sequence stop "ORIG_HEAD"))
-          (setq  patches (nreverse patches))
-          (while patches
-            (let ((patch (pop patches)))
-              (magit-insert-section (file patch)
-                (insert (if patches
-                            (propertize "pick" 'face 'magit-sequence-pick)
-                          (propertize "stop" 'face 'magit-sequence-stop))
-                        ?\s (propertize (file-name-nondirectory patch)
-                                        'face 'magit-hash)
-                        ?\n))))
-          (magit-sequence-insert-sequence nil "ORIG_HEAD")))
+      (let ((patches (nreverse (magit-rebase-patches)))
+            patch commit)
+        (while patches
+          (setq patch (pop patches)
+                commit (magit-rev-verify-commit
+                        (cadr (split-string (magit-file-line patch)))))
+          (cond ((and commit patches)
+                 (magit-sequence-insert-commit
+                  "pick" commit 'magit-sequence-pick))
+                (patches
+                 (magit-sequence-insert-am-patch
+                  "pick" patch 'magit-sequence-pick))
+                (commit
+                 (magit-sequence-insert-sequence commit "ORIG_HEAD"))
+                (t
+                 (magit-sequence-insert-am-patch
+                  "stop" patch 'magit-sequence-stop)
+                 (magit-sequence-insert-sequence nil "ORIG_HEAD")))))
       (insert ?\n))))
+
+(defun magit-sequence-insert-am-patch (type patch face)
+  (magit-insert-section (file patch)
+    (insert (propertize type 'face face)
+            ?\s (propertize (file-name-nondirectory patch) 'face 'magit-hash)
+            ?\n)))
 
 (defun magit-insert-rebase-sequence ()
   "Insert section for the on-going rebase sequence.
@@ -551,9 +587,9 @@ If no such sequence is in progress, do nothing."
   (directory-files (magit-git-dir "rebase-apply") t "^[0-9]\\{4\\}$"))
 
 (defun magit-sequence-insert-sequence (stop onto &optional orig)
-  (setq  onto (magit-rev-parse onto))
-  (let ((head (magit-rev-parse "HEAD"))
-        (done (magit-git-lines "log" "--format=%H" (concat onto "..HEAD"))))
+  (let ((head (magit-rev-parse "HEAD")) done)
+    (setq onto (if onto (magit-rev-parse onto) head))
+    (setq done (magit-git-lines "log" "--format=%H" (concat onto "..HEAD")))
     (when (and stop (not (member stop done)))
       (let ((id (magit-patch-id stop)))
         (--if-let (--first (equal (magit-patch-id it) id) done)
@@ -570,7 +606,7 @@ If no such sequence is in progress, do nothing."
             ;; ...and the dust hasn't settled yet...
             (magit-sequence-insert-commit
              (let ((staged   (magit-commit-tree "oO" nil "HEAD"))
-                   (unstaged (magit-commit-worktree "oO")))
+                   (unstaged (magit-commit-worktree "oO" "--reset")))
                (cond
                 ;; ...but we could end up at the same tree just by committing.
                 ((or (magit-rev-equal staged   stop)

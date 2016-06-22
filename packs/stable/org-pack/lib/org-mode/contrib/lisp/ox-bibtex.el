@@ -248,6 +248,7 @@ Return new parse tree."
 		(insert (format "<div id=\"bibliography\">\n<h2>%s</h2>\n"
 				(org-export-translate "References" :html info)))
 		(insert-file-contents (concat out-file ".html"))
+		(goto-char (point-max))
 		(insert "\n</div>"))
 	       ((org-export-derived-backend-p backend 'ascii)
 		;; convert HTML references to text w/pandoc

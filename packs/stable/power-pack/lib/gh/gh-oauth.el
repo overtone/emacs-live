@@ -44,7 +44,7 @@
 (defclass gh-oauth-password-authenticator (gh-password-authenticator)
   ((remember :allocation :class :initform nil)))
 
-(defmethod constructor :static ((api gh-oauth-api) newname &rest args)
+(defmethod constructor :static ((api gh-oauth-api) &rest args)
   ;; force password authentication for this API
   (let ((gh-api-v3-authenticator 'gh-oauth-password-authenticator))
     (call-next-method)))

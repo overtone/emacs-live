@@ -1,6 +1,6 @@
 ;;; ob-sqlite.el --- org-babel functions for sqlite database interaction
 
-;; Copyright (C) 2010-2014 Free Software Foundation, Inc.
+;; Copyright (C) 2010-2016 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;; Keywords: literate programming, reproducible research
@@ -119,7 +119,7 @@ This function is called by `org-babel-execute-src-block'."
    (lambda (pair)
      (setq body
 	   (replace-regexp-in-string
-	    (format "\$%s" (car pair))  ;FIXME: "\$" == "$"!
+	    (format "$%s" (car pair))
 	    (let ((val (cdr pair)))
               (if (listp val)
                   (let ((data-file (org-babel-temp-file "sqlite-data-")))

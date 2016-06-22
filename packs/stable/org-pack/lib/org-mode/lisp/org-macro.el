@@ -1,6 +1,6 @@
 ;;; org-macro.el --- Macro Replacement Code for Org Mode
 
-;; Copyright (C) 2013-2015 Free Software Foundation, Inc.
+;; Copyright (C) 2013-2016 Free Software Foundation, Inc.
 
 ;; Author: Nicolas Goaziou <n.goaziou@gmail.com>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -106,6 +106,8 @@ Return an alist containing all macro templates found."
 				      (org-remove-double-quotes val))))
 			   (unless (member file files)
 			     (with-temp-buffer
+			       (setq default-directory
+				     (file-name-directory file))
 			       (org-mode)
 			       (insert (org-file-contents file 'noerror))
 			       (setq templates
@@ -135,7 +137,7 @@ function installs the following ones: \"property\",
           (when (org-string-nw-p l)
             (condition-case _
                 (let ((org-link-search-must-match-exact-headline t))
-                  (org-link-search l nil nil t))
+                  (org-link-search l nil t))
               (error
                (error \"Macro property failed: cannot find location %s\"
                       l)))))
@@ -186,7 +188,7 @@ found in the buffer with no definition in TEMPLATES.
 
 Optional argument KEYWORDS, when non-nil is a list of keywords,
 as strings, where macro expansion is allowed."
-  (save-excursion
+  (org-with-wide-buffer
     (goto-char (point-min))
     (let ((properties-regexp
 	   (format "\\`EXPORT_%s\\+?\\'" (regexp-opt keywords)))

@@ -6,6 +6,8 @@ Feature: Tests for some minor features
     And I open file "tmp/src/cljr/core.clj"
     And I clear the buffer
     And I don't use multiple-cursors
+    And I switch warn-on-analyzer-needs-eval off
+    And I mock out the call to the middleware to find locals
 
   Scenario: Promote fn to defn
     When I insert:
@@ -130,4 +132,29 @@ Feature: Tests for some minor features
                        (map (fn [x] (do-stuff x)) (range idx))))
               {}
               (map-indexed vector cells)))
+    """
+
+  Scenario: Promote fn capturing locals
+    When I insert:
+    """
+    (let [foo 1
+          bar 2]
+      (map (fn [n] (+ foo bar n)) [1 2 3]))
+    """
+    And I place the cursor after "fn"
+    And The middleware is mocked to return foo bar as locals
+    And I start an action chain
+    And I press "C-! pf"
+    And I type "foobar-adder"
+    And I press "RET"
+    And I execute the action chain
+    Then I should see:
+    """
+    (defn- foobar-adder
+      [foo bar n]
+      (+ foo bar n))
+
+    (let [foo 1
+          bar 2]
+      (map (partial foobar-adder foo bar) [1 2 3]))
     """

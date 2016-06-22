@@ -1,6 +1,6 @@
 ;;; ob-groovy.el --- org-babel functions for Groovy evaluation
 
-;; Copyright (C) 2013-2014 Free Software Foundation, Inc.
+;; Copyright (C) 2013-2016 Free Software Foundation, Inc.
 
 ;; Author: Miro Bezjak
 ;; Keywords: literate programming, reproducible research
@@ -80,8 +80,8 @@ println(new Runner().run())
 (defun org-babel-groovy-evaluate
   (session body &optional result-type result-params)
   "Evaluate BODY in external Groovy process.
-If RESULT-TYPE equals 'output then return standard output as a string.
-If RESULT-TYPE equals 'value then return the value of the last statement
+If RESULT-TYPE equals `output' then return standard output as a string.
+If RESULT-TYPE equals `value' then return the value of the last statement
 in BODY as elisp."
   (when session (error "Sessions are not (yet) supported for Groovy"))
   (case result-type

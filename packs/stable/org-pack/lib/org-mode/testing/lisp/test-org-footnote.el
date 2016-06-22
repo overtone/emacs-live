@@ -98,7 +98,30 @@
     " \\*bold\\*\\[fn:1\\]"
     (org-test-with-temp-text " *bold*<point>"
       (let ((org-footnote-auto-label t)) (org-footnote-new))
-      (buffer-string)))))
+      (buffer-string))))
+  ;; When creating a new footnote, move to its definition.
+  (should
+   (string=
+    "[fn:1] "
+    (org-test-with-temp-text "Text<point>"
+      (let ((org-footnote-auto-label t)
+	    (org-footnote-auto-adjust nil))
+	(org-footnote-new))
+      (buffer-substring-no-properties (line-beginning-position) (point)))))
+  ;; Re-order and re-label footnotes properly when
+  ;; `org-footnote-auto-adjust' is non-nil.
+  (should
+   (string=
+    "[fn:1] 1\n\n[fn:2] \n\n[fn:3] 2\n"
+    (org-test-with-temp-text
+	"Text[fn:1]Text<point>Text[fn:2]\n\n[fn:1] 1\n\n[fn:2] 2"
+      (let ((org-footnote-auto-label t)
+	    (org-footnote-auto-adjust t)
+	    (org-footnote-section nil))
+	(org-footnote-new))
+      (buffer-substring-no-properties
+       (line-beginning-position -1)
+       (line-beginning-position 4))))))
 
 (ert-deftest test-org-footnote/delete ()
   "Test `org-footnote-delete' specifications."
@@ -172,7 +195,7 @@
   ;; anonymous footnotes.
   (should
    (equal
-    " Definition."
+    "Definition."
     (org-test-with-temp-text "Some text\n[fn:1] Definition."
       (org-footnote-goto-definition "fn:1")
       (buffer-substring (point) (point-max)))))

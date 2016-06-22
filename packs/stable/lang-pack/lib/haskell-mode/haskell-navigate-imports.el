@@ -1,4 +1,4 @@
-;;; haskell-navigate-imports.el --- A function for cycling through Haskell import lists
+;;; haskell-navigate-imports.el --- A function for cycling through Haskell import lists -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2010  Chris Done
 
@@ -36,7 +36,7 @@
 ;; Example usage:
 
 ;; (require 'haskell-navigate-imports)
-;; (define-key haskell-mode-map [f8] 'haskell-navigate-imports)
+;; (define-key haskell-mode-map (kbd "<f8>") 'haskell-navigate-imports)
 
 ;;; Code:
 
@@ -52,7 +52,7 @@
 
 ;;;###autoload
 (defun haskell-navigate-imports-go ()
-  "Go to the first line of a list of consequtive import lines. Cycles."
+  "Go to the first line of a list of consecutive import lines. Cycles."
   (interactive)
   (unless (or (haskell-navigate-imports-line)
               (equal (line-beginning-position) (point-min))
@@ -70,7 +70,7 @@
     (goto-char haskell-navigate-imports-start-point)))
 
 (defun haskell-navigate-imports-go-internal ()
-  "Go to the first line of a list of consequtive import lines. Cycle."
+  "Go to the first line of a list of consecutive import lines. Cycle."
   (if (haskell-navigate-imports-line)
       (progn (haskell-navigate-imports-goto-end)
              (when (haskell-navigate-imports-find-forward-line)
@@ -85,7 +85,7 @@
                    (search-forward "\n\n" nil t 1))))))))
 
 (defun haskell-navigate-imports-goto-end ()
-  "Skip a bunch of consequtive import lines."
+  "Skip a bunch of consecutive import lines."
   (while (not (or (equal (point)
                          (point-max))
                   (not (haskell-navigate-imports-line))))
@@ -98,10 +98,9 @@
                     (haskell-navigate-imports-after-imports-p) ;; This one just speeds it up.
                     (haskell-navigate-imports-line)))
       (forward-line))
-    (let ((point (point)))
-      (if (haskell-navigate-imports-line)
-          (point)
-        nil))))
+    (if (haskell-navigate-imports-line)
+        (point)
+        nil)))
 
 (defun haskell-navigate-imports-line ()
   "Try to match the current line as a regexp."

@@ -382,7 +382,9 @@ the \"slide\" class will be added to the to the list element,
  which will make the list into a \"build\"."
   (let ((text (org-html-item item contents info)))
     (if (org-export-get-node-property :STEP item t)
-        (replace-regexp-in-string "^<li>" "<li class='slide'>" text)
+	(progn
+	  (replace-regexp-in-string "^<li>" "<li class='slide'>" text)
+	  (replace-regexp-in-string "^<li class='checkbox'>" "<li class='checkbox slide'>" text))
       text)))
 
 (defun org-deck-link (link desc info)

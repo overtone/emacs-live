@@ -795,6 +795,93 @@
       (let ((org-list-indent-offset 0)) (org-list-repair))
       (buffer-string)))))
 
+(ert-deftest test-org-list/update-checkbox-count ()
+  "Test `org-update-checkbox-count' specifications."
+  ;; From a headline.
+  (should
+   (string-match "\\[0/1\\]"
+		 (org-test-with-temp-text "* [/]\n- [ ] item"
+		   (org-update-checkbox-count)
+		   (buffer-string))))
+  (should
+   (string-match "\\[1/1\\]"
+		 (org-test-with-temp-text "* [/]\n- [X] item"
+		   (org-update-checkbox-count)
+		   (buffer-string))))
+  (should
+   (string-match "\\[100%\\]"
+		 (org-test-with-temp-text "* [%]\n- [X] item"
+		   (org-update-checkbox-count)
+		   (buffer-string))))
+  ;; From a list or a sub-list.
+  (should
+   (string-match "\\[0/1\\]"
+		 (org-test-with-temp-text "- [/]\n  - [ ] item"
+		   (org-update-checkbox-count)
+		   (buffer-string))))
+  (should
+   (string-match "\\[1/1\\]"
+		 (org-test-with-temp-text "- [/]\n  - [X] item"
+		   (org-update-checkbox-count)
+		   (buffer-string))))
+  (should
+   (string-match "\\[100%\\]"
+		 (org-test-with-temp-text "- [%]\n  - [X] item"
+		   (org-update-checkbox-count)
+		   (buffer-string))))
+  (should
+   (string-match
+    "\\[1/1\\]"
+    (org-test-with-temp-text "- [ ] item 1\n- [ ] item 2 [/]\n  - [X] sub 1"
+      (org-update-checkbox-count)
+      (buffer-string))))
+  ;; Count do not apply to sub-lists unless count is not hierarchical.
+  ;; This state can be achieved with COOKIE_DATA node property set to
+  ;; "recursive".
+  (should
+   (string-match "\\[1/1\\]"
+		 (org-test-with-temp-text "- [/]\n  - item\n    - [X] sub-item"
+		   (let ((org-checkbox-hierarchical-statistics nil))
+		     (org-update-checkbox-count))
+		   (buffer-string))))
+  (should
+   (string-match "\\[1/1\\]"
+		 (org-test-with-temp-text "
+<point>* H
+:PROPERTIES:
+:COOKIE_DATA: recursive
+:END:
+- [/]
+  - item
+    - [X] sub-item"
+		   (org-update-checkbox-count)
+		   (buffer-string))))
+  (should
+   (string-match "\\[0/0\\]"
+		 (org-test-with-temp-text "- [/]\n  - item\n    - [ ] sub-item"
+		   (org-update-checkbox-count)
+		   (buffer-string))))
+  ;; With optional argument ALL, update all buffer.
+  (should
+   (= 2
+      (org-test-with-temp-text "* [/]\n- [X] item\n* [/]\n- [X] item"
+	(org-update-checkbox-count t)
+	(count-matches "\\[1/1\\]"))))
+  ;; Ignore boxes in drawers, blocks or inlinetasks when counting from
+  ;; outside.
+  (should
+   (string-match "\\[2/2\\]"
+		 (org-test-with-temp-text "
+- [/]
+  - [X] item1
+    :DRAWER:
+    - [X] item
+    :END:
+  - [X] item2"
+		   (let ((org-checkbox-hierarchical-statistics nil))
+		     (org-update-checkbox-count))
+		   (buffer-string)))))
+
 
 
 ;;; Radio Lists

@@ -1,12 +1,12 @@
 ;;; flx-ido.el --- flx integration for ido
 
-;; Copyright © 2013 Le Wang
+;; Copyright © 2013, 2015 Le Wang
 
 ;; Author: Le Wang
 ;; Maintainer: Le Wang
 ;; Description: flx integration for ido
 ;; Created: Sun Apr 21 20:38:36 2013 (+0800)
-;; Version: 0.5
+;; Version: 0.6.1
 ;; URL: https://github.com/lewang/flx
 ;; Package-Requires: ((flx "0.1") (cl-lib "0.3"))
 
@@ -233,6 +233,14 @@ Our implementation always uses flex and doesn't care about substring matches."
        items)
       (delete-consecutive-dups (nreverse matches) t))))
 
+;;;###autoload
+(define-minor-mode flx-ido-mode
+  "Toggle flx ido mode"
+  :init-value nil
+  :lighter ""
+  :group 'ido
+  :global t)
+
 (defadvice ido-exit-minibuffer (around flx-ido-reset activate)
   "Remove flx properties after."
   (let* ((obj (car ido-matches))
@@ -275,14 +283,6 @@ Our implementation always uses flex and doesn't care about substring matches."
       (flx-ido-reset))))
 
 (add-hook 'ido-minibuffer-setup-hook 'flx-ido-reset nil)
-
-;;;###autoload
-(define-minor-mode flx-ido-mode
-  "Toggle flx ido mode"
-  :init-value nil
-  :lighter ""
-  :group 'ido
-  :global t)
 
 (provide 'flx-ido)
 

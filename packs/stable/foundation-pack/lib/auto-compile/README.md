@@ -25,11 +25,22 @@ that `auto-compile-on-load-mode` is still required.
 Setup
 -----
 
-To reduce the risk of loading outdated byte code files, enable
-`auto-compile-on-load-mode` as early as possible, preferably even
-before the package manager.  If your Emacs supports it, then also
-set `load-prefer-newer` to t even before requiring `auto-compile`.
-Then also enable `auto-compile-on-save-mode`.
+To reduce the risk of loading outdated byte code files, you should set
+`load-prefer-newer` and enable `auto-compile-on-load-mode` as early as
+possible.  Then also enable `auto-compile-on-save-mode`.  You should
+also consider not byte-compiling your personal init file, or setting
+`load-prefer-newer` in a system-wide init file.
+
+If you use `package.el` then use something like this:
+
+    ;;; init.el --- user init file      -*- no-byte-compile: t -*-
+    (setq load-prefer-newer t)
+    (package-initialize)
+    (require 'auto-compile)
+    (auto-compile-on-load-mode)
+    (auto-compile-on-save-mode)
+
+otherwise:
 
     ;;; init.el --- user init file      -*- no-byte-compile: t -*-
     (setq load-prefer-newer t)
@@ -37,8 +48,8 @@ Then also enable `auto-compile-on-save-mode`.
     (add-to-list 'load-path "/path/to/packed")
     (add-to-list 'load-path "/path/to/auto-compile")
     (require 'auto-compile)
-    (auto-compile-on-load-mode 1)
-    (auto-compile-on-save-mode 1)
+    (auto-compile-on-load-mode)
+    (auto-compile-on-save-mode)
 
 Usage
 -----

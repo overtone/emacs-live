@@ -1,15 +1,18 @@
-;;; haskell-mode.el --- A Haskell editing mode    -*- coding: utf-8 -*-
+;;; haskell-mode.el --- A Haskell editing mode    -*- coding: utf-8; lexical-binding: t -*-
 
-;; Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008  Free Software Foundation, Inc
-;; Copyright (C) 1992, 1997-1998  Simon Marlow, Graeme E Moss, and Tommy Thorn
+;; Copyright © 2003, 2004, 2005, 2006, 2007, 2008, 2016
+;;             Free Software Foundation, Inc
+
+;; Copyright © 1992, 1997-1998  Simon Marlow, Graeme E Moss, and Tommy Thorn
 
 ;; Author:  1992      Simon Marlow
 ;;          1997-1998 Graeme E Moss <gem@cs.york.ac.uk> and
 ;;                    Tommy Thorn <thorn@irisa.fr>,
 ;;          2001-2002 Reuben Thomas (>=v1.4)
 ;;          2003      Dave Love <fx@gnu.org>
+;;          2016      Arthur Fayzrakhmanov
 ;; Keywords: faces files Haskell
-;; Version: 13.15-git
+;; Version: 13.20
 ;; URL: https://github.com/haskell/haskell-mode
 
 ;; This file is not part of GNU Emacs.
@@ -136,13 +139,17 @@
 (require 'haskell-complete-module)
 (require 'haskell-compat)
 (require 'haskell-align-imports)
+(require 'haskell-lexeme)
 (require 'haskell-sort-imports)
 (require 'haskell-string)
+(require 'haskell-indentation)
+(require 'haskell-font-lock)
+(require 'haskell-cabal)
 
 ;; All functions/variables start with `(literate-)haskell-'.
 
 ;; Version of mode.
-(defconst haskell-version "13.15-git"
+(defconst haskell-version "13.20"
   "The release version of `haskell-mode'.")
 
 ;;;###autoload
@@ -152,12 +159,12 @@ With prefix argument HERE, insert it at point."
   (interactive "P")
   (let* ((haskell-mode-dir (ignore-errors
                              (file-name-directory (or (locate-library "haskell-mode") ""))))
-         (_version (format "haskell-mode version %s (%s)"
+         (version (format "haskell-mode version %s (%s)"
                            haskell-version
                            haskell-mode-dir)))
     (if here
-        (insert _version)
-      (message "%s" _version))))
+        (insert version)
+      (message "%s" version))))
 
 ;;;###autoload
 (defun haskell-mode-view-news ()
@@ -171,7 +178,7 @@ With prefix argument HERE, insert it at point."
 
 ;; Are we looking at a literate script?
 (defvar haskell-literate nil
-  "*If not nil, the current buffer contains a literate Haskell script.
+  "If not nil, the current buffer contains a literate Haskell script.
 Possible values are: `bird' and `tex', for Bird-style and LaTeX-style
 literate scripts respectively.  Set by `haskell-mode' and
 `literate-haskell-mode'.  For an ambiguous literate buffer -- i.e. does
@@ -180,6 +187,7 @@ its own, nor does it contain \">\" at the start of a line -- the value
 of `haskell-literate-default' is used.")
 (make-variable-buffer-local 'haskell-literate)
 (put 'haskell-literate 'safe-local-variable 'symbolp)
+
 ;; Default literate style for ambiguous literate buffers.
 (defcustom haskell-literate-default 'bird
   "Default value for `haskell-literate'.
@@ -199,8 +207,23 @@ be set to the preferred literate style."
     (define-key map (kbd "C-c C-v") 'haskell-mode-enable-process-minor-mode)
     (define-key map (kbd "C-c C-t") 'haskell-mode-enable-process-minor-mode)
     (define-key map (kbd "C-c C-i") 'haskell-mode-enable-process-minor-mode)
+    (define-key map (kbd "C-c C-s") 'haskell-mode-toggle-scc-at-point)
     map)
-  "Keymap used in Haskell mode.")
+  "Keymap used in `haskell-mode'.")
+
+
+(defvar haskell-ghc-supported-extensions
+  (split-string (shell-command-to-string "ghc --supported-extensions"))
+  "List of language extensions supported by the installed version of GHC.
+This list comes from default system's GHC, i.e. first `ghc`
+executable found in PATH.")
+
+(defvar haskell-ghc-supported-options
+  (split-string (shell-command-to-string "ghc --show-options"))
+  "List of options supported by the installed version of GHC.
+This list comes from default system's GHC, i.e. first `ghc`
+executable found in PATH.")
+
 
 (defun haskell-mode-enable-process-minor-mode ()
   "Tell the user to choose a minor mode for process interaction."
@@ -214,7 +237,6 @@ be set to the preferred literate style."
   ;; - look up docs
   `("Haskell"
     ["Indent line" indent-according-to-mode]
-    ["Indent region" indent-region mark-active]
     ["(Un)Comment region" comment-region mark-active]
     "---"
     ["Start interpreter" haskell-interactive-switch]
@@ -479,8 +501,105 @@ be set to the preferred literate style."
     table)
   "Syntax table used in Haskell mode.")
 
+(defun haskell-syntax-propertize (begin end)
+  (save-excursion
+    (when haskell-literate
+      (goto-char begin)
+      ;; Algorithm (first matching rule wins):
+      ;; - current line is latex code if previous non-empty line was
+      ;;   latex code or was \begin{code} and current line is not
+      ;;   \end{code}
+      ;; - current line is bird code if it starts with >
+      ;; - else literate comment
+      (let ((previous-line-latex-code
+             (catch 'return
+               (save-excursion
+                 (when (= (forward-line -1) 0)
+                   (while (looking-at-p "^[\t ]*$")
+                     (unless (= (forward-line -1) 0)
+                       (throw 'return nil)))
+                   (or
+                    (and
+                     (not (equal (string-to-syntax "<") (syntax-after (point))))
+                     (not (looking-at-p "^>")))
+                    (looking-at-p "^\\\\begin{code}[\t ]*$")))))))
+        (while (< (point) end)
+          (unless (looking-at-p "^[\t ]*$")
+            (if previous-line-latex-code
+                (if (looking-at-p "^\\\\end{code}[\t ]*$")
+                    (progn
+                      (put-text-property (point) (1+ (point)) 'syntax-table (string-to-syntax "<"))
+                      (setq previous-line-latex-code nil))
+                  ;; continue latex-code
+                  )
+              (if (looking-at-p "^>")
+                  ;; this is a whitespace
+                  (put-text-property (point) (1+ (point)) 'syntax-table (string-to-syntax "-"))
+                ;; this is a literate comment
+                (progn
+                  (put-text-property (point) (1+ (point)) 'syntax-table (string-to-syntax "<"))
+                  (when (looking-at-p "^\\\\begin{code}[\t ]*$")
+                    (setq previous-line-latex-code t))))))
+          (forward-line 1))))
+
+    (goto-char begin)
+    (let ((ppss (syntax-ppss)))
+      (when (nth 8 ppss)
+        ;; go to the beginning of a comment or string
+        (goto-char (nth 8 ppss))
+        (when (equal ?| (nth 3 ppss))
+          ;; if this is a quasi quote we need to backtrack even more
+          ;; to the opening bracket
+          (skip-chars-backward "^[")
+          (goto-char (1- (point)))))
+
+      (while (< (point) end)
+        (let
+            ((token-kind (haskell-lexeme-looking-at-token)))
+
+          (cond
+           ((equal token-kind 'qsymid)
+            (when (member
+                   (haskell-lexeme-classify-by-first-char (char-after (match-beginning 1)))
+                   '(varsym consym))
+              ;; we have to neutralize potential comments here
+              (put-text-property (match-beginning 1) (match-end 1) 'syntax-table (string-to-syntax "."))))
+           ((equal token-kind 'number)
+            (put-text-property (match-beginning 0) (match-end 0) 'syntax-table (string-to-syntax "w")))
+           ((equal token-kind 'char)
+            (put-text-property (match-beginning 0) (1+ (match-beginning 0)) 'syntax-table (string-to-syntax "\""))
+            (put-text-property (1- (match-end 0)) (match-end 0) 'syntax-table (string-to-syntax "\"")))
+           ((equal token-kind 'string)
+            (save-excursion
+              (goto-char (match-beginning 2))
+              (let ((limit (match-end 2)))
+                (save-match-data
+                  (while (re-search-forward "\"" limit t)
+                    (put-text-property (match-beginning 0) (match-end 0) 'syntax-table (string-to-syntax ".")))))
+              ;; Place a generic string delimeter only when an open
+              ;; quote is closed by end-of-line Emacs acts strangely
+              ;; when a generic delimiter is not closed so in case
+              ;; string ends at the end of the buffer we will use
+              ;; plain string
+              (when (and (equal (match-beginning 3) (match-end 3))
+                         (not (equal (match-beginning 3) (point-max))))
+                (put-text-property (match-beginning 1) (match-end 1) 'syntax-table (string-to-syntax "|"))
+                (put-text-property (match-beginning 3) (1+ (match-end 3)) 'syntax-table (string-to-syntax "|")))))
+           ((equal token-kind 'template-haskell-quasi-quote)
+            (put-text-property (match-beginning 2) (match-end 2) 'syntax-table (string-to-syntax "\""))
+            (put-text-property (match-beginning 4) (match-end 4) 'syntax-table (string-to-syntax "\""))
+            (save-excursion
+              (goto-char (match-beginning 3))
+              (let ((limit (match-end 3)))
+                (save-match-data
+                  (while (re-search-forward "\"" limit t)
+                    (put-text-property (match-beginning 0) (match-end 0) 'syntax-table (string-to-syntax "."))))))))
+          (if token-kind
+              (goto-char (match-end 0))
+            (goto-char end)))))))
+
 (defun haskell-ident-at-point ()
-  "Return the identifier under point, or nil if none found.
+  "Return the identifier near point going backward or nil if none found.
 May return a qualified name."
   (let ((reg (haskell-ident-pos-at-point)))
     (when reg
@@ -498,43 +617,106 @@ May return a qualified name."
             (cons start end)))))))
 
 (defun haskell-ident-pos-at-point ()
-  "Return the span of the identifier under point, or nil if none found.
-May return a qualified name."
-  (save-excursion
-    ;; Skip whitespace if we're on it.  That way, if we're at "map ", we'll
-    ;; see the word "map".
-    (if (and (not (eobp))
-             (eq ?  (char-syntax (char-after))))
-        (skip-chars-backward " \t"))
-
-    (let ((case-fold-search nil))
-      (cl-multiple-value-bind (start end)
-          (list
-           (progn (skip-syntax-backward "w_") (point))
-           (progn (skip-syntax-forward "w_") (point)))
-        ;; If we're looking at a module ID that qualifies further IDs, add
-        ;; those IDs.
-        (goto-char start)
-        (while (and (looking-at "[[:upper:]]") (eq (char-after end) ?.)
-                    ;; It's a module ID that qualifies further IDs.
-                    (goto-char (1+ end))
-                    (save-excursion
-                      (when (not (zerop (skip-syntax-forward
-                                         (if (looking-at "\\s_") "_" "w'"))))
-                        (setq end (point))))))
-        ;; If we're looking at an ID that's itself qualified by previous
-        ;; module IDs, add those too.
-        (goto-char start)
-        (if (eq (char-after) ?.) (forward-char 1)) ;Special case for "."
-        (while (and (eq (char-before) ?.)
-                    (progn (forward-char -1)
-                           (not (zerop (skip-syntax-backward "w'"))))
-                    (skip-syntax-forward "'")
-                    (looking-at "[[:upper:]]"))
-          (setq start (point)))
-        ;; This is it.
-        (unless (= start end)
+  "Return the span of the identifier near point going backward.
+Returns nil if no identifier found or point is inside string or
+comment.  May return a qualified name."
+  (when (not (nth 8 (syntax-ppss)))
+    ;; Do not handle comments and strings
+    (let (start end)
+      ;; Initial point position is non-deterministic, it may occur anywhere
+      ;; inside identifier span, so the approach is:
+      ;; - first try go left and find left boundary
+      ;; - then try go right and find right boundary
+      ;;
+      ;; In both cases assume the longest path, e.g. when going left take into
+      ;; account than point may occur at the end of identifier, when going right
+      ;; take into account that point may occur at the beginning of identifier.
+      ;;
+      ;; We should handle `.` character very careful because it is heavily
+      ;; overloaded.  Examples of possible cases:
+      ;; Control.Monad.>>=  -- delimiter
+      ;; Control.Monad.when -- delimiter
+      ;; Data.Aeson..:      -- delimiter and operator symbol
+      ;; concat.map         -- composition function
+      ;; .?                 -- operator symbol
+      (save-excursion
+        ;; First, skip whitespace if we're on it, moving point to last
+        ;; identifier char.  That way, if we're at "map ", we'll see the word
+        ;; "map".
+        (when (and (looking-at (rx eol))
+                   (not (bolp)))
+          (backward-char))
+        (when (and (not (eobp))
+                   (eq (char-syntax (char-after)) ? ))
+          (skip-chars-backward " \t")
+          (backward-char))
+        ;; Now let's try to go left.
+        (save-excursion
+          (if (not (haskell-mode--looking-at-varsym))
+              ;; Looking at non-operator char, this is quite simple
+              (progn
+                (skip-syntax-backward "w_")
+                ;; Remember position
+                (setq start (point)))
+            ;; Looking at operator char.
+            (while (and (not (bobp))
+                        (haskell-mode--looking-at-varsym))
+              ;; skip all operator chars backward
+              (setq start (point))
+              (backward-char))
+            ;; Extra check for case when reached beginning of the buffer.
+            (when (haskell-mode--looking-at-varsym)
+              (setq start (point))))
+          ;; Slurp qualification part if present.  If identifier is qualified in
+          ;; case of non-operator point will stop before `.` dot, but in case of
+          ;; operator it will stand at `.` delimiting dot.  So if we're looking
+          ;; at `.` let's step one char forward and try to get qualification
+          ;; part.
+          (goto-char start)
+          (when (looking-at-p (rx "."))
+            (forward-char))
+          (let ((pos (haskell-mode--skip-qualification-backward)))
+            (when pos
+              (setq start pos))))
+        ;; Finally, let's try to go right.
+        (save-excursion
+          ;; Try to slurp qualification part first.
+          (skip-syntax-forward "w_")
+          (setq end (point))
+          (while (and (looking-at (rx "." upper))
+                      (not (zerop (progn (forward-char)
+                                         (skip-syntax-forward "w_")))))
+            (setq end (point)))
+          ;; If point was at non-operator we already done, otherwise we need an
+          ;; extra check.
+          (while (haskell-mode--looking-at-varsym)
+            (forward-char)
+            (setq end (point))))
+        (when (not (= start end))
           (cons start end))))))
+
+(defun haskell-mode--looking-at-varsym ()
+  "Return t when point stands at operator symbol."
+  (when (not (eobp))
+    (let ((lex (haskell-lexeme-classify-by-first-char (char-after))))
+      (or (eq lex 'varsym)
+          (eq lex 'consym)))))
+
+(defun haskell-mode--skip-qualification-backward ()
+  "Skip qualified part of identifier backward.
+Expects point stands *after* delimiting dot.
+Returns beginning position of qualified part or nil if no qualified part found."
+  (when (not (and (bobp)
+                  (looking-at (rx bol))))
+    (let ((case-fold-search nil)
+          pos)
+      (while (and (eq (char-before) ?.)
+                  (progn (backward-char)
+                         (not (zerop (skip-syntax-backward "w'"))))
+                  (skip-syntax-forward "'")
+                  (looking-at "[[:upper:]]"))
+        (setq pos (point)))
+      pos)))
 
 (defun haskell-delete-indentation (&optional arg)
   "Like `delete-indentation' but ignoring Bird-style \">\"."
@@ -542,26 +724,14 @@ May return a qualified name."
   (let ((fill-prefix (or fill-prefix (if (eq haskell-literate 'bird) ">"))))
     (delete-indentation arg)))
 
-;; Various mode variables.
-
-(defcustom haskell-mode-contextual-import-completion
-  t
-  "Enable import completion on haskell-mode-contextual-space."
-  :type 'boolean
-  :group 'haskell-interactive)
-
 (defvar eldoc-print-current-symbol-info-function)
-
-;; For compatibility with Emacs < 24, derive conditionally
-(defalias 'haskell-parent-mode
-  (if (fboundp 'prog-mode) 'prog-mode 'fundamental-mode))
 
 ;; The main mode functions
 ;;;###autoload
-(define-derived-mode haskell-mode haskell-parent-mode "Haskell"
+(define-derived-mode haskell-mode prog-mode "Haskell"
   "Major mode for editing Haskell programs.
 
-For more information aee also Info node `(haskell-mode)Getting Started'.
+For more information see also Info node `(haskell-mode)Getting Started'.
 
 \\<haskell-mode-map>
 
@@ -581,9 +751,6 @@ Indentation modes:
 
     `haskell-indent-mode', Guy Lapalme
       Intelligent semi-automatic indentation.
-
-    `haskell-simple-indent-mode', Graeme E Moss and Heribert Schuetz
-      Simple indentation.
 
 Interaction modes:
 
@@ -608,28 +775,25 @@ example, `M-x haskell-doc-mode'. Run it again to disable it.
 To enable a mode for every haskell-mode buffer, add a hook in
 your Emacs configuration. To do that you can customize
 `haskell-mode-hook' or add lines to your .emacs file. For
-example, to enable `haskell-indent-mode' and
-`interactive-haskell-mode', use the following:
+example, to enable `interactive-haskell-mode', use the following:
 
-    (add-hook 'haskell-mode-hook 'haskell-indentation-mode)
     (add-hook 'haskell-mode-hook 'interactive-haskell-mode)
 
 For more details see Info node `(haskell-mode)haskell-mode-hook'.
-
-Warning: do not enable more than one of the above indentation
-modes. See Info node `(haskell-mode)indentation' for more
-details.
 
 Minor modes that work well with `haskell-mode':
 
 - `smerge-mode': show and work with diff3 conflict markers used
   by git, svn and other version control systems."
   :group 'haskell
+  (when (< emacs-major-version 24)
+    (error "haskell-mode requires at least Emacs 24"))
+
   ;; paragraph-{start,separate} should treat comments as paragraphs as well.
   (set (make-local-variable 'paragraph-start)
        (concat " *{-\\| *-- |\\|" page-delimiter))
   (set (make-local-variable 'paragraph-separate)
-       (concat " *$\\| *-- |\\| *\\({-\\|-}\\) *$\\|" page-delimiter))
+       (concat " *$\\| *\\({-\\|-}\\) *$\\|" page-delimiter))
   (set (make-local-variable 'fill-paragraph-function) 'haskell-fill-paragraph)
   ;; (set (make-local-variable 'adaptive-fill-function) 'haskell-adaptive-fill)
   (set (make-local-variable 'adaptive-fill-mode) nil)
@@ -638,8 +802,10 @@ Minor modes that work well with `haskell-mode':
   (set (make-local-variable 'comment-start-skip) "[-{]-[ \t]*")
   (set (make-local-variable 'comment-end) "")
   (set (make-local-variable 'comment-end-skip) "[ \t]*\\(-}\\|\\s>\\)")
+  (set (make-local-variable 'forward-sexp-function) #'haskell-forward-sexp)
   (set (make-local-variable 'parse-sexp-ignore-comments) nil)
-  (set (make-local-variable 'indent-line-function) 'haskell-mode-suggest-indent-choice)
+  (set (make-local-variable 'syntax-propertize-function) #'haskell-syntax-propertize)
+
   ;; Set things up for eldoc-mode.
   (set (make-local-variable 'eldoc-documentation-function)
        'haskell-doc-current-info)
@@ -648,19 +814,19 @@ Minor modes that work well with `haskell-mode':
        'haskell-ds-create-imenu-index)
   ;; Set things up for font-lock.
   (set (make-local-variable 'font-lock-defaults)
-       '(haskell-font-lock-choose-keywords
-         nil nil ((?\' . "w") (?_  . "w")) nil
-         (font-lock-syntactic-keywords
-          . haskell-font-lock-choose-syntactic-keywords)
+       '((haskell-font-lock-keywords)
+         nil nil nil nil
          (font-lock-syntactic-face-function
           . haskell-syntactic-face-function)
          ;; Get help from font-lock-syntactic-keywords.
-         (parse-sexp-lookup-properties . t)))
+         (parse-sexp-lookup-properties . t)
+         (font-lock-extra-managed-props . (composition haskell-type))))
   ;; Haskell's layout rules mean that TABs have to be handled with extra care.
   ;; The safer option is to avoid TABs.  The second best is to make sure
   ;; TABs stops are 8 chars apart, as mandated by the Haskell Report.  --Stef
   (set (make-local-variable 'indent-tabs-mode) nil)
   (set (make-local-variable 'tab-width) 8)
+  (set (make-local-variable 'comment-auto-fill-only-comments) t)
   ;; Haskell is not generally suitable for electric indentation, since
   ;; there is no unambiguously correct indent level for any given line.
   (when (boundp 'electric-indent-inhibit)
@@ -675,7 +841,12 @@ Minor modes that work well with `haskell-mode':
   (setq haskell-literate nil)
   (add-hook 'before-save-hook 'haskell-mode-before-save-handler nil t)
   (add-hook 'after-save-hook 'haskell-mode-after-save-handler nil t)
-  )
+  ;; provide non-interactive completion function
+  (add-hook 'completion-at-point-functions
+            #'haskell-completions-completion-at-point
+            nil
+            t)
+  (haskell-indentation-mode))
 
 (defun haskell-fill-paragraph (justify)
   (save-excursion
@@ -733,6 +904,49 @@ Minor modes that work well with `haskell-mode':
 ;;           (skip-syntax-forward "^w")
 ;;           (make-string (- (point) line-start) ?\s))))))
 
+;;;###autoload
+(defun haskell-forward-sexp (&optional arg)
+  "Haskell specific version of `forward-sexp'.
+
+Move forward across one balanced expression (sexp).  With ARG, do
+it that many times.  Negative arg -N means move backward across N
+balanced expressions.  This command assumes point is not in a
+string or comment.
+
+If unable to move over a sexp, signal `scan-error' with three
+arguments: a message, the start of the obstacle (a parenthesis or
+list marker of some kind), and end of the obstacle."
+  (interactive "^p")
+  (or arg (setq arg 1))
+  (if (< arg 0)
+      (while (< arg 0)
+        (skip-syntax-backward "->")
+        ;; Navigate backwards using plain `backward-sexp', assume that it
+        ;; skipped over at least one Haskell expression, and jump forward until
+        ;; last possible point before the starting position. If applicable,
+        ;; `scan-error' is signalled by `backward-sexp'.
+        (let ((end (point))
+              (forward-sexp-function nil))
+          (backward-sexp)
+          (let ((cur (point)))
+            (while (< (point) end)
+              (setf cur (point))
+              (haskell-forward-sexp)
+              (skip-syntax-forward "->"))
+            (goto-char cur)))
+        (setf arg (1+ arg)))
+    (save-match-data
+      (while (> arg 0)
+        (when (haskell-lexeme-looking-at-token)
+          (cond ((member (match-string 0) (list "(" "[" "{"))
+                 (goto-char (or (scan-sexps (point) 1) (buffer-end 1))))
+                ((member (match-string 0) (list ")" "]" "}"))
+                 (signal 'scan-error (list "Containing expression ends prematurely."
+                                           (match-beginning 0)
+                                           (match-end 0))))
+                (t (goto-char (match-end 0)))))
+        (setf arg (1- arg))))))
+
 
 
 ;;;###autoload
@@ -766,115 +980,6 @@ Minor modes that work well with `haskell-mode':
 ;;;###autoload
 (add-to-list 'completion-ignored-extensions ".hi")
 
-(defcustom haskell-hoogle-command
-  (if (executable-find "hoogle") "hoogle")
-  "Name of the command to use to query Hoogle.
-If nil, use the Hoogle web-site."
-  :group 'haskell
-  :type '(choice (const :tag "Use Web-site" nil)
-                 string))
-
-(defcustom haskell-hoogle-url "http://haskell.org/hoogle/?q=%s"
-  "Default value for hoogle web site.
-"
-  :group 'haskell
-  :type '(choice
-          (const :tag "haskell-org" "http://haskell.org/hoogle/?q=%s")
-          (const :tag "fp-complete" "https://www.fpcomplete.com/hoogle?q=%s")
-          string))
-
-;;;###autoload
-(defun haskell-hoogle (query &optional info)
-  "Do a Hoogle search for QUERY.
-When `haskell-hoogle-command' is non-nil, this command runs
-that.  Otherwise, it opens a hoogle search result in the browser.
-
-If prefix argument INFO is given, then `haskell-hoogle-command'
-is asked to show extra info for the items matching QUERY.."
-  (interactive
-   (let ((def (haskell-ident-at-point)))
-     (if (and def (symbolp def)) (setq def (symbol-name def)))
-     (list (read-string (if def
-                            (format "Hoogle query (default %s): " def)
-                          "Hoogle query: ")
-                        nil nil def)
-           current-prefix-arg)))
-  (if (null haskell-hoogle-command)
-      (browse-url (format haskell-hoogle-url (url-hexify-string query)))
-    (let ((hoogle-args (append (when info '("-i"))
-                               (list "--color" (shell-quote-argument query)))))
-      (with-help-window "*hoogle*"
-        (with-current-buffer standard-output
-          (insert (shell-command-to-string
-                   (concat haskell-hoogle-command
-                           (if info " -i " "")
-                           " --color " (shell-quote-argument query))))
-          (ansi-color-apply-on-region (point-min) (point-max)))))))
-
-;;;###autoload
-(defalias 'hoogle 'haskell-hoogle)
-
-(defvar hoogle-server-process-name "emacs-local-hoogle")
-(defvar hoogle-server-buffer-name (format "*%s*" hoogle-server-process-name))
-(defvar hoogle-port-number 49513 "Port number.")
-
-(defun hoogle-start-server ()
-  "Start hoogle local server."
-  (interactive)
-  (unless (hoogle-server-live-p)
-    (start-process
-     hoogle-server-process-name
-     (get-buffer-create hoogle-server-buffer-name) "/bin/sh" "-c"
-     (format "hoogle server -p %i" hoogle-port-number))))
-
-(defun hoogle-server-live-p ()
-  "Whether hoogle server is live or not."
-  (condition-case err
-      (process-live-p (get-buffer-create hoogle-server-buffer-name))
-    (error nil)))
-
-(defun hoogle-kill-server ()
-  "Kill hoogle server if it is live."
-  (interactive)
-  (when (hoogle-server-live-p)
-    (kill-process (get-buffer-create hoogle-server-buffer-name))))
-
-;;;###autoload
-(defun hoogle-lookup-from-local ()
-  "Lookup by local hoogle."
-  (interactive)
-  (if (hoogle-server-live-p)
-      (browse-url (format "http://localhost:%i/?hoogle=%s"
-                          hoogle-port-number
-                          (read-string "hoogle: " (haskell-ident-at-point))))
-    (when (y-or-n-p
-           "hoogle server not found, start hoogle server?")
-      (if (executable-find "hoogle")
-          (hoogle-start-server)
-        (error "hoogle is not installed")))))
-
-(defcustom haskell-hayoo-url "http://hayoo.fh-wedel.de/?query=%s"
-  "Default value for hayoo web site.
-"
-  :group 'haskell
-  :type '(choice
-          (const :tag "fh-wedel.de" "http://hayoo.fh-wedel.de/?query=%s")
-          string))
-
-;;;###autoload
-(defun haskell-hayoo (query)
-  "Do a Hayoo search for QUERY."
-  (interactive
-   (let ((def (haskell-ident-at-point)))
-     (if (and def (symbolp def)) (setq def (symbol-name def)))
-     (list (read-string (if def
-                            (format "Hayoo query (default %s): " def)
-                          "Hayoo query: ")
-                        nil nil def))))
-  (browse-url (format haskell-hayoo-url (url-hexify-string query))))
-
-;;;###autoload
-(defalias 'hayoo 'haskell-hayoo)
 
 (defcustom haskell-check-command "hlint"
   "*Command used to check a Haskell file."
@@ -882,11 +987,6 @@ is asked to show extra info for the items matching QUERY.."
   :type '(choice (const "hlint")
                  (const "ghc -fno-code")
                  (string :tag "Other command")))
-
-(defcustom haskell-stylish-on-save nil
-  "Whether to run stylish-haskell on the buffer before saving."
-  :group 'haskell
-  :type 'boolean)
 
 (defcustom haskell-tags-on-save nil
   "Generate tags via hasktags after saving."
@@ -898,7 +998,8 @@ is asked to show extra info for the items matching QUERY.."
 
 (defcustom haskell-indent-spaces 2
   "Number of spaces to indent inwards."
-  :group 'haskell)
+  :group 'haskell
+  :type 'integer)
 
 ;; Like Python.  Should be abstracted, sigh.
 (defun haskell-check (command)
@@ -928,14 +1029,6 @@ To be added to `flymake-init-create-temp-buffer-copy'."
 
 (add-to-list 'flymake-allowed-file-name-masks '("\\.l?hs\\'" haskell-flymake-init))
 
-(defun haskell-mode-suggest-indent-choice ()
-  "Ran when the user tries to indent in the buffer but no indentation mode has been selected.
-Explains what has happened and suggests reading docs for `haskell-mode-hook'."
-  (interactive)
-  (error "You tried to do an indentation command, but an indentation mode has not been enabled yet.
-
-Run M-x describe-variable haskell-mode-hook for a list of such modes."))
-
 (defun haskell-mode-format-imports ()
   "Format the imports by aligning and sorting them."
   (interactive)
@@ -949,24 +1042,17 @@ Run M-x describe-variable haskell-mode-hook for a list of such modes."))
   "Function that will be called before buffer's saving."
   )
 
-(defun haskell-mode-jump-to-loc (loc)
-  "Jump to the given location.
-LOC = (list FILE LINE COL)"
-  (find-file (elt loc 0))
-  (goto-char (point-min))
-  (forward-line (1- (elt loc 1)))
-  (goto-char (+ (line-beginning-position)
-                (1- (elt loc 2)))))
-
 ;; From Bryan O'Sullivan's blog:
 ;; http://www.serpentine.com/blog/2007/10/09/using-emacs-to-insert-scc-annotations-in-haskell-code/
-(defun haskell-mode-insert-scc-at-point ()
-  "Insert an SCC annotation at point."
-  (interactive)
-  (if (or (looking-at "\\b\\|[ \t]\\|$") (and (not (bolp))
-                                              (save-excursion
-                                                (forward-char -1)
-                                                (looking-at "\\b\\|[ \t]"))))
+(defun haskell-mode-try-insert-scc-at-point ()
+  "Try to insert an SCC annotation at point.  Return true if
+successful, nil otherwise."
+  (if (or (looking-at "\\b\\|[ \t]\\|$")
+          ;; Allow SCC if point is on a non-letter with whitespace to the left
+          (and (not (bolp))
+               (save-excursion
+                 (forward-char -1)
+                 (looking-at "[ \t]"))))
       (let ((space-at-point (looking-at "[ \t]")))
         (unless (and (not (bolp)) (save-excursion
                                     (forward-char -1)
@@ -975,13 +1061,23 @@ LOC = (list FILE LINE COL)"
         (insert "{-# SCC \"\" #-}")
         (unless space-at-point
           (insert " "))
-        (forward-char (if space-at-point -5 -6)))
-    (error "Not over an area of whitespace")))
+        (forward-char (if space-at-point -5 -6))
+        t )))
 
-;; Also Bryan O'Sullivan's.
-(defun haskell-mode-kill-scc-at-point ()
-  "Kill the SCC annotation at point."
+(defun haskell-mode-insert-scc-at-point ()
+  "Insert an SCC annotation at point."
   (interactive)
+  (if (not (haskell-mode-try-insert-scc-at-point))
+      (error "Not over an area of whitespace")))
+
+(make-obsolete
+ 'haskell-mode-insert-scc-at-point
+ 'haskell-mode-toggle-scc-at-point
+ "2015-11-11")
+
+(defun haskell-mode-try-kill-scc-at-point ()
+  "Try to kill an SCC annotation at point.  Return true if
+successful, nil otherwise."
   (save-excursion
     (let ((old-point (point))
           (scc "\\({-#[ \t]*SCC \"[^\"]*\"[ \t]*#-}\\)[ \t]*"))
@@ -990,8 +1086,27 @@ LOC = (list FILE LINE COL)"
       (if (and (looking-at scc)
                (<= (match-beginning 1) old-point)
                (> (match-end 1) old-point))
-          (kill-region (match-beginning 0) (match-end 0))
-        (error "No SCC at point")))))
+          (progn (kill-region (match-beginning 0) (match-end 0))
+                 t)))))
+
+;; Also Bryan O'Sullivan's.
+(defun haskell-mode-kill-scc-at-point ()
+  "Kill the SCC annotation at point."
+  (interactive)
+  (if (not (haskell-mode-try-kill-scc-at-point))
+      (error "No SCC at point")))
+
+(make-obsolete
+ 'haskell-mode-kill-scc-at-point
+ 'haskell-mode-toggle-scc-at-point
+ "2015-11-11")
+
+(defun haskell-mode-toggle-scc-at-point ()
+  "If point is in an SCC annotation, kill the annotation.  Otherwise, try to insert a new annotation."
+  (interactive)
+  (if (not (haskell-mode-try-kill-scc-at-point))
+      (if (not (haskell-mode-try-insert-scc-at-point))
+          (error "Could not insert or remove SCC"))))
 
 (defun haskell-guess-module-name ()
   "Guess the current module name of the buffer."
@@ -1017,9 +1132,36 @@ LOC = (list FILE LINE COL)"
     (goto-char (point-min))
     (end-of-line)))
 
-
+;;;###autoload
+(defun haskell-mode-generate-tags (&optional and-then-find-this-tag)
+  "Generate tags using Hasktags.  This is synchronous function.
+
+If optional AND-THEN-FIND-THIS-TAG argument is present it is used
+with function `xref-find-definitions' after new table was
+generated."
+  (let* ((dir (haskell-cabal--find-tags-dir))
+         (command (haskell-cabal--compose-hasktags-command dir)))
+    (if (not command)
+        (error "Unable to compose hasktags command")
+      (shell-command command)
+      (haskell-mode-message-line "Tags generated.")
+      (when and-then-find-this-tag
+        (let ((tags-file-name dir))
+          (xref-find-definitions and-then-find-this-tag))))))
+
+(defun haskell-mode-message-line (str)
+  "Echo STR in mini-buffer.
+Given string is shrinken to single line, multiple lines just
+disturbs the programmer."
+  (message (haskell-mode-one-line str (frame-width))))
+
+(defun haskell-mode-one-line (str width)
+  "Try to fit STR as much as possible on one line according to given WIDTH."
+  (let* ((long-line (replace-regexp-in-string "\n" " " str))
+         (condensed  (replace-regexp-in-string
+                      " +" " " (haskell-string-trim long-line))))
+    (truncate-string-to-width condensed width nil nil "…")))
+
 ;; Provide ourselves:
-
 (provide 'haskell-mode)
-
 ;;; haskell-mode.el ends here

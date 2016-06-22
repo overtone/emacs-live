@@ -1,6 +1,6 @@
 ;;; ob-lob.el --- functions supporting the Library of Babel
 
-;; Copyright (C) 2009-2015 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2016 Free Software Foundation, Inc.
 
 ;; Authors: Eric Schulte
 ;;	 Dan Davison
@@ -64,14 +64,14 @@ To add files to this list use the `org-babel-lob-ingest' command."
 
 (defconst org-babel-block-lob-one-liner-regexp
   (concat
-   "^\\([ \t]*?\\)#\\+call:[ \t]+\\([^\(\)\n]+?\\)\\(\\[\\(.*\\)\\]\\|\\(\\)\\)"
-   "\(\\([^\n]*?\\)\)\\(\\[.+\\]\\|\\)[ \t]*\\(\\([^\n]*\\)\\)?")
+   "^\\([ \t]*?\\)#\\+call:[ \t]+\\([^()\n]+?\\)\\(\\[\\(.*\\)\\]\\|\\(\\)\\)"
+   "(\\([^\n]*?\\))\\(\\[.+\\]\\|\\)[ \t]*\\(\\([^\n]*\\)\\)?")
   "Regexp to match non-inline calls to predefined source block functions.")
 
 (defconst org-babel-inline-lob-one-liner-regexp
   (concat
-   "\\([^\n]*?\\)call_\\([^\(\)[:space:]\n]+?\\)\\(\\[\\(.*?\\)\\]\\|\\(\\)\\)"
-   "\(\\(.*?\\)\)\\(\\[\\(.*?\\)\\]\\)?")
+   "\\([^\n]*?\\)call_\\([^()[:space:]\n]+?\\)\\(\\[\\(.*?\\)\\]\\|\\(\\)\\)"
+   "(\\(.*?\\))\\(\\[\\(.*?\\)\\]\\)?")
   "Regexp to match inline calls to predefined source block functions.")
 
 (defconst org-babel-lob-one-liner-regexp

@@ -1,4 +1,4 @@
-;;; smex.el --- M-x interface with Ido-style fuzzy matching.
+;;; smex.el --- M-x interface with Ido-style fuzzy matching. -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2009-2014 Cornelius Mika and contributors
 ;;
@@ -95,14 +95,14 @@ Set this to nil to disable fuzzy matching."
          (smex-update))
     (smex-read-and-run smex-ido-cache)))
 
-(defsubst smex-already-running ()
+(defun smex-already-running ()
   (and (boundp 'ido-choice-list)
        (eql ido-choice-list smex-ido-cache)
        (minibuffer-window-active-p (selected-window))))
 
-(defsubst smex-update-and-rerun ()
+(defun smex-update-and-rerun ()
   (smex-do-with-selected-item
-   (lambda (ignore) (smex-update) (smex-read-and-run smex-ido-cache ido-text))))
+   (lambda (_) (smex-update) (smex-read-and-run smex-ido-cache ido-text))))
 
 (defun smex-read-and-run (commands &optional initial-input)
   (let* ((chosen-item-name (smex-completing-read commands initial-input))
@@ -112,7 +112,8 @@ Set this to nil to disable fuzzy matching."
           (setq smex-custom-action nil)
           (funcall action chosen-item))
       (unwind-protect
-          (execute-extended-command current-prefix-arg chosen-item-name)
+          (with-no-warnings ; Don't warn about interactive use of `execute-extended-command'
+            (execute-extended-command current-prefix-arg chosen-item-name))
         (smex-rank chosen-item)))))
 
 ;;;###autoload
@@ -240,8 +241,12 @@ Set this to nil to disable fuzzy matching."
 
 (defun smex-initialize-ido ()
   "Sets up a minimal Ido environment for `ido-completing-read'."
-  (ido-init-completion-maps)
+  (with-no-warnings ; `ido-init-completion-maps' is deprecated in Emacs 25
+    (ido-init-completion-maps))
   (add-hook 'minibuffer-setup-hook 'ido-minibuffer-setup))
+
+(defsubst smex-save-file-not-empty-p ()
+  (string-match-p "\[^[:space:]\]" (buffer-string)))
 
 (defun smex-load-save-file ()
   "Loads `smex-history' and `smex-data' from `smex-save-file'"
@@ -255,28 +260,28 @@ Set this to nil to disable fuzzy matching."
             (error (if (smex-save-file-not-empty-p)
                        (error "Invalid data in smex-save-file (%s). Can't restore history."
                               smex-save-file)
-                     (if (not (boundp 'smex-history)) (setq smex-history))
-                     (if (not (boundp 'smex-data))    (setq smex-data))))))
+                     (unless (boundp 'smex-history) (setq smex-history nil))
+                     (unless (boundp 'smex-data)    (setq smex-data nil))))))
       (setq smex-history nil smex-data nil))))
-
-(defsubst smex-save-file-not-empty-p ()
-  (string-match-p "\[^[:space:]\]" (buffer-string)))
 
 (defun smex-save-history ()
   "Updates `smex-history'"
   (setq smex-history nil)
   (let ((cell smex-cache))
-    (dotimes (i smex-history-length)
+    (dotimes (_ smex-history-length)
       (setq smex-history (cons (caar cell) smex-history))
       (setq cell (cdr cell))))
   (setq smex-history (nreverse smex-history)))
+
+(defmacro smex-pp (list-var)
+  `(smex-pp* ,list-var ,(symbol-name list-var)))
 
 (defun smex-save-to-file ()
   (interactive)
   (smex-save-history)
   (with-temp-file (expand-file-name smex-save-file)
-    (ido-pp 'smex-history)
-    (ido-pp 'smex-data)))
+    (smex-pp smex-history)
+    (smex-pp smex-data)))
 
 ;;--------------------------------------------------------------------------------
 ;; Ranking
@@ -338,8 +343,7 @@ Set this to nil to disable fuzzy matching."
 (defun smex-sort-item-at (n)
   "Sorts item at position N in `smex-cache'."
   (let* ((command-cell (nthcdr n smex-cache))
-         (command-item (car command-cell))
-         (command-count (cdr command-item)))
+         (command-item (car command-cell)))
     (let ((insert-at (smex-detect-position
                       command-cell
                       (lambda (cell)
@@ -410,7 +414,7 @@ Returns nil when reaching the end of the list."
     commands))
 
 (defun smex-parse-keymap (map commands)
-  (map-keymap (lambda (binding element)
+  (map-keymap (lambda (_binding element)
                 (if (and (listp element) (eq 'keymap (car element)))
                     (smex-parse-keymap element commands)
                   ;; Strings are commands, too. Reject them.
@@ -455,9 +459,25 @@ sorted by frequency of use."
     (setq buffer-read-only t)
     (let ((inhibit-read-only t))
       (erase-buffer)
-      (ido-pp 'unbound-commands))
+      (smex-pp unbound-commands))
     (set-buffer-modified-p nil)
     (goto-char (point-min))))
+
+;; A copy of `ido-pp' that's compatible with lexical bindings
+(defun smex-pp* (list list-name)
+  (let ((print-level nil) (eval-expression-print-level nil)
+        (print-length nil) (eval-expression-print-length nil))
+    (insert "\n;; ----- " list-name " -----\n(\n ")
+    (while list
+      (let* ((elt (car list))
+             (s (if (consp elt) (car elt) elt)))
+        (if (and (stringp s) (= (length s) 0))
+            (setq s nil))
+        (if s
+            (prin1 elt (current-buffer)))
+        (if (and (setq list (cdr list)) s)
+            (insert "\n "))))
+    (insert "\n)\n")))
 
 (provide 'smex)
 ;;; smex.el ends here

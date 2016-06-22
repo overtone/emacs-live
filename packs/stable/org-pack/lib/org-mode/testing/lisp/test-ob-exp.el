@@ -48,7 +48,7 @@ Current buffer is a copy of the original buffer."
       (org-export-to-file 'html html-file))
     ;; should create a .html file
     (should (file-exists-p html-file))
-    ;; should not create a file with "::" appended to it's name
+    ;; should not create a file with "::" appended to its name
     (should-not (file-exists-p (concat org-test-no-heading-file "::")))
     (when (file-exists-p html-file) (delete-file html-file))))
 
@@ -77,7 +77,7 @@ Current buffer is a copy of the original buffer."
       (org-export-to-file 'html html-file))
     ;; should create a .html file
     (should (file-exists-p html-file))
-    ;; should not create a file with "::" appended to it's name
+    ;; should not create a file with "::" appended to its name
     (should-not (file-exists-p (concat org-test-link-in-heading-file "::")))
     (when (file-exists-p html-file) (delete-file html-file))))
 

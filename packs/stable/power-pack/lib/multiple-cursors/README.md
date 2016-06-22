@@ -4,6 +4,18 @@ Multiple cursors for Emacs. This is some pretty crazy functionality, so yes,
 there are kinks. Don't be afraid tho, I've been using it since 2011 with
 great success and much merriment.
 
+## Installation
+
+I highly recommend installing multiple-cursors through `package.el`.
+
+It's available on [melpa](http://melpa.milkbox.net/):
+
+    M-x package-install multiple-cursors
+
+The package depends on the `cl-lib` package, so if you do not use
+`package.el` or have a recent Emacs, you would need to install that
+too: see [GNU ELPA](http://elpa.gnu.org/packages/cl-lib.html).
+
 ## Basic usage
 
 Start out with:
@@ -40,6 +52,8 @@ You can [watch an intro to multiple-cursors at Emacs Rocks](http://emacsrocks.co
 ### Mark one more occurrence
 
  - `mc/mark-next-like-this`: Adds a cursor and region at the next part of the buffer forwards that matches the current region.
+ - `mc/mark-next-like-this-word`: Adds a cursor and region at the next part of the buffer forwards that matches the current region, if  no region is selected it selects the word at the point.
+ - `mc/mark-next-like-this-symbol`: Adds a cursor and region at the next part of the buffer forwards that matches the current region, if  no region is selected it selects the symbol at the point.
  - `mc/mark-next-word-like-this`: Like `mc/mark-next-like-this` but only for whole words.
  - `mc/mark-next-symbol-like-this`: Like `mc/mark-next-like-this` but only for whole symbols.
  - `mc/mark-previous-like-this`: Adds a cursor and region at the next part of the buffer backwards that matches the current region.
@@ -47,7 +61,7 @@ You can [watch an intro to multiple-cursors at Emacs Rocks](http://emacsrocks.co
  - `mc/mark-previous-symbol-like-this`: Like `mc/mark-previous-like-this` but only for whole symbols.
  - `mc/mark-more-like-this-extended`: Use arrow keys to quickly mark/skip next/previous occurances.
  - `mc/add-cursor-on-click`: Bind to a mouse event to add cursors by clicking. See tips-section.
- - `mc/pop-mark`: Set a cursor at the current point and move to the next (different) position on the mark stack.  This allows for fine grained control over the placement of cursors.
+ - `mc/mark-pop`: Set a cursor at the current point and move to the next (different) position on the mark stack.  This allows for fine grained control over the placement of cursors.
 
 ### Juggle around with the current cursors
 
@@ -76,6 +90,7 @@ You can [watch an intro to multiple-cursors at Emacs Rocks](http://emacsrocks.co
  - `set-rectangular-region-anchor`: Think of this one as `set-mark` except you're marking a rectangular region.
  - `mc/mark-sgml-tag-pair`: Mark the current opening and closing tag.
  - `mc/insert-numbers`: Insert increasing numbers for each cursor, top to bottom.
+ - `mc/insert-letters`: Insert increasing letters for each cursor, top to bottom.
  - `mc/sort-regions`: Sort the marked regions alphabetically.
  - `mc/reverse-regions`: Reverse the order of the marked regions.
 
@@ -86,10 +101,15 @@ You can [watch an intro to multiple-cursors at Emacs Rocks](http://emacsrocks.co
   insert a newline in multiple-cursors-mode, use `C-j`.
 
 - Sometimes you end up with cursors outside of your view. You can
-  scroll the screen to center on each cursor with `C-v` and `M-v`.
+  scroll the screen to center on each cursor with `C-v` and `M-v` or you can
+  press `C-'` to hide all lines without a cursor, press `C-'` again to unhide.
 
 - Try pressing `mc/mark-next-like-this` with no region selected. It
   will just add a cursor on the next line.
+
+- Try pressing `mc/mark-next-like-this-word` or
+  `mc/mark-next-like-this-symbol` with no region selected. It will
+  mark the word or symbol and add a cursor at the next occurance
 
 - Try pressing `mc/mark-all-like-this-dwim` on a tagname in html-mode.
 
@@ -101,6 +121,9 @@ You can [watch an intro to multiple-cursors at Emacs Rocks](http://emacsrocks.co
 
 - You can use `mc/reverse-regions` with nothing selected and just one cursor.
   It will then flip the sexp at point and the one below it.
+
+- When you use `mc/edit-lines`, you can give it a positive or negative
+  prefix to change how it behaves on too short lines.
 
 - If you would like to keep the global bindings clean, and get custom keybindings
   when the region is active, you can try [region-bindings-mode](https://github.com/fgallina/region-bindings-mode).
@@ -132,6 +155,7 @@ the location with:
 
     (setq mc/list-file "/my/preferred/file")
 
+NB! Make sure to do so before requiring multiple-cursors.
 
 ## Known limitations
 
@@ -166,11 +190,14 @@ Run the tests with:
 ## Contributors
 
 * [Takafumi Arakaki](https://github.com/tkf) has contributed several small improvements
-* [Marco Baringer](https://github.com/segv) contributed looping to mc/cycle and adding cursors without region for mark-more.
-* [Ivan Andrus](https://github.com/gvol) added showing number of cursors in mode-line
+* [Marco Baringer](https://github.com/segv) contributed looping to `mc/cycle` and adding cursors without region for mark-more.
+* [Ivan Andrus](https://github.com/gvol) added showing number of cursors in mode-line, and different options for how to handle short lines in `mc/edit-lines`.
 * [Fuco](https://github.com/Fuco1) added the first version of `mc/mark-all-like-this-dwim`
 * [Zach Kost-Smith](https://github.com/smithzvk) added `mc/mark-pop`
 * [Maciej Katafiasz](https://github.com/mathrick) added `mc/mark-all-dwim`
+* [Aleksey Fedotov](https://github.com/lexa) added `mc-hide-unmatched-lines-mode`
+* [Jules Tamagnan](https://github.com/jtamagnan) added `mc/mark-next-like-this-word` and `mc/mark-next-like-this-symbol`
+* [Ingo Lohmar](https://github.com/ilohmar) extended `mc/add-cursor-on-click` to toggle cursors.
 
 Thanks!
 

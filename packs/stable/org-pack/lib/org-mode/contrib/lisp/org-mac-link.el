@@ -1,6 +1,6 @@
 ;;; org-mac-link.el --- Insert org-mode links to items selected in various Mac apps
 ;;
-;; Copyright (c) 2010-2014 Free Software Foundation, Inc.
+;; Copyright (c) 2010-2016 Free Software Foundation, Inc.
 ;;
 ;; Author: Anthony Lander <anthony.lander@gmail.com>
 ;;      John Wiegley <johnw@gnu.org>
@@ -580,7 +580,7 @@ The links are of the form <link>::split::<name>."
   "Open a message in Outlook"
   (do-applescript
    (concat
-    "tell application \"Microsoft Outlook\"\n"
+    "tell application \"/Applications/Microsoft Office 2011/Microsoft Outlook.app\"\n"
     (format "open message id %s\n" (substring-no-properties msgid))
     "activate\n"
     "end tell")))
@@ -589,7 +589,7 @@ The links are of the form <link>::split::<name>."
   "AppleScript to create links to selected messages in Microsoft Outlook.app."
   (do-applescript
    (concat
-    "tell application \"Microsoft Outlook\"\n"
+    "tell application \"/Applications/Microsoft Office 2011/Microsoft Outlook.app\"\n"
     "set msgCount to count current messages\n"
     "if (msgCount < 1) then\n"
     "return\n"

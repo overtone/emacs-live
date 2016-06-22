@@ -1,7 +1,7 @@
 #+STARTUP: indent
 #+OPTIONS: num:nil toc:nil author:nil timestamp:nil
 
-# Copyright (C) 2001, 2010-2014 K-talo Miyazaki, all rights reserved.
+# Copyright (C) 2001, 2010-2016 K-talo Miyazaki, all rights reserved.
 
 * volatile-highlights.el --- 操作に視覚的フィードバックを与える
 
@@ -9,7 +9,7 @@
 
 本ライブラリは、ある操作に関連した部位を強調表示することで、
 その操作に対する視覚的フィードバックを与えるマイナーモード
-`volatile-highlights-mode' を提供する。
+=volatile-highlights-mode= を提供する。
 
 本ライブラリにより作成された強調表示は、新たな操作の
 実行により消去される。
@@ -72,3 +72,38 @@
 以下の操作でカスタマイズグループを確認できる:
 
 : M-x customize-group RET volatile-highlights RET
+
+
+** 他のパッケージで Volataile Highlights を使用するための設定例
+
+*** vip
+
+#+BEGIN_SRC emacs-lisp
+;;-----------------------------------------------------------------------------
+;; Supporting vip-mode.
+;;-----------------------------------------------------------------------------
+(vhl/define-extension 'vip 'vip-yank)
+(vhl/install-extension 'vip)
+#+END_SRC
+
+*** evil
+
+#+BEGIN_SRC emacs-lisp
+;;-----------------------------------------------------------------------------
+;; Supporting evil-mode.
+;;-----------------------------------------------------------------------------
+(vhl/define-extension 'evil 'evil-paste-after 'evil-paste-before
+                      'evil-paste-pop 'evil-move)
+(vhl/install-extension 'evil)
+#+END_SRC
+
+*** undo-tree
+
+#+BEGIN_SRC emacs-lisp
+;;-----------------------------------------------------------------------------
+;; Supporting undo-tree.
+;;-----------------------------------------------------------------------------
+(vhl/define-extension 'undo-tree 'undo-tree-yank 'undo-tree-move)
+(vhl/install-extension 'undo-tree)
+#+END_SRC
+

@@ -1,5 +1,5 @@
 ;;; org-mobile.el --- Code for asymmetric sync with a mobile device
-;; Copyright (C) 2009-2014 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2016 Free Software Foundation, Inc.
 ;;
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -88,7 +88,7 @@ org-agenda-text-search-extra-files
 Encryption uses AES-256, with a password given in
 `org-mobile-encryption-password'.
 When nil, plain files are kept on the server.
-Turning on encryption requires to set the same password in the MobileOrg
+Turning on encryption requires setting the same password in the MobileOrg
 application.  Before turning this on, check of MobileOrg does already
 support it - at the time of this writing it did not yet."
   :group 'org-mobile
@@ -439,14 +439,14 @@ agenda view showing the flagged items."
 	(if org-mobile-use-encryption
 	    org-mobile-encryption-tempfile
 	  target-file)
+      (insert "#+READONLY\n")
       (while (setq entry (pop def-todo))
-	(insert "#+READONLY\n")
 	(setq kwds (mapcar (lambda (x) (if (string-match "(" x)
 					   (substring x 0 (match-beginning 0))
 					 x))
 			   (cdr entry)))
 	(insert "#+TODO: " (mapconcat 'identity kwds " ") "\n")
-	(setq dwds (member "|" kwds)
+	(setq dwds (or (member "|" kwds) (last kwds))
 	      twds (org-delete-all dwds kwds)
 	      todo-kwds (org-delete-all twds todo-kwds)
 	      done-kwds (org-delete-all dwds done-kwds)))

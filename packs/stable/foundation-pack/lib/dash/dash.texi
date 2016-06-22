@@ -13,9 +13,9 @@
 
 @copying
 
-This manual is for @code{dash.el} version 2.10.0.
+This manual is for @code{dash.el} version 2.12.0.
 
-Copyright © 2012-2015 Magnar Sveen
+Copyright © 2012-2015 Free Software Foundation, Inc.
 
 @quotation
 This program is free software; you can redistribute it and/or modify
@@ -97,7 +97,7 @@ Development
 @chapter Installation
 
 It's available on @uref{http://marmalade-repo.org/,marmalade} and
-@uref{http://melpa.milkbox.net/,Melpa}; use @code{M-x
+@uref{https://melpa.org/,Melpa}; use @code{M-x
 package-install}:
 
 @table @kbd
@@ -124,13 +124,13 @@ Alternatively, you can just dump @verb{~dash.el~} or
 Add this to the big comment block at the top:
 
 @lisp
-;; Package-Requires: ((dash "2.10.0"))
+;; Package-Requires: ((dash "2.12.0"))
 @end lisp
 
 @noindent To get function combinators:
 
 @lisp
-;; Package-Requires: ((dash "2.10.0") (dash-functional "1.2.0") (emacs "24"))
+;; Package-Requires: ((dash "2.12.0") (dash-functional "1.2.0") (emacs "24"))
 @end lisp
 
 @node Syntax highlighting of dash functions
@@ -375,6 +375,10 @@ See also: @code{-splice} (@pxref{-splice}), @code{-insert-at} (@pxref{-insert-at
 @group
 (-splice-list 'keywordp nil '(1 :foo 2))
     @result{} '(1 2)
+@end group
+@group
+(--splice-list (keywordp it) '(a b c) '(1 :foo 2))
+    @result{} '(1 a b c 2)
 @end group
 @end example
 @end defun
@@ -723,6 +727,14 @@ Return a new list with the concatenation of the elements in the supplied @var{li
 @defun -flatten (l)
 Take a nested list @var{l} and return its contents as a single, flat list.
 
+Note that because @code{nil} represents a list of zero elements (an
+empty list), any mention of nil in @var{l} will disappear after
+flattening.  If you need to preserve nils, consider @code{-flatten-n} (@pxref{-flatten-n})
+or map them to some unique symbol and then map them back.
+
+Conses of two atoms are considered "terminals", that is, they
+aren't flattened further.
+
 See also: @code{-flatten-n} (@pxref{-flatten-n})
 
 @example
@@ -961,6 +973,8 @@ item, etc. If @var{list} contains no items, return @var{initial-value} and
 In the anaphoric form @code{--reduce-from}, the accumulated value is
 exposed as `acc`.
 
+See also: @code{-reduce} (@pxref{-reduce}), @code{-reduce-r} (@pxref{-reduce-r})
+
 @example
 @group
 (-reduce-from '- 10 '(1 2 3))
@@ -985,6 +999,8 @@ returned and @var{fn} is not called.
 
 Note: this function works the same as @code{-reduce-from} (@pxref{-reduce-from}) but the
 operation associates from right instead of from left.
+
+See also: @code{-reduce-r} (@pxref{-reduce-r}), @code{-reduce} (@pxref{-reduce})
 
 @example
 @group
@@ -1012,6 +1028,8 @@ reduce return the result of calling @var{fn} with no arguments. If
 
 In the anaphoric form @code{--reduce}, the accumulated value is
 exposed as `acc`.
+
+See also: @code{-reduce-from} (@pxref{-reduce-from}), @code{-reduce-r} (@pxref{-reduce-r})
 
 @example
 @group
@@ -1042,6 +1060,8 @@ accumulated value.
 
 Note: this function works the same as @code{-reduce} (@pxref{-reduce}) but the operation
 associates from right instead of from left.
+
+See also: @code{-reduce-r-from} (@pxref{-reduce-r-from}), @code{-reduce} (@pxref{-reduce})
 
 @example
 @group
@@ -2702,7 +2722,7 @@ second item in second form, etc.
 @end defun
 
 @anchor{->>}
-@defun ->> (x form &rest more)
+@defun ->> (x &optional form &rest more)
 Thread the expr through the forms. Insert @var{x} as the last item
 in the first form, making a list of it if it is not a list
 already. If there are more forms, insert the first form as the
@@ -2747,6 +2767,69 @@ in second form, etc.
 @end example
 @end defun
 
+@anchor{-some->}
+@defun -some-> (x &optional form &rest more)
+When expr is non-nil, thread it through the first form (via @code{->} (@pxref{->})),
+and when that result is non-nil, through the next form, etc.
+
+@example
+@group
+(-some-> '(2 3 5))
+    @result{} '(2 3 5)
+@end group
+@group
+(-some-> 5 square)
+    @result{} 25
+@end group
+@group
+(-some-> 5 even? square)
+    @result{} nil
+@end group
+@end example
+@end defun
+
+@anchor{-some->>}
+@defun -some->> (x &optional form &rest more)
+When expr is non-nil, thread it through the first form (via @code{->>} (@pxref{->>})),
+and when that result is non-nil, through the next form, etc.
+
+@example
+@group
+(-some->> '(1 2 3) (-map 'square))
+    @result{} '(1 4 9)
+@end group
+@group
+(-some->> '(1 3 5) (-last 'even?) (+ 100))
+    @result{} nil
+@end group
+@group
+(-some->> '(2 4 6) (-last 'even?) (+ 100))
+    @result{} 106
+@end group
+@end example
+@end defun
+
+@anchor{-some-->}
+@defun -some--> (x &optional form &rest more)
+When expr in non-nil, thread it through the first form (via @code{-->} (@pxref{-->})),
+and when that result is non-nil, through the next form, etc.
+
+@example
+@group
+(-some--> "def" (concat "abc" it "ghi"))
+    @result{} "abcdefghi"
+@end group
+@group
+(-some--> nil (concat "abc" it "ghi"))
+    @result{} nil
+@end group
+@group
+(-some--> '(1 3 5) (-filter 'even? it) (append it it) (-map 'square it))
+    @result{} nil
+@end group
+@end example
+@end defun
+
 
 @node Binding
 @section Binding
@@ -2784,7 +2867,9 @@ If all @var{vals} evaluate to true, bind them to their corresponding
 @var{vars} and execute body. @var{vars-vals} should be a list of (@var{var} @var{val})
 pairs.
 
-Note: binding is done according to @code{-let*} (@pxref{-let*}).
+Note: binding is done according to @code{-let*} (@pxref{-let*}).  @var{vals} are evaluated
+sequentially, and evaluation stops after the first nil @var{val} is
+encountered.
 
 @example
 @group
@@ -2823,7 +2908,9 @@ If all @var{vals} evaluate to true, bind them to their corresponding
 @var{vars} and do @var{then}, otherwise do @var{else}. @var{vars-vals} should be a list
 of (@var{var} @var{val}) pairs.
 
-Note: binding is done according to @code{-let*} (@pxref{-let*}).
+Note: binding is done according to @code{-let*} (@pxref{-let*}).  @var{vals} are evaluated
+sequentially, and evaluation stops after the first nil @var{val} is
+encountered.
 
 @example
 @group
@@ -2903,10 +2990,10 @@ Vectors:
                      If the @var{pattern} is longer than @var{source}, an @code{error} is
                      thrown.
 
-    [a1 a2 a3 ... &rest rest] ) - as above, but bind the rest of
-                                  the sequence to @var{rest}.  This is
-                                  conceptually the same as improper list
-                                  matching (a1 a2 ... aN . rest)
+    [a1 a2 a3 ... &rest rest] - as above, but bind the rest of
+                                the sequence to @var{rest}.  This is
+                                conceptually the same as improper list
+                                matching (a1 a2 ... aN . rest)
 
 Key/value stores:
 

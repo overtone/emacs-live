@@ -261,16 +261,37 @@ to dead or no buffer."
 	     (make-progress-reporter "Updating Org Contacts Database..." 0 (length org-contacts-files)))
 	    (i 0))
 	(dolist (file (org-contacts-files))
-	  (org-check-agenda-file file)
-	  (with-current-buffer (org-get-agenda-file-buffer file)
-	    (unless (eq major-mode 'org-mode)
-	      (error "File %s is not in `org-mode'" file))
-	    (setf result
-		  (append result
-			  (org-scan-tags
-			   'org-contacts-at-point
-			   contacts-matcher
-			   todo-only))))
+	  (if (catch 'nextfile
+                ;; if file doesn't exist and the user agrees to removing it
+                ;; from org-agendas-list, 'nextfile is thrown.  Catch it here
+                ;; and skip processing the file.
+                ;;
+                ;; TODO: suppose that the user has set an org-contacts-files
+                ;; list that contains an element that doesn't exist in the
+                ;; file system: in that case, the org-agenda-files list could
+                ;; be updated (and saved to the customizations of the user) if
+                ;; it contained the same file even though the org-agenda-files
+                ;; list wasn't actually used.  I don't think it is normal that
+                ;; org-contacts updates org-agenda-files in this case, but
+                ;; short of duplicating org-check-agenda-files and
+                ;; org-remove-files, I don't know how to avoid it.
+                ;;
+                ;; A side effect of the TODO is that the faulty
+                ;; org-contacts-files list never gets updated and thus the
+                ;; user is always queried about the missing files when
+                ;; org-contacts-db-need-update-p returns true.
+                (org-check-agenda-file file))
+              (message "Skipped %s removed from org-agenda-files list."
+                       (abbreviate-file-name file))
+	    (with-current-buffer (org-get-agenda-file-buffer file)
+	      (unless (eq major-mode 'org-mode)
+		(error "File %s is not in `org-mode'" file))
+	      (setf result
+		    (append result
+			    (org-scan-tags
+			     'org-contacts-at-point
+			     contacts-matcher
+			     todo-only)))))
 	  (progress-reporter-update progress-reporter (setq i (1+ i))))
 	(setf org-contacts-db result
 	      org-contacts-last-update (current-time))

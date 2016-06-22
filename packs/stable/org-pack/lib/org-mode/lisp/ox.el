@@ -1,6 +1,6 @@
 ;;; ox.el --- Generic Export Engine for Org Mode
 
-;; Copyright (C) 2012-2014 Free Software Foundation, Inc.
+;; Copyright (C) 2012-2016 Free Software Foundation, Inc.
 
 ;; Author: Nicolas Goaziou <n.goaziou at gmail dot com>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -496,7 +496,7 @@ t           Allow export of math snippets."
   "The last level which is still exported as a headline.
 
 Inferior levels will usually produce itemize or enumerate lists
-when exported, but back-end behaviour may differ.
+when exported, but back-end behavior may differ.
 
 This option can also be set with the OPTIONS keyword,
 e.g. \"H:2\"."
@@ -800,9 +800,9 @@ is nil.  You can also allow them through local buffer variables."
 (defcustom org-export-snippet-translation-alist nil
   "Alist between export snippets back-ends and exporter back-ends.
 
-This variable allows to provide shortcuts for export snippets.
+This variable allows providing shortcuts for export snippets.
 
-For example, with a value of '\(\(\"h\" . \"html\"\)\), the
+For example, with a value of \\='((\"h\" . \"html\")), the
 HTML back-end will recognize the contents of \"@@h:<b>@@\" as
 HTML code while every other back-end will ignore it."
   :group 'org-export-general
@@ -883,7 +883,7 @@ output is restricted to body only, \"s\" when it is restricted to
 the current subtree, \"v\" when only visible elements are
 considered for export, \"f\" when publishing functions should be
 passed the FORCE argument and \"a\" when the export should be
-asynchronous).  Also, \[?] allows to switch back to standard
+asynchronous).  Also, [?] allows switching back to standard
 mode."
   :group 'org-export-general
   :version "24.4"
@@ -1094,7 +1094,7 @@ keywords are understood:
     Menu entry for the export dispatcher.  It should be a list
     like:
 
-      '(KEY DESCRIPTION-OR-ORDINAL ACTION-OR-MENU)
+      \\='(KEY DESCRIPTION-OR-ORDINAL ACTION-OR-MENU)
 
     where :
 
@@ -1118,30 +1118,30 @@ keywords are understood:
       If it is an alist, associations should follow the
       pattern:
 
-        '(KEY DESCRIPTION ACTION)
+        \\='(KEY DESCRIPTION ACTION)
 
       where KEY, DESCRIPTION and ACTION are described above.
 
     Valid values include:
 
-      '(?m \"My Special Back-end\" my-special-export-function)
+      \\='(?m \"My Special Back-end\" my-special-export-function)
 
       or
 
-      '(?l \"Export to LaTeX\"
-           \(?p \"As PDF file\" org-latex-export-to-pdf)
-           \(?o \"As PDF file and open\"
-               \(lambda (a s v b)
-                 \(if a (org-latex-export-to-pdf t s v b)
-                   \(org-open-file
-                    \(org-latex-export-to-pdf nil s v b)))))))
+      \\='(?l \"Export to LaTeX\"
+           (?p \"As PDF file\" org-latex-export-to-pdf)
+           (?o \"As PDF file and open\"
+               (lambda (a s v b)
+                 (if a (org-latex-export-to-pdf t s v b)
+                   (org-open-file
+                    (org-latex-export-to-pdf nil s v b)))))))
 
       or the following, which will be added to the previous
       sub-menu,
 
-      '(?l 1
-          \((?B \"As TEX buffer (Beamer)\" org-beamer-export-as-latex)
-           \(?P \"As PDF file (Beamer)\" org-beamer-export-to-pdf)))
+      \\='(?l 1
+          ((?B \"As TEX buffer (Beamer)\" org-beamer-export-as-latex)
+           (?P \"As PDF file (Beamer)\" org-beamer-export-to-pdf)))
 
   :options-alist
 
@@ -1215,12 +1215,12 @@ keywords are understood:
 As an example, here is how one could define \"my-latex\" back-end
 as a variant of `latex' back-end with a custom template function:
 
-  \(org-export-define-derived-backend 'my-latex 'latex
-     :translate-alist '((template . my-latex-template-fun)))
+  (org-export-define-derived-backend \\='my-latex \\='latex
+     :translate-alist \\='((template . my-latex-template-fun)))
 
 The back-end could then be called with, for example:
 
-  \(org-export-to-buffer 'my-latex \"*Test my-latex*\")"
+  (org-export-to-buffer \\='my-latex \"*Test my-latex*\")"
   (declare (indent 2))
   (let (blocks filters menu-entry options transcoders contents)
     (while (keywordp (car body))
@@ -1320,39 +1320,6 @@ inferior to file-local settings."
     :back-end
     backend
     :translate-alist (org-export-get-all-transcoders backend)
-    :footnote-definition-alist
-    ;; Footnotes definitions must be collected in the original
-    ;; buffer, as there's no insurance that they will still be in
-    ;; the parse tree, due to possible narrowing.
-    (let (alist)
-      (org-with-wide-buffer
-       (goto-char (point-min))
-       (while (re-search-forward org-footnote-re nil t)
-	 (backward-char)
-	 (let ((fn (save-match-data (org-element-context))))
-	   (case (org-element-type fn)
-	     (footnote-definition
-	      (push
-	       (cons (org-element-property :label fn)
-		     (let ((cbeg (org-element-property :contents-begin fn)))
-		       (when cbeg
-			 (org-element--parse-elements
-			  cbeg (org-element-property :contents-end fn)
-			  nil nil nil nil (list 'org-data nil)))))
-	       alist))
-	     (footnote-reference
-	      (let ((label (org-element-property :label fn))
-		    (cbeg (org-element-property :contents-begin fn)))
-		(when (and label cbeg
-			   (eq (org-element-property :type fn) 'inline))
-		  (push
-		   (cons label
-			 (org-element-parse-secondary-string
-			  (buffer-substring
-			   cbeg (org-element-property :contents-end fn))
-			  (org-element-restriction 'footnote-reference)))
-		   alist)))))))
-       alist))
     :id-alist
     ;; Collect id references.
     (let (alist)
@@ -1372,21 +1339,24 @@ inferior to file-local settings."
 Optional argument BACKEND is an export back-end, as returned by,
 e.g., `org-export-create-backend'.  It specifies which back-end
 specific items to read, if any."
-  (let ((all
-	 (mapcar
-	  (lambda (o) (cons (nth 2 o) (car o)))
-	  ;; Priority is given to back-end specific options.
-	  (append (and backend (org-export-get-all-options backend))
-		  org-export-options-alist)))
-	(start)
-	plist)
-    (while (string-match "\\(.+?\\):\\((.*?)\\|\\S-*\\)[ \t\n]*" options start)
-      (setq start (match-end 0))
-      (let ((property (cdr (assoc-string (match-string 1 options) all t))))
-	(when property
-	  (setq plist
-		(plist-put plist property (read (match-string 2 options)))))))
-    plist))
+  (let ((line
+	 (let ((s 0) alist)
+	   (while (string-match "\\(.+?\\):\\((.*?)\\|\\S-*\\)[ \t]*" options s)
+	     (setq s (match-end 0))
+	     (push (cons (match-string 1 options)
+			 (read (match-string 2 options)))
+		   alist))
+	   alist))
+	;; Priority is given to back-end specific options.
+	(all (append (and backend (org-export-get-all-options backend))
+		     org-export-options-alist))
+	(plist))
+    (when line
+      (dolist (entry all plist)
+	(let ((item (nth 2 entry)))
+	  (when item
+	    (let ((v (assoc-string item line t)))
+	      (when v (setq plist (plist-put plist (car entry) (cdr v)))))))))))
 
 (defun org-export--get-subtree-options (&optional backend)
   "Get export options in subtree at point.
@@ -1397,52 +1367,46 @@ for export.  Return options as a plist."
   ;; same property in communication channel.  The name for the
   ;; property is the keyword with "EXPORT_" appended to it.
   (org-with-wide-buffer
-   (let (plist
+   ;; Make sure point is at a heading.
+   (if (org-at-heading-p) (org-up-heading-safe) (org-back-to-heading t))
+   (let ((plist
+	  ;; EXPORT_OPTIONS are parsed in a non-standard way.  Take
+	  ;; care of them right from the start.
+	  (let ((o (org-entry-get (point) "EXPORT_OPTIONS" 'selective)))
+	    (and o (org-export--parse-option-keyword o backend))))
+	 ;; Take care of EXPORT_TITLE.  If it isn't defined, use
+	 ;; headline's title (with no todo keyword, priority cookie or
+	 ;; tag) as its fallback value.
+	 (cache (list
+		 (cons "TITLE"
+		       (or (org-entry-get (point) "EXPORT_TITLE" 'selective)
+			   (progn (looking-at org-complex-heading-regexp)
+				  (org-match-string-no-properties 4))))))
 	 ;; Look for both general keywords and back-end specific
 	 ;; options, with priority given to the latter.
 	 (options (append (and backend (org-export-get-all-options backend))
 			  org-export-options-alist)))
-     ;; Make sure point is at a heading.
-     (if (org-at-heading-p) (org-up-heading-safe) (org-back-to-heading t))
-     ;; Take care of EXPORT_TITLE.  If it isn't defined, use
-     ;; headline's title (with no todo keyword, priority cookie or
-     ;; tag) as its fallback value.
-     (let ((title (or (org-entry-get (point) "EXPORT_TITLE")
-		      (progn (looking-at org-complex-heading-regexp)
-			     (org-match-string-no-properties 4)))))
-       (setq plist
-	     (plist-put
-	      plist :title
-	      (if (eq (nth 4 (assq :title options)) 'parse)
-		  (org-element-parse-secondary-string
-		   title (org-element-restriction 'keyword))
-		title))))
-     ;; EXPORT_OPTIONS are parsed in a non-standard way.
-     (let ((o (org-entry-get (point) "EXPORT_OPTIONS")))
-       (when o
-	 (setq plist
-	       (nconc plist (org-export--parse-option-keyword o backend)))))
-     ;; Handle other keywords.  TITLE keyword is excluded as it has
-     ;; been handled already.  Then return PLIST.
-     (let ((seen '("TITLE")))
-       (dolist (option options plist)
-	 (let ((property (car option))
-	       (keyword (nth 1 option)))
-	   (when (and keyword (not (member keyword seen)))
-	     (let* ((subtree-prop (concat "EXPORT_" keyword))
-		    (value (org-entry-get (point) subtree-prop)))
-	       (push keyword seen)
-	       (when (and value (not (plist-member plist property)))
-		 (setq plist
-		       (plist-put
-			plist
-			property
-			(case (nth 4 option)
-			  (parse
-			   (org-element-parse-secondary-string
-			    value (org-element-restriction 'keyword)))
-			  (split (org-split-string value))
-			  (t value)))))))))))))
+     ;; Handle other keywords.  Then return PLIST.
+     (dolist (option options plist)
+       (let ((property (car option))
+	     (keyword (nth 1 option)))
+	 (when keyword
+	   (let ((value
+		  (or (cdr (assoc keyword cache))
+		      (let ((v (org-entry-get (point)
+					      (concat "EXPORT_" keyword)
+					      'selective)))
+			(push (cons keyword v) cache) v))))
+	     (when value
+	       (setq plist
+		     (plist-put plist
+				property
+				(case (nth 4 option)
+				  (parse
+				   (org-element-parse-secondary-string
+				    value (org-element-restriction 'keyword)))
+				  (split (org-split-string value))
+				  (t value))))))))))))
 
 (defun org-export--get-inbuffer-options (&optional backend)
   "Return current buffer export options, as a plist.
@@ -1491,6 +1455,8 @@ Assume buffer is in Org mode.  Narrowing, if any, is ignored."
 			 ;; Avoid circular dependencies.
 			 (unless (member file files)
 			   (with-temp-buffer
+			     (setq default-directory
+				   (file-name-directory file))
 			     (insert (org-file-contents file 'noerror))
 			     (let ((org-inhibit-startup t)) (org-mode))
 			     (setq plist (funcall get-options
@@ -1554,7 +1520,7 @@ Assume buffer is in Org mode.  Narrowing, if any, is ignored."
 			    (and buffer-file-name (list buffer-file-name))
 			    nil)))
       ;; Parse properties in TO-PARSE.  Remove newline characters not
-      ;; involved in line breaks to simulate `space' behaviour.
+      ;; involved in line breaks to simulate `space' behavior.
       ;; Finally return options.
       (dolist (p to-parse options)
 	(let ((value (org-element-parse-secondary-string
@@ -1622,6 +1588,8 @@ an alist where associations are (VARIABLE-NAME VALUE)."
 					(org-remove-double-quotes val))))
 			     (unless (member file files)
 			       (with-temp-buffer
+				 (setq default-directory
+				       (file-name-directory file))
 				 (let ((org-inhibit-startup t)) (org-mode))
 				 (insert (org-file-contents file 'noerror))
 				 (setq alist
@@ -1666,9 +1634,6 @@ Following tree properties are set or updated:
 `:exported-data' Hash table used to memoize results from
                  `org-export-data'.
 
-`:footnote-definition-alist' List of footnotes definitions in
-                   original buffer and current parse tree.
-
 `:headline-offset' Offset between true level of headlines and
 		   local level.  An offset of -1 means a headline
 		   of level 2 should be considered as a level
@@ -1686,22 +1651,6 @@ Return updated plist."
 	(plist-put info
 		   :headline-offset
 		   (- 1 (org-export--get-min-level data info))))
-  ;; Footnote definitions in parse tree override those stored in
-  ;; `:footnote-definition-alist'.  This way, any change to
-  ;; a definition in the parse tree (e.g., through a parse tree
-  ;; filter) propagates into the alist.
-  (let ((defs (plist-get info :footnote-definition-alist)))
-    (org-element-map data '(footnote-definition footnote-reference)
-      (lambda (fn)
-	(cond ((eq (org-element-type fn) 'footnote-definition)
-	       (push (cons (org-element-property :label fn)
-			   (append '(org-data nil) (org-element-contents fn)))
-		     defs))
-	      ((eq (org-element-property :type fn) 'inline)
-	       (push (cons (org-element-property :label fn)
-			   (org-element-contents fn))
-		     defs)))))
-    (setq info (plist-put info :footnote-definition-alist defs)))
   ;; Properties order doesn't matter: get the rest of the tree
   ;; properties.
   (nconc
@@ -1734,7 +1683,7 @@ DATA is the parse tree.  OPTIONS is the plist holding export
 options.
 
 Return an alist whose key is a headline and value is its
-associated numbering \(in the shape of a list of numbers\) or nil
+associated numbering \(in the shape of a list of numbers) or nil
 for a footnotes section."
   (let ((numbering (make-vector org-export-max-depth 0)))
     (org-element-map data 'headline
@@ -2639,25 +2588,45 @@ The function assumes BUFFER's major mode is `org-mode'."
   "Delete commented areas in the buffer.
 Commented areas are comments, comment blocks, commented trees and
 inlinetasks.  Trailing blank lines after a comment or a comment
-block are preserved.  Narrowing, if any, is ignored."
+block are removed, as long as it doesn't alter the structure of
+the document.  Narrowing, if any, is ignored."
   (org-with-wide-buffer
    (goto-char (point-min))
-   (let ((regexp (concat org-outline-regexp-bol ".*" org-comment-string
-			 "\\|"
-			 "^[ \t]*#\\(?: \\|$\\|\\+begin_comment\\)"))
-	 (case-fold-search t))
+   (let* ((case-fold-search t)
+	  (comment-re "^[ \t]*#\\(?: \\|$\\|\\+end_comment\\)")
+	  (regexp (concat org-outline-regexp-bol ".*" org-comment-string "\\|"
+			  comment-re)))
      (while (re-search-forward regexp nil t)
-       (let ((e (org-element-at-point)))
-	 (case (org-element-type e)
-	   ((comment comment-block)
-	    (delete-region (org-element-property :begin e)
-			   (progn (goto-char (org-element-property :end e))
-				  (skip-chars-backward " \r\t\n")
-				  (line-beginning-position 2))))
+       (let ((element (org-element-at-point)))
+	 (case (org-element-type element)
 	   ((headline inlinetask)
-	    (when (org-element-property :commentedp e)
-	      (delete-region (org-element-property :begin e)
-			     (org-element-property :end e))))))))))
+	    (when (org-element-property :commentedp element)
+	      (delete-region (org-element-property :begin element)
+			     (org-element-property :end element))))
+	   ((comment comment-block)
+	    (let* ((parent (org-element-property :parent element))
+		   (start (org-element-property :begin element))
+		   (end (org-element-property :end element))
+		   ;; We remove trailing blank lines.  Doing so could
+		   ;; modify the structure of the document.  Therefore
+		   ;; we ensure that any comment between elements is
+		   ;; replaced with one empty line, so as to keep them
+		   ;; separated.
+		   (add-blank?
+		    (save-excursion
+		      (goto-char start)
+		      (not (or (bobp)
+			       (eq (org-element-property :contents-begin parent)
+				   start)
+			       (eq (org-element-property :contents-end parent)
+				   end)
+			       (progn
+				 (forward-line -1)
+				 (or (org-looking-at-p "^[ \t]*$")
+				     (org-with-limited-levels
+				      (org-at-heading-p)))))))))
+	      (delete-region start end)
+	      (when add-blank? (insert "\n"))))))))))
 
 (defun org-export--prune-tree (data info)
   "Prune non exportable elements from DATA.
@@ -2686,13 +2655,12 @@ from tree."
 		      ;; If headline is archived but tree below has to
 		      ;; be skipped, remove contents.
 		      (org-element-set-contents data)
-		    ;; Move into secondary string, if any.
-		    (let ((sec-prop
-			   (cdr (assq type org-element-secondary-value-alist))))
-		      (when sec-prop
-			(mapc walk-data (org-element-property sec-prop data))))
 		    ;; Move into recursive objects/elements.
-		    (mapc walk-data (org-element-contents data)))))))))
+		    (mapc walk-data (org-element-contents data)))
+		  ;; Move into secondary string, if any.
+		  (dolist (p (cdr (assq type
+					org-element-secondary-value-alist)))
+		    (mapc walk-data (org-element-property p data)))))))))
     ;; If a select tag is active, also ignore the section before the
     ;; first headline, if any.
     (when selected
@@ -2789,10 +2757,135 @@ returned by the function."
 	(when new
 	  ;; Splice NEW at BLOB location in parse tree.
 	  (dolist (e new (org-element-extract-element blob))
-	    (unless (string= e "") (org-element-insert-before e blob))))))
-    info)
+	    (unless (equal e "") (org-element-insert-before e blob))))))
+    info nil nil t)
   ;; Return modified parse tree.
   data)
+
+(defun org-export--merge-external-footnote-definitions (tree)
+  "Insert footnote definitions outside parsing scope in TREE.
+
+If there is a footnote section in TREE, definitions found are
+appended to it.  If `org-footnote-section' is non-nil, a new
+footnote section containing all definitions is inserted in TREE.
+Otherwise, definitions are appended at the end of the section
+containing their first reference.
+
+Only definitions actually referred to within TREE, directly or
+not, are considered."
+  (let* ((collect-labels
+	  (lambda (data)
+	    (org-element-map data 'footnote-reference
+	      (lambda (f)
+		(and (eq (org-element-property :type f) 'standard)
+		     (org-element-property :label f))))))
+	 (referenced-labels (funcall collect-labels tree)))
+    (when referenced-labels
+      (let* ((definitions)
+	     (push-definition
+	      (lambda (datum)
+		(case (org-element-type datum)
+		  (footnote-definition
+		   (push (save-restriction
+			   (narrow-to-region (org-element-property :begin datum)
+					     (org-element-property :end datum))
+			   (org-element-map (org-element-parse-buffer)
+			       'footnote-definition #'identity nil t))
+			 definitions))
+		  (footnote-reference
+		   (let ((label (org-element-property :label datum))
+			 (cbeg (org-element-property :contents-begin datum)))
+		     (when (and label cbeg
+				(eq (org-element-property :type datum) 'inline))
+		       (push
+			(apply #'org-element-create
+			       'footnote-definition
+			       (list :label label :post-blank 1)
+			       (org-element-parse-secondary-string
+				(buffer-substring
+				 cbeg (org-element-property :contents-end datum))
+				(org-element-restriction 'footnote-reference)))
+			definitions))))))))
+	;; Collect all out of scope definitions.
+	(save-excursion
+	  (goto-char (point-min))
+	  (org-with-wide-buffer
+	   (while (re-search-backward org-footnote-re nil t)
+	     (funcall push-definition (org-element-context))))
+	  (goto-char (point-max))
+	  (org-with-wide-buffer
+	   (while (re-search-forward org-footnote-re nil t)
+	     (funcall push-definition (org-element-context)))))
+	;; Filter out definitions referenced neither in the original
+	;; tree nor in the external definitions.
+	(let* ((directly-referenced
+		(org-remove-if-not
+		 (lambda (d)
+		   (member (org-element-property :label d) referenced-labels))
+		 definitions))
+	       (all-labels
+		(append (funcall collect-labels directly-referenced)
+			referenced-labels)))
+	  (setq definitions
+		(org-remove-if-not
+		 (lambda (d)
+		   (member (org-element-property :label d) all-labels))
+		 definitions)))
+	;; Install definitions in subtree.
+	(cond
+	 ((null definitions))
+	 ;; If there is a footnote section, insert them here.
+	 ((let ((footnote-section
+		 (org-element-map tree 'headline
+		   (lambda (h)
+		     (and (org-element-property :footnote-section-p h) h))
+		   nil t)))
+	    (and footnote-section
+		 (apply #'org-element-adopt-elements (nreverse definitions)))))
+	 ;; If there should be a footnote section, create one containing
+	 ;; all the definitions at the end of the tree.
+	 (org-footnote-section
+	  (org-element-adopt-elements
+	   tree
+	   (org-element-create 'headline
+			       (list :footnote-section-p t
+				     :level 1
+				     :title org-footnote-section)
+			       (apply #'org-element-create
+				      'section
+				      nil
+				      (nreverse definitions)))))
+	 ;; Otherwise add each definition at the end of the section where
+	 ;; it is first referenced.
+	 (t
+	  (let* ((seen)
+		 (insert-definitions)	; For byte-compiler.
+		 (insert-definitions
+		  (lambda (data)
+		    ;; Insert definitions in the same section as their
+		    ;; first reference in DATA.
+		    (org-element-map tree 'footnote-reference
+		      (lambda (f)
+			(when (eq (org-element-property :type f) 'standard)
+			  (let ((label (org-element-property :label f)))
+			    (unless (member label seen)
+			      (push label seen)
+			      (let ((definition
+				      (catch 'found
+					(dolist (d definitions)
+					  (when (equal
+						 (org-element-property :label d)
+						 label)
+					    (setq definitions
+						  (delete d definitions))
+					    (throw 'found d))))))
+				(when definition
+				  (org-element-adopt-elements
+				   (org-element-lineage f '(section))
+				   definition)
+				  (funcall insert-definitions
+					   definition)))))))))))
+	    (funcall insert-definitions tree))))))))
 
 ;;;###autoload
 (defun org-export-as
@@ -2854,27 +2947,34 @@ Return code as a string."
 				    org-export-options-alist))))
 	     tree)
 	;; Update communication channel and get parse tree.  Buffer
-	;; isn't parsed directly.  Instead, a temporary copy is
-	;; created, where include keywords, macros are expanded and
-	;; code blocks are evaluated.
+	;; isn't parsed directly.  Instead, all buffer modifications
+	;; and consequent parsing are undertaken in a temporary copy.
 	(org-export-with-buffer-copy
 	 ;; Run first hook with current back-end's name as argument.
 	 (run-hook-with-args 'org-export-before-processing-hook
 			     (org-export-backend-name backend))
+	 ;; Include files, delete comments and expand macros.
 	 (org-export-expand-include-keyword)
 	 (org-export--delete-comments)
-	 ;; Refresh buffer properties, radio targets and macros after
-	 ;; including files.
-	 (org-set-regexps-and-options)
-	 (org-update-radio-target-regexp)
 	 (org-macro-initialize-templates)
 	 (org-macro-replace-all org-macro-templates nil parsed-keywords)
+	 ;; Refresh buffer properties and radio targets after
+	 ;; potentially invasive previous changes.  Likewise, do it
+	 ;; again after executing Babel code.
+	 (org-set-regexps-and-options)
+	 (org-update-radio-target-regexp)
 	 (org-export-execute-babel-code)
+	 (org-set-regexps-and-options)
+	 (org-update-radio-target-regexp)
 	 ;; Run last hook with current back-end's name as argument.
+	 ;; Update buffer properties and radio targets one last time
+	 ;; before parsing.
 	 (goto-char (point-min))
 	 (save-excursion
 	   (run-hook-with-args 'org-export-before-parsing-hook
 			       (org-export-backend-name backend)))
+	 (org-set-regexps-and-options)
+	 (org-update-radio-target-regexp)
 	 ;; Update communication channel with environment.  Also
 	 ;; install user's and developer's filters.
 	 (setq info
@@ -2913,13 +3013,14 @@ Return code as a string."
 	  parsed-keywords)
 	 ;; Parse buffer.
 	 (setq tree (org-element-parse-buffer nil visible-only))
+	 ;; Merge footnote definitions outside scope into parse tree.
+	 (org-export--merge-external-footnote-definitions tree)
 	 ;; Prune tree from non-exported elements and transform
 	 ;; uninterpreted elements or objects in both parse tree and
 	 ;; communication channel.
 	 (org-export--prune-tree tree info)
 	 (org-export--remove-uninterpreted-data tree info)
-	 ;; Parse buffer, handle uninterpreted elements or objects,
-	 ;; then call parse-tree filters.
+	 ;; Call parse tree filters.
 	 (setq tree
 	       (org-export-filter-apply-functions
 		(plist-get info :filter-parse-tree) tree info))
@@ -2978,14 +3079,10 @@ Return code as a string."
 BACKEND is either an export back-end, as returned by, e.g.,
 `org-export-create-backend', or a symbol referring to
 a registered back-end."
-  (if (not (org-region-active-p))
-      (user-error "No active region to replace")
-    (let* ((beg (region-beginning))
-	   (end (region-end))
-	   (str (buffer-substring beg end)) rpl)
-      (setq rpl (org-export-string-as str backend t))
-      (delete-region beg end)
-      (insert rpl))))
+  (unless (org-region-active-p) (user-error "No active region to replace"))
+  (insert
+   (org-export-string-as
+    (delete-and-extract-region (region-beginning) (region-end)) backend t)))
 
 ;;;###autoload
 (defun org-export-insert-default-template (&optional backend subtreep)
@@ -3227,7 +3324,7 @@ Return a string of lines to be included in the format expected by
       (let ((org-inhibit-startup t)) (org-mode)))
     (condition-case err
 	;; Enforce consistent search.
-	(let ((org-link-search-must-match-exact-headline t))
+	(let ((org-link-search-must-match-exact-headline nil))
 	  (org-link-search location))
       (error
        (error "%s for %s::%s" (error-message-string err) file location)))
@@ -3272,24 +3369,6 @@ Return a string of lines to be included in the format expected by
 		       (while (< (point) end) (incf counter) (forward-line))
 		       counter))))))))
 
-(defun org-export--update-footnote-label (ref-begin digit-label id)
-  "Prefix footnote-label at point REF-BEGIN in buffer with ID.
-
-REF-BEGIN corresponds to the property `:begin' of objects of type
-footnote-definition and footnote-reference.
-
-If DIGIT-LABEL is non-nil the label is assumed to be of the form
-\[N] where N is one or more numbers.
-
-Return the new label."
-  (goto-char (1+ ref-begin))
-  (buffer-substring (point)
-		    (progn
-		      (if digit-label (insert (format "fn:%d-" id))
-			(forward-char 3)
-			(insert (format "%d-" id)))
-		      (1- (search-forward "]")))))
-
 (defun org-export--prepare-file-contents
     (file &optional lines ind minlevel id footnotes)
   "Prepare contents of FILE for inclusion and return it as a string.
@@ -3300,20 +3379,20 @@ lines, include only those lines.
 Optional argument IND, when non-nil, is an integer specifying the
 global indentation of returned contents.  Since its purpose is to
 allow an included file to stay in the same environment it was
-created \(i.e. a list item), it doesn't apply past the first
+created (e.g., a list item), it doesn't apply past the first
 headline encountered.
 
 Optional argument MINLEVEL, when non-nil, is an integer
 specifying the level that any top-level headline in the included
 file should have.
+
 Optional argument ID is an integer that will be inserted before
 each footnote definition and reference if FILE is an Org file.
 This is useful to avoid conflicts when more than one Org file
 with footnotes is included in a document.
 
 Optional argument FOOTNOTES is a hash-table to store footnotes in
-the included document.
-"
+the included document."
   (with-temp-buffer
     (insert-file-contents file)
     (when lines
@@ -3342,7 +3421,7 @@ the included document.
     (delete-region (point) (point-max))
     ;; If IND is set, preserve indentation of include keyword until
     ;; the first headline encountered.
-    (when ind
+    (when (and ind (> ind 0))
       (unless (eq major-mode 'org-mode)
 	(let ((org-inhibit-startup t)) (org-mode)))
       (goto-char (point-min))
@@ -3364,57 +3443,66 @@ the included document.
        (let ((levels (org-map-entries
 		      (lambda () (org-reduced-level (org-current-level))))))
 	 (when levels
-	   (let ((offset (- minlevel (apply 'min levels))))
+	   (let ((offset (- minlevel (apply #'min levels))))
 	     (unless (zerop offset)
 	       (when org-odd-levels-only (setq offset (* offset 2)))
 	       ;; Only change stars, don't bother moving whole
 	       ;; sections.
 	       (org-map-entries
-		(lambda () (if (< offset 0) (delete-char (abs offset))
-			(insert (make-string offset ?*)))))))))))
+		(lambda ()
+		  (if (< offset 0) (delete-char (abs offset))
+		    (insert (make-string offset ?*)))))))))))
     ;; Append ID to all footnote references and definitions, so they
     ;; become file specific and cannot collide with footnotes in other
-    ;; included files.  Further, collect relevant footnotes outside of
-    ;; LINES.
+    ;; included files.  Further, collect relevant footnote definitions
+    ;; outside of LINES, in order to reintroduce them later.
     (when id
       (let ((marker-min (point-min-marker))
-	    (marker-max (point-max-marker)))
+	    (marker-max (point-max-marker))
+	    (get-new-label
+	     (lambda (label)
+	       ;; Generate new label from LABEL.  If LABEL is akin to
+	       ;; [1] convert it to [fn:--ID-1].  Otherwise add "-ID-"
+	       ;; after "fn:".
+	       (if (org-string-match-p "\\`[0-9]+\\'" label)
+		   (format "fn:--%d-%s" id label)
+		 (format "fn:-%d-%s" id (substring label 3)))))
+	    (set-new-label
+	     (lambda (f old new)
+	       ;; Replace OLD label with NEW in footnote F.
+	       (save-excursion
+		 (goto-char (1+ (org-element-property :begin f)))
+		 (looking-at (regexp-quote old))
+		 (replace-match new))))
+	    (seen-alist))
 	(goto-char (point-min))
 	(while (re-search-forward org-footnote-re nil t)
-	  (let ((reference (org-element-context)))
-	    (when (eq (org-element-type reference) 'footnote-reference)
-	      (let* ((label (org-element-property :label reference))
-		     (digit-label
-		      (and label (org-string-match-p "\\`[0-9]+\\'" label))))
+	  (let ((footnote (save-excursion
+			    (backward-char)
+			    (org-element-context))))
+	    (when (memq (org-element-type footnote)
+			'(footnote-definition footnote-reference))
+	      (let* ((label (org-element-property :label footnote)))
 		;; Update the footnote-reference at point and collect
 		;; the new label, which is only used for footnotes
 		;; outsides LINES.
 		(when label
-		  ;; If label is akin to [1] convert it to [fn:ID-1].
-		  ;; Otherwise add "ID-" after "fn:".
-		  (let ((new-label (org-export--update-footnote-label
-				    (org-element-property :begin reference)
-				    digit-label id)))
-		    (unless (eq (org-element-property :type reference) 'inline)
-		      (org-with-wide-buffer
-		       (let* ((definition (org-footnote-get-definition label))
-			      (beginning (nth 1 definition)))
-			 (unless definition
-			   (error
-			    "Definition not found for footnote %s in file %s"
-			    label file))
-			 (if (or (< beginning marker-min)
-				 (> beginning marker-max))
+		  (let ((seen (cdr (assoc label seen-alist))))
+		    (if seen (funcall set-new-label footnote label seen)
+		      (let ((new (funcall get-new-label label)))
+			(push (cons label new) seen-alist)
+			(org-with-wide-buffer
+			 (let* ((def (org-footnote-get-definition label))
+				(beg (nth 1 def)))
+			   (when (and def
+				      (or (< beg marker-min)
+					  (>= beg marker-max)))
 			     ;; Store since footnote-definition is
 			     ;; outside of LINES.
-			     (puthash new-label
-				      (org-element-normalize-string
-				       (nth 3 definition))
-				      footnotes)
-			   ;; Update label of definition since it is
-			   ;; included directly.
-			   (org-export--update-footnote-label
-			    beginning digit-label id)))))))))))
+			     (puthash new
+				      (org-element-normalize-string (nth 3 def))
+				      footnotes))))
+			(funcall set-new-label footnote label new)))))))))
 	(set-marker marker-min nil)
 	(set-marker marker-max nil)))
     (org-element-normalize-string (buffer-string))))
@@ -3573,10 +3661,21 @@ applied."
 INFO is the plist used as a communication channel.  If no such
 definition can be found, raise an error."
   (let ((label (org-element-property :label footnote-reference)))
-    (or (if label
-	    (cdr (assoc label (plist-get info :footnote-definition-alist)))
-	  (org-element-contents footnote-reference))
-	(error "Definition not found for footnote %s" label))))
+    (if (not label) (org-element-contents footnote-reference)
+      (let ((cache (or (plist-get info :footnote-definition-cache)
+		       (let ((hash (make-hash-table :test #'equal)))
+			 (plist-put info :footnote-definition-cache hash)
+			 hash))))
+	(or (gethash label cache)
+	    (puthash label
+		     (org-element-map (plist-get info :parse-tree)
+			 '(footnote-definition footnote-reference)
+		       (lambda (f)
+			 (and (equal (org-element-property :label f) label)
+			      (org-element-contents f)))
+		       info t)
+		     cache)
+	    (error "Definition not found for footnote %s" label))))))
 
 (defun org-export--footnote-reference-map
     (function data info &optional body-first)
@@ -3715,8 +3814,8 @@ process, leading to a different order when footnotes are nested."
 ;; level, relatively to the lower headline level in the parsed tree.
 ;;
 ;; `org-export-get-headline-number' returns the section number of an
-;; headline, while `org-export-number-to-roman' allows to convert it
-;; to roman numbers.  With an optional argument,
+;; headline, while `org-export-number-to-roman' allows it to be
+;; converted to roman numbers.  With an optional argument,
 ;; `org-export-get-headline-number' returns a number to unnumbered
 ;; headlines (used for internal id).
 ;;
@@ -3964,7 +4063,7 @@ PATH is the link path.  DESC is its description."
 Optional argument is a set of RULES defining inline images.  It
 is an alist where associations have the following shape:
 
-  \(TYPE . REGEXP)
+  (TYPE . REGEXP)
 
 Applying a rule means apply REGEXP against LINK's path when its
 type is TYPE.  The function will return a non-nil value if any of
@@ -4015,93 +4114,69 @@ error if no block contains REF."
 
 INFO is a plist holding contextual information.
 
-Return value can be an object, an element, or nil:
+Return value can be an object or an element:
 
 - If LINK path matches a target object (i.e. <<path>>) return it.
 
 - If LINK path exactly matches the name affiliated keyword
-  \(i.e. #+NAME: path) of an element, return that element.
+  (i.e. #+NAME: path) of an element, return that element.
 
 - If LINK path exactly matches any headline name, return that
-  element.  If more than one headline share that name, priority
-  will be given to the one with the closest common ancestor, if
-  any, or the first one in the parse tree otherwise.
+  element.
 
 - Otherwise, throw an error.
 
 Assume LINK type is \"fuzzy\".  White spaces are not
 significant."
-  (let* ((raw-path (org-element-property :path link))
-	 (match-title-p (eq (string-to-char raw-path) ?*))
+  (let* ((raw-path (org-link-unescape (org-element-property :path link)))
+	 (headline-only (eq (string-to-char raw-path) ?*))
 	 ;; Split PATH at white spaces so matches are space
 	 ;; insensitive.
 	 (path (org-split-string
-		(if match-title-p (substring raw-path 1) raw-path)))
-	 ;; Cache for destinations that are not position dependent.
+		(if headline-only (substring raw-path 1) raw-path)))
 	 (link-cache
 	  (or (plist-get info :resolve-fuzzy-link-cache)
-	      (plist-get (setq info (plist-put info :resolve-fuzzy-link-cache
-					       (make-hash-table :test 'equal)))
+	      (plist-get (plist-put info
+				    :resolve-fuzzy-link-cache
+				    (make-hash-table :test #'equal))
 			 :resolve-fuzzy-link-cache)))
 	 (cached (gethash path link-cache 'not-found)))
-    (cond
-     ;; Destination is not position dependent: use cached value.
-     ((and (not match-title-p) (not (eq cached 'not-found))) cached)
-     ;; First try to find a matching "<<path>>" unless user specified
-     ;; he was looking for a headline (path starts with a "*"
-     ;; character).
-     ((and (not match-title-p)
-	   (let ((match (org-element-map (plist-get info :parse-tree) 'target
-			  (lambda (blob)
-			    (and (equal (org-split-string
-					 (org-element-property :value blob))
-					path)
-				 blob))
-			  info 'first-match)))
-	     (and match (puthash path match link-cache)))))
-     ;; Then try to find an element with a matching "#+NAME: path"
-     ;; affiliated keyword.
-     ((and (not match-title-p)
-	   (let ((match (org-element-map (plist-get info :parse-tree)
-			    org-element-all-elements
-			  (lambda (el)
-			    (let ((name (org-element-property :name el)))
-			      (when (and name
-					 (equal (org-split-string name) path))
-				el)))
-			  info 'first-match)))
-	     (and match (puthash path match link-cache)))))
-     ;; Last case: link either points to a headline or to nothingness.
-     ;; Try to find the source, with priority given to headlines with
-     ;; the closest common ancestor.  If such candidate is found,
-     ;; return it, otherwise signal an error.
-     (t
-      (let ((find-headline
-	     (function
-	      ;; Return first headline whose `:raw-value' property is
-	      ;; NAME in parse tree DATA, or nil.  Statistics cookies
-	      ;; are ignored.
-	      (lambda (name data)
-		(org-element-map data 'headline
-		  (lambda (headline)
-		    (when (equal (org-split-string
-				  (replace-regexp-in-string
-				   "\\[[0-9]+%\\]\\|\\[[0-9]+/[0-9]+\\]" ""
-				   (org-element-property :raw-value headline)))
-				 name)
-		      headline))
-		  info 'first-match)))))
-	;; Search among headlines sharing an ancestor with link, from
-	;; closest to farthest.
-	(catch 'exit
-	  (dolist (parent
-		   (let ((parent-hl (org-export-get-parent-headline link)))
-		     (if (not parent-hl) (list (plist-get info :parse-tree))
-		       (org-element-lineage parent-hl nil t))))
-	    (let ((foundp (funcall find-headline path parent)))
-	      (when foundp (throw 'exit foundp))))
-	  ;; No destination found: error.
-	  (user-error "Unable to resolve link \"%s\"" raw-path)))))))
+    (if (not (eq cached 'not-found)) cached
+      (let ((ast (plist-get info :parse-tree)))
+	(puthash
+	 path
+	 (cond
+	  ;; First try to find a matching "<<path>>" unless user
+	  ;; specified he was looking for a headline (path starts with
+	  ;; a "*" character).
+	  ((and (not headline-only)
+		(org-element-map ast 'target
+		  (lambda (datum)
+		    (and (equal (org-split-string
+				 (org-element-property :value datum))
+				path)
+			 datum))
+		  info 'first-match)))
+	  ;; Then try to find an element with a matching "#+NAME: path"
+	  ;; affiliated keyword.
+	  ((and (not headline-only)
+		(org-element-map ast org-element-all-elements
+		  (lambda (datum)
+		    (let ((name (org-element-property :name datum)))
+		      (and name (equal (org-split-string name) path) datum)))
+		  info 'first-match)))
+	  ;; Try to find a matching headline.
+	  ((org-element-map ast 'headline
+	     (lambda (h)
+	       (and (equal (org-split-string
+			    (replace-regexp-in-string
+			     "\\[[0-9]+%\\]\\|\\[[0-9]+/[0-9]+\\]" ""
+			     (org-element-property :raw-value h)))
+			   path)
+		    h))
+	     info 'first-match))
+	  (t (user-error "Unable to resolve link \"%s\"" raw-path)))
+	 link-cache)))))
 
 (defun org-export-resolve-id-link (link info)
   "Return headline referenced as LINK destination.
@@ -4144,12 +4219,10 @@ has type \"radio\"."
 
 (defun org-export-file-uri (filename)
   "Return file URI associated to FILENAME."
-  (if (not (file-name-absolute-p filename)) filename
-    (concat "file:/"
-	    (and (not (org-file-remote-p filename)) "/")
-	    (if (org-string-match-p "\\`~" filename)
-		(expand-file-name filename)
-	      filename))))
+  (cond ((org-string-match-p "\\`//" filename) (concat "file:" filename))
+	((not (file-name-absolute-p filename)) filename)
+	((org-file-remote-p filename) (concat "file:/" filename))
+	(t (concat "file://" (expand-file-name filename)))))
 
 
 ;;;; For References
@@ -4192,8 +4265,8 @@ Otherwise, only provided element's type is considered.
 Optional argument PREDICATE is a function returning a non-nil
 value if the current element or object should be counted in.  It
 accepts two arguments: the element or object being considered and
-the plist used as a communication channel.  This allows to count
-only a certain type of objects (i.e. inline images).
+the plist used as a communication channel.  This allows counting
+only a certain type of object (i.e. inline images).
 
 Return value is a list of numbers if ELEMENT is a headline or an
 item.  It is nil for keywords.  It represents the footnote number
@@ -5001,105 +5074,115 @@ Return a list of src-block elements with a caption."
      ;; one may use: »...«, "...", ›...‹, or '...'.
      ;; http://sproget.dk/raad-og-regler/retskrivningsregler/retskrivningsregler/a7-40-60/a7-58-anforselstegn/
      ;; LaTeX quotes require Babel!
-     (opening-double-quote :utf-8 "»" :html "&raquo;" :latex ">>"
-			   :texinfo "@guillemetright{}")
-     (closing-double-quote :utf-8 "«" :html "&laquo;" :latex "<<"
-			   :texinfo "@guillemetleft{}")
-     (opening-single-quote :utf-8 "›" :html "&rsaquo;" :latex "\\frq{}"
-			   :texinfo "@guilsinglright{}")
-     (closing-single-quote :utf-8 "‹" :html "&lsaquo;" :latex "\\flq{}"
-			   :texinfo "@guilsingleft{}")
+     (primary-opening
+      :utf-8 "»" :html "&raquo;" :latex ">>" :texinfo "@guillemetright{}")
+     (primary-closing
+      :utf-8 "«" :html "&laquo;" :latex "<<" :texinfo "@guillemetleft{}")
+     (secondary-opening
+      :utf-8 "›" :html "&rsaquo;" :latex "\\frq{}" :texinfo "@guilsinglright{}")
+     (secondary-closing
+      :utf-8 "‹" :html "&lsaquo;" :latex "\\flq{}" :texinfo "@guilsingleft{}")
      (apostrophe :utf-8 "’" :html "&rsquo;"))
     ("de"
-     (opening-double-quote :utf-8 "„" :html "&bdquo;" :latex "\"`"
-			   :texinfo "@quotedblbase{}")
-     (closing-double-quote :utf-8 "“" :html "&ldquo;" :latex "\"'"
-			   :texinfo "@quotedblleft{}")
-     (opening-single-quote :utf-8 "‚" :html "&sbquo;" :latex "\\glq{}"
-			   :texinfo "@quotesinglbase{}")
-     (closing-single-quote :utf-8 "‘" :html "&lsquo;" :latex "\\grq{}"
-			   :texinfo "@quoteleft{}")
+     (primary-opening
+      :utf-8 "„" :html "&bdquo;" :latex "\"`" :texinfo "@quotedblbase{}")
+     (primary-closing
+      :utf-8 "“" :html "&ldquo;" :latex "\"'" :texinfo "@quotedblleft{}")
+     (secondary-opening
+      :utf-8 "‚" :html "&sbquo;" :latex "\\glq{}" :texinfo "@quotesinglbase{}")
+     (secondary-closing
+      :utf-8 "‘" :html "&lsquo;" :latex "\\grq{}" :texinfo "@quoteleft{}")
      (apostrophe :utf-8 "’" :html "&rsquo;"))
     ("en"
-     (opening-double-quote :utf-8 "“" :html "&ldquo;" :latex "``" :texinfo "``")
-     (closing-double-quote :utf-8 "”" :html "&rdquo;" :latex "''" :texinfo "''")
-     (opening-single-quote :utf-8 "‘" :html "&lsquo;" :latex "`" :texinfo "`")
-     (closing-single-quote :utf-8 "’" :html "&rsquo;" :latex "'" :texinfo "'")
+     (primary-opening :utf-8 "“" :html "&ldquo;" :latex "``" :texinfo "``")
+     (primary-closing :utf-8 "”" :html "&rdquo;" :latex "''" :texinfo "''")
+     (secondary-opening :utf-8 "‘" :html "&lsquo;" :latex "`" :texinfo "`")
+     (secondary-closing :utf-8 "’" :html "&rsquo;" :latex "'" :texinfo "'")
      (apostrophe :utf-8 "’" :html "&rsquo;"))
     ("es"
-     (opening-double-quote :utf-8 "«" :html "&laquo;" :latex "\\guillemotleft{}"
-			   :texinfo "@guillemetleft{}")
-     (closing-double-quote :utf-8 "»" :html "&raquo;" :latex "\\guillemotright{}"
-			   :texinfo "@guillemetright{}")
-     (opening-single-quote :utf-8 "“" :html "&ldquo;" :latex "``" :texinfo "``")
-     (closing-single-quote :utf-8 "”" :html "&rdquo;" :latex "''" :texinfo "''")
+     (primary-opening
+      :utf-8 "«" :html "&laquo;" :latex "\\guillemotleft{}"
+      :texinfo "@guillemetleft{}")
+     (primary-closing
+      :utf-8 "»" :html "&raquo;" :latex "\\guillemotright{}"
+      :texinfo "@guillemetright{}")
+     (secondary-opening :utf-8 "“" :html "&ldquo;" :latex "``" :texinfo "``")
+     (secondary-closing :utf-8 "”" :html "&rdquo;" :latex "''" :texinfo "''")
      (apostrophe :utf-8 "’" :html "&rsquo;"))
     ("fr"
-     (opening-double-quote :utf-8 "« " :html "&laquo;&nbsp;" :latex "\\og "
-			   :texinfo "@guillemetleft{}@tie{}")
-     (closing-double-quote :utf-8 " »" :html "&nbsp;&raquo;" :latex "\\fg{}"
-			   :texinfo "@tie{}@guillemetright{}")
-     (opening-single-quote :utf-8 "« " :html "&laquo;&nbsp;" :latex "\\og "
-			   :texinfo "@guillemetleft{}@tie{}")
-     (closing-single-quote :utf-8 " »" :html "&nbsp;&raquo;" :latex "\\fg{}"
-			   :texinfo "@tie{}@guillemetright{}")
+     (primary-opening
+      :utf-8 "« " :html "&laquo;&nbsp;" :latex "\\og "
+      :texinfo "@guillemetleft{}@tie{}")
+     (primary-closing
+      :utf-8 " »" :html "&nbsp;&raquo;" :latex "\\fg{}"
+      :texinfo "@tie{}@guillemetright{}")
+     (secondary-opening
+      :utf-8 "« " :html "&laquo;&nbsp;" :latex "\\og "
+      :texinfo "@guillemetleft{}@tie{}")
+     (secondary-closing :utf-8 " »" :html "&nbsp;&raquo;" :latex "\\fg{}"
+			:texinfo "@tie{}@guillemetright{}")
      (apostrophe :utf-8 "’" :html "&rsquo;"))
     ("no"
      ;; https://nn.wikipedia.org/wiki/Sitatteikn
-     (opening-double-quote :utf-8 "«" :html "&laquo;" :latex "\\guillemotleft{}"
-			   :texinfo "@guillemetleft{}")
-     (closing-double-quote :utf-8 "»" :html "&raquo;" :latex "\\guillemotright{}"
-			   :texinfo "@guillemetright{}")
-     (opening-single-quote :utf-8 "‘" :html "&lsquo;" :latex "`" :texinfo "`")
-     (closing-single-quote :utf-8 "’" :html "&rsquo;" :latex "'" :texinfo "'")
+     (primary-opening
+      :utf-8 "«" :html "&laquo;" :latex "\\guillemotleft{}"
+      :texinfo "@guillemetleft{}")
+     (primary-closing
+      :utf-8 "»" :html "&raquo;" :latex "\\guillemotright{}"
+      :texinfo "@guillemetright{}")
+     (secondary-opening :utf-8 "‘" :html "&lsquo;" :latex "`" :texinfo "`")
+     (secondary-closing :utf-8 "’" :html "&rsquo;" :latex "'" :texinfo "'")
      (apostrophe :utf-8 "’" :html "&rsquo;"))
     ("nb"
      ;; https://nn.wikipedia.org/wiki/Sitatteikn
-     (opening-double-quote :utf-8 "«" :html "&laquo;" :latex "\\guillemotleft{}"
-			   :texinfo "@guillemetleft{}")
-     (closing-double-quote :utf-8 "»" :html "&raquo;" :latex "\\guillemotright{}"
-			   :texinfo "@guillemetright{}")
-     (opening-single-quote :utf-8 "‘" :html "&lsquo;" :latex "`" :texinfo "`")
-     (closing-single-quote :utf-8 "’" :html "&rsquo;" :latex "'" :texinfo "'")
+     (primary-opening
+      :utf-8 "«" :html "&laquo;" :latex "\\guillemotleft{}"
+      :texinfo "@guillemetleft{}")
+     (primary-closing
+      :utf-8 "»" :html "&raquo;" :latex "\\guillemotright{}"
+      :texinfo "@guillemetright{}")
+     (secondary-opening :utf-8 "‘" :html "&lsquo;" :latex "`" :texinfo "`")
+     (secondary-closing :utf-8 "’" :html "&rsquo;" :latex "'" :texinfo "'")
      (apostrophe :utf-8 "’" :html "&rsquo;"))
     ("nn"
      ;; https://nn.wikipedia.org/wiki/Sitatteikn
-     (opening-double-quote :utf-8 "«" :html "&laquo;" :latex "\\guillemotleft{}"
-			   :texinfo "@guillemetleft{}")
-     (closing-double-quote :utf-8 "»" :html "&raquo;" :latex "\\guillemotright{}"
-			   :texinfo "@guillemetright{}")
-     (opening-single-quote :utf-8 "‘" :html "&lsquo;" :latex "`" :texinfo "`")
-     (closing-single-quote :utf-8 "’" :html "&rsquo;" :latex "'" :texinfo "'")
+     (primary-opening
+      :utf-8 "«" :html "&laquo;" :latex "\\guillemotleft{}"
+      :texinfo "@guillemetleft{}")
+     (primary-closing
+      :utf-8 "»" :html "&raquo;" :latex "\\guillemotright{}"
+      :texinfo "@guillemetright{}")
+     (secondary-opening :utf-8 "‘" :html "&lsquo;" :latex "`" :texinfo "`")
+     (secondary-closing :utf-8 "’" :html "&rsquo;" :latex "'" :texinfo "'")
      (apostrophe :utf-8 "’" :html "&rsquo;"))
     ("ru"
      ;; http://ru.wikipedia.org/wiki/%D0%9A%D0%B0%D0%B2%D1%8B%D1%87%D0%BA%D0%B8#.D0.9A.D0.B0.D0.B2.D1.8B.D1.87.D0.BA.D0.B8.2C_.D0.B8.D1.81.D0.BF.D0.BE.D0.BB.D1.8C.D0.B7.D1.83.D0.B5.D0.BC.D1.8B.D0.B5_.D0.B2_.D1.80.D1.83.D1.81.D1.81.D0.BA.D0.BE.D0.BC_.D1.8F.D0.B7.D1.8B.D0.BA.D0.B5
      ;; http://www.artlebedev.ru/kovodstvo/sections/104/
-     (opening-double-quote :utf-8 "«" :html "&laquo;" :latex "{}<<"
-			   :texinfo "@guillemetleft{}")
-     (closing-double-quote :utf-8 "»" :html "&raquo;" :latex ">>{}"
-			   :texinfo "@guillemetright{}")
-     (opening-single-quote :utf-8 "„" :html "&bdquo;" :latex "\\glqq{}"
-			   :texinfo "@quotedblbase{}")
-     (closing-single-quote :utf-8 "“" :html "&ldquo;" :latex "\\grqq{}"
-			   :texinfo "@quotedblleft{}")
+     (primary-opening :utf-8 "«" :html "&laquo;" :latex "{}<<"
+		      :texinfo "@guillemetleft{}")
+     (primary-closing :utf-8 "»" :html "&raquo;" :latex ">>{}"
+		      :texinfo "@guillemetright{}")
+     (secondary-opening
+      :utf-8 "„" :html "&bdquo;" :latex "\\glqq{}" :texinfo "@quotedblbase{}")
+     (secondary-closing
+      :utf-8 "“" :html "&ldquo;" :latex "\\grqq{}" :texinfo "@quotedblleft{}")
      (apostrophe :utf-8 "’" :html: "&#39;"))
     ("sv"
      ;; based on https://sv.wikipedia.org/wiki/Citattecken
-     (opening-double-quote :utf-8 "”" :html "&rdquo;" :latex "’’" :texinfo "’’")
-     (closing-double-quote :utf-8 "”" :html "&rdquo;" :latex "’’" :texinfo "’’")
-     (opening-single-quote :utf-8 "’" :html "&rsquo;" :latex "’" :texinfo "`")
-     (closing-single-quote :utf-8 "’" :html "&rsquo;" :latex "’" :texinfo "'")
-     (apostrophe :utf-8 "’" :html "&rsquo;"))
-    )
+     (primary-opening :utf-8 "”" :html "&rdquo;" :latex "’’" :texinfo "’’")
+     (primary-closing :utf-8 "”" :html "&rdquo;" :latex "’’" :texinfo "’’")
+     (secondary-opening :utf-8 "’" :html "&rsquo;" :latex "’" :texinfo "`")
+     (secondary-closing :utf-8 "’" :html "&rsquo;" :latex "’" :texinfo "'")
+     (apostrophe :utf-8 "’" :html "&rsquo;")))
   "Smart quotes translations.
 
 Alist whose CAR is a language string and CDR is an alist with
 quote type as key and a plist associating various encodings to
 their translation as value.
 
-A quote type can be any symbol among `opening-double-quote',
-`closing-double-quote', `opening-single-quote',
-`closing-single-quote' and `apostrophe'.
+A quote type can be any symbol among `primary-opening',
+`primary-closing', `secondary-opening', `secondary-closing' and
+`apostrophe'.
 
 Valid encodings include `:utf-8', `:html', `:latex' and
 `:texinfo'.
@@ -5116,62 +5199,65 @@ INFO is the current export state, as a plist."
 		      table)))
 	 (value (gethash parent cache 'missing-data)))
     (if (not (eq value 'missing-data)) (cdr (assq s value))
-      (let (level1-open level2-open full-status)
+      (let (level1-open full-status)
 	(org-element-map parent 'plain-text
 	  (lambda (text)
 	    (let ((start 0) current-status)
 	      (while (setq start (string-match "['\"]" text start))
-		(incf start)
 		(push
 		 (cond
 		  ((equal (match-string 0 text) "\"")
 		   (setf level1-open (not level1-open))
-		   (setf level2-open nil)
-		   (if level1-open 'opening-double-quote 'closing-double-quote))
+		   (if level1-open 'primary-opening 'primary-closing))
 		  ;; Not already in a level 1 quote: this is an
 		  ;; apostrophe.
 		  ((not level1-open) 'apostrophe)
-		  ;; Apostrophe.
-		  ((org-string-match-p "\\S-'\\S-" text) 'apostrophe)
-		  ;; Apostrophe at the beginning of a string.  Check
-		  ;; white space at the end of the last object.
-		  ((and (org-string-match-p "\\`'\\S-" text)
-			(let ((p (org-export-get-previous-element text info)))
-			  (and p
-			       (if (stringp p)
-				   (not (org-string-match-p "[ \t]\\'" p))
-				 (memq (org-element-property :post-blank p)
-				       '(0 nil))))))
-		   'apostrophe)
-		  ;; Apostrophe at the end of a string.  Check white
-		  ;; space at the beginning of the next object, which
-		  ;; can only happen if that object is a string.
-		  ((and (org-string-match-p "\\S-'\\'" text)
-			(let ((n (org-export-get-next-element text info)))
-			  (and n
-			       (not (and (stringp n)
-					 (org-string-match-p "\\`[ \t]" n))))))
-		   'apostrophe)
-		  ;; Lonesome apostrophe.  Check white space around
-		  ;; both ends.
-		  ((and (equal text "'")
-			(let ((p (org-export-get-previous-element text info)))
-			  (and p
-			       (if (stringp p)
-				   (not (org-string-match-p "[ \t]\\'" p))
-				 (memq (org-element-property :post-blank p)
-				       '(0 nil)))
-			       (let ((n (org-export-get-next-element text info)))
-				 (and n
-				      (not (and (stringp n)
-						(org-string-match-p "\\`[ \t]"
-								    n))))))))
-		   'apostrophe)
-		  ;; Else, consider it as a level 2 quote.
-		  (t (setf level2-open (not level2-open))
-		     (if level2-open 'opening-single-quote
-		       'closing-single-quote)))
-		 current-status))
+		  ;; Extract previous char and next char.  As
+		  ;; a special case, they can also be set to `blank',
+		  ;; `no-blank' or nil.  Then determine if current
+		  ;; match is allowed as an opening quote or a closing
+		  ;; quote.
+		  (t
+		   (let* ((previous
+			   (if (> start 0) (substring text (1- start) start)
+			     (let ((p (org-export-get-previous-element
+				       text info)))
+			       (cond ((not p) nil)
+				     ((stringp p) (substring p (1- (length p))))
+				     ((memq (org-element-property :post-blank p)
+					    '(0 nil))
+				      'no-blank)
+				     (t 'blank)))))
+			  (next
+			   (if (< (1+ start) (length text))
+			       (substring text (1+ start) (+ start 2))
+			     (let ((n (org-export-get-next-element text info)))
+			       (cond ((not n) nil)
+				     ((stringp n) (substring n 0 1))
+				     (t 'no-blank)))))
+			  (allow-open
+			   (and (if (stringp previous)
+				    (string-match "\\s\"\\|\\s-\\|\\s("
+						  previous)
+				  (memq previous '(blank nil)))
+				(if (stringp next)
+				    (string-match "\\w\\|\\s.\\|\\s_" next)
+				  (eq next 'no-blank))))
+			  (allow-close
+			   (and (if (stringp previous)
+				    (string-match "\\w\\|\\s.\\|\\s_" previous)
+				  (eq previous 'no-blank))
+				(if (stringp next)
+				    (string-match "\\s-\\|\\s)\\|\\s.\\|\\s\""
+						  next)
+				  (memq next '(blank nil))))))
+		     (cond
+		      ((and allow-open allow-close) (error "Should not happen"))
+		      (allow-open 'secondary-opening)
+		      (allow-close 'secondary-closing)
+		      (t 'apostrophe)))))
+		 current-status)
+		(setq start (1+ start)))
 	      (when current-status
 		(push (cons text (nreverse current-status)) full-status))))
 	  info nil org-element-recursive-objects)
@@ -5603,7 +5689,7 @@ to `:default' encoding.  If it fails, return S."
 ;; returned results in the current process.
 ;;
 ;; At a higher level, `org-export-to-buffer' and `org-export-to-file'
-;; allow to export to a buffer or a file, asynchronously or not.
+;; allow exporting to a buffer or a file, asynchronously or not.
 ;;
 ;; `org-export-output-file-name' is an auxiliary function meant to be
 ;; used with `org-export-to-file'.  With a given extension, it tries
@@ -5703,7 +5789,7 @@ and `org-export-to-file' for more specialized functions."
                                       (kill-buffer proc-buffer))))
                            (org-export-add-to-stack proc-buffer nil p)
                            (ding)
-                           (message "Process '%s' exited abnormally" p))
+                           (message "Process `%s' exited abnormally" p))
                        (unless org-export-async-debug
                          (delete-file ,,temp-file)))))))))))))
 
@@ -5736,10 +5822,10 @@ no argument.  It is always called within the current process,
 from BUFFER, with point at its beginning.  Export back-ends can
 use it to set a major mode there, e.g,
 
-  \(defun org-latex-export-as-latex
-    \(&optional async subtreep visible-only body-only ext-plist)
-    \(interactive)
-    \(org-export-to-buffer 'latex \"*Org LATEX Export*\"
+  (defun org-latex-export-as-latex
+    (&optional async subtreep visible-only body-only ext-plist)
+    (interactive)
+    (org-export-to-buffer \\='latex \"*Org LATEX Export*\"
       async subtreep visible-only body-only ext-plist (lambda () (LaTeX-mode))))
 
 This function returns BUFFER."
@@ -5796,13 +5882,13 @@ argument and happens asynchronously when ASYNC is non-nil.  It
 has to return a file name, or nil.  Export back-ends can use this
 to send the output file through additional processing, e.g,
 
-  \(defun org-latex-export-to-latex
-    \(&optional async subtreep visible-only body-only ext-plist)
-    \(interactive)
-    \(let ((outfile (org-export-output-file-name \".tex\" subtreep)))
-      \(org-export-to-file 'latex outfile
+  (defun org-latex-export-to-latex
+    (&optional async subtreep visible-only body-only ext-plist)
+    (interactive)
+    (let ((outfile (org-export-output-file-name \".tex\" subtreep)))
+      (org-export-to-file \\='latex outfile
         async subtreep visible-only body-only ext-plist
-        \(lambda (file) (org-latex-compile file)))
+        (lambda (file) (org-latex-compile file)))
 
 The function returns either a file name returned by POST-PROCESS,
 or FILE."
@@ -5848,9 +5934,6 @@ of subtree at point.
 When optional argument PUB-DIR is set, use it as the publishing
 directory.
 
-When optional argument VISIBLE-ONLY is non-nil, don't export
-contents of hidden elements.
-
 Return file name as a string."
   (let* ((visited-file (buffer-file-name (buffer-base-buffer)))
 	 (base-name
@@ -5862,7 +5945,7 @@ Return file name as a string."
 		    (org-entry-get
 		     (save-excursion
 		       (ignore-errors (org-back-to-heading) (point)))
-		     "EXPORT_FILE_NAME" t))
+		     "EXPORT_FILE_NAME" 'selective))
 	       ;; File name may be extracted from buffer's associated
 	       ;; file, if any.
 	       (and visited-file (file-name-nondirectory visited-file))
@@ -6135,7 +6218,7 @@ is nil when this menu hasn't been selected yet.
 
 EXPERTP, when non-nil, triggers expert UI.  In that case, no help
 buffer is provided, but indications about currently active
-options are given in the prompt.  Moreover, \[?] allows to switch
+options are given in the prompt.  Moreover, [?] allows switching
 back to standard interface."
   (let* ((fontify-key
 	  (lambda (key &optional access-key)

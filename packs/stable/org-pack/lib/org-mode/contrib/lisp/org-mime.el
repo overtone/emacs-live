@@ -194,10 +194,10 @@ and images in a multipart/related part."
       str)
      html-images)))
 
-(defun org-mime-htmlize (arg)
-  "Export a portion of an email body composed using `mml-mode' to
-html using `org-mode'.  If called with an active region only
-export that region, otherwise export the entire body."
+(defun org-mime-htmlize (&optional arg)
+  "Export to HTML an email body composed using `mml-mode'.
+If called with an active region only export that region,
+otherwise export the entire body."
   (interactive "P")
   (require 'ox-org)
   (require 'ox-html)
@@ -285,7 +285,7 @@ export that region, otherwise export the entire body."
 
 (defun org-mime-compose (body fmt file &optional to subject headers)
   (require 'message)
-  (message-mail to subject headers nil)
+  (compose-mail to subject headers nil)
   (message-goto-body)
   (let ((bhook
 	 (lambda (body fmt)

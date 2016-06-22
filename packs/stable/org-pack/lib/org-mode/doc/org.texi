@@ -2,6 +2,7 @@
 @c %**start of header
 @setfilename ../../info/org.info
 @settitle The Org Manual
+@include docstyle.texi
 
 @include org-version.inc
 
@@ -11,7 +12,6 @@
 @set MAINTAINER Carsten Dominik
 @set MAINTAINEREMAIL @email{carsten at orgmode dot org}
 @set MAINTAINERCONTACT @uref{mailto:carsten at orgmode dot org,contact the maintainer}
-@documentencoding UTF-8
 @c %**end of header
 @finalout
 
@@ -259,7 +259,7 @@
 @copying
 This manual is for Org version @value{VERSION}.
 
-Copyright @copyright{} 2004--2015 Free Software Foundation, Inc.
+Copyright @copyright{} 2004--2016 Free Software Foundation, Inc.
 
 @quotation
 Permission is granted to copy, distribute and/or modify this document
@@ -701,7 +701,7 @@ Using header arguments
 Specific header arguments
 
 * var::                         Pass arguments to code blocks
-* Results::                     Specify the type of results and how they will
+* results::                     Specify the type of results and how they will
                                 be collected and handled
 * file::                        Specify a path for file output
 * file-desc::                   Specify a description for file results
@@ -875,7 +875,7 @@ Recent Emacs distributions include a packaging system which lets you install
 Elisp libraries.  You can install Org with @kbd{M-x package-install RET org}.
 
 @noindent @b{Important}: you need to do this in a session where no @code{.org} file has
-been visited, i.e. where no Org built-in function have been loaded.
+been visited, i.e., where no Org built-in function have been loaded.
 Otherwise autoload Org functions will mess up the installation.
 
 Then, to make sure your Org configuration is taken into account, initialize
@@ -1038,7 +1038,7 @@ is not necessary.  In that case it is sufficient to start Emacs as
 shown below.
 
 @lisp
-;;; Minimal setup to load latest `org-mode'
+;;; Minimal setup to load latest 'org-mode'
 
 ;; activate debugging
 (setq debug-on-error t
@@ -1693,7 +1693,7 @@ In that case, all items are closed.  Here is an example:
    But in the end, no individual scenes matter but the film as a whole.
    Important actors in this film are:
    - @b{Elijah Wood} :: He plays Frodo
-   - @b{Sean Austin} :: He plays Sam, Frodo's friend.  I still remember
+   - @b{Sean Astin} :: He plays Sam, Frodo's friend.  I still remember
      him very well from his role as Mikey Walsh in @i{The Goonies}.
 @end group
 @end example
@@ -2349,7 +2349,7 @@ Fields that are wider become clipped and end in the string @samp{=>}.
 Note that the full text is still in the buffer but is hidden.
 To see the full text, hold the mouse over the field---a tool-tip window
 will show the full content.  To edit such a field, use the command
-@kbd{C-c `} (that is @kbd{C-c} followed by the backquote).  This will
+@kbd{C-c `} (that is @kbd{C-c} followed by the grave accent).  This will
 open a new window with the full field.  Edit it and finish with @kbd{C-c
 C-c}.
 
@@ -2392,13 +2392,13 @@ a group of its own.  Boundaries between column groups will upon export be
 marked with vertical lines.  Here is an example:
 
 @example
-| N | N^2 | N^3 | N^4 | sqrt(n) | sqrt[4](N) |
-|---+-----+-----+-----+---------+------------|
-| / |   < |     |   > |       < |          > |
-| 1 |   1 |   1 |   1 |       1 |          1 |
-| 2 |   4 |   8 |  16 |  1.4142 |     1.1892 |
-| 3 |   9 |  27 |  81 |  1.7321 |     1.3161 |
-|---+-----+-----+-----+---------+------------|
+| N | N^2 | N^3 | N^4 | ~sqrt(n)~ | ~sqrt[4](N)~ |
+|---+-----+-----+-----+-----------+--------------|
+| / |   < |     |   > |         < |            > |
+| 1 |   1 |   1 |   1 |         1 |            1 |
+| 2 |   4 |   8 |  16 |    1.4142 |       1.1892 |
+| 3 |   9 |  27 |  81 |    1.7321 |       1.3161 |
+|---+-----+-----+-----+-----------+--------------|
 #+TBLFM: $2=$1^2::$3=$1^3::$4=$1^4::$5=sqrt($1)::$6=sqrt(sqrt(($1)))
 @end example
 
@@ -2776,7 +2776,7 @@ It is also possible to write a formula in Emacs Lisp.  This can be useful
 for string manipulation and control structures, if Calc's functionality is
 not enough.
 
-If a formula starts with a single-quote followed by an opening parenthesis,
+If a formula starts with an apostrophe followed by an opening parenthesis,
 then it is evaluated as a Lisp form.  The evaluation should return either a
 string or a number.  Just as with @file{calc} formulas, you can specify modes
 and a printf format after a semicolon.
@@ -5925,7 +5925,7 @@ package@footnote{When working with the standard diary sexp functions, you
 need to be very careful with the order of the arguments.  That order depends
 evilly on the variable @code{calendar-date-style} (or, for older Emacs
 versions, @code{european-calendar-style}).  For example, to specify a date
-December 12, 2005, the call might look like @code{(diary-date 12 1 2005)} or
+December 1, 2005, the call might look like @code{(diary-date 12 1 2005)} or
 @code{(diary-date 1 12 2005)} or @code{(diary-date 2005 12 1)}, depending on
 the settings.  This has been the source of much confusion.  Org mode users
 can resort to special versions of these functions like @code{org-date} or
@@ -6074,7 +6074,7 @@ sep 15        @result{} @b{2006}-09-15
 feb 15        @result{} @b{2007}-02-15
 sep 12 9      @result{} 2009-09-12
 12:45         @result{} @b{2006}-@b{06}-@b{13} 12:45
-22 sept 0:34  @result{} @b{2006}-09-22 0:34
+22 sept 0:34  @result{} @b{2006}-09-22 00:34
 w4            @result{} ISO week for of the current year @b{2006}
 2012 w4 fri   @result{} Friday of ISO week 4 in 2012
 2012-w04-5    @result{} Same as above
@@ -6456,9 +6456,9 @@ you stop working on that task, or when you mark the task done, the clock is
 stopped and the corresponding time interval is recorded.  It also computes
 the total time spent on each subtree@footnote{Clocking only works if all
 headings are indented with less than 30 stars.  This is a hardcoded
-limitation of `lmax' in `org-clock-sum'.} of a project.  And it remembers a
-history or tasks recently clocked, so that you can jump quickly between a
-number of tasks absorbing your time.
+limitation of @code{lmax} in @code{org-clock-sum}.} of a project.
+And it remembers a history or tasks recently clocked, so that you can jump
+quickly between a number of tasks absorbing your time.
 
 To save the clock history across Emacs sessions, use
 @lisp
@@ -6512,7 +6512,7 @@ reset of the task @footnote{as recorded by the @code{LAST_REPEAT} property}
 will be shown.  More control over what time is shown can be exercised with
 the @code{CLOCK_MODELINE_TOTAL} property.  It may have the values
 @code{current} to show only the current clocking instance, @code{today} to
-show all time clocked on this tasks today (see also the variable
+show all time clocked on this task today (see also the variable
 @code{org-extend-today-until}), @code{all} to include all time, or
 @code{auto} which is the default@footnote{See also the variable
 @code{org-clock-modeline-total}.}.@* Clicking with @kbd{mouse-1} onto the
@@ -6648,6 +6648,7 @@ be selected:
              thisweek, lastweek, thisweek-@var{N}     @r{a relative week}
              thismonth, lastmonth, thismonth-@var{N}  @r{a relative month}
              thisyear, lastyear, thisyear-@var{N}     @r{a relative year}
+             untilnow
              @r{Use @kbd{S-@key{left}/@key{right}} keys to shift the time interval.}
 :tstart      @r{A time string specifying when to start considering times.}
              @r{Relative times like @code{"<-2w>"} can also be used.  See}
@@ -7153,7 +7154,9 @@ files, targets usually define a node.  Entries will become children of this
 node.  Other types will be added to the table or list in the body of this
 node.  Most target specifications contain a file name.  If that file name is
 the empty string, it defaults to @code{org-default-notes-file}.  A file can
-also be given as a variable, function, or Emacs Lisp form.
+also be given as a variable, function, or Emacs Lisp form.  When an absolute
+path is not specified for a target, it is taken as relative to
+@code{org-directory}.
 
 Valid values are:
 
@@ -8243,7 +8246,7 @@ brackets (like @samp{DEADLINE<="<2008-12-24 18:30>"}), both values are
 assumed to be date/time specifications in the standard Org way, and the
 comparison will be done accordingly.  Special values that will be recognized
 are @code{"<now>"} for now (including time), and @code{"<today>"}, and
-@code{"<tomorrow>"} for these days at 0:00 hours, i.e., without a time
+@code{"<tomorrow>"} for these days at 00:00 hours, i.e., without a time
 specification.  Also strings like @code{"<+5d>"} or @code{"<-2m>"} with units
 @code{d}, @code{w}, @code{m}, and @code{y} for day, week, month, and year,
 respectively, can be used.
@@ -8615,9 +8618,10 @@ selected.
 @vindex org-agenda-category-filter-preset
 
 Filter the current agenda view with respect to the category of the item at
-point.  Pressing @code{<} another time will remove this filter.  You can add
-a filter preset through the option @code{org-agenda-category-filter-preset}
-(see below.)
+point.  Pressing @code{<} another time will remove this filter.  When called
+with a prefix argument exclude the category of the item at point from the
+agenda.  You can add a filter preset through the option
+@code{org-agenda-category-filter-preset} (see below.)
 
 @orgcmd{^,org-agenda-filter-by-top-headline}
 Filter the current agenda view and only display the siblings and the parent
@@ -8636,7 +8640,7 @@ be accumulated.  You can add a filter preset through the option
 @orgcmd{_,org-agenda-filter-by-effort}
 @vindex org-agenda-effort-filter-preset
 @vindex org-sort-agenda-noeffort-is-high
-Filter the agenda view with respect to effort estimates.  
+Filter the agenda view with respect to effort estimates.
 You first need to set up allowed efforts globally, for example
 @lisp
 (setq org-global-properties
@@ -8830,6 +8834,7 @@ agenda and timeline views.
 @c
 @orgcmd{v a,org-agenda-archives-mode}
 @xorgcmd{v A,org-agenda-archives-mode 'files}
+@cindex Archives mode
 Toggle Archives mode.  In Archives mode, trees that are marked
 @code{ARCHIVED} are also scanned when producing the agenda.  When you use the
 capital @kbd{A}, even all archive files are included.  To exit archives mode,
@@ -9996,15 +10001,19 @@ that can be marked up by font-lock in Emacs, you can ask for the example to
 look like the fontified Emacs buffer@footnote{This works automatically for
 the HTML back-end (it requires version 1.34 of the @file{htmlize.el} package,
 which is distributed with Org).  Fontified code chunks in @LaTeX{} can be
-achieved using either the listings or the
-@url{http://code.google.com/p/minted, minted,} package.  Refer to
-@code{org-latex-listings} documentation for details.}.  This is done
-with the @samp{src} block, where you also need to specify the name of the
-major mode that should be used to fontify the example@footnote{Code in
-@samp{src} blocks may also be evaluated either interactively or on export.
-See @pxref{Working with source code} for more information on evaluating code
-blocks.}, see @ref{Easy templates} for shortcuts to easily insert code
-blocks.
+achieved using either the
+@url{https://www.ctan.org/tex-archive/macros/latex/contrib/listings/?lang=en, listings,}
+or the
+@url{https://github.com/gpoore/minted, minted,} package.
+If you use minted or listing, you must load the packages manually, for
+example by adding the desired package to
+@code{org-latex-packages-alist}.  Refer to @code{org-latex-listings}
+for details.}.  This is done with the @samp{src} block, where you also need
+to specify the name of the major mode that should be used to fontify the
+example@footnote{Code in @samp{src} blocks may also be evaluated either
+interactively or on export.  See @pxref{Working with source code} for more
+information on evaluating code blocks.}, see @ref{Easy templates} for
+shortcuts to easily insert code blocks.
 @cindex #+BEGIN_SRC
 
 @example
@@ -10211,16 +10220,20 @@ export.
 
 @item @{@{@{date@}@}@}
 @itemx @{@{@{date(@var{FORMAT})@}@}@}
-@itemx @{@{@{time(@var{FORMAT})@}@}@}
-@itemx @{@{@{modification-time(@var{FORMAT})@}@}@}
 @cindex date, macro
+This macro refers to the @code{#+DATE} keyword. @var{FORMAT} is an optional
+argument to the @code{@{@{@{date@}@}@}} macro that will be used only if
+@code{#+DATE} is a single timestamp.  @var{FORMAT} should be a format string
+understood by @code{format-time-string}.
+
+@item @{@{@{time(@var{FORMAT})@}@}@}
+@itemx @{@{@{modification-time(@var{FORMAT})@}@}@}
 @cindex time, macro
 @cindex modification time, macro
-These macros refer to the @code{#+DATE} keyword, the current date, and the
-modification time of the file being exported, respectively.  @var{FORMAT}
-should be a format string understood by @code{format-time-string}.  Note that
-@var{FORMAT} is an optional argument to the @code{@{@{@{date@}@}@}} macro,
-and that it will only be used if @code{#+DATE} is a single timestamp.
+These macros refer to the date and time when the document is exported and to
+the modification date and time of the file being exported, respectively.
+@var{FORMAT} should be a format string understood by
+@code{format-time-string}.
 
 @item @{@{@{input-file@}@}@}
 @cindex input file, macro
@@ -10503,14 +10516,14 @@ macro, they are removed again (depending on the variable
 @code{cdlatex-simplify-sub-super-scripts}).
 @item
 @kindex `
-Pressing the backquote @kbd{`} followed by a character inserts math
+Pressing the grave accent @kbd{`} followed by a character inserts math
 macros, also outside @LaTeX{} fragments.  If you wait more than 1.5 seconds
-after the backquote, a help window will pop up.
+after the grave accent, a help window will pop up.
 @item
 @kindex '
-Pressing the single-quote @kbd{'} followed by another character modifies
+Pressing the apostrophe @kbd{'} followed by another character modifies
 the symbol before point with an accent or a font.  If you wait more than
-1.5 seconds after the single-quote, a help window will pop up.  Character
+1.5 seconds after the apostrophe, a help window will pop up.  Character
 modification will work only inside @LaTeX{} fragments; outside the quote
 is normal.
 @end itemize
@@ -10586,8 +10599,7 @@ toggle export options@footnote{It is also possible to use a less intrusive
 interface by setting @code{org-export-dispatch-use-expert-ui} to a
 non-@code{nil} value.  In that case, only a prompt is visible from the
 minibuffer.  From there one can still switch back to regular menu by pressing
-@key{?}.} from which it is possible to select an export format and to toggle
-export options.
+@key{?}.}.
 
 @table @asis
 @orgcmd{C-c C-e,org-export-dispatch}
@@ -10633,7 +10645,7 @@ You can change the default state of this option by setting
 
 @item C-v
 Toggle visible-only export.  Only export the text that is currently
-visible, i.e. not hidden by outline visibility in the buffer.
+visible, i.e., not hidden by outline visibility in the buffer.
 @end table
 
 @node Export back-ends
@@ -12072,7 +12084,8 @@ All lines between these markers are exported literally
 @cindex #+ATTR_LATEX
 
 @LaTeX{} understands attributes specified in an @code{ATTR_LATEX} line.  They
-affect tables, images, plain lists, special blocks and source blocks.
+affect tables, images, plain lists, source blocks, example blocks and special
+blocks.
 
 @subsubheading Tables in @LaTeX{} export
 @cindex tables, in @LaTeX{} export
@@ -12289,6 +12302,23 @@ counterpart to @code{org-latex-listings-options} and
   (defun Fib (n)                          ; Count rabbits.
     (if (< n 2) n (+ (Fib (- n 1)) (Fib (- n 2)))))
 #+END_SRC
+@end example
+
+@subsubheading Example blocks in @LaTeX{} export
+@cindex example blocks, in @LaTeX{} export
+@cindex verbatim blocks, in @LaTeX{} export
+
+By default, when exporting to @LaTeX{}, example blocks contents are wrapped
+in a @samp{verbatim} environment.  It is possible to use a different
+environment globally using an appropriate export filter (@pxref{Advanced
+configuration}).  You can also change this per block using
+@code{:environment} parameter.
+
+@example
+#+ATTR_LATEX: :environment myverbatim
+#+BEGIN_EXAMPLE
+This sentence is false.
+#+END_EXAMPLE
 @end example
 
 @subsubheading Special blocks in @LaTeX{} export
@@ -12599,7 +12629,7 @@ Internet-style links for all other links.
 A link with no description and destined to a regular (un-itemized) outline
 heading is replaced with a cross-reference and section number of the heading.
 
-A @samp{\ref@{label@}}-style reference to an image, table etc. is replaced
+A @samp{\ref@{label@}}-style reference to an image, table etc.@: is replaced
 with a cross-reference and sequence number of the labeled entity.
 @xref{Labels and captions in ODT export}.
 
@@ -12688,7 +12718,7 @@ You can control the size and scale of the embedded images using the
 The exporter specifies the desired size of the image in the final document in
 units of centimeters.  In order to scale the embedded images, the exporter
 queries for pixel dimensions of the images using one of a) ImageMagick's
-@file{identify} program or b) Emacs `create-image' and `image-size'
+@file{identify} program or b) Emacs @code{create-image} and @code{image-size}
 APIs@footnote{Use of @file{ImageMagick} is only desirable.  However, if you
 routinely produce documents that have large images or you export your Org
 files that has images using a Emacs batch script, then the use of
@@ -12740,7 +12770,7 @@ height:width ratio, do the following
 
 @cindex #+ATTR_ODT
 You can control the manner in which an image is anchored by setting the
-@code{:anchor} property of it's @code{#+ATTR_ODT} line.  You can specify one
+@code{:anchor} property of its @code{#+ATTR_ODT} line.  You can specify one
 of the following three values for the @code{:anchor} property:
 @samp{"as-char"}, @samp{"paragraph"} and @samp{"page"}.
 
@@ -12863,7 +12893,7 @@ You can label and caption various category of objects---an inline image, a
 table, a @LaTeX{} fragment or a Math formula---using @code{#+LABEL} and
 @code{#+CAPTION} lines.  @xref{Images and tables}.  ODT exporter enumerates
 each labeled or captioned object of a given category separately.  As a
-result, each such object is assigned a sequence number based on order of it's
+result, each such object is assigned a sequence number based on order of its
 appearance in the Org file.
 
 In the exported document, a user-provided caption is augmented with the
@@ -13440,9 +13470,9 @@ These keywords are treated in details in the following sections.
 When processing a document, @samp{texinfo} back-end generates a minimal file
 header along with a title page, a copyright page, and a menu.  You control
 the latter through the structure of the document (@pxref{Headings and
-sectioning structure}).  Various keywords allow to tweak the other parts.  It
-is also possible to give directions to install the document in the @samp{Top}
-node.
+sectioning structure}).  Various keywords allow you to tweak the other parts.
+It is also possible to give directions to install the document in the
+@samp{Top} node.
 
 @subsubheading File header
 
@@ -13504,7 +13534,7 @@ Copyright information is printed on the back of the title page.
 
   This is a short example of a complete Texinfo file, version 1.0.
 
-  Copyright \copy 2014 Free Software Foundation, Inc.
+  Copyright \copy 2016 Free Software Foundation, Inc.
 @end example
 
 @subsubheading The Top node
@@ -13689,7 +13719,7 @@ equivalent Texinfo code.
 #+TEXINFO_PRINTED_TITLE: GNU Sample
 #+SUBTITLE: for version @{@{@{version@}@}@}, @{@{@{updated@}@}@}
 
-* Copying 
+* Copying
   :PROPERTIES:
   :COPYING:  t
   :END:
@@ -13925,23 +13955,22 @@ where @code{TYPE} is the type targeted by the filter.  Valid types are:
 @tab planning
 @item property-drawer
 @tab quote-block
-@tab quote-section
-@item radio-target
-@tab section
+@tab radio-target
+@item section
 @tab special-block
-@item src-block
-@tab statistics-cookie
+@tab src-block
+@item statistics-cookie
 @tab strike-through
-@item subscript
-@tab superscript
+@tab subscript
+@item superscript
 @tab table
-@item table-cell
-@tab table-row
+@tab table-cell
+@item table-row
 @tab target
-@item timestamp
-@tab underline
+@tab timestamp
+@item underline
 @tab verbatim
-@item verse-block
+@tab verse-block
 @end multitable
 
 For example, the following snippet allows me to use non-breaking spaces in
@@ -13951,9 +13980,9 @@ the Org buffer and get them translated into @LaTeX{} without using the
 @lisp
 @group
 (defun my-latex-filter-nobreaks (text backend info)
-  "Ensure \" \" are properly handled in LaTeX export."
+  "Ensure \"_\" are properly handled in LaTeX export."
   (when (org-export-derived-backend-p backend 'latex)
-        (replace-regexp-in-string " " "~" text)))
+        (replace-regexp-in-string "_" "~" text)))
 
 (add-to-list 'org-export-filter-plain-text-functions
              'my-latex-filter-nobreaks)
@@ -13990,7 +14019,7 @@ in the file itself and ensures that the functions will be there when needed.
 
 This is obviously the most powerful customization, since the changes happen
 at the parser level.  Indeed, some export back-ends are built as extensions
-of other ones (e.g. Markdown back-end an extension of HTML back-end).
+of other ones (e.g., Markdown back-end an extension of HTML back-end).
 
 Extending a back-end means that if an element type is not transcoded by the
 new back-end, it will be handled by the original one.  Hence you can extend
@@ -14339,7 +14368,6 @@ however, override everything.
 @item @code{:html-todo-kwd-class-prefix}      @tab @code{org-html-todo-kwd-class-prefix}
 @item @code{:html-toplevel-hlevel}            @tab @code{org-html-toplevel-hlevel}
 @item @code{:html-use-infojs}                 @tab @code{org-html-use-infojs}
-@item @code{:html-use-unicode-chars}          @tab @code{org-html-use-unicode-chars}
 @item @code{:html-validation-link}            @tab @code{org-html-validation-link}
 @item @code{:html-viewport}                   @tab @code{org-html-viewport}
 @item @code{:html-xml-declaration}            @tab @code{org-html-xml-declaration}
@@ -14347,7 +14375,7 @@ however, override everything.
 
 @subsubheading @LaTeX{} specific properties
 
-@multitable {@code{:latex-link-with-unknown-path-format}} {@code{org-latex-link-with-unknown-path-format}} 
+@multitable {@code{:latex-link-with-unknown-path-format}} {@code{org-latex-link-with-unknown-path-format}}
 @item @code{:latex-active-timestamp-format}    @tab @code{org-latex-active-timestamp-format}
 @item @code{:latex-caption-above}              @tab @code{org-latex-caption-above}
 @item @code{:latex-classes}                    @tab @code{org-latex-classes}
@@ -14821,7 +14849,8 @@ of code block evaluation, @emph{both} the code and the results of code block
 evaluation, or @emph{none}.  For most languages, the default exports code.
 However, for some languages (e.g., @code{ditaa}) the default exports the
 results of code block evaluation.  For information on exporting code block
-bodies, see @ref{Literal examples}.
+bodies, see @ref{Literal examples}.  For information on exporting
+parts of Org documents, see @ref{Exporting}.
 
 The @code{:exports} header argument can be used to specify export
 behavior (note that these arguments are only relevant for code blocks, not
@@ -14921,7 +14950,7 @@ The @code{org-babel-tangle-jump-to-org} function provides this jumping from
 code to Org-mode functionality.  Two header arguments are required for
 jumping to work, first the @code{padline} (@ref{padline}) option must be set
 to true (the default setting), second the @code{comments} (@ref{comments})
-header argument must be set to @code{links}, which will insert comments into
+header argument must be set to @code{link}, which will insert comments into
 the source code buffer which point back to the original Org-mode file.
 
 @node Evaluating code blocks
@@ -14942,10 +14971,9 @@ and/or the name of the evaluated code block.  The default value of
 @code{org-babel-results-keyword}.
 
 By default, the evaluation facility is only enabled for Lisp code blocks
-specified as @code{emacs-lisp}.  However, source code blocks in many languages
-can be evaluated within Org mode (see @ref{Languages} for a list of supported
-languages and @ref{Structure of code blocks} for information on the syntax
-used to define a code block).
+specified as @code{emacs-lisp}.  See @ref{Languages} to enable other
+supported languages.  See @ref{Structure of code blocks} for information on
+the syntax used to define a code block.
 
 @kindex C-c C-c
 There are a number of ways to evaluate code blocks.  The simplest is to press
@@ -15015,14 +15043,12 @@ Org mode file.  Code blocks defined in the ``Library of Babel'' can be called
 remotely as if they were in the current Org mode buffer (see @ref{Evaluating
 code blocks} for information on the syntax of remote code block evaluation).
 
-
 The central repository of code blocks in the ``Library of Babel'' is housed
-in an Org mode file located in the @samp{contrib} directory of Org mode.
+in an Org mode file located in the @samp{doc} directory of Org mode.
 
 Users can add code blocks they believe to be generally useful to their
 ``Library of Babel.''  The code blocks can be stored in any Org mode file and
 then loaded into the library with @code{org-babel-lob-ingest}.
-
 
 @kindex C-c C-v i
 Code blocks located in any Org mode file can be loaded into the ``Library of
@@ -15040,22 +15066,22 @@ Code blocks in the following languages are supported.
 @multitable @columnfractions 0.25 0.25 0.25 0.25
 @headitem @b{Language} @tab @b{Identifier} @tab @b{Language} @tab @b{Identifier}
 @item Asymptote @tab asymptote @tab Awk @tab awk
-@item C @tab C @tab C++ @tab C++ 
-@item Clojure @tab clojure @tab CSS @tab css 
-@item D @tab d @tab ditaa @tab ditaa 
+@item C @tab C @tab C++ @tab C++
+@item Clojure @tab clojure @tab CSS @tab css
+@item D @tab d @tab ditaa @tab ditaa
 @item Graphviz @tab dot @tab Emacs Calc @tab calc
 @item Emacs Lisp @tab emacs-lisp @tab Fortran @tab fortran
-@item gnuplot @tab gnuplot @tab Haskell @tab haskell 
-@item Java @tab java @tab Javascript @tab js 
-@item LaTeX @tab latex @tab Ledger @tab ledger 
-@item Lisp @tab lisp @tab Lilypond @tab lilypond 
-@item MATLAB @tab matlab @tab Mscgen @tab mscgen 
-@item Objective Caml @tab ocaml @tab Octave @tab octave 
-@item Org mode @tab org @tab Oz @tab oz 
-@item Perl @tab perl @tab Plantuml @tab plantuml 
-@item Processing.js @tab processing @tab Python @tab python 
-@item R @tab R @tab Ruby @tab ruby 
-@item Sass @tab sass @tab Scheme @tab scheme 
+@item gnuplot @tab gnuplot @tab Haskell @tab haskell
+@item Java @tab java @tab Javascript @tab js
+@item LaTeX @tab latex @tab Ledger @tab ledger
+@item Lisp @tab lisp @tab Lilypond @tab lilypond
+@item MATLAB @tab matlab @tab Mscgen @tab mscgen
+@item Objective Caml @tab ocaml @tab Octave @tab octave
+@item Org mode @tab org @tab Oz @tab oz
+@item Perl @tab perl @tab Plantuml @tab plantuml
+@item Processing.js @tab processing @tab Python @tab python
+@item R @tab R @tab Ruby @tab ruby
+@item Sass @tab sass @tab Scheme @tab scheme
 @item GNU Screen @tab screen @tab Sed @tab sed
 @item shell @tab sh @tab SQL @tab sql
 @item SQLite @tab sqlite @tab @tab
@@ -15316,7 +15342,7 @@ argument in lowercase letters.  The following header arguments are defined:
 
 @menu
 * var::                         Pass arguments to code blocks
-* Results::                     Specify the type of results and how they will
+* results::                     Specify the type of results and how they will
                                 be collected and handled
 * file::                        Specify a path for file output
 * file-desc::                   Specify a description for file results
@@ -15610,7 +15636,7 @@ Emacs Lisp, as shown in the following example.
 : (a b c)
 @end example
 
-@node Results
+@node results
 @subsubsection @code{:results}
 @cindex @code{:results}, src header argument
 
@@ -15973,7 +15999,8 @@ session a name.  For example, @code{:session mysession}.  If @code{:session}
 is given but no name string is specified, the session is named according to
 the language used in the block.  All blocks with the same session name share
 the same session.  Using different session names enables concurrent sessions
-(even for the same interpreted language).
+(even for the same interpreted language, if the language supports multiple
+sessions).
 
 @end itemize
 
@@ -16373,7 +16400,7 @@ argument.  The first example shows how to attach a attribute-line via @code{:pos
 @example
 #+name: attr_wrap
 #+begin_src sh :var data="" :var width="\\textwidth" :results output
-  echo "#+ATTR_LATEX :width $width"
+  echo "#+ATTR_LATEX: :width $width"
   echo "$data"
 #+end_src
 
@@ -16446,7 +16473,7 @@ block body before execution.  Also see @ref{prologue}.
 The way in which results are handled depends on whether a session is invoked,
 as well as on whether @code{:results value} or @code{:results output} is
 used.  The following table shows the table possibilities.  For a full listing
-of the possible results header arguments see @ref{Results}.
+of the possible results header arguments see @ref{results}.
 
 @multitable @columnfractions 0.26 0.33 0.41
 @item @tab @b{Non-session} @tab @b{Session}
@@ -16516,7 +16543,7 @@ process.  For example, compare the following two blocks:
 : bye
 @end example
 
-In non-session mode, the `2' is not printed and does not appear.
+In non-session mode, the ``2'' is not printed and does not appear.
 
 @example
 #+BEGIN_SRC python :results output :session
@@ -16531,8 +16558,8 @@ In non-session mode, the `2' is not printed and does not appear.
 : bye
 @end example
 
-But in @code{:session} mode, the interactive interpreter receives input `2'
-and prints out its value, `2'.  (Indeed, the other print statements are
+But in @code{:session} mode, the interactive interpreter receives input ``2''
+and prints out its value, ``2''.  (Indeed, the other print statements are
 unnecessary here).
 
 @node Noweb reference syntax
@@ -18295,7 +18322,7 @@ The corresponding block writer function could look like this:
 (defun org-dblock-write:block-update-time (params)
   (let ((fmt (or (plist-get params :format) "%d. %m. %Y")))
     (insert "Last block update at: "
-            (format-time-string fmt (current-time)))))
+            (format-time-string fmt))))
 @end lisp
 
 If you want to make sure that all dynamic blocks are always up-to-date,
@@ -18571,8 +18598,8 @@ scheduled, and clocking, and any additional properties defined in the
 entry.  The return value is an alist.  Keys may occur multiple times
 if the property key was used several times.@*
 POM may also be @code{nil}, in which case the current entry is used.
-If WHICH is @code{nil} or `all', get all properties.  If WHICH is
-`special' or `standard', only get that subclass.
+If WHICH is @code{nil} or @code{all}, get all properties.  If WHICH is
+@code{special} or @code{standard}, only get that subclass.
 @end defun
 @vindex org-use-property-inheritance
 @findex org-insert-property-drawer
@@ -19245,7 +19272,7 @@ enabled source code highlighting in Gnus.
 Max-Planck-Institute for Neurology.  He also inspired the creation of a
 concept index for HTML export.
 @item
-@i{J@"urgen Vollmer} contributed code generating the table of contents
+@i{Jürgen Vollmer} contributed code generating the table of contents
 in HTML output.
 @item
 @i{Samuel Wales} has provided important feedback and bug reports.

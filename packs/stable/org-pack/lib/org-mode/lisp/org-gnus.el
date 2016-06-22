@@ -1,6 +1,6 @@
 ;;; org-gnus.el --- Support for links to Gnus groups and messages from within Org-mode
 
-;; Copyright (C) 2004-2014 Free Software Foundation, Inc.
+;; Copyright (C) 2004-2016 Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;;         Tassilo Horn <tassilo at member dot fsf dot org>
@@ -62,7 +62,7 @@ Normally, this translation is done by querying the IMAP server,
 which is usually very fast.  Unfortunately, some (maybe badly
 configured) IMAP servers don't support this operation quickly.
 So if following a link to a Gnus article takes ages, try setting
-this variable to `t'."
+this variable to t."
   :group 'org-link-store
   :version "24.1"
   :type 'boolean)
@@ -295,7 +295,7 @@ If `org-store-link' was called with a prefix arg the meaning of
 	(group (gnus-group-jump-to-group group))))
 
 (defun org-gnus-no-new-news ()
-  "Like `M-x gnus' but doesn't check for new news."
+  "Like `\\[gnus]' but doesn't check for new news."
   (if (not (gnus-alive-p)) (if org-gnus-no-server (gnus-no-server) (gnus))))
 
 (provide 'org-gnus)

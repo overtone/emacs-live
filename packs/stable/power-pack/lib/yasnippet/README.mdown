@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/capitaomorte/yasnippet.png)](https://travis-ci.org/capitaomorte/yasnippet)
+[![Build Status](https://travis-ci.org/joaotavora/yasnippet.png)](https://travis-ci.org/joaotavora/yasnippet)
 
 # Intro
 
@@ -34,7 +34,7 @@ Add your own snippets to `~/.emacs.d/snippets` by placing files there or invokin
 ## Install with `package-install`
 
 In a recent emacs `M-x list-packages` is the recommended way to list and install packages.
-[MELPA][melpa] keeps a very recent snapshot of YASnippet, see http://melpa.milkbox.net/#installing.
+[MELPA][melpa] keeps a very recent snapshot of YASnippet, see http://melpa.org/#installing.
 
 ## Install with el-get
 
@@ -43,10 +43,12 @@ https://github.com/dimitri/el-get for instructions.
 
 ## Use `yas-minor-mode` on a per-buffer basis
 
-To use YASnippet as a non-global minor mode, replace `(yas-global-mode 1)` with
-`(yas-reload-all)` to load the snippet tables. Then add a call to
-`(yas-minor-mode)` to the major-modes where you to enable YASnippet.
+To use YASnippet as a non-global minor mode, don't call
+`yas-global-mode`; instead call `yas-reload-all` to load the snippet
+tables and then call `yas-minor-mode` from the hooks of major-modes
+where you want YASnippet enabled.
 
+    (yas-reload-all)
     (add-hook 'prog-mode-hook #'yas-minor-mode)
 
 # Where are the snippets?
@@ -61,8 +63,8 @@ download "git submodules" and find two subdirs under the main tree.
 
 1. `snippets/`
 
-    Points to [yasnippet-snippets][yasnippet-snippets] the snippet
-    collection of [AndreaCrotti](https://github.com/AndreaCrotti).
+    Points to [yasnippet-snippets] the snippet collection of
+    [AndreaCrotti](https://github.com/AndreaCrotti).
 
     The default configuraiton already points to this dir, so to use
     them, just make sure the submodule really was downloaded
@@ -70,8 +72,8 @@ download "git submodules" and find two subdirs under the main tree.
 
 2. `yasmate/`
 
-    Points to a github repo of the [yasmate][yasmate] tool, which is
-    dedicated to converting textmate bundles into yasnippet snippets.
+    Points to a github repo of the [yasmate] tool, which is dedicated
+    to converting textmate bundles into yasnippet snippets.
 
     To use these snippets you have to run the tool first, so
     [see its doc][yasmate]), and then point the `yas-snippet-dirs`
@@ -79,6 +81,11 @@ download "git submodules" and find two subdirs under the main tree.
 
     If you have a working ruby environment, you can probably get lucky
     directly with `rake convert-bundles`.
+
+3.  [textmate-to-yas.el]
+
+    This is another textmate bundle converting tool using Elisp
+    instead of Ruby.
 
 Naturally, you can point `yas-snippet-dirs` to good snippet collections out
 there. If you have created snippets for a mode, or multiple modes,
@@ -121,14 +128,14 @@ $ git clone https://github.com/capitaomorte/yasnippet.git yasnippet-bug
 $ cd yasnippet-bug
 $ git log -1 --oneline
 6053db0 Closes #527: Unbreak case where yas-fallback-behaviour is a list
-$ HOME=$PWD emacs -L  # This "sandboxes" your emacs, melpa configuration, etc
+$ HOME=$PWD emacs -L . # This "sandboxes" your emacs, melpa configuration, etc
 
 (require 'yasnippet)
 (yas-global-mode 1)
 
-When I open a foo-mode file I can't expand foo-mode snippets! 
+When I open a foo-mode file I don't see foo-mode under the "YASnippet" menu!
 OR
-I can't get yasnippet to load because frankinbogen!
+When loading yasnippet I see "Error: failed to frobnicate"!
 ```
 
 Using `emacs -Q` or temporarily moving your `.emacs` init file to the side 
@@ -154,10 +161,11 @@ request).
 
 Finally, thank you very much for using YASnippet!
 
-[docs]: http://capitaomorte.github.com/yasnippet/
+[docs]: http://joaotavora.github.io/yasnippet/
 [issues]: https://github.com/capitaomorte/yasnippet/issues
 [googlecode tracker]: http://code.google.com/p/yasnippet/issues/list
 [forum]: http://groups.google.com/group/smart-snippet
 [melpa]: http://melpa.milkbox.net/
 [yasmate]: http://github.com/capitaomorte/yasmate
+[textmate-to-yas.el]: https://github.com/mattfidler/textmate-to-yas.el
 [yasnippet-snippets]: http://github.com/AndreaCrotti/yasnippet-snippets

@@ -27,6 +27,7 @@
 
 ;;; Code:
 
+(require 'cl-lib)
 (require 'expand-region-core)
 (require 'html-mode-expansions)
 (require 'nxml-mode)
@@ -74,11 +75,10 @@ point is in, or otherwise nil"
   (save-excursion 
     (forward-char 1)
     (nxml-token-before))
-  (let ((attr (find-if (lambda (att) 
-                           (and (<= (xmltok-attribute-value-start att) (point))
-                                (>= (xmltok-attribute-value-end att) (point)))) 
-                         xmltok-attributes)))
-    attr))
+  (cl-find-if (lambda (att)
+		(and (<= (xmltok-attribute-value-start att) (point))
+		     (>= (xmltok-attribute-value-end att) (point))))
+	      xmltok-attributes))
 
 (defun er/mark-nxml-attribute-inner-string ()
   "Marks an attribute string"

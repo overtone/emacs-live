@@ -1,4 +1,4 @@
-;;; haskell-collapse.el --- Collapse expressions
+;;; haskell-collapse.el --- Collapse expressions -*- lexical-binding: t -*-
 
 ;; Copyright (c) 2014 Chris Done. All rights reserved.
 

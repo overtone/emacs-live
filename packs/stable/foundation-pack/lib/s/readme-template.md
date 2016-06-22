@@ -4,7 +4,7 @@ The long lost Emacs string manipulation library.
 
 ## Installation
 
-It's available on [marmalade](http://marmalade-repo.org/) and [Melpa](http://melpa.milkbox.net/):
+It's available on [marmalade](http://marmalade-repo.org/) and [Melpa](https://melpa.org/):
 
     M-x package-install s
 
@@ -39,6 +39,16 @@ calculate the Levenshtein distance between two strings.
 * [string-utils](https://github.com/rolandwalker/string-utils) is another general string manipulation library.
 
 ## Changelist
+
+### From 1.10.0 to 1.11.0
+
+- Add `s-matched-positions-all` (ono hiroko)
+
+### From 1.9.0 to 1.10.0
+
+- Add `s-wrap` (Johan Andersson)
+- Add `s-split-up-to` (Matus Goljer)
+- Fix `s-reverse` for Unicode combining characters. (Christopher Wellons)
 
 ### From 1.8.0 to 1.9.0
 
@@ -100,6 +110,7 @@ calculate the Levenshtein distance between two strings.
 * [Geoff Gole](https://github.com/gsg) contributed `s-all-match-strings`
 * [Sylvain Rousseau](https://github.com/thisirs) contributed `s-word-initials`
 * [Lars Andersen](https://github.com/expez) contributed `s-count-matches`
+* [ono hiroko](https://github.com/kuanyui) contributed `s-matched-positions-all`
 
 Thanks!
 
@@ -131,7 +142,7 @@ Change `readme-template.md` or `examples-to-docs.el` instead.
 
 ## License
 
-Copyright (C) 2012 Magnar Sveen
+Copyright (C) 2012-2015 Magnar Sveen
 
 Authors: Magnar Sveen <magnars@gmail.com>
 Keywords: strings

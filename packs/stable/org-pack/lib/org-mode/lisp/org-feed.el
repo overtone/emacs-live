@@ -1,6 +1,6 @@
 ;;; org-feed.el --- Add RSS feed items to Org files
 ;;
-;; Copyright (C) 2009-2014 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2016 Free Software Foundation, Inc.
 ;;
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -24,7 +24,7 @@
 ;;
 ;;; Commentary:
 ;;
-;;  This module allows to create and change entries in an Org-mode
+;;  This module allows entries to be created and changed in an Org-mode
 ;;  file triggered by items in an RSS feed.  The basic functionality is
 ;;  geared toward simply adding new items found in a feed as outline nodes
 ;;  to an Org file.  Using hooks, arbitrary actions can be triggered for
@@ -406,8 +406,8 @@ it can be a list structured like an entry in `org-feed-alist'."
 
 	  ;; Normalize the visibility of the inbox tree
 	  (goto-char inbox-pos)
-	  (hide-subtree)
-	  (show-children)
+	  (outline-hide-subtree)
+	  (outline-show-children)
 	  (org-cycle-hide-drawers 'children)
 
 	  ;; Hooks and messages
@@ -604,6 +604,7 @@ Assumes headers are indeed present!"
   "Parse BUFFER for RSS feed entries.
 Returns a list of entries, with each entry a property list,
 containing the properties `:guid' and `:item-full-text'."
+  (require 'xml)
   (let ((case-fold-search t)
 	entries beg end item guid entry)
     (with-current-buffer buffer
@@ -615,7 +616,7 @@ containing the properties `:guid' and `:item-full-text'."
 		       (match-beginning 0)))
 	(setq item (buffer-substring beg end)
 	      guid (if (string-match "<guid\\>.*?>\\(.*?\\)</guid>" item)
-		       (org-match-string-no-properties 1 item)))
+		       (xml-substitute-special (org-match-string-no-properties 1 item))))
 	(setq entry (list :guid guid :item-full-text item))
 	(push entry entries)
 	(widen)
@@ -690,7 +691,8 @@ formatted as a string, not the original XML data."
 				  (xml-node-children content)))))
 	 (t
 	  (setq entry (plist-put entry :description
-				 (format "Unknown '%s' content." type)))))))
+				 (format-message
+                                  "Unknown `%s' content." type)))))))
     entry))
 
 (provide 'org-feed)

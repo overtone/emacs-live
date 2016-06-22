@@ -1,6 +1,6 @@
 ;;; ob-clojure.el --- org-babel functions for clojure evaluation
 
-;; Copyright (C) 2009-2014 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2016 Free Software Foundation, Inc.
 
 ;; Author: Joel Boehland, Eric Schulte, Oleh Krehel
 ;;
@@ -43,8 +43,11 @@
 (eval-when-compile
   (require 'cl))
 
+(declare-function cider-current-connection "ext:cider-client" (&optional type))
+(declare-function cider-current-session "ext:cider-client" ())
 (declare-function nrepl-dict-get "ext:nrepl-client" (dict key))
-(declare-function nrepl-sync-request:eval "ext:nrepl-client" (input &optional ns session))
+(declare-function nrepl-sync-request:eval "ext:nrepl-client"
+		  (input connection session &optional ns))
 (declare-function slime-eval "ext:slime" (sexp &optional package))
 
 (defvar org-babel-tangle-lang-exts)
@@ -91,7 +94,8 @@
        (let ((result-params (cdr (assoc :result-params params))))
 	 (setq result
 	       (nrepl-dict-get
-		(nrepl-sync-request:eval expanded)
+		(nrepl-sync-request:eval
+		 expanded (cider-current-connection) (cider-current-session))
 		(if (or (member "output" result-params)
 			(member "pp" result-params))
 		    "out"
@@ -99,7 +103,7 @@
       (slime
        (require 'slime)
        (with-temp-buffer
-    	 (insert expanded)
+	 (insert expanded)
 	 (setq result
 	       (slime-eval
 		`(swank:eval-and-grab-output

@@ -1,4 +1,4 @@
-;;; haskell-unicode-input-method.el --- Haskell Unicode helper functions  -*- coding: utf-8 -*-
+;;; haskell-unicode-input-method.el --- Haskell Unicode helper functions  -*- coding: utf-8; lexical-binding: t -*-
 
 ;; Copyright (C) 2010-2011  Roel van Dijk
 

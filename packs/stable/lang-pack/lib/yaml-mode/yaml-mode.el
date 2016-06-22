@@ -5,7 +5,7 @@
 ;; Author: Yoshiki Kurihara <clouder@gmail.com>
 ;;         Marshall T. Vandegrift <llasram@gmail.com>
 ;; Keywords: data yaml
-;; Version: 0.0.11
+;; Version: 0.0.12
 
 ;; This file is not part of Emacs
 
@@ -115,7 +115,7 @@ that key is pressed to begin a block literal."
 
 ;; Constants
 
-(defconst yaml-mode-version "0.0.11" "Version of `yaml-mode'.")
+(defconst yaml-mode-version "0.0.12" "Version of `yaml-mode'.")
 
 (defconst yaml-blank-line-re "^ *$"
   "Regexp matching a line containing only (valid) whitespace.")
@@ -222,11 +222,15 @@ that key is pressed to begin a block literal."
   (set (make-local-variable 'comment-start-skip) "#+ *")
   (set (make-local-variable 'indent-line-function) 'yaml-indent-line)
   (set (make-local-variable 'indent-tabs-mode) nil)
+  (set (make-local-variable 'fill-paragraph-function) 'yaml-fill-paragraph)
   (set (make-local-variable 'font-lock-defaults)
        '(yaml-font-lock-keywords
          nil nil nil nil
          (font-lock-syntactic-keywords . yaml-font-lock-syntactic-keywords)))
-  (font-lock-fontify-buffer))
+  (if (fboundp 'font-lock-flush)
+      (font-lock-flush)
+    (with-no-warnings
+      (font-lock-fontify-buffer))))
 
 
 ;; Font-lock support
@@ -388,6 +392,46 @@ margin."
     (if (and (not arg) (looking-at yaml-document-delimiter-re))
         (delete-horizontal-space))))
 
+(defun yaml-narrow-to-block-literal ()
+  "Narrow the buffer to block literal if the point is in it,
+otherwise do nothing."
+  (interactive)
+  (save-excursion
+    (goto-char (point-at-bol))
+    (while (and (looking-at-p yaml-blank-line-re) (not (bobp)))
+      (forward-line -1))
+    (let ((nlines yaml-block-literal-search-lines)
+	  (min-level (current-indentation))
+	  beg)
+      (forward-line -1)
+      (while (and (/= nlines 0)
+		  (/= min-level 0)
+		  (not (looking-at-p yaml-block-literal-re))
+		  (not (bobp)))
+	(set 'nlines (1- nlines))
+	(unless (looking-at-p yaml-blank-line-re)
+	  (set 'min-level (min min-level (current-indentation))))
+	(forward-line -1))
+      (when (and (< (current-indentation) min-level)
+		  (looking-at-p yaml-block-literal-re))
+	(set 'min-level (current-indentation))
+	(forward-line)
+	(setq beg (point))
+	(while (and (not (eobp))
+		    (or (looking-at-p yaml-blank-line-re)
+			(> (current-indentation) min-level)))
+	  (forward-line))
+	(narrow-to-region beg (point))))))
+
+(defun yaml-fill-paragraph (&optional justify region)
+  "Fill paragraph.
+This behaves as `fill-paragraph' except that filling does not
+cross boundaries of block literals."
+  (interactive "*P")
+  (save-restriction
+    (yaml-narrow-to-block-literal)
+    (let ((fill-paragraph-function nil))
+      (fill-paragraph justify region))))
 
 (defun yaml-set-imenu-generic-expression ()
   (make-local-variable 'imenu-generic-expression)
@@ -405,7 +449,7 @@ margin."
   yaml-mode-version)
 
 ;;;###autoload
-(add-to-list 'auto-mode-alist '("\\.ya?ml$" . yaml-mode))
+(add-to-list 'auto-mode-alist '("\\.e?ya?ml$" . yaml-mode))
 
 (provide 'yaml-mode)
 

@@ -13,8 +13,8 @@ Feature: Add namespace to blank .clj files
     Then I should see:
     """
     (ns cljr.core-test
-      (:require [cljr.core :refer :all]
-                [clojure.test :refer :all]))
+      (:require [cljr.core :as sut]
+                [clojure.test :as t]))
     """
 
   Scenario: Test file with foo_ prefix
@@ -22,8 +22,8 @@ Feature: Add namespace to blank .clj files
     Then I should see:
     """
     (ns cljr.foo-core
-      (:require [cljr.core :refer :all]
-                [clojure.test :refer :all]))
+      (:require [cljr.core :as sut]
+                [clojure.test :as t]))
     """
 
  Scenario: Test file with _bar suffix
@@ -31,8 +31,8 @@ Feature: Add namespace to blank .clj files
     Then I should see:
     """
     (ns cljr.core-bar
-      (:require [cljr.core :refer :all]
-                [clojure.test :refer :all]))
+      (:require [cljr.core :as sut]
+                [clojure.test :as t]))
     """
 
   Scenario: Midje
@@ -46,8 +46,8 @@ Feature: Add namespace to blank .clj files
     Then I should see:
     """
     (ns cljr.core-test
-      (:require [cljr.core :refer :all]
-                [midje.sweet :refer :all]))
+      (:require [cljr.core :as sut]
+                [midje.sweet :as midje]))
     """
 
   Scenario: Midje with t_ prefix
@@ -61,6 +61,16 @@ Feature: Add namespace to blank .clj files
     Then I should see:
     """
     (ns cljr.t-core
-      (:require [cljr.core :refer :all]
-                [midje.sweet :refer :all]))
+      (:require [cljr.core :as sut]
+                [midje.sweet :as midje]))
+    """
+
+  Scenario: cljc file
+    When I open file "tmp/test/cljr/core_test.cljc"
+    Then I should see:
+    """
+    (ns cljr.core-test
+      (:require [cljr.core :as sut]
+                #?(:clj [clojure.test :as t]
+                   :cljs [cljs.test :as t :include-macros true])))
     """

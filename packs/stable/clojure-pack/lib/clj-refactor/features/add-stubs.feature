@@ -15,7 +15,7 @@ Feature: Add stub implementations for java.util.List
       java.util.List)
     """
     And I place the cursor before "List"
-    And I call the add-stubs function directly with mock data from the middleware
+    And I call the add-stubs function directly with mock data for java.util.List from the middleware
     Then I should see:
     """
     (defrecord MyRecord []
@@ -48,4 +48,29 @@ Feature: Add stub implementations for java.util.List
       (remove [^Object arg])
       (hashCode [])
       (contains [^Object arg]))
+    """
+
+  Background:
+    Given I have a project "cljr" in "tmp"
+    And I have a clojure-file "tmp/src/cljr/core.clj"
+    And I open file "tmp/src/cljr/core.clj"
+    And I clear the buffer
+
+  Scenario: Stub implementations for a protocol in an aliased namespace in deftype
+    When I insert:
+    """
+    (ns cljr.core
+      (:require [clojure.repl :as repl]
+                [clojure.reflect :as r])
+
+    (defrecord MyRecord []
+      r/TypeReference)
+    """
+    And I place the cursor before "TypeReference"
+    And I call the add-stubs function directly with mock data for clojure.reflect from the middleware
+    Then I should see:
+    """
+    (defrecord MyRecord []
+      r/TypeReference
+      (typename [this]))
     """

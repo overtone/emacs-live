@@ -1,5 +1,71 @@
 # Changelog
 
+## Up next
+
+## 2.2.0
+
+- Smarten up `cljr-stop-referring` to replace `:refer :all` style require with alias and apply the alias to all occurrences of symbols from the referred namespace.
+- [#292](https://github.com/clojure-emacs/clj-refactor.el/issues/292) The buffer wasn't saved after adding a missing libspec causing clean-ns
+to act on stale data.
+- Don't try to resolve `js/` in cljs-mode
+- `cljr-create-fn-from-example` improvements: strip ns off keywords when making param name; always include a blank line over new function
+- [#306](https://github.com/clojure-emacs/clj-refactor.el/issues/306) Add-require doesn't jump back if there is no REPL connection with refactor-nrepl configured
+
+### Changes
+
+- Compatible with CIDER 0.11
+- Follow up CIDER 0.11 injecting its own dependencies at `cider-jack-in` by adding clj-refactor's own dependencies to the approriate vars in CIDER. Both leiningen and boot are supported. Set `cljr-inject-dependencies-at-jack-in` to nil to opt out.
+
+## 2.0.0
+
+- [#267](https://github.com/clojure-emacs/clj-refactor.el/issues/267)
+ Add `cljr-require-macro` which requires a macro into the current
+ namespace.
+- Add prefix variant to `cljr-add-import-to-ns` for insertion of imports in the cljs part of the ns declaration.
+- Add prefix variant to `cljr-add-use-to-ns` for insertion of 'use' in the cljs part of the ns declaration.
+- Add prefix variant to `cljr-add-require` for insertion of requires in the cljs part of the ns declaration.
+- Boot support for `cljr-clean-ns`.
+- Boot support for `cljr-sort-project-dependencies`.
+- Boot support for `cljr-update-project-dependencies`.
+- Boot support for `cljr-update-project-dependency`.
+- [#228](https://github.com/clojure-emacs/clj-refactor.el/issues/238) Boot support for `cljr-add-project-dependency`.
+- Get rid of `cljr-reload-config`.  We're now sending the configuration options down to the middleware on each request instead of storing it down there.
+- Make magic requires cljc aware.
+- [#215](https://github.com/clojure-emacs/clj-refactor.el/issues/215) Improve the magic requires feature (when you hit `/`) by asking the middleware for all available namespace aliases.
+- Add `cljr-extract-def` which extracts the form at, or around, point as a def.
+- Add `cljr-change-function-signature` to re-order or re-name function parameters.
+- Keep pressing `l` after `cljr-expand-let` to expand further.
+- [refactor-nrepl#99](https://github.com/clojure-emacs/refactor-nrepl/issues/99) if cljr-thread-first-all or cljr-thread-last-all is called with a prefix the last expression is not threaded. cljr-thread-all-but-last defcustom has the same effect without the prefix
+- [hydra](https://github.com/abo-abo/hydra) menus for discoverability: they help to (re)learn clj-refactor key bindings. See: [parent hydra](https://github.com/clojure-emacs/clj-refactor.el/wiki/Hydra).
+
+### Bugs fixed
+
+- [#285](https://github.com/clojure-emacs/clj-refactor.el/issues/285) clean-ns did the wrong thing unless the code was loaded.
+
+### Changes
+
+- [#265](https://github.com/clojure-emacs/clj-refactor.el/issues/265) Feedback to the user is lost among other general messages from emacs.
+- Make `cljr-clean-ns` the only default function used by `cljr-project-clean`.
+- Remove `cljr-remove-unused-requires` which is replaced by `cljr-clean-ns`.
+- Remove `cljr-replace-use` which is replaced by `cljr-clean-ns`.
+- Remove `cljr-sort-ns` which is replaced by `cljr-clean-ns`.
+- `cljr-remove-debug-fns` has been removed.
+- `cljr-magic-require-namespaces` is now only consulted in the event the namespace alias isn't already used in the project.
+- [#217](https://github.com/clojure-emacs/clj-refactor.el/issues/217) When requiring the test framework in test files stop favoring `:refer :all`.
+- [#217](https://github.com/clojure-emacs/clj-refactor.el/issues/217) Add a bunch of defcustoms to parameterise what gets inserted into the test namespaces for the various test frameworks.
+- [#216](https://github.com/clojure-emacs/clj-refactor.el/issues/216) Teach our automatic ns generator about cljc files.
+- Teach `cljr-extract-constant` about the `^:const` hint to the compiler.
+- Use yasnippet for placeholder parameters in `cljr-create-fn-from-example`
+- Highlight the function be promoted with overlays in `cljr-promote-function`.
+- Highlight the form to be extracted with overlays in `cljr-extract-function`.
+- `cljr-create-fn-from-example` is now significantly smarter about guessing parameter numbers and names.
+- `cljr-sort-ns` no longer marks the buffer as changed if it did no work.
+- `cljr-rename-symbol` now fails earlier, before prompting the user for a new name if an AST can't be built due to errors.
+- support for emacs 24.3 and older is dropped
+- [refactor-nrepl#85](https://github.com/clojure-emacs/refactor-nrepl/issues/85) Eliminate some find usages duplicates
+- Some AST based features (find usages, rename symbol, inline symbol) ignore namespaces that cannot be analyzed if `cljr-ignore-analyzer-errors` set to true instead of failing entirely.
+- By default warning is given when AST based feature is used and clj-refactor only proceeds with it if the user allowed evalling the project as the analyzer also evals first level forms. To disable the warning set `cljr-warn-on-eval` to `nil`. This also reenables warming AST cache at startup of the REPL.
+
 ## 1.1.0
 
 - Add `cljr-describe-refactoring` which shows the wiki page describing one of the available refactorings inline in emacs.

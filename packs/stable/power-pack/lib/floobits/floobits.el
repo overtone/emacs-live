@@ -3,13 +3,13 @@
 ;; Filename: floobits.el
 ;; Description: Real-time collaborative editing.
 ;;
-;; Copyright 2013-2015 Floobits, Inc.
+;; Copyright 2013-2016 Floobits, Inc.
 ;;
 ;; Author: Matt Kaniaris
 ;;      Geoff Greer
 ;; Keywords: comm, tools
 ;; Package-Requires: ((json "1.2") (highlight "0"))
-;; Package-Version: 1.5.23
+;; Package-Version: 1.7.2
 ;; URL: http://github.com/Floobits/floobits-emacs
 ;; Version: 24.0
 ;;
@@ -58,7 +58,7 @@
   :link '(url-link :tag "Description" "https://github.com/Floobits/floobits-emacs"))
 
 (defcustom floobits-python-executable "python"
-  "Python executable to use when running Floobits"
+  "Python executable to use when running Floobits."
   :type 'string
   :group 'floobits)
 
@@ -69,7 +69,7 @@
 ;; TODO: figure out why we increased max-specpdl-size
 (setq max-specpdl-size 1500)
 
-(defconst floobits-version "1.5.23" "Floobits Plugin Version")
+(defconst floobits-version "1.7.2" "Floobits Plugin Version")
 
 (defvar floobits-debug nil)
 (defvar floobits-agent-host "127.0.0.1")
@@ -170,22 +170,24 @@
           (floobits-send-to-agent req 'rename_buf))
       (message "You don't have permission to rename buffers in this workspace."))))
 
-(defmacro floo-get-item (alist key)
-  "just grab an element from an alist"
-  (list 'cdr (list 'assoc-string key alist)))
+(defmacro floobits--get-item (alist key)
+  "Fetch value in ALIST associated with KEY."
+  `(cdr (assoc-string ,key ,alist)))
 
-(defmacro floo-set-item (alist key value)
-  "set an element in an alist"
-  (list 'add-to-list alist (list 'cons key value)))
+(defmacro floobits--set-item (alist-var key value)
+  "Associate KEY with VALUE in the alist stored in ALIST-VAR."
+  `(add-to-list ,alist-var (cons ,key ,value)))
 
-(defmacro floo-when-buf (buf &rest body)
-  "save excursion and widen"
-  (list 'when buf
-        (list 'with-current-buffer buf
-              (list 'save-excursion
-                    (list 'save-restriction
-                          (list 'widen)
-                          (cons 'progn body))))))
+(defmacro floobits--when-buf (buf &rest body)
+  "Like `with-current-buffer' but check for existence of BUF,
+plus widen and save excursion / restriction."
+  (declare (indent defun))
+  `(when ,buf
+     (with-current-buffer ,buf
+       (save-excursion
+         (save-restriction
+           (widen)
+           ,@body)))))
 
 (defun floobits-send-debug ()
   (when floobits-conn
@@ -196,7 +198,7 @@
 
 ;;;###autoload
 (defun floobits-debug ()
-  "Toggles debug logging."
+  "Toggle Floobits debug logging."
   (interactive)
   (setq floobits-debug (not floobits-debug))
   (message "Debug logging %s." (if floobits-debug "enabled" "disabled"))
@@ -204,13 +206,13 @@
 
 ;;;###autoload
 (defun floobits-summon ()
-  "Summons all users to your cursor position."
+  "Summon all Floobits collaborators to point."
   (interactive)
   (floobits-send-highlight t))
 
 ;;;###autoload
 (defun floobits-follow-mode-toggle ()
-  "Toggles following of recent changes in a workspace"
+  "Toggle following recent changes in Floobits workspace."
   (interactive)
   (when floobits-conn
     (setq floobits-follow-mode (not floobits-follow-mode))
@@ -222,30 +224,33 @@
 
 ;;;###autoload
 (defun floobits-follow-user ()
-  "Follow a users changes. This also toggles follow mode."
+  "Follow a Floobits collaborator's changes.
+Also toggles follow mode (see `floobits-follow-mode-toggle')."
   (interactive)
   (when floobits-conn
     (floobits-send-to-agent () 'follow_user)))
 
 ;;;###autoload
 (defun floobits-leave-workspace ()
-  "leaves the current workspace"
+  "Leave the current Floobits workspace."
   (interactive)
   (floobits-destroy-connection))
 
 ;;;###autoload
 (defun floobits-complete-signup ()
-  "If you created an Floobits account via emacs, you must call this command before you can login to
-  the website."
+  "Finalize creation of your Floobits account.
+If you created a Floobits account via Emacs you must call this
+command before you can log in to the website."
   (interactive)
   (floobits-destroy-connection)
   (floobits-create-connection (lambda () (floobits-send-to-agent () 'pinocchio))))
 
 ;;;###autoload
 (defun floobits-share-dir-public (dir-to-share)
-  "Create a workspace and populate it with the contents of the directory, dir-to-share, or make it.
-If the directory corresponds to an existing floobits workspace, you will instead join the workspace.
-"
+  "Create public Floobits workspace and add contents of DIR-TO-SHARE.
+If DIR-TO-SHARE does not it exist, it will be created.  If the
+directory corresponds to an existing Floobits workspace, the
+workspace will be joined instead."
   (interactive "DDirectory to share: ")
   (floobits-destroy-connection)
   (lexical-let* ((req (list
@@ -257,9 +262,10 @@ If the directory corresponds to an existing floobits workspace, you will instead
 
 ;;;###autoload
 (defun floobits-share-dir-private (dir-to-share)
-  "Create a workspace and populate it with the contents of the directory, dir-to-share, or make it.
-If the directory corresponds to an existing floobits workspace, you will instead join the workspace.
-"
+  "Create private Floobits workspace and add contents of DIR-TO-SHARE.
+If DIR-TO-SHARE does not it exist, it will be created.  If the
+directory corresponds to an existing Floobits workspace, the
+workspace will be joined instead."
   (interactive "DDirectory to share: ")
   (floobits-destroy-connection)
   (lexical-let* ((req (list
@@ -270,7 +276,7 @@ If the directory corresponds to an existing floobits workspace, you will instead
     (floobits-create-connection func)))
 
 (defun floobits-event-error (req)
-  (display-message-or-buffer (floo-get-item req 'msg)))
+  (display-message-or-buffer (floobits--get-item req 'msg)))
 
 (defun floobits--read-persistent ()
   "Load contents of Floobits persistence file.
@@ -280,27 +286,28 @@ Return nil if unparseable or nonexistent."
       (insert-file-contents "~/floobits/persistent.json")
       (let* ((json-key-type 'string)
              (data (json-read-from-string (buffer-string)))
-             (data (floo-get-item data 'recent_workspaces)))
-        (mapcar (lambda (x) (floo-get-item x 'url)) data)))))
+             (data (floobits--get-item data 'recent_workspaces)))
+        (mapcar (lambda (x) (floobits--get-item x 'url)) data)))))
 
-(defun _floobits-get-url-from-dot-floo ()
+(defun floobits--get-url-from-dot-floo ()
   (condition-case nil
       (with-temp-buffer
         (insert-file-contents ".floo")
         (let* ((json-key-type 'string)
-               (entry (json-read-from-string  (buffer-string))))
+               (entry (json-read-from-string (buffer-string))))
           (cdr (assoc-string "url" entry))))
     (error "https://floobits.com/")))
 
 ;;;###autoload
 (defun floobits-join-workspace (floourl)
   "Join an existing Floobits workspace.
-See floobits-share-dir to create one or visit floobits.com."
+Create a new workspace with `floobits-share-dir-public' or
+`floobits-share-dir-private', or by visiting http://floobits.com."
   (interactive (list
                 ;; read-from-minibuffer prompt &optional initial keymap read history default inherit-input-method
                 (let ((histories (or (floobits--read-persistent) '(""))))
                   (read-from-minibuffer "Floobits workspace URL (owner/workspace): "
-                                        (_floobits-get-url-from-dot-floo) nil nil 'histories))))
+                                        (floobits--get-url-from-dot-floo) nil nil 'histories))))
   (let* ((url-struct (url-generic-parse-url floourl))
          (domain (url-host url-struct))
          (port (url-port url-struct))
@@ -336,7 +343,8 @@ See floobits-share-dir to create one or visit floobits.com."
 
 ;;;###autoload
 (defun floobits-remove-from-workspace (path)
-  "Removes a file from the remote workspace without deleting it locally"
+  "Remove PATH from Floobits workspace.
+Does not delete file locally."
   (interactive "fpath: ")
   (if (member "delete_buf" floobits-perms)
       (progn
@@ -351,24 +359,24 @@ See floobits-share-dir to create one or visit floobits.com."
 
 ;;;###autoload
 (defun floobits-clear-highlights ()
-  "Clears all highlights"
+  "Clear all Floobits highlights."
   (interactive)
   (maphash
    (lambda (key highlight)
-     (floo-when-buf (get-file-buffer (cadr key))
-                    (hlt-unhighlight-region 0 (buffer-size))))
+     (floobits--when-buf (get-file-buffer (cadr key))
+       (hlt-unhighlight-region 0 (buffer-size))))
    floobits-user-highlights))
 
 ;;;###autoload
 (defun floobits-add-to-workspace (path)
-  "Adds a file or directory to the workspace"
+  "Add file or directory at PATH to Floobits workspace."
   (interactive "fpath: ")
   (floobits-send-to-agent (list (cons 'full_path path)) 'create_buf))
 
 (defun floobits-process-live-p (process)
-  "Returns non-nil if PROCESS is alive.
-  A process is considered alive if its status is `run', `open',
-  `listen', `connect' or `stop'."
+  "Return non-nil if PROCESS is alive.
+A process is considered alive if its status is `run', `open',
+`listen', `connect' or `stop'."
   (memq (process-status process)
         '(run open listen connect stop)))
 
@@ -404,7 +412,7 @@ See floobits-share-dir to create one or visit floobits.com."
         (mapcar (lambda (x) (and (funcall condp x) x)) lst)))
 
 (defun floobits-post-command-func ()
-  "used for grabbing changes in point for highlighting"
+  "Transmit changes at point to Floobits for highlighting."
   (floobits-buffer-list-change)
   (floobits-send-highlight))
 
@@ -450,7 +458,7 @@ See floobits-share-dir to create one or visit floobits.com."
 (defun floobits-send-to-agent (req event)
   (if (floobits-process-live-p floobits-conn)
       (progn
-        (floo-set-item 'req 'name event)
+        (floobits--set-item 'req 'name event)
         ;; This works around a bug in Emacs where regions aren't shown or something
         (run-at-time .01 nil
                      (lambda (req)
@@ -465,21 +473,21 @@ See floobits-share-dir to create one or visit floobits.com."
   (if (active-minibuffer-window)
       (push req floobits-user-input-events)
     (let
-        ((prompt (floo-get-item req 'prompt))
-         (initial (floo-get-item req 'initial))
-         (choices (floo-get-item req 'choices))
-         (dir (floo-get-item req 'dir)))
-      (floo-set-item 'req 'response
-                     (cond
-                      (choices (completing-read prompt (mapcar (lambda (x) (append x nil)) choices) nil t initial))
-                      ((floo-get-item req 'y_or_n) (y-or-n-p prompt))
-                      (dir (read-directory-name prompt nil initial))
-                      (t (read-from-minibuffer prompt initial))))
+        ((prompt (floobits--get-item req 'prompt))
+         (initial (floobits--get-item req 'initial))
+         (choices (floobits--get-item req 'choices))
+         (dir (floobits--get-item req 'dir)))
+      (floobits--set-item 'req 'response
+                          (cond
+                           (choices (completing-read prompt (mapcar (lambda (x) (append x nil)) choices) nil t initial))
+                           ((floobits--get-item req 'y_or_n) (y-or-n-p prompt))
+                           (dir (read-directory-name prompt nil initial))
+                           (t (read-from-minibuffer prompt initial))))
       (floobits-send-to-agent req 'user_input))))
 
 (defun floobits-event-rename_buf (req)
-  (let* ((old-path (floo-get-item req 'old_path))
-         (new-path (floo-get-item req 'path))
+  (let* ((old-path (floobits--get-item req 'old_path))
+         (new-path (floobits--get-item req 'path))
          (buf (get-file-buffer old-path)))
     (rename-file old-path new-path 1)
     (when buf
@@ -519,26 +527,26 @@ See floobits-share-dir to create one or visit floobits.com."
   (floobits-path-is-shared (buffer-file-name buf)))
 
 (defun floobits-get-public-buffers ()
-  "returns buffers that aren't internal to emacs"
+  "Return buffers that aren't internal to Emacs."
   (floobits-filter-func 'floobits-buffer-is-shareable (buffer-list)))
 
 (defun floobits-get-text (begin end)
   (buffer-substring-no-properties begin end))
 
 (defun floobits-get-buffer-text (buffer)
-  "returns properties free text of buffer with name (name)"
-  (floo-when-buf buffer
-                 (floobits-get-text 1 (+ 1 (buffer-size)))))
+  "Return property-free text of BUFFER."
+  (floobits--when-buf buffer
+    (floobits-get-text 1 (1+ (buffer-size)))))
 
 (defun floobits-event-disconnect (req)
-  (message "Disconnected: %s" (floo-get-item req 'reason)))
+  (message "Disconnected: %s" (floobits--get-item req 'reason)))
 
 (defun floobits-event-room_info (req)
-  (let ((floobits-workspace (floo-get-item req 'workspace_name)))
+  (let ((floobits-workspace (floobits--get-item req 'workspace_name)))
     (message "Successfully joined workspace %s." floobits-workspace)
-    (setq floobits-share-dir (floo-get-item req 'project_path))
+    (setq floobits-share-dir (floobits--get-item req 'project_path))
     (message "Project path is %s." floobits-share-dir)
-    (setq floobits-perms (append (floo-get-item req 'perms) nil))
+    (setq floobits-perms (append (floobits--get-item req 'perms) nil))
     (mapc
      (lambda (x)
        (when (and (> (length x) 9) (string="floobits-" (substring x 0 9)))
@@ -549,19 +557,19 @@ See floobits-share-dir to create one or visit floobits.com."
 
 (defun floobits-event-join (req)
   (floobits-debug-message "%s" req)
-  (message "%s joined the workspace"  (floo-get-item req 'username)))
+  (message "%s joined the workspace"  (floobits--get-item req 'username)))
 
 (defun floobits-event-part (req)
   (floobits-debug-message "%s" req)
-  (message "%s left the workspace" (floo-get-item req 'username)))
+  (message "%s left the workspace" (floobits--get-item req 'username)))
 
 (defun floobits-event-create_view (req)
-  (find-file (floo-get-item req 'full_path))
+  (find-file (floobits--get-item req 'full_path))
   (floobits-buffer-list-change))
 
 (defun floobits-event-focus (req)
-  (find-file (floo-get-item req 'full_path))
-  (goto-char (+ 1 (floo-get-item req 'offset))))
+  (find-file (floobits--get-item req 'full_path))
+  (goto-char (+ 1 (floobits--get-item req 'offset))))
 
 (defun floobits-highlight-apply-f (f highlights)
   ;; convert to list :(
@@ -583,23 +591,23 @@ See floobits-share-dir to create one or visit floobits.com."
 
 (defun floobits-event-highlight (req)
   (setq floobits-last-highlight req)
-  (let* ((ranges (floo-get-item req 'ranges))
+  (let* ((ranges (floobits--get-item req 'ranges))
          (ranges-length (- (length ranges) 1))
-         (user_id (floo-get-item req 'user_id))
-         (username (floo-get-item req 'username))
+         (user_id (floobits--get-item req 'user_id))
+         (username (floobits--get-item req 'username))
          (pos (+ 1 (elt (elt ranges ranges-length) 0)))
-         (path (floo-get-item req 'full_path))
+         (path (floobits--get-item req 'full_path))
          (buffer (get-file-buffer path))
-         (following (floo-get-item req 'following))
-         (should-jump (or (floo-get-item req 'ping) (and
-                                                     (and floobits-follow-mode (or (not floobits-follow-users)
-                                                                                   (member username floobits-follow-users))) (not following))))
+         (following (floobits--get-item req 'following))
+         (should-jump (or (floobits--get-item req 'ping) (and
+                                                          (and floobits-follow-mode (or (not floobits-follow-users)
+                                                                                        (member username floobits-follow-users))) (not following))))
          (buffer (or buffer (and should-jump (find-file path)))))
 
-    (floo-when-buf buffer
-                   (floobits-apply-highlight user_id buffer ranges)
-                   (goto-char pos)
-                   (bookmark-set (format "floobits-%s-%s" username user_id)))
+    (floobits--when-buf buffer
+      (floobits-apply-highlight user_id buffer ranges)
+      (goto-char pos)
+      (bookmark-set (format "floobits-%s-%s" username user_id)))
 
     (when should-jump
       (unless (window-minibuffer-p (get-buffer-window))
@@ -612,10 +620,10 @@ See floobits-share-dir to create one or visit floobits.com."
               (error))))))))
 
 (defun floobits-event-save (req)
-  (floo-when-buf (get-file-buffer (floo-get-item req 'full_path))
-                 (remove-hook 'after-save-hook 'floobits-after-save-hook)
-                 (save-buffer)
-                 (add-hook 'after-save-hook 'floobits-after-save-hook)))
+  (floobits--when-buf (get-file-buffer (floobits--get-item req 'full_path))
+    (remove-hook 'after-save-hook 'floobits-after-save-hook)
+    (save-buffer)
+    (add-hook 'after-save-hook 'floobits-after-save-hook)))
 
 (defun floobits-apply-edit (edit)
   (let* ((inhibit-modification-hooks t)
@@ -641,9 +649,9 @@ See floobits-share-dir to create one or visit floobits.com."
          mark) t active))))
 
 (defun floobits-event-edit (req)
-  (let* ((filename (floo-get-item req "full_path"))
+  (let* ((filename (floobits--get-item req "full_path"))
          (buf (get-file-buffer filename))
-         (edits (floo-get-item req "edits")))
+         (edits (floobits--get-item req "edits")))
     (when buf
       (with-current-buffer buf
         (save-restriction
@@ -652,36 +660,36 @@ See floobits-share-dir to create one or visit floobits.com."
             (mapc 'floobits-apply-edit edits)))))))
 
 (defun floobits-event-create_buf (req)
-  (let ((filename (floo-get-item req "path" ))
-        (username (floo-get-item req "username")))
+  (let ((filename (floobits--get-item req "path" ))
+        (username (floobits--get-item req "username")))
     (floobits-debug-message "User %s created buffer %s" username filename)))
 
 (defun floobits-event-follow_user (req)
-  (let ((username (floo-get-item req "username")))
+  (let ((username (floobits--get-item req "username")))
     (setq floobits-follow-mode t)
     (add-to-list 'floobits-follow-users username)))
 
 (defun floobits-event-delete_buf (req)
-  (let ((filename (floo-get-item req "path" ))
-        (username (floo-get-item req "username")))
+  (let ((filename (floobits--get-item req "path" ))
+        (username (floobits--get-item req "username")))
     (unless (string= filename "FLOOBITS_README.md")
       (message "User %s deleted buffer %s" username filename))))
 
 (defun floobits-event-get_buf (req)
-  (floo-when-buf (get-file-buffer (floo-get-item req "full_path"))
-                 (atomic-change-group
-                   (delete-region 1 (+ 1 (buffer-size)))
-                   (insert (floo-get-item req "buf")))))
+  (floobits--when-buf (get-file-buffer (floobits--get-item req "full_path"))
+    (atomic-change-group
+      (delete-region 1 (+ 1 (buffer-size)))
+      (insert (floobits--get-item req "buf")))))
 
 (defun floobits-event-open_file (req)
-  (find-file (floo-get-item req "filename")))
+  (find-file (floobits--get-item req "filename")))
 
 (defun floobits-event-message (req)
-  (message "%s" (floo-get-item req "message")))
+  (message "%s" (floobits--get-item req "message")))
 
 (defun floobits-event-rename (req)
-  (let* ((new-name (floo-get-item req "new_name"))
-         (old-name (floo-get-item req "full_path"))
+  (let* ((new-name (floobits--get-item req "new_name"))
+         (old-name (floobits--get-item req "full_path"))
          (buf (get-file-buffer old-name)))
     (when buf
       (if (get-buffer new-name)
@@ -697,7 +705,7 @@ See floobits-share-dir to create one or visit floobits.com."
   (let* ((json-key-type 'string)
          (json-false 'nil)
          (req (json-read-from-string text))
-         (event (floo-get-item req "name"))
+         (event (floobits--get-item req "name"))
          (func (concat "floobits-event-" event)))
     (if (fboundp (intern-soft func))
         (funcall (read func) req)

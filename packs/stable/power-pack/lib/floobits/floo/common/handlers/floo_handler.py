@@ -10,7 +10,7 @@ try:
     from . import base
     from ..reactor import reactor
     from ..lib import DMP
-    from .. import msg, ignore, shared as G, utils
+    from .. import msg, ignore, repo, shared as G, utils
     from ..exc_fmt import str_e
     from ... import editor
     from ..protocols import floo_proto
@@ -20,7 +20,7 @@ except (ImportError, ValueError) as e:
     from floo.common.lib import DMP
     from floo.common.reactor import reactor
     from floo.common.exc_fmt import str_e
-    from floo.common import msg, ignore, shared as G, utils
+    from floo.common import msg, ignore, repo, shared as G, utils
     from floo.common.protocols import floo_proto
 
 try:
@@ -34,9 +34,9 @@ except ImportError:
     io = None
 
 
-MAX_WORKSPACE_SIZE = 100000000  # 100MB
+MAX_WORKSPACE_SIZE = 200000000  # 200MB
 TOO_BIG_TEXT = '''Maximum workspace size is %.2fMB.\n
-%s is too big (%.2fMB) to upload.\n\nWould you like to ignore the following and continue?\n\n%s'''
+%s is too big (%.2fMB) to upload.\n\nWould you like to ignore these paths and continue?\n\n%s'''
 
 
 class FlooHandler(base.BaseHandler):
@@ -285,7 +285,11 @@ class FlooHandler(base.BaseHandler):
         if view:
             view.rename(new)
         else:
-            os.rename(old, new)
+            try:
+                os.rename(old, new)
+            except Exception as e:
+                msg.debug('Error moving ', old, 'to', new, str_e(e))
+                utils.save_buf(self.bufs[data.id])
         self.bufs[data['id']]['path'] = data['path']
 
     def _on_delete_buf(self, data):
@@ -321,15 +325,10 @@ class FlooHandler(base.BaseHandler):
         for buf_id in missing_buf_ids:
             self.send({'name': 'delete_buf', 'id': buf_id})
 
-        def __upload_buf(buf):
-            return self._upload(utils.get_full_path(buf['path']), buf.get('buf'))
-
-        changed_bufs_len = reduce(lambda a, buf: a + len(buf.get('buf', '')), changed_bufs, 0)
-        self._rate_limited_upload(iter(changed_bufs), changed_bufs_len, upload_func=__upload_buf)
-
         for p, buf_id in self.paths_to_ids.items():
             if p in files:
                 files.discard(p)
+                # TODO: recalculate size (need size in room_info)
                 continue
             if buf_id in missing_buf_ids:
                 continue
@@ -338,15 +337,28 @@ class FlooHandler(base.BaseHandler):
                 'id': buf_id,
             })
 
-        def __upload(rel_path):
-            buf_id = self.paths_to_ids.get(rel_path)
+        def __upload(rel_path_or_buf):
+            # Its a buf!
+            if type(rel_path_or_buf) == dict:
+                return self._upload(utils.get_full_path(rel_path_or_buf['path']), rel_path_or_buf.get('buf'))
+
+            # Its a rel path!
+            buf_id = self.paths_to_ids.get(rel_path_or_buf)
             text = self.bufs.get(buf_id, {}).get('buf')
             # Only upload stuff that's not in self.bufs (new bufs). We already took care of everything else.
             if text is not None:
                 return len(text)
-            return self._upload(utils.get_full_path(rel_path), self.get_view_text_by_path(rel_path))
+            return self._upload(utils.get_full_path(rel_path_or_buf), self.get_view_text_by_path(rel_path_or_buf))
 
-        self._rate_limited_upload(iter(files), size, upload_func=__upload)
+        def make_iterator():
+            # Upload changed bufs before everything else, since they're probably what people will edit
+            for b in changed_bufs:
+                yield b
+            for f in files:
+                yield f
+
+        total_size = reduce(lambda a, buf: a + len(buf.get('buf', '')), changed_bufs, size)
+        self._rate_limited_upload(make_iterator(), total_size, upload_func=__upload)
         cb()
 
     @utils.inlined_callbacks
@@ -483,7 +495,7 @@ class FlooHandler(base.BaseHandler):
             else:
                 yield self._initial_upload, ig, missing_bufs, changed_bufs
 
-        success_msg = 'Successfully joined workspace %s/%s' % (self.owner, self.workspace)
+        success_msg = '%s@%s/%s: Joined!' % (self.username, self.owner, self.workspace)
         msg.log(success_msg)
         editor.status_message(success_msg)
 
@@ -498,6 +510,18 @@ class FlooHandler(base.BaseHandler):
         if hangout_url:
             self.prompt_join_hangout(hangout_url)
 
+        if data.get('repo_info'):
+            msg.log('Repo info:', data.get('repo_info'))
+            # TODO: check local repo info and update remote (or prompt?)
+        else:
+            repo_info = repo.get_info(self.workspace_url, G.PROJECT_PATH)
+            if repo_info and 'repo' in G.PERMS:
+                self.send({
+                    'name': 'repo',
+                    'action': 'set',
+                    'data': repo_info,
+                })
+
         self.emit("room_info")
 
     def _on_user_info(self, data):
@@ -508,7 +532,7 @@ class FlooHandler(base.BaseHandler):
             G.PERMS = user_info['perms']
 
     def _on_join(self, data):
-        msg.log(data['username'], ' joined the workspace')
+        msg.log(data['username'], ' joined the workspace on ', data.get('client', 'unknown client'))
         user_id = str(data['user_id'])
         self.workspace_info['users'][user_id] = data
 
@@ -741,6 +765,14 @@ class FlooHandler(base.BaseHandler):
         except Exception as e:
             msg.error('Failed to create buffer ', path, ': ', str_e(e))
         return size
+
+    def kick(self, user_id):
+        if 'kick' not in G.PERMS:
+            return
+        self.send({
+            'name': 'kick',
+            'user_id': user_id,
+        })
 
     def stop(self):
         utils.cancel_timeout(self.upload_timeout)

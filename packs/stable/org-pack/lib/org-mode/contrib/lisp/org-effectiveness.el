@@ -1,6 +1,6 @@
 ;;; org-effectiveness.el --- Measuring the personal effectiveness
 
-;; Copyright (C) 2013 Free Software Foundation, Inc.
+;; Copyright (C) 2013-2016 Free Software Foundation, Inc.
 
 ;; Author: David Arroyo Menéndez <davidam@es.gnu.org>
 ;; Keywords: effectiveness, plot

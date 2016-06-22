@@ -20,190 +20,193 @@
 (require 'ert)
 (require 'haskell-mode)
 
-(ert-deftest empty ()
+(ert-deftest haskell-mode-ident-at-point-empty ()
   (should (with-temp-buffer
             (haskell-mode)
             (eq nil (haskell-ident-at-point)))))
 
-(ert-deftest empty-pos ()
+(ert-deftest haskell-mode-ident-pos-at-point-empty ()
   (should (with-temp-buffer
             (haskell-mode)
             (eq nil (haskell-ident-pos-at-point)))))
 
-(ert-deftest empty-spanable ()
+(ert-deftest haskell-mode-spanable-pos-at-point-empty-spanable ()
   (should (with-temp-buffer
             (haskell-mode)
             (eq nil (haskell-spanable-pos-at-point)))))
 
-(ert-deftest aftercolons ()
+(ert-deftest haskell-mode-ident-at-point-aftercolons ()
   (should (with-temp-buffer
             (haskell-mode)
             (insert "foo ::")
-            (eq nil (haskell-ident-at-point)))))
+            (string= "::" (haskell-ident-at-point)))))
 
-(ert-deftest aftercolons-pos ()
+(ert-deftest haskell-mode-ident-pos-at-point-aftercolons ()
   (should (with-temp-buffer
             (haskell-mode)
             (insert "foo ::")
-            (eq nil (haskell-ident-pos-at-point)))))
+            (not (eq nil (haskell-ident-pos-at-point))))))
 
-(ert-deftest beforetype ()
-  (should (with-temp-buffer
-            (haskell-mode)
-            (insert "foo ::")
-            (save-excursion (insert " bar -> baz"))
-            (eq nil (haskell-ident-at-point)))))
-
-(ert-deftest beforetype-pos ()
+(ert-deftest haskell-mode-ident-at-point-beforetype ()
   (should (with-temp-buffer
             (haskell-mode)
             (insert "foo ::")
             (save-excursion (insert " bar -> baz"))
-            (eq nil (haskell-ident-pos-at-point)))))
+            (string= "::" (haskell-ident-at-point)))))
 
-(ert-deftest beforetype-spanable ()
+(ert-deftest haskell-mode-ident-pos-at-point-beforetype ()
   (should (with-temp-buffer
             (haskell-mode)
             (insert "foo ::")
             (save-excursion (insert " bar -> baz"))
-            (eq nil (haskell-spanable-pos-at-point)))))
+            (not (eq nil (haskell-ident-pos-at-point))))))
 
-(ert-deftest single ()
+(ert-deftest haskell-mode-spanable-pos-at-point-beforetype ()
+  (should (with-temp-buffer
+            (haskell-mode)
+            (insert "foo ::")
+            (save-excursion (insert " bar -> baz"))
+            (not (eq nil (haskell-spanable-pos-at-point))))))
+
+(ert-deftest haskell-mode-ident-at-point-single ()
   (should (with-temp-buffer
             (haskell-mode)
             (insert "a")
             (string= "a" (haskell-ident-at-point)))))
 
-(ert-deftest constructor ()
+(ert-deftest haskell-mode-ident-at-point-constructor ()
   (should (with-temp-buffer
             (haskell-mode)
             (insert "Hello123")
             (string= "Hello123" (haskell-ident-at-point)))))
 
-(ert-deftest in-string ()
+(ert-deftest haskell-mode-ident-at-point-in-string ()
   (should (with-temp-buffer
             (haskell-mode)
             (insert "\"Hello\"")
             (goto-char (1- (point-max)))
-            (string= "Hello" (haskell-ident-at-point)))))
+            (eq nil (haskell-ident-at-point)))))
 
-(ert-deftest in-commas ()
+(ert-deftest haskell-mode-ident-at-point-in-commas ()
   (should (with-temp-buffer
             (haskell-mode)
             (insert ",Hello,")
             (goto-char (1- (point-max)))
             (string= "Hello" (haskell-ident-at-point)))))
 
-(ert-deftest var ()
+(ert-deftest haskell-mode-ident-at-point-var ()
   (should (with-temp-buffer
             (haskell-mode)
             (insert "hello")
             (string= "hello" (haskell-ident-at-point)))))
 
-(ert-deftest prime ()
+(ert-deftest haskell-mode-ident-at-point-prime ()
   (should (with-temp-buffer
             (haskell-mode)
             (insert "f'")
             (string= "f'" (haskell-ident-at-point)))))
 
-(ert-deftest prime2 ()
+(ert-deftest haskell-mode-ident-at-point-prime2 ()
   (should (with-temp-buffer
             (haskell-mode)
             (insert "f5oo'")
             (string= "f5oo'" (haskell-ident-at-point)))))
 
-(ert-deftest prime3 ()
+(ert-deftest haskell-mode-ident-at-point-prime3 ()
   (should (with-temp-buffer
             (haskell-mode)
             (insert "f'oo'")
             (string= "f'oo'" (haskell-ident-at-point)))))
 
-(ert-deftest prime4 ()
+(ert-deftest haskell-mode-ident-at-point-prime4 ()
   (should (with-temp-buffer
             (haskell-mode)
             (insert "f'oo'")
             (goto-char (point-min))
             (string= "f'oo'" (haskell-ident-at-point)))))
 
-(ert-deftest prime5 ()
+(ert-deftest haskell-mode-ident-at-point-prime5 ()
   (should (with-temp-buffer
             (haskell-mode)
             (insert "f'o6o'")
             (goto-char (+ 1 (point-min)))
             (string= "f'o6o'" (haskell-ident-at-point)))))
 
-(ert-deftest prime6 ()
+(ert-deftest haskell-mode-ident-at-point-prime6 ()
   (should (with-temp-buffer
             (haskell-mode)
             (insert "f'oo'")
             (goto-char (+ 2 (point-min)))
             (string= "f'oo'" (haskell-ident-at-point)))))
 
-(ert-deftest underscore ()
+(ert-deftest haskell-mode-ident-at-point-underscore ()
   (should (with-temp-buffer
             (haskell-mode)
             (insert "f_oo_")
             (goto-char (+ 2 (point-min)))
             (string= "f_oo_" (haskell-ident-at-point)))))
 
-
-(ert-deftest underscore2 ()
+(ert-deftest haskell-mode-ident-at-point-underscore2 ()
   (should (with-temp-buffer
             (haskell-mode)
             (insert "_oo_")
             (goto-char (point-min))
             (string= "_oo_" (haskell-ident-at-point)))))
 
-(ert-deftest underscore3 ()
+(ert-deftest haskell-mode-ident-at-point-underscore3 ()
   (should (with-temp-buffer
             (haskell-mode)
             (insert "o3o_")
             (string= "o3o_" (haskell-ident-at-point)))))
 
-(ert-deftest unicode ()
+(ert-deftest haskell-mode-ident-at-point-unicode ()
   (should (with-temp-buffer
             (haskell-mode)
             (insert "åöèą5ċōïá")
             (string= "åöèą5ċōïá" (haskell-ident-at-point)))))
 
-(ert-deftest unicode2 ()
+(ert-deftest haskell-mode-ident-at-point-unicode2 ()
   (should (with-temp-buffer
             (haskell-mode)
             (insert "Äöèąċōïá")
-            (string= "Äöèąċōïá" (haskell-ident-at-point)))))            
+            (string= "Äöèąċōïá" (haskell-ident-at-point)))))
 
-(ert-deftest unicode-pos ()
+(ert-deftest haskell-mode-ident-pos-at-point-unicode ()
   (should (with-temp-buffer
             (haskell-mode)
             (insert "åöèą5ċōïá")
-            (equal (cons (point-min) (point-max)) (haskell-ident-pos-at-point)))))
+            (equal (cons (point-min) (point-max))
+                   (haskell-ident-pos-at-point)))))
 
-(ert-deftest unicode2-pos ()
+(ert-deftest haskell-mode-ident-pos-at-point-unicode2 ()
   (should (with-temp-buffer
             (haskell-mode)
             (insert "Äöèąċōïá")
-            (equal (cons (point-min) (point-max)) (haskell-ident-pos-at-point)))))
+            (equal (cons (point-min) (point-max))
+                   (haskell-ident-pos-at-point)))))
 
-(ert-deftest unicode-spanable ()
+(ert-deftest haskell-mode-spanable-pos-at-point-unicode ()
   (should (with-temp-buffer
             (haskell-mode)
             (insert "åöèą5ċōïá")
-            (equal (cons (point-min) (point-max)) (haskell-spanable-pos-at-point)))))
+            (equal (cons (point-min) (point-max))
+                   (haskell-spanable-pos-at-point)))))
 
-(ert-deftest unicode2-spanable ()
+(ert-deftest haskell-mode-spanable-pos-at-point-unicode2 ()
   (should (with-temp-buffer
             (haskell-mode)
             (insert "Äöèąċōïá")
-            (equal (cons (point-min) (point-max)) (haskell-spanable-pos-at-point)))))
+            (equal (cons (point-min) (point-max))
+                   (haskell-spanable-pos-at-point)))))
 
-(ert-deftest ident-in-backticks ()
+(ert-deftest haskell-mode-ident-at-point-in-backticks ()
   (should (with-temp-buffer
             (haskell-mode)
             (insert "`foo`")
             (backward-char 2)
             (string= "foo" (haskell-ident-at-point)))))
 
-(ert-deftest ident-pos-in-backticks ()
+(ert-deftest haskell-mode-ident-pos-at-point-in-backticks ()
   (should (with-temp-buffer
             (haskell-mode)
             (insert "`foo`")
@@ -211,7 +214,7 @@
             (equal (cons (1+ (point-min)) (1- (point-max)))
                    (haskell-ident-pos-at-point)))))
 
-(ert-deftest spanable-pos-in-backticks ()
+(ert-deftest haskell-mode-spanable-pos-at-point-in-backticks ()
   (should (with-temp-buffer
             (haskell-mode)
             (insert "`foo`")
@@ -219,6 +222,53 @@
             (equal (cons (point-min) (point-max))
                    (haskell-spanable-pos-at-point)))))
 
+(ert-deftest haskell-mode-ident-at-point-operators ()
+  "Test `haskell-ident-at-point' for all operator cases."
+  (with-temp-buffer
+    (haskell-mode)
+    ;; point at the end of unqualified operator
+    (insert ">>")
+    (should (string= ">>" (haskell-ident-at-point)))
+    ;; point in the middle of unqualified operator
+    (save-excursion
+      (insert "=")
+      (insert "\n"))
+    (should (string= ">>=" (haskell-ident-at-point)))
+    (forward-line)
+    ;; point at the end of qualified operator
+    (insert "Control.Monad.>>=")
+    (should (string= "Control.Monad.>>=" (haskell-ident-at-point)))
+    ;; point at the beginning of qualified operator
+    (goto-char (line-beginning-position))
+    (should (string= "Control.Monad.>>=" (haskell-ident-at-point)))
+    ;; point in the middle of qualified part of operator
+    (forward-char)
+    (should (string= "Control.Monad.>>=" (haskell-ident-at-point)))
+    ;; point atfer `.` dot in qualified part of operator
+    (search-forward ".")
+    (should (string= "Control.Monad.>>=" (haskell-ident-at-point)))
+    ;; point at `.` dot in qualified part
+    (backward-char)
+    (should (string= "Control.Monad.>>=" (haskell-ident-at-point)))
+    (goto-char (line-end-position))
+    (insert "\n")
+    ;; Overloaded `.` dot tests.
+    ;; point at operator's `.` dot preceded by delimiting `.` dot
+    (insert "Data.Aeson.")
+    (save-excursion
+      (insert ".:"))
+    (should (string= "Data.Aeson..:" (haskell-ident-at-point)))
+    (forward-char)
+    (should (string= "Data.Aeson..:" (haskell-ident-at-point)))
+    ;; surrounding parentheses
+    (goto-char (line-beginning-position))
+    (save-excursion (insert "("))
+    (should (eq nil (haskell-ident-at-point)))
+    (goto-char (line-end-position))
+    (insert ")")
+    (should (eq nil (haskell-ident-at-point)))
+    (backward-char 2)
+    (should (string= "Data.Aeson..:" (haskell-ident-at-point)))))
 
 (defun check-fill (expected initial)
   "Check using ERT if `fill-paragraph' over `initial' gives
@@ -227,73 +277,73 @@ the beginning of the buffer.
 
 `fill-column' will be set to 10 so that it is easy to spot issues."
   (should (equal expected
-		 (with-temp-buffer
-		   (haskell-mode)
-		   (setq fill-column 10)
-		   (dolist (line initial)
-		     (insert line)
-		     (insert "\n"))
-		   (goto-char (point-min))
-		   (skip-chars-forward "^@")
-		   (if (eobp)
-		       (goto-char (point-min))
-		     (delete-char 1))
-		   (fill-paragraph nil)
-		   (split-string (buffer-substring-no-properties (point-min) (1- (point-max))) "\n")))))
+                 (with-temp-buffer
+                   (haskell-mode)
+                   (setq fill-column 10)
+                   (dolist (line initial)
+                     (insert line)
+                     (insert "\n"))
+                   (goto-char (point-min))
+                   (skip-chars-forward "^@")
+                   (if (eobp)
+                       (goto-char (point-min))
+                     (delete-char 1))
+                   (fill-paragraph nil)
+                   (split-string (buffer-substring-no-properties (point-min) (1- (point-max))) "\n")))))
 
 (ert-deftest fill-comment-1 ()
   (check-fill '("{- a -}")
-	      '("{- @a -}")))
+              '("{- @a -}")))
 
 (ert-deftest fill-comment-2 ()
   (check-fill '("{- a b c d e"
-		"f g h i j"
-		"k -}")
-	      '("{- @a b c d e f g h i j k -}")))
+                "f g h i j"
+                "k -}")
+              '("{- @a b c d e f g h i j k -}")))
 
 (ert-deftest fill-comment-3 ()
   (check-fill '("{-"
-		"a"
-		"-}")
-	      '("{-"
-		"@a"
-		"-}")))
+                "a"
+                "-}")
+              '("{-"
+                "@a"
+                "-}")))
 
 (ert-deftest fill-comment-4 ()
   (check-fill '("{-"
-		"a b c d e"
-		"f g h i-}")
-	      '("{-"
-		"@a"
-		"b"
-		"c"
-		"d e f g h i-}")))
+                "a b c d e"
+                "f g h i-}")
+              '("{-"
+                "@a"
+                "b"
+                "c"
+                "d e f g h i-}")))
 
 (ert-deftest fill-comment-5 ()
   (check-fill '("    {-"
-		" a b c d e"
-		"f g h i"
-		"    -}")
-	      '("    {-" " @a b c d e f g h i" "    -}")))
+                " a b c d e"
+                "f g h i"
+                "    -}")
+              '("    {-" " @a b c d e f g h i" "    -}")))
 
 (ert-deftest fill-comment-6 ()
   (check-fill '("  -- a b c"
-		"  -- d e f"
-		"  -- g h i"
-		"  -- j k l"
-		"  -- m n o"
-		"  -- p q r"
-		"  -- s t u"
-		"  -- v")
-	      '("  -- @a b c d e f g h i j k l m n o p q r s t u v")))
+                "  -- d e f"
+                "  -- g h i"
+                "  -- j k l"
+                "  -- m n o"
+                "  -- p q r"
+                "  -- s t u"
+                "  -- v")
+              '("  -- @a b c d e f g h i j k l m n o p q r s t u v")))
 
 (ert-deftest fill-comment-7 ()
   (check-fill '("  --  a b"
-		"  --  c d"
-		"  --  e f"
-		"  --  g h"
-		"  --  i j")
-	      '("  --  @a b c d e f g h i j ")))
+                "  --  c d"
+                "  --  e f"
+                "  --  g h"
+                "  --  i j")
+              '("  --  @a b c d e f g h i j ")))
 
 (ert-deftest fill-comment-8 ()
   "Note: first letter of second line should be in the same column
@@ -302,13 +352,13 @@ as first letter in the first line.
 Also should respect 10 column fill."
   :expected-result :failed
   (check-fill '("  {-  a b"
-		"      c d"
-		"      e f"
-		"      g h"
-		"      i j"
-		"   -}")
-	      '("  {-  @a b c d e f g h i j"
-		"  -}")))
+                "      c d"
+                "      e f"
+                "      g h"
+                "      i j"
+                "   -}")
+              '("  {-  @a b c d e f g h i j"
+                "  -}")))
 
 (ert-deftest fill-comment-9 ()
   "Note: first letter in the second line position should be kept
@@ -317,13 +367,13 @@ as defined, just the content should move properly.
 Also should respect 10 column fill."
   :expected-result :failed
   (check-fill '("  {-  a b"
-		"     c d e"
-		"     f g h"
-		"     i j"
-		"   -}")
-	      '("  {-  @a"
-		"     b c d e f g h i j"
-		"  -}")))
+                "     c d e"
+                "     f g h"
+                "     i j"
+                "   -}")
+              '("  {-  @a"
+                "     b c d e f g h i j"
+                "  -}")))
 
 (ert-deftest fill-comment-10 ()
   "Note: first letter in the second line position should be kept
@@ -333,15 +383,15 @@ lines should take position from second line.
 Also should respect 10 column fill."
   :expected-result :failed
   (check-fill '("  {-  a b"
-		"     c d e"
-		"     f g h"
-		"     i j"
-		"   -}")
-	      '("  {-  @a"
-		"     b c d e"
-		"  f g h"
-		"                    i j"
-		"  -}")))
+                "     c d e"
+                "     f g h"
+                "     i j"
+                "   -}")
+              '("  {-  @a"
+                "     b c d e"
+                "  f g h"
+                "                    i j"
+                "  -}")))
 
 (ert-deftest fill-comment-11 ()
   "Note: first letter in the second line position should be kept
@@ -350,11 +400,11 @@ as defined, just the content should move properly.
 Also should respect 10 column fill."
   :expected-result :failed
   (check-fill '("  --  a b"
-		"  -- c d e"
-		"  -- f g h"
-		"  -- i j")
-	      '("  --  @a"
-		"  -- b c d e f g h i j")))
+                "  -- c d e"
+                "  -- f g h"
+                "  -- i j")
+              '("  --  @a"
+                "  -- b c d e f g h i j")))
 
 (ert-deftest fill-comment-12 ()
   "Note: first letter in the second line position should be kept
@@ -364,12 +414,125 @@ lines should take position from second line.
 Also should respect 10 column fill."
   :expected-result :failed
   (check-fill '("  --  a b"
-		"  -- c d e"
-		"  -- f g h"
-		"  -- i j")
-	      '("  --  @a"
-		"  -- b c d e"
-		"--f g h"
-		"        --            i j")))
+                "  -- c d e"
+                "  -- f g h"
+                "  -- i j")
+              '("  --  @a"
+                "  -- b c d e"
+                "--f g h"
+                "        --            i j")))
+
+(ert-deftest fill-comment-haddock-1 ()
+  (check-fill '("-- | a b c"
+                "-- d")
+              '("-- @| a b c d")))
+
+(ert-deftest fill-comment-haddock-2 ()
+  (check-fill '("-- | a b c"
+                "-- d e")
+              '("-- @| a b c d"
+                "-- e")))
+
+(ert-deftest insert-scc-feasible ()
+  "insert an SCC where it's possible to do so"
+  (should (with-temp-buffer
+            (insert "hello world")
+            (goto-char 6)
+            (haskell-mode-toggle-scc-at-point)
+            (string= "hello {-# SCC \"\" #-} world"
+                     (buffer-substring 1 (point-max))))))
+
+(ert-deftest insert-scc-infeasible ()
+  "insert an SCC where it's not possible to do so"
+  (should-error (with-temp-buffer
+            (insert "hello world")
+            (goto-char 2)
+            (haskell-mode-toggle-scc-at-point)
+            (string= "hello world"
+                     (buffer-substring 1 (point-max))))))
+
+(ert-deftest remove-scc ()
+  "insert an SCC where it's possible to do so"
+  (should (with-temp-buffer
+            (insert "hello {-# SCC \"\" #-} world")
+            (goto-char 10)
+            (haskell-mode-toggle-scc-at-point)
+            (string= "hello world"
+                     (buffer-substring 1 (point-max))))))
+
+(ert-deftest forward-sexp-function-1 ()
+  "Check if `forward-sexp-function' behaves properly on end of
+sexp."
+  (should (with-temp-buffer
+            (haskell-mode)
+            (insert "(foo) bar")
+            (goto-char 5)
+            (condition-case err
+                (progn (forward-sexp)
+                       nil)
+              (scan-error (equal (cddr err) (list 5 6)))))))
+
+(ert-deftest forward-sexp-function-2 ()
+  "Check if `forward-sexp-function' behaves properly on beginning
+of sexp."
+  (should (with-temp-buffer
+            (haskell-mode)
+            (insert "(foo) bar")
+            (goto-char 1)
+            (forward-sexp)
+            (eq (point) 6))))
+
+(ert-deftest haskell-forward-sexp-1 ()
+  "Check if `haskell-forward-sexp' properly moves over sexps."
+  (should (with-temp-buffer
+            (insert "foo = bar . baz")
+            (goto-char 1)
+            (haskell-forward-sexp 4)
+            (eq (point) 12))))
+
+(ert-deftest haskell-forward-sexp-2 ()
+  "Check if `haskell-forward-sexp' properly moves over sexps."
+  (should (with-temp-buffer
+            (insert "foo = bar . baz")
+            (goto-char 1)
+            (haskell-forward-sexp 1)
+            (eq (point) 4))))
+
+(ert-deftest haskell-forward-sexp-3 ()
+  "Check if `haskell-forward-sexp' properly moves over sexps."
+  (should (with-temp-buffer
+            (insert "(a b) c = d . e")
+            (goto-char 1)
+            (haskell-forward-sexp 5)
+            (eq (point) 14))))
+
+(ert-deftest haskell-forward-sexp-4 ()
+  "Check if `haskell-forward-sexp' properly moves over sexps."
+  (should (with-temp-buffer
+            (insert "(a b) c = d . e")
+            (goto-char 1)
+            (haskell-forward-sexp 1)
+            (eq (point) 6))))
+
+(ert-deftest backward-sexp ()
+  "Check if `forward-sexp-function' behaves properly on
+beginning of sexp."
+  (should (with-temp-buffer
+            (haskell-mode)
+            (insert "(foo) bar")
+            (goto-char 2)
+            (condition-case err
+                (progn (backward-sexp)
+                       nil)
+              (scan-error (equal (cddr err) (list 1 1)))))))
+
+(ert-deftest haskell-backward-sexp ()
+  "Check if `haskell-forward-sexp' with negatives arg properly
+moves over sexps."
+  (should (with-temp-buffer
+            (insert "a (b c) = d . e")
+            (goto-char 15)
+            (haskell-forward-sexp -4)
+            (eq (point) 3))))
 
 (provide 'haskell-mode-tests)

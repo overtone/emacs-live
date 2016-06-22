@@ -351,7 +351,7 @@ Feature: Threading and unwinding of macros
     """
 
   Scenario: Unwind all (->>)
-    When I insert: 
+    When I insert:
     """
     (->> (make-things)
          (filter even?)
@@ -362,4 +362,38 @@ Feature: Threading and unwinding of macros
     Then I should see:
     """
     (map square (filter even? (make-things)))
+    """
+
+  Scenario: Thread first all (->) part 2, but last
+    When I insert "(->map (assoc {} :key "value") :lock)"
+    And I place the cursor before "(->map (assoc"
+    And I press "C-u C-! tf"
+    Then I should see:
+    """
+    (-> (assoc {} :key "value")
+        (->map :lock))
+    """
+
+  Scenario: Thread last all (->>) part 2, but last
+    When I insert "(map square (filter even? (make-things)))"
+    And I place the cursor before "(map square"
+    And I press "C-u C-! tl"
+    Then I should see:
+    """
+    (->> (filter even? (make-things))
+         (map square))
+    """
+
+  Scenario: Dangling parens #255
+    When I insert:
+    """
+    (map inc
+         (range))
+    """
+    And I place the cursor before "(map"
+    And I press "C-! tl"
+    Then I should see:
+    """
+    (->> (range)
+         (map inc))
     """

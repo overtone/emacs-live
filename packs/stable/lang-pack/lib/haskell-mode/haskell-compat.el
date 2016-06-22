@@ -1,4 +1,4 @@
-;;; haskell-compat.el --- legacy/compatibility backports for haskell-mode
+;;; haskell-compat.el --- legacy/compatibility backports for haskell-mode -*- lexical-binding: t -*-
 ;;
 ;; Filename: haskell-compat.el
 ;; Description: legacy/compatibility backports for haskell-mode
@@ -29,14 +29,6 @@
 (eval-when-compile
   (setq byte-compile-warnings '(not cl-functions obsolete)))
 
-;; Missing in Emacs23, stolen from Emacs24's `subr.el'
-(unless (fboundp 'process-live-p)
-  (defun process-live-p (process)
-    "Returns non-nil if PROCESS is alive.
-A process is considered alive if its status is `run', `open',
-`listen', `connect' or `stop'."
-    (memq (process-status process)
-	  '(run open listen connect stop))))
 
 ;; Cross-referencing commands have been replaced since Emacs 25.1.
 ;; These aliases are required to provide backward compatibility.
@@ -64,6 +56,9 @@ A process is considered alive if its status is `run', `open',
     (let ((next-p (and (boundp 'xref-prompt-for-identifier)
                        xref-prompt-for-identifier)))
       (find-tag ident next-p))))
+
+(unless (fboundp 'font-lock-ensure)
+  (defalias 'font-lock-ensure 'font-lock-fontify-buffer))
 
 (provide 'haskell-compat)
 

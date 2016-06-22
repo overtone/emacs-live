@@ -15,7 +15,7 @@ suffix commands.
 @end ifnottex
 
 @quotation
-Copyright (C) 2015 Jonas Bernoulli <jonas@@bernoul.li>
+Copyright (C) 2015-2016 Jonas Bernoulli <jonas@@bernoul.li>
 
 You can redistribute this document and/or modify it under the terms
 of the GNU General Public License as published by the Free Software
@@ -37,7 +37,7 @@ General Public License for more details.
 @finalout
 @titlepage
 @title Magit-Popup User Manual
-@subtitle for version 2.1
+@subtitle for version 2.7
 @author Jonas Bernoulli
 @page
 @vskip 0pt plus 1filll
@@ -52,7 +52,6 @@ General Public License for more details.
 @insertcopying
 @end ifnottex
 
-
 @menu
 * Introduction::
 * Usage::
@@ -61,16 +60,18 @@ General Public License for more details.
 @detailmenu
 --- The Detailed Node Listing ---
 
+
 Usage
 
 * Customizing existing popups::
 * Other options::
 
+
+
 Defining prefix and suffix commands
 
 * Defining prefix commands::
 * Defining suffix commands::
-
 @end detailmenu
 @end menu
 
@@ -294,6 +295,9 @@ buffers along with the other common commands.
 It is possible to define additional infix arguments and suffix
 commands to an existing popup using the following functions.
 
+You can find some examples which use the below commands at
+@uref{https://github.com/magit/magit/wiki/Additional-proposed-infix-arguments-and-suffix-commands}.
+
 @defun magit-define-popup-switch popup key desc switch &optional enable at prepend
 
 In POPUP, define KEY as SWITCH.
@@ -360,19 +364,57 @@ of another command already defined for POPUP, the command is then
 placed before or after AT, depending on PREPEND.
 @end defun
 
+@defun magit-define-popup-sequence-action popup key desc command &optional at prepend
+
+Like @code{magit-define-popup-action}, but modifies the value of the
+@code{:sequence-actions} property instead of @code{:actions}.
+@end defun
+
+@defun magit-define-popup-variable popup key desc command formatter &optional at prepend
+
+In POPUP, define KEY as COMMAND.
+
+POPUP is a popup command defined using @code{magit-define-popup}.  COMMAND
+is a command which calls @code{magit-popup-set-variable}.  FORMATTER is a
+function which calls @code{magit-popup-format-variable}.  These two
+functions have to be called with the same arguments.
+
+KEY is a character representing the event used interactively call
+the COMMAND.
+
+DESC is the variable or a representation thereof.  It's not actually
+used for anything.
+
+COMMAND is inserted after all other commands already defined for
+POPUP, unless optional PREPEND is non-nil, in which case it is
+placed first.  If optional AT is non-nil then it should be the KEY
+of another command already defined for POPUP, the command is then
+placed before or after AT, depending on PREPEND."
+@end defun
+
 @defun magit-change-popup-key popup type from to
 
 In POPUP, bind TO to what FROM was bound to.  TYPE is one of
-@code{:action}, @code{:switch}, or @code{:option}.  Bind TO and unbind FROM, both are
-characters.
+@code{:action}, @code{:sequence-action}, @code{:switch}, or @code{:option}.  Bind TO and unbind
+FROM, both are characters.
 @end defun
 
 @defun magit-remove-popup-key popup type key
 
 In POPUP, remove KEY's binding of TYPE.  POPUP is a popup command
-defined using @code{magit-define-popup}.  TYPE is one of @code{:action}, @code{:switch},
-or @code{:option}.  KEY is the character which is to be unbound.
+defined using @code{magit-define-popup}.  TYPE is one of @code{:action},
+@code{:sequence-action}, @code{:switch}, or @code{:option}.  KEY is the character which
+is to be unbound.
 @end defun
+
+It is also possible to change other aspects of a popup by setting a
+property using @code{plist-put}.  See @ref{Defining prefix commands,Defining prefix commands} for valid
+properties.  The most likely change Magit users might want to make
+is:
+
+@lisp
+(plist-put magit-show-refs-popup :use-prefix nil)
+@end lisp
 
 @node Other options
 @section Other options
@@ -414,12 +456,30 @@ directly invoke the popup's default action.
 
 Ignore prefix arguments.
 @end itemize
+This option can be overridden for individual popups.
+@code{magit-show-refs-popup} for example defaults to invoking the default
+action directly.  It only shows the popup buffer when a prefix
+argument is used.  See @ref{Customizing existing popups,Customizing existing popups}.
 @end defopt
 
 @defopt magit-popup-manpage-package
 
 The Emacs package used to display man-pages, one of @code{man} or @code{woman}.
 @end defopt
+
+@defopt magit-popup-display-buffer-action
+
+The option controls how the window used to display a popup buffer is
+created.  Popup buffers are displayed using @code{display-buffer} with the
+value of this option as ACTION argument.  You can also set this to
+nil and instead add an entry to @code{display-buffer-alist}.
+@end defopt
+
+To emphasize the default action by making it bold use this:
+
+@lisp
+(button-type-put 'magit-popup-action-button 'format " %k %D")
+@end lisp
 
 @node Defining prefix and suffix commands
 @chapter Defining prefix and suffix commands
@@ -450,19 +510,19 @@ infix arguments, and then also one of its suffix commands.
   'magit-commands
   :man-page "git-tag"
   :switches '((?a "Annotate" "--annotate")
-              (?s "Sign"     "--sign")
-              (?f "Force"    "--force"))
+	      (?s "Sign"     "--sign")
+	      (?f "Force"    "--force"))
   :actions  '((?t "Create"   magit-tag)
-              (?k "Delete"   magit-tag-delete)
-              (?p "Prune"    magit-tag-prune))
+	      (?k "Delete"   magit-tag-delete)
+	      (?p "Prune"    magit-tag-prune))
   :default-action 'magit-tag)
 
 ;;;###autoload
 (defun magit-tag (name rev &optional args)
   "Create a new tag with the given NAME at REV."
   (interactive (list (magit-read-tag "Tag name")
-                     (magit-read-branch-or-commit "Place tag on")
-                     (magit-tag-arguments)))
+		     (magit-read-branch-or-commit "Place tag on")
+		     (magit-tag-arguments)))
   (magit-run-git-with-editor "tag" args name rev))
 @end lisp
 
@@ -587,6 +647,14 @@ READER), see @code{magit-define-popup-option} for details.
 
 
 @item
+@code{:variables}
+
+Git variables which can be set from the popup.  VALUE is a list
+whose members have the form (KEY DESC COMMAND FORMATTER), see
+@code{magit-define-popup-variable} for details.
+
+
+@item
 @code{:default-arguments}
 
 The default arguments, a list of switches (which are then enabled
@@ -595,20 +663,11 @@ by default) and options with there default values, as in
 
 
 @item
-@code{:man-page}
-
-The name of the manpage to be displayed when the user requests
-help for an argument.
-@end itemize
-When MODE is @code{magit-popup-sequence-mode}, then the following keywords
-are also meaningful:
-
-@itemize
-@item
 @code{:sequence-predicate}
 
 When this function returns non-nil, then the popup uses
-@code{:sequence-actions} instead of @code{:actions}.
+@code{:sequence-actions} instead of @code{:actions}, and does not show the
+@code{:switches} and @code{:options}.
 
 
 @item
@@ -616,6 +675,29 @@ When this function returns non-nil, then the popup uses
 
 The actions which can be invoked from the popup, when
 @code{:sequence-predicate} returns non-nil.
+
+
+@item
+@code{:setup-function}
+
+When this function is specified, then it is used instead of
+@code{magit-popup-default-setup}.
+
+
+@item
+@code{:refresh-function}
+
+When this function is specified, then it is used instead of
+calling @code{magit-popup-insert-section} three times with symbols
+@code{magit-popup-switch-button}, @code{magit-popup-option-button}, and finally
+@code{magit-popup-action-button} as argument.
+
+
+@item
+@code{:man-page}
+
+The name of the manpage to be displayed when the user requests
+help for an argument.
 @end itemize
 @end defmac
 

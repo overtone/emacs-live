@@ -1,6 +1,6 @@
 ;;; ox-org.el --- Org Back-End for Org Export Engine
 
-;; Copyright (C) 2013-2015 Free Software Foundation, Inc.
+;; Copyright (C) 2013-2016 Free Software Foundation, Inc.
 
 ;; Author: Nicolas Goaziou <n.goaziou@gmail.com>
 ;; Keywords: org, wp
@@ -45,7 +45,7 @@ look bad if different people with different fontification setup
 work on the same website.  When this variable is non-nil,
 creating an htmlized version of an Org buffer using
 `org-org-export-as-org' will include a link to this URL if the
-setting of `org-html-htmlize-output-type' is 'css."
+setting of `org-html-htmlize-output-type' is `css'."
   :group 'org-export-org
   :type '(choice
 	  (const :tag "Don't include external stylesheet link" nil)
@@ -294,12 +294,13 @@ Return output file name."
 	   (html-ext (concat "." (or (plist-get plist :html-extension)
 				     org-html-extension "html")))
 	   (visitingp (find-buffer-visiting filename))
-	   (work-buffer (or visitingp (find-file filename)))
+	   (work-buffer (or visitingp (find-file-noselect filename)))
 	   newbuf)
-      (font-lock-ensure)
-      (show-all)
-      (org-show-block-all)
-      (setq newbuf (htmlize-buffer))
+      (with-current-buffer work-buffer
+        (org-font-lock-ensure)
+        (outline-show-all)
+        (org-show-block-all)
+        (setq newbuf (htmlize-buffer)))
       (with-current-buffer newbuf
 	(when org-org-htmlized-css-url
 	  (goto-char (point-min))
@@ -308,10 +309,12 @@ Return output file name."
 	       (replace-match
 		(format
 		 "<link rel=\"stylesheet\" type=\"text/css\" href=\"%s\">"
-		 org-org-htmlized-css-url) t t)))
+		 org-org-htmlized-css-url)
+                t t)))
 	(write-file (concat pub-dir (file-name-nondirectory filename) html-ext)))
       (kill-buffer newbuf)
       (unless visitingp (kill-buffer work-buffer)))
+    ;; FIXME: Why?  Which buffer is this supposed to apply to?
     (set-buffer-modified-p nil)))
 
 

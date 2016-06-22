@@ -95,7 +95,7 @@
   ((username :initarg :username :initform nil))
   "Abstract authenticator")
 
-(defmethod constructor :static ((auth gh-authenticator) newname &rest args)
+(defmethod constructor :static ((auth gh-authenticator) &rest args)
   (let ((obj (call-next-method)))
     (or (oref obj :username)
         (oset obj :username (gh-auth-get-username)))
@@ -131,7 +131,7 @@
    (2fa-cls :initform gh-auth-2fa-callback :allocation :class))
   "Password-based authenticator")
 
-(defmethod constructor :static ((auth gh-password-authenticator) newname &rest args)
+(defmethod constructor :static ((auth gh-password-authenticator) &rest args)
   (let ((obj (call-next-method)))
     (or (oref obj :password)
         (oset obj :password (gh-auth-get-password (oref obj remember))))
@@ -154,7 +154,7 @@
   ((token :initarg :token :protection :private :initform nil))
   "Oauth-based authenticator")
 
-(defmethod constructor :static ((auth gh-oauth-authenticator) newname &rest args)
+(defmethod constructor :static ((auth gh-oauth-authenticator) &rest args)
   (let ((obj (call-next-method)))
     (or (oref obj :token)
         (oset obj :token (gh-auth-get-oauth-token)))

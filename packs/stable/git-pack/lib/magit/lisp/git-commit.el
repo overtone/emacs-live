@@ -1,6 +1,6 @@
 ;;; git-commit.el --- Edit Git commit messages  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2010-2015  The Magit Project Contributors
+;; Copyright (C) 2010-2016  The Magit Project Contributors
 ;;
 ;; You should have received a copy of the AUTHORS.md file which
 ;; lists all contributors.  If not, see http://magit.vc/authors.
@@ -11,7 +11,7 @@
 ;;	Marius Vollmer <marius.vollmer@gmail.com>
 ;; Maintainer: Jonas Bernoulli <jonas@bernoul.li>
 
-;; Package-Requires: ((emacs "24.4") (dash "2.10.0") (with-editor "2.1.0"))
+;; Package-Requires: ((emacs "24.4") (dash "2.12.1") (with-editor "2.5.1"))
 ;; Keywords: git tools vc
 ;; Homepage: https://github.com/magit/magit
 
@@ -101,7 +101,7 @@
 ;; files.
 
 ;; Finally this package highlights style errors, like lines that are
-;; to long, or when the second line is not empty.  It may even nag you
+;; too long, or when the second line is not empty.  It may even nag you
 ;; when you attempt to finish the commit without having fixed these
 ;; issues.  Some people like that nagging, I don't, so you'll have to
 ;; enable it.  Which brings me to the last point.  Like any
@@ -123,6 +123,8 @@
 ;;;; Declarations
 
 (defvar flyspell-generic-check-word-predicate)
+
+(declare-function magit-expand-git-file-name 'magit-git)
 
 ;;; Options
 ;;;; Variables
@@ -159,6 +161,12 @@ The major mode configured here is turned on by the minor mode
   :type '(choice (function-item text-mode)
                  (const :tag "No major mode")))
 
+(unless (find-lisp-object-file-name 'git-commit-setup-hook 'defvar)
+  (add-hook 'git-commit-setup-hook 'with-editor-usage-message)
+  (add-hook 'git-commit-setup-hook 'git-commit-propertize-diff)
+  (add-hook 'git-commit-setup-hook 'git-commit-turn-on-auto-fill)
+  (add-hook 'git-commit-setup-hook 'git-commit-setup-changelog-support)
+  (add-hook 'git-commit-setup-hook 'git-commit-save-message))
 (defcustom git-commit-setup-hook
   '(git-commit-save-message
     git-commit-setup-changelog-support
@@ -168,7 +176,7 @@ The major mode configured here is turned on by the minor mode
   "Hook run at the end of `git-commit-setup'."
   :group 'git-commit
   :type 'hook
-  :options '(magit-revert-buffers
+  :options '(
              git-commit-save-message
              git-commit-setup-changelog-support
              git-commit-turn-on-auto-fill
@@ -350,6 +358,21 @@ usually honor this wish and return non-nil."
        (git-commit-setup)))
 
 (defun git-commit-setup ()
+  ;; cygwin git will pass a cygwin path (/cygdrive/c/foo/.git/...),
+  ;; try to handle this in window-nt Emacs.
+  (--when-let
+      (and (eq system-type 'windows-nt)
+           (not (file-accessible-directory-p default-directory))
+           (if (require 'magit-git nil t)
+               ;; Emacs prepends a "c:".
+               (magit-expand-git-file-name (substring buffer-file-name 2))
+             ;; Fallback if we can't load `magit-git'.
+             (and (string-match "\\`[a-z]:/\\(cygdrive/\\)?\\([a-z]\\)/\\(.*\\)"
+                                buffer-file-name)
+                  (concat (match-string 2 buffer-file-name) ":/"
+                          (match-string 3 buffer-file-name)))))
+    (when (file-accessible-directory-p (file-name-directory it))
+      (find-alternate-file it)))
   (when git-commit-major-mode
     (funcall git-commit-major-mode))
   (setq with-editor-show-usage nil)
@@ -423,12 +446,7 @@ finally check current non-comment text."
   (flyspell-buffer))
 
 (defun git-commit-flyspell-verify ()
-  (not (memq (get-text-property (point) 'face)
-             '(font-lock-comment-face     font-lock-comment-delimiter-face
-               git-commit-comment-branch  git-commit-comment-detached
-               git-commit-comment-heading git-commit-comment-file
-               git-commit-comment-action  git-commit-pseudo-header
-               git-commit-known-pseudo-header))))
+  (not (= (char-after (line-beginning-position)) ?#)))
 
 (defun git-commit-finish-query-functions (force)
   (run-hook-with-args-until-failure
@@ -437,7 +455,7 @@ finally check current non-comment text."
 (defun git-commit-check-style-conventions (force)
   "Check for violations of certain basic style conventions.
 For each violation ask the user if she wants to proceed anyway.
-This makes sure the summary line isn't to long and that the
+This makes sure the summary line isn't too long and that the
 second line is empty."
   (or force
       (save-excursion
@@ -447,7 +465,7 @@ second line is empty."
             t ; Just try; we don't know whether --allow-empty-message was used.
           (and (or (equal (match-string 2) "")
                    (y-or-n-p "Summary line is too long.  Commit anyway? "))
-               (or (equal (match-string 3) "")
+               (or (not (match-string 3))
                    (y-or-n-p "Second line is not empty.  Commit anyway? ")))))))
 
 (defun git-commit-cancel-message ()
@@ -492,6 +510,9 @@ With a numeric prefix ARG, go forward ARG comments."
         (str (buffer-substring-no-properties (point-min) (point-max))))
     (with-temp-buffer
       (insert str)
+      (goto-char (point-min))
+      (when (re-search-forward (concat flush " -+ >8 -+$") nil t)
+        (delete-region (point-at-bol) (point-max)))
       (goto-char (point-min))
       (flush-lines flush)
       (goto-char (point-max))
@@ -569,7 +590,7 @@ With a numeric prefix ARG, go forward ARG comments."
              (insert ?\n)))
           (t
            (while (re-search-backward (concat "^" comment-start) nil t))
-           (unless (looking-back "\n\n")
+           (unless (looking-back "\n\n" nil)
              (insert ?\n))
            (insert header ?\n)))
     (unless (or (eobp) (= (char-after) ?\n))
@@ -591,7 +612,7 @@ With a numeric prefix ARG, go forward ARG comments."
    ;; Summary line
    (format "\\(.\\{0,%d\\}\\)\\(.*\\)" git-commit-summary-max-length)
    ;; Non-empty non-comment second line
-   (format "\\(?:\n%s\\|\n\\(.*\\)\\)?" comment-start)))
+   (format "\\(?:\n%s\\|\n\\(.+\\)\\)?" comment-start)))
 
 (defun git-commit-mode-font-lock-keywords ()
   `(;; Comments
@@ -629,6 +650,7 @@ With a numeric prefix ARG, go forward ARG comments."
   (save-excursion
     (goto-char (point-min))
     (when (re-search-forward "^diff --git" nil t)
+      (beginning-of-line)
       (let ((buffer (current-buffer)))
         (insert
          (with-temp-buffer
@@ -638,12 +660,17 @@ With a numeric prefix ARG, go forward ARG comments."
                 (delete-region (point) (point-max)))))
            (diff-mode)
            (let (font-lock-verbose font-lock-support-mode)
-             (font-lock-fontify-buffer))
+             (if (fboundp 'font-lock-ensure)
+                 (font-lock-ensure)
+               (with-no-warnings
+                 (font-lock-fontify-buffer))))
            (let (next (pos (point-min)))
              (while (setq next (next-single-property-change pos 'face))
                (put-text-property pos next 'font-lock-face
                                   (get-text-property pos 'face))
-               (setq pos next)))
+               (setq pos next))
+             (put-text-property pos (point-max) 'font-lock-face
+                                (get-text-property pos 'face)))
            (buffer-string)))))))
 
 ;;; git-commit.el ends soon

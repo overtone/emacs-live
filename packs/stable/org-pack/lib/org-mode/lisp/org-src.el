@@ -1,6 +1,6 @@
 ;;; org-src.el --- Source code examples in Org
 ;;
-;; Copyright (C) 2004-2015 Free Software Foundation, Inc.
+;; Copyright (C) 2004-2016 Free Software Foundation, Inc.
 ;;
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;;	   Bastien Guerry <bzg@gnu.org>
@@ -54,6 +54,7 @@
 (declare-function org-trim "org" (s))
 
 (defvar org-element-all-elements)
+(defvar org-inhibit-startup)
 
 (defcustom org-edit-src-turn-on-auto-save nil
   "Non-nil means turn `auto-save-mode' on when editing a source block.
@@ -283,37 +284,35 @@ which see.  BEG and END are buffer positions."
 DATUM is an element or object.  Return a list (BEG END CONTENTS)
 where BEG and END are buffer positions and CONTENTS is a string."
   (let ((type (org-element-type datum)))
-    (cond
-     ((eq type 'footnote-definition)
-      (let* ((beg (org-with-wide-buffer
-		   (goto-char (org-element-property :post-affiliated datum))
-		   (search-forward "]")))
-	     (end (or (org-element-property :contents-end datum) beg)))
-	(list beg end (buffer-substring-no-properties beg end))))
-     ((org-element-property :contents-begin datum)
-      (let ((beg (org-element-property :contents-begin datum))
-	    (end (org-element-property :contents-end datum)))
-	(list beg end (buffer-substring-no-properties beg end))))
-     ((memq type '(example-block export-block src-block))
-      (list (org-with-wide-buffer
-	     (goto-char (org-element-property :post-affiliated datum))
-	     (line-beginning-position 2))
-	    (org-with-wide-buffer
-	     (goto-char (org-element-property :end datum))
-	     (skip-chars-backward " \r\t\n")
-	     (line-beginning-position 1))
-	    (org-element-property :value datum)))
-     ((memq type '(fixed-width table))
-      (let ((beg (org-element-property :post-affiliated datum))
-	    (end (org-with-wide-buffer
-		  (goto-char (org-element-property :end datum))
-		  (skip-chars-backward " \r\t\n")
-		  (line-beginning-position 2))))
-	(list beg
-	      end
-	      (if (eq type 'fixed-width) (org-element-property :value datum)
-		(buffer-substring-no-properties beg end)))))
-     (t (error "Unsupported element or object: %s" type)))))
+    (org-with-wide-buffer
+     (cond
+      ((eq type 'footnote-definition)
+       (let* ((beg (progn
+		     (goto-char (org-element-property :post-affiliated datum))
+		     (search-forward "]")))
+	      (end (or (org-element-property :contents-end datum) beg)))
+	 (list beg end (buffer-substring-no-properties beg end))))
+      ((org-element-property :contents-begin datum)
+       (let ((beg (org-element-property :contents-begin datum))
+	     (end (org-element-property :contents-end datum)))
+	 (list beg end (buffer-substring-no-properties beg end))))
+      ((memq type '(example-block export-block src-block))
+       (list (progn (goto-char (org-element-property :post-affiliated datum))
+		    (line-beginning-position 2))
+	     (progn (goto-char (org-element-property :end datum))
+		    (skip-chars-backward " \r\t\n")
+		    (line-beginning-position 1))
+	     (org-element-property :value datum)))
+      ((memq type '(fixed-width table))
+       (let ((beg (org-element-property :post-affiliated datum))
+	     (end (progn (goto-char (org-element-property :end datum))
+			 (skip-chars-backward " \r\t\n")
+			 (line-beginning-position 2))))
+	 (list beg
+	       end
+	       (if (eq type 'fixed-width) (org-element-property :value datum)
+		 (buffer-substring-no-properties beg end)))))
+      (t (error "Unsupported element or object: %s" type))))))
 
 (defun org-src--make-source-overlay (beg end edit-buffer)
   "Create overlay between BEG and END positions and return it.
@@ -497,7 +496,7 @@ as `org-src-fontify-natively' is non-nil."
 	  (delete-region (point-min) (point-max))
 	  (insert string " ") ;; so there's a final property change
 	  (unless (eq major-mode lang-mode) (funcall lang-mode))
-	  (font-lock-fontify-buffer)
+	  (org-font-lock-ensure)
 	  (setq pos (point-min))
 	  (while (setq next (next-single-property-change pos 'face))
 	    (put-text-property
@@ -519,9 +518,9 @@ Escaping happens when a line starts with \"*\", \"#+\", \",*\" or
 \",#+\" by appending a comma to it."
   (interactive "r")
   (save-excursion
-    (goto-char beg)
-    (while (re-search-forward "^[ \t]*,?\\(\\*\\|#\\+\\)" end t)
-      (replace-match ",\\1" nil nil nil 1))))
+    (goto-char end)
+    (while (re-search-backward "^[ \t]*,?\\(\\*\\|#\\+\\)" beg t)
+      (save-excursion (replace-match ",\\1" nil nil nil 1)))))
 
 (defun org-escape-code-in-string (s)
   "Escape lines in string S.
@@ -535,9 +534,9 @@ Un-escaping happens by removing the first comma on lines starting
 with \",*\", \",#+\", \",,*\" and \",,#+\"."
   (interactive "r")
   (save-excursion
-    (goto-char beg)
-    (while (re-search-forward "^[ \t]*,?\\(,\\)\\(?:\\*\\|#\\+\\)" end t)
-      (replace-match "" nil nil nil 1))))
+    (goto-char end)
+    (while (re-search-backward "^[ \t]*,?\\(,\\)\\(?:\\*\\|#\\+\\)" beg t)
+      (save-excursion (replace-match "" nil nil nil 1)))))
 
 (defun org-unescape-code-in-string (s)
   "Un-escape lines in string S.
@@ -657,9 +656,9 @@ This command is not bound to a key by default, to avoid conflicts
 with language major mode bindings.  To bind it to C-c @ in all
 language major modes, you could use
 
-  (add-hook 'org-src-mode-hook
+  (add-hook \\='org-src-mode-hook
             (lambda () (define-key org-src-mode-map \"\\C-c@\"
-                    'org-src-do-key-sequence-at-code-block)))
+                    \\='org-src-do-key-sequence-at-code-block)))
 
 In that case, for example, C-c @ t issued in code edit buffers
 would tangle the current Org code block, C-c @ e would execute
@@ -719,6 +718,7 @@ If BUFFER is non-nil, test it instead."
     (unless label (user-error "Cannot edit remotely anonymous footnotes"))
     (let* ((definition (org-with-wide-buffer
 			(org-footnote-goto-definition label)
+			(backward-char)
 			(org-element-context)))
 	   (inline (eq (org-element-type definition) 'footnote-reference))
 	   (contents
@@ -756,7 +756,9 @@ If BUFFER is non-nil, test it instead."
 	    ;; table's structure.
 	    (when ,(org-element-lineage definition '(table-cell))
 	      (while (search-forward "\n" nil t) (delete-char -1)))))
-       contents
+       (concat contents
+	       (and (not (org-element-property :contents-begin definition))
+		    " "))
        'remote))
     ;; Report success.
     t))

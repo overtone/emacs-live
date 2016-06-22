@@ -1,6 +1,6 @@
 ;;; ob-io.el --- org-babel functions for Io evaluation
 
-;; Copyright (C) 2012-2014 Free Software Foundation, Inc.
+;; Copyright (C) 2012-2016 Free Software Foundation, Inc.
 
 ;; Author: Andrzej Lichnerowicz
 ;; Keywords: literate programming, reproducible research
@@ -71,8 +71,8 @@ called by `org-babel-execute-src-block'"
 
 (defun org-babel-io-evaluate (session body &optional result-type result-params)
   "Evaluate BODY in external Io process.
-If RESULT-TYPE equals 'output then return standard output as a string.
-If RESULT-TYPE equals 'value then return the value of the last statement
+If RESULT-TYPE equals `output' then return standard output as a string.
+If RESULT-TYPE equals `value' then return the value of the last statement
 in BODY as elisp."
   (when session (error "Sessions are not (yet) supported for Io"))
   (case result-type

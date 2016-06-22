@@ -1,6 +1,6 @@
 ;;; ob-sed.el --- org-babel functions for sed scripts
 
-;; Copyright (C) 2015 Free Software Foundation
+;; Copyright (C) 2015-2016 Free Software Foundation, Inc.
 
 ;; Author: Bjarte Johansen
 ;; Keywords: literate programming, reproducible research

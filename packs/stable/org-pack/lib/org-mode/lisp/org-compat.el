@@ -1,6 +1,6 @@
 ;;; org-compat.el --- Compatibility code for Org-mode
 
-;; Copyright (C) 2004-2015 Free Software Foundation, Inc.
+;; Copyright (C) 2004-2016 Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -40,11 +40,6 @@
 ;; it in org-mode, because the Byte compiler evaluates (featurep 'xemacs)
 ;; at compilation time and can therefore optimize code better.
 (defconst org-xemacs-p (featurep 'xemacs))
-(defconst org-format-transports-properties-p
-  (let ((x "a"))
-    (add-text-properties 0 1 '(test t) x)
-    (get-text-property 0 'test (format "%s" x)))
-  "Does format transport text properties?")
 
 (defun org-compatible-face (inherits specs)
   "Make a compatible face specification.
@@ -241,7 +236,7 @@ ignored in this case."
   (or window (selected-window)))
 
 (defun org-number-sequence (from &optional to inc)
-  "Call `number-sequence or emulate it."
+  "Call `number-sequence' or emulate it."
   (if (fboundp 'number-sequence)
       (number-sequence from to inc)
     (if (or (not to) (= from to))
@@ -338,7 +333,9 @@ Works on both Emacs and XEmacs."
 Pass COLUMN and FORCE to `move-to-column'.
 Pass BUFFER to the XEmacs version of `move-to-column'."
   (let ((buffer-invisibility-spec
-	 (remove '(org-filtered) buffer-invisibility-spec)))
+	 (if (listp buffer-invisibility-spec)
+	     (remove '(org-filtered) buffer-invisibility-spec)
+	   buffer-invisibility-spec)))
     (if (featurep 'xemacs)
 	(org-xemacs-without-invisibility
 	 (move-to-column column force buffer))
@@ -402,20 +399,22 @@ Pass BUFFER to the XEmacs version of `move-to-column'."
 	 (when focus-follows-mouse
 	   (set-mouse-position frame (1- (frame-width frame)) 0)))))
 
-(defun org-float-time (&optional time)
-  "Convert time value TIME to a floating point number.
-TIME defaults to the current time."
-  (if (featurep 'xemacs)
-      (time-to-seconds (or time (current-time)))
-    (float-time time)))
+(defalias 'org-float-time
+  (if (featurep 'xemacs) 'time-to-seconds 'float-time))
 
 ;; `user-error' is only available from 24.2.50 on
 (unless (fboundp 'user-error)
   (defalias 'user-error 'error))
 
+;; ‘format-message’ is available only from 25 on
+(unless (fboundp 'format-message)
+  (defalias 'format-message 'format))
+
 ;; `font-lock-ensure' is only available from 24.4.50 on
-(unless (fboundp 'font-lock-ensure)
-  (defalias 'font-lock-ensure 'font-lock-fontify-buffer))
+(defalias 'org-font-lock-ensure
+  (if (fboundp 'font-lock-ensure)
+      #'font-lock-ensure
+    (lambda (&optional _beg _end) (font-lock-fontify-buffer))))
 
 (defmacro org-no-popups (&rest body)
   "Suppress popup windows.
@@ -543,6 +542,18 @@ Implements `file-equal-p' for older emacsen and XEmacs."
   (if (fboundp 'buffer-narrowed-p)
       (buffer-narrowed-p)
     (/= (- (point-max) (point-min)) (buffer-size))))
+
+;; As of Emacs 25.1, `outline-mode` functions are under the 'outline-'
+;; prefix.
+(when (< emacs-major-version 25)
+  (defalias 'outline-show-all 'show-all)
+  (defalias 'outline-hide-subtree 'hide-subtree)
+  (defalias 'outline-show-subtree 'show-subtree)
+  (defalias 'outline-show-branches 'show-branches)
+  (defalias 'outline-show-children 'show-children)
+  (defalias 'outline-show-entry 'show-entry)
+  (defalias 'outline-hide-entry 'hide-entry)
+  (defalias 'outline-hide-sublevels 'hide-sublevels))
 
 (defmacro org-with-silent-modifications (&rest body)
   (if (fboundp 'with-silent-modifications)

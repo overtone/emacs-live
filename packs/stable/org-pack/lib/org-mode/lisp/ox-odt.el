@@ -1,6 +1,6 @@
 ;;; ox-odt.el --- OpenDocument Text Exporter for Org Mode
 
-;; Copyright (C) 2010-2015 Free Software Foundation, Inc.
+;; Copyright (C) 2010-2016 Free Software Foundation, Inc.
 
 ;; Author: Jambunathan K <kjambunathan at gmail dot com>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -245,13 +245,13 @@ standard Emacs.")
 (defvar org-odt-automatic-styles '()
   "Registry of automatic styles for various OBJECT-TYPEs.
 The variable has the following form:
-\(\(OBJECT-TYPE-A
-  \(\(OBJECT-NAME-A.1 OBJECT-PROPS-A.1\)
-   \(OBJECT-NAME-A.2 OBJECT-PROPS-A.2\) ...\)\)
- \(OBJECT-TYPE-B
-  \(\(OBJECT-NAME-B.1 OBJECT-PROPS-B.1\)
-   \(OBJECT-NAME-B.2 OBJECT-PROPS-B.2\) ...\)\)
- ...\).
+ ((OBJECT-TYPE-A
+   ((OBJECT-NAME-A.1 OBJECT-PROPS-A.1)
+    (OBJECT-NAME-A.2 OBJECT-PROPS-A.2) ...))
+  (OBJECT-TYPE-B
+   ((OBJECT-NAME-B.1 OBJECT-PROPS-B.1)
+    (OBJECT-NAME-B.2 OBJECT-PROPS-B.2) ...))
+  ...).
 
 OBJECT-TYPEs could be \"Section\", \"Table\", \"Figure\" etc.
 OBJECT-PROPS is (typically) a plist created by passing
@@ -276,7 +276,8 @@ This style is much the same as that of \"OrgFixedWidthBlock\"
 except that the foreground and background colors are set
 according to the default face identified by the `htmlfontify'.")
 
-(defvar hfy-optimisations)
+(defvar hfy-optimizations)
+(define-obsolete-variable-alias 'hfy-optimisations 'hfy-optimizations "25.1")
 (defvar org-odt-embedded-formulas-count 0)
 (defvar org-odt-embedded-images-count 0)
 (defvar org-odt-image-size-probe-method
@@ -305,7 +306,7 @@ according to the default face identified by the `htmlfontify'.")
 
 This is an alist where each element is of the form:
 
-  \(STYLE-NAME ATTACH-FMT REF-MODE REF-FMT)
+  (STYLE-NAME ATTACH-FMT REF-MODE REF-FMT)
 
 ATTACH-FMT controls how labels and captions are attached to an
 entity.  It may contain following specifiers - %e and %c.  %e is
@@ -332,7 +333,7 @@ See also `org-odt-format-label'.")
 
 This is a list where each entry is of the form:
 
-  \(CATEGORY-HANDLE OD-VARIABLE LABEL-STYLE CATEGORY-NAME ENUMERATOR-PREDICATE)
+  (CATEGORY-HANDLE OD-VARIABLE LABEL-STYLE CATEGORY-NAME ENUMERATOR-PREDICATE)
 
 CATEGORY_HANDLE identifies the captionable entity in question.
 
@@ -684,11 +685,11 @@ The default value simply returns the value of CONTENTS."
   "Function to format headline text.
 
 This function will be called with 5 arguments:
-TODO      the todo keyword \(string or nil\).
-TODO-TYPE the type of todo \(symbol: `todo', `done', nil\)
-PRIORITY  the priority of the headline \(integer or nil\)
-TEXT      the main headline text \(string\).
-TAGS      the tags string, separated with colons \(string or nil\).
+TODO      the todo keyword (string or nil).
+TODO-TYPE the type of todo (symbol: `todo', `done', nil)
+PRIORITY  the priority of the headline (integer or nil)
+TEXT      the main headline text (string).
+TAGS      the tags string, separated with colons (string or nil).
 
 The function result will be used as headline text."
   :group 'org-export-odt
@@ -861,16 +862,16 @@ TABLE-CELL-STYLE-SELECTOR := `use-first-row-styles'       |
                              `use-banding-rows-styles'    |
                              `use-banding-columns-styles' |
                              `use-first-row-styles'
-ON-OR-OFF                 := `t' | `nil'
+ON-OR-OFF                 := t | nil
 
 For example, with the following configuration
 
 \(setq org-odt-table-styles
-      '\(\(\"TableWithHeaderRowsAndColumns\" \"Custom\"
-         \(\(use-first-row-styles . t\)
-          \(use-first-column-styles . t\)\)\)
-        \(\"TableWithHeaderColumns\" \"Custom\"
-         \(\(use-first-column-styles . t\)\)\)\)\)
+      '((\"TableWithHeaderRowsAndColumns\" \"Custom\"
+         ((use-first-row-styles . t)
+          (use-first-column-styles . t)))
+        (\"TableWithHeaderColumns\" \"Custom\"
+         ((use-first-column-styles . t)))))
 
 1. A table associated with \"TableWithHeaderRowsAndColumns\"
    style will use the following table-cell styles -
@@ -1174,14 +1175,15 @@ table of contents as a string, or nil."
   ;; /TOC/, as otherwise there will be duplicated anchors one in TOC
   ;; and one in the document body.
   ;;
-  ;; FIXME: Are there any other objects that need to be suppressed
-  ;; within TOC?
+  ;; Likewise, links, footnote references and regular targets are also
+  ;; suppressed.
   (let* ((headlines (org-export-collect-headlines info depth scope))
 	 (backend (org-export-create-backend
 		   :parent (org-export-backend-name (plist-get info :back-end))
-		   :transcoders (mapcar
-				 (lambda (type) (cons type (lambda (d c i) c)))
-				 (list 'radio-target)))))
+		   :transcoders '((footnote-reference . ignore)
+				  (link . (lambda (object c i) c))
+				  (radio-target . (lambda (object c i) c))
+				  (target . ignore)))))
     (when headlines
       (org-odt--format-toc
        (and (not scope) (org-export-translate "Table of Contents" :utf-8 info))
@@ -1381,7 +1383,8 @@ original parsed data.  INFO is a plist holding export options."
   ;; Copy styles.xml.  Also dump htmlfontify styles, if there is any.
   ;; Write styles file.
   (let* ((styles-file (plist-get info :odt-styles-file))
-	 (styles-file (and styles-file (read (org-trim styles-file))))
+	 (styles-file (and (org-string-nw-p styles-file)
+			   (read (org-trim styles-file))))
 	 ;; Non-availability of styles.xml is not a critical
 	 ;; error. For now, throw an error.
 	 (styles-file (or styles-file
@@ -1409,8 +1412,8 @@ original parsed data.  INFO is a plist holding export options."
 	 ((member styles-file-type '("odt" "ott"))
 	  (org-odt--zip-extract styles-file "styles.xml" org-odt-zip-dir)))))
      (t
-      (error (format "Invalid specification of styles.xml file: %S"
-		     (plist-get info :odt-styles-file)))))
+      (error "Invalid specification of styles.xml file: %S"
+	     (plist-get info :odt-styles-file))))
 
     ;; create a manifest entry for styles.xml
     (org-odt-create-manifest-file-entry "text/xml" "styles.xml")
@@ -1764,8 +1767,6 @@ CONTENTS is nil.  INFO is a plist holding contextual information."
 	((not
 	  (org-export-footnote-first-reference-p footnote-reference info nil t))
 	 (funcall --format-footnote-reference n))
-	;; Inline definitions are secondary strings.
-	;; Non-inline footnotes definitions are full Org data.
 	(t
 	 (let* ((raw (org-export-get-footnote-definition
 		      footnote-reference info))
@@ -1783,9 +1784,14 @@ CONTENTS is nil.  INFO is a plist holding contextual information."
 						 "OrgFootnoteCenter"
 						 "OrgFootnoteQuotations")))))
 			      info))))
-		   (if (eq (org-element-type raw) 'org-data) def
-		     (format "\n<text:p text:style-name=\"%s\">%s</text:p>"
-			     "Footnote" def)))))
+		   ;; Inline definitions are secondary strings.  We
+		   ;; need to wrap them within a paragraph.
+		   (if (memq (org-element-type (car (org-element-contents raw)))
+			     org-element-all-elements)
+		       def
+		     (format
+		      "\n<text:p text:style-name=\"Footnote\">%s</text:p>"
+		      def)))))
 	   (funcall --format-footnote-definition n def))))))))
 
 
@@ -2780,17 +2786,10 @@ INFO is a plist holding contextual information.  See
 			     (org-export-resolve-fuzzy-link link info)
 			   (org-export-resolve-id-link link info))))
 	(case (org-element-type destination)
-	  ;; Case 1: Fuzzy link points nowhere.
-	  ('nil
-	   (format "<text:span text:style-name=\"%s\">%s</text:span>"
-		   "Emphasis"
-		   (or desc
-		       (org-export-data (org-element-property :raw-link link)
-					info))))
-	  ;; Case 2: Fuzzy link points to a headline.
+	  ;; Fuzzy link points to a headline.  If there's
+	  ;; a description, create a hyperlink.  Otherwise, try to
+	  ;; provide a meaningful description.
 	  (headline
-	   ;; If there's a description, create a hyperlink.
-	   ;; Otherwise, try to provide a meaningful description.
 	   (if (not desc) (org-odt-link--infer-description destination info)
 	     (let ((label
 		    (or (and (string= type "custom-id")
@@ -2799,15 +2798,15 @@ INFO is a plist holding contextual information.  See
 	       (format
 		"<text:a xlink:type=\"simple\" xlink:href=\"#%s\">%s</text:a>"
 		label desc))))
-	  ;; Case 3: Fuzzy link points to a target.
+	  ;; Fuzzy link points to a target.  If there's a description,
+	  ;; create a hyperlink.  Otherwise, try to provide
+	  ;; a meaningful description.
 	  (target
-	   ;; If there's a description, create a hyperlink.
-	   ;; Otherwise, try to provide a meaningful description.
 	   (format "<text:a xlink:type=\"simple\" xlink:href=\"#%s\">%s</text:a>"
 		   (org-export-get-reference destination info)
 		   (or desc (org-export-get-ordinal destination info))))
-	  ;; Case 4: Fuzzy link points to some element (e.g., an
-	  ;; inline image, a math formula or a table).
+	  ;; Fuzzy link points to some element (e.g., an inline image,
+	  ;; a math formula or a table).
 	  (otherwise
 	   (let ((label-reference
 		  (ignore-errors
@@ -3146,8 +3145,8 @@ and prefix with \"OrgSrc\".  For example,
 			       (" " "<text:s/>")
 			       ("	" "<text:tab/>")))
 	 (hfy-face-to-css 'org-odt-hfy-face-to-css)
-	 (hfy-optimisations-1 (copy-sequence hfy-optimisations))
-	 (hfy-optimisations (add-to-list 'hfy-optimisations-1
+	 (hfy-optimizations-1 (copy-sequence hfy-optimizations))
+	 (hfy-optimizations (add-to-list 'hfy-optimizations-1
 					 'body-text-only))
 	 (hfy-begin-span-handler
 	  (lambda (style text-block text-id text-begins-block-p)
@@ -3169,7 +3168,7 @@ and prefix with \"OrgSrc\".  For example,
 		 (with-temp-buffer
 		   (insert code)
 		   (funcall lang-mode)
-		   (font-lock-ensure)
+		   (org-font-lock-ensure)
 		   (buffer-string))))
 	 (fontifier (if use-htmlfontify-p 'org-odt-htmlfontify-string
 		      'org-odt--encode-plain-text))
@@ -4117,8 +4116,8 @@ contextual information."
 					 nil standard-output nil (cdr cmd)))))
 		    (or (zerop exitcode)
 			(error (concat "Unable to create OpenDocument file."
-				       (format "  Zip failed with error (%s)"
-					       err-string)))))
+				       "  Zip failed with error (%s)")
+			       err-string)))
 		  cmds)))
 	     ;; Move the zip file from temporary work directory to
 	     ;; user-mandated location.

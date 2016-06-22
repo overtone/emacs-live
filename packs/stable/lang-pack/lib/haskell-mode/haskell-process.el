@@ -1,4 +1,4 @@
-;;; haskell-process.el --- Communicating with the inferior Haskell process
+;;; haskell-process.el --- Communicating with the inferior Haskell process -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2011  Chris Done
 
@@ -85,7 +85,8 @@ HPTYPE is the result of calling `'haskell-process-type`' function."
                      nil)
                (apply haskell-process-wrapper-function
                       (list
-                       (cons haskell-process-path-ghci haskell-process-args-ghci)))))
+                       (append (haskell-process-path-to-list haskell-process-path-ghci)
+                               haskell-process-args-ghci)))))
       ('cabal-repl
        (append (list (format "Starting inferior `cabal repl' process using %s ..."
                              haskell-process-path-cabal)
@@ -94,17 +95,29 @@ HPTYPE is the result of calling `'haskell-process-type`' function."
                (apply haskell-process-wrapper-function
                       (list
                        (append
-                        (list haskell-process-path-cabal "repl")
+                        (haskell-process-path-to-list haskell-process-path-cabal)
+                        (list "repl")
                         haskell-process-args-cabal-repl
                         (let ((target (haskell-session-target session)))
                           (if target (list target) nil)))))))
-      ('cabal-ghci
-       (append (list (format "Starting inferior cabal-ghci process using %s ..."
-                             haskell-process-path-cabal-ghci)
+      ('stack-ghci
+       (append (list (format "Starting inferior stack GHCi process using %s" haskell-process-path-stack)
                      session-name
                      nil)
                (apply haskell-process-wrapper-function
-                      (list (list haskell-process-path-cabal-ghci))))))))
+                      (list
+                       (append
+                        (haskell-process-path-to-list haskell-process-path-stack)
+                        (list "ghci")
+                        (let ((target (haskell-session-target session)))
+                          (if target (list target) nil))
+                        haskell-process-args-stack-ghci))))))))
+
+(defun haskell-process-path-to-list (path)
+  "Convert a path (which may be a string or a list) to a list."
+  (if (stringp path)
+      (list path)
+    path))
 
 (defun haskell-process-make (name)
   "Make an inferior Haskell process."
@@ -125,7 +138,7 @@ HPTYPE is the result of calling `'haskell-process-type`' function."
           (haskell-process-log
            (propertize "Process reset.\n"
                        'face font-lock-comment-face))
-          (run-hook-with-args 'haskell-process-ended-hook process))))))
+          (run-hook-with-args 'haskell-process-ended-functions process))))))
 
 (defun haskell-process-filter (proc response)
   "The filter for the process pipe."
@@ -179,7 +192,7 @@ HPTYPE is the result of calling `'haskell-process-type`' function."
                          (process-name proc)))
               haskell-sessions))
 
-(defun haskell-process-collect (session response process)
+(defun haskell-process-collect (_session response process)
   "Collect input for the response until receives a prompt."
   (haskell-process-set-response process
                                 (concat (haskell-process-response process) response))
@@ -220,7 +233,7 @@ HPTYPE is the result of calling `'haskell-process-type`' function."
                        'face '((:weight bold))))
           (process-send-string child out))
       (unless (haskell-process-restarting process)
-        (run-hook-with-args 'haskell-process-ended process)))))
+        (run-hook-with-args 'haskell-process-ended-functions process)))))
 
 (defun haskell-process-live-updates (process)
   "Process live updates."
@@ -258,7 +271,7 @@ the response."
             (haskell-command-exec-go cmd))))
     (progn (haskell-process-reset process)
            (haskell-process-set process 'command-queue nil)
-           (run-hook-with-args 'haskell-process-ended process))))
+           (run-hook-with-args 'haskell-process-ended-functions process))))
 
 (defun haskell-process-queue-flushed-p (process)
   "Return t if command queue has been completely processed."
@@ -282,23 +295,36 @@ This uses `accept-process-output' internally."
     (haskell-process-queue-flush process)
     (car-safe (haskell-command-state cmd))))
 
-(defun haskell-process-get-repl-completions (process inputstr)
-  "Perform `:complete repl ...' query for INPUTSTR using PROCESS."
-  (let* ((reqstr (concat ":complete repl "
+(defun haskell-process-get-repl-completions (process inputstr &optional limit)
+  "Query PROCESS with `:complete repl ...' for INPUTSTR.
+Give optional LIMIT arg to limit completion candidates count,
+zero, negative values, and nil means all possible completions.
+Returns NIL when no completions found."
+  (let* ((mlimit (if (and limit (> limit 0))
+                     (concat " " (number-to-string limit) " ")
+                   " "))
+         (reqstr (concat ":complete repl"
+                         mlimit
                          (haskell-string-literal-encode inputstr)))
-         (rawstr (haskell-process-queue-sync-request process reqstr)))
-    (if (string-prefix-p "unknown command " rawstr)
-        (error "GHCi lacks `:complete' support (try installing 7.8 or ghci-ng)")
-      (let* ((s1 (split-string rawstr "\r?\n" t))
-             (cs (mapcar #'haskell-string-literal-decode (cdr s1)))
-             (h0 (car s1))) ;; "<cnt1> <cnt2> <quoted-str>"
-        (unless (string-match "\\`\\([0-9]+\\) \\([0-9]+\\) \\(\".*\"\\)\\'" h0)
-          (error "Invalid `:complete' response"))
-        (let ((cnt1 (match-string 1 h0))
-              (h1 (haskell-string-literal-decode (match-string 3 h0))))
-          (unless (= (string-to-number cnt1) (length cs))
-            (error "Lengths inconsistent in `:complete' reponse"))
-          (cons h1 cs))))))
+         (rawstr (haskell-process-queue-sync-request process reqstr))
+         (response-status (haskell-utils-repl-response-error-status rawstr)))
+    (if (eq 'unknown-command response-status)
+        (error
+         "GHCi lacks `:complete' support (try installing GHC 7.8+ or ghci-ng)")
+      (when rawstr
+        ;; parse REPL response if any
+        (let* ((s1 (split-string rawstr "\r?\n" t))
+               (cs (mapcar #'haskell-string-literal-decode (cdr s1)))
+               (h0 (car s1))) ;; "<limit count> <all count> <unused string>"
+          (unless (string-match
+                   "\\`\\([0-9]+\\) \\([0-9]+\\) \\(\".*\"\\)\\'"
+                   h0)
+            (error "Invalid `:complete' response"))
+          (let ((cnt1 (match-string 1 h0))
+                (h1 (haskell-string-literal-decode (match-string 3 h0))))
+            (unless (= (string-to-number cnt1) (length cs))
+              (error "Lengths inconsistent in `:complete' reponse"))
+            (cons h1 cs)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Accessing the process
@@ -344,7 +370,7 @@ re-asking about the same imports."
   (haskell-process-set p 'evaluating v))
 
 (defun haskell-process-evaluating-p (p)
-  "Set status of evaluating to be on/off."
+  "Get status of evaluating (on/off)."
   (haskell-process-get p 'evaluating))
 
 (defun haskell-process-set-process (p v)
@@ -463,7 +489,7 @@ function and remove this comment.
   "Call the command's complete function."
   (let ((comp-func (haskell-command-complete command)))
     (when comp-func
-      (condition-case e
+      (condition-case-unless-debug e
           (funcall comp-func
                    (haskell-command-state command)
                    response)

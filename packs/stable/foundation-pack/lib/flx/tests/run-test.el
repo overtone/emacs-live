@@ -23,6 +23,13 @@
             flx-root-dir))
 
 
+;; Cask
+(setq package-user-dir
+      (expand-file-name (format ".cask/%s/elpa" emacs-version) flx-root-dir))
+(package-initialize)
+
+
+
 ;; Use ERT from github when this Emacs does not have it
 (unless (locate-library "ert")
   (add-to-list

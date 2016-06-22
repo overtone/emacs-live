@@ -1,16 +1,15 @@
 #+TITLE: Magit-Popup User Manual
 #+AUTHOR: Jonas Bernoulli
 #+EMAIL: jonas@bernoul.li
-#+DATE: 2015
+#+DATE: 2015-2016
 #+LANGUAGE: en
 
 #+TEXINFO_DIR_CATEGORY: Emacs
 #+TEXINFO_DIR_TITLE: Magit-Popup: (magit-popup).
 #+TEXINFO_DIR_DESC: Infix arguments with feedback
-#+SUBTITLE: for version 2.1
+#+SUBTITLE: for version 2.7
 
 #+OPTIONS: H:4 num:3 toc:2
-#+STARTUP: indent
 
 * Copying
 :PROPERTIES:
@@ -26,7 +25,7 @@ suffix commands.
 @end ifnottex
 
 @quotation
-Copyright (C) 2015 Jonas Bernoulli <jonas@@bernoul.li>
+Copyright (C) 2015-2016 Jonas Bernoulli <jonas@@bernoul.li>
 
 You can redistribute this document and/or modify it under the terms
 of the GNU General Public License as published by the Free Software
@@ -187,7 +186,7 @@ interface, it is better to do so directly from the popup buffer.
 
 It is also possible to add additional arguments and commands to an
 existing popup, but that cannot be done directly from the popup (or
-the Custom interface).  See [[*Customizing existing popups][Customizing existing popups]].
+the Custom interface).  See [[*Customizing existing popups]].
 
 Documentation about a popup's arguments and commands can be shown
 directly from the popup.
@@ -223,6 +222,9 @@ buffers along with the other common commands.
 
 It is possible to define additional infix arguments and suffix
 commands to an existing popup using the following functions.
+
+You can find some examples which use the below commands at
+https://github.com/magit/magit/wiki/Additional-proposed-infix-arguments-and-suffix-commands.
 
 - Function: magit-define-popup-switch popup key desc switch &optional enable at prepend
 
@@ -287,17 +289,53 @@ commands to an existing popup using the following functions.
   of another command already defined for POPUP, the command is then
   placed before or after AT, depending on PREPEND.
 
+- Function: magit-define-popup-sequence-action popup key desc command &optional at prepend
+
+  Like ~magit-define-popup-action~, but modifies the value of the
+  ~:sequence-actions~ property instead of ~:actions~.
+
+- Function: magit-define-popup-variable popup key desc command formatter &optional at prepend
+
+  In POPUP, define KEY as COMMAND.
+
+  POPUP is a popup command defined using ~magit-define-popup~.  COMMAND
+  is a command which calls ~magit-popup-set-variable~.  FORMATTER is a
+  function which calls ~magit-popup-format-variable~.  These two
+  functions have to be called with the same arguments.
+
+  KEY is a character representing the event used interactively call
+  the COMMAND.
+
+  DESC is the variable or a representation thereof.  It's not actually
+  used for anything.
+
+  COMMAND is inserted after all other commands already defined for
+  POPUP, unless optional PREPEND is non-nil, in which case it is
+  placed first.  If optional AT is non-nil then it should be the KEY
+  of another command already defined for POPUP, the command is then
+  placed before or after AT, depending on PREPEND."
+
 - Function: magit-change-popup-key popup type from to
 
   In POPUP, bind TO to what FROM was bound to.  TYPE is one of
-  ~:action~, ~:switch~, or ~:option~.  Bind TO and unbind FROM, both are
-  characters.
+  ~:action~, ~:sequence-action~, ~:switch~, or ~:option~.  Bind TO and unbind
+  FROM, both are characters.
 
 - Function: magit-remove-popup-key popup type key
 
   In POPUP, remove KEY's binding of TYPE.  POPUP is a popup command
-  defined using ~magit-define-popup~.  TYPE is one of ~:action~, ~:switch~,
-  or ~:option~.  KEY is the character which is to be unbound.
+  defined using ~magit-define-popup~.  TYPE is one of ~:action~,
+  ~:sequence-action~, ~:switch~, or ~:option~.  KEY is the character which
+  is to be unbound.
+
+It is also possible to change other aspects of a popup by setting a
+property using ~plist-put~.  See [[*Defining prefix commands]] for valid
+properties.  The most likely change Magit users might want to make
+is:
+
+#+BEGIN_SRC emacs-lisp
+  (plist-put magit-show-refs-popup :use-prefix nil)
+#+END_SRC
 
 ** Other options
 
@@ -330,9 +368,27 @@ commands to an existing popup using the following functions.
 
     Ignore prefix arguments.
 
+  This option can be overridden for individual popups.
+  ~magit-show-refs-popup~ for example defaults to invoking the default
+  action directly.  It only shows the popup buffer when a prefix
+  argument is used.  See [[*Customizing existing popups]].
+
 - User Option: magit-popup-manpage-package
 
   The Emacs package used to display man-pages, one of ~man~ or ~woman~.
+
+- User Option: magit-popup-display-buffer-action
+  
+  The option controls how the window used to display a popup buffer is
+  created.  Popup buffers are displayed using ~display-buffer~ with the
+  value of this option as ACTION argument.  You can also set this to
+  nil and instead add an entry to ~display-buffer-alist~.
+
+To emphasize the default action by making it bold use this:
+
+#+BEGIN_SRC emacs-lisp
+  (button-type-put 'magit-popup-action-button 'format " %k %D")
+#+END_SRC
 
 * Defining prefix and suffix commands
 
@@ -481,29 +537,45 @@ commands have to be defined separately using plain ~defun~.
     VALUE is a list whose members have the form (KEY DESC OPTION
     READER), see ~magit-define-popup-option~ for details.
 
+  - ~:variables~
+
+    Git variables which can be set from the popup.  VALUE is a list
+    whose members have the form (KEY DESC COMMAND FORMATTER), see
+    ~magit-define-popup-variable~ for details.
+
   - ~:default-arguments~
 
     The default arguments, a list of switches (which are then enabled
     by default) and options with there default values, as in
     "--OPT~OPTVAL\".
 
-  - ~:man-page~
-
-    The name of the manpage to be displayed when the user requests
-    help for an argument.
-
-  When MODE is ~magit-popup-sequence-mode~, then the following keywords
-  are also meaningful:
-
   - ~:sequence-predicate~
 
     When this function returns non-nil, then the popup uses
-    ~:sequence-actions~ instead of ~:actions~.
+    ~:sequence-actions~ instead of ~:actions~, and does not show the
+    ~:switches~ and ~:options~.
 
   - ~:sequence-actions~
 
     The actions which can be invoked from the popup, when
     ~:sequence-predicate~ returns non-nil.
+
+  - ~:setup-function~
+
+    When this function is specified, then it is used instead of
+    ~magit-popup-default-setup~.
+
+  - ~:refresh-function~
+
+    When this function is specified, then it is used instead of
+    calling ~magit-popup-insert-section~ three times with symbols
+    ~magit-popup-switch-button~, ~magit-popup-option-button~, and finally
+    ~magit-popup-action-button~ as argument.
+
+  - ~:man-page~
+
+    The name of the manpage to be displayed when the user requests
+    help for an argument.
 
 ** Defining suffix commands
 

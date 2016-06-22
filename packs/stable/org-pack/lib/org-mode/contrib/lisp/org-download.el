@@ -1,6 +1,6 @@
 ;;; org-download.el --- Image drag-and-drop for Emacs org-mode
 
-;; Copyright (C) 2014-2015 Free Software Foundation, Inc.
+;; Copyright (C) 2014-2016 Free Software Foundation, Inc.
 
 ;; Author: Oleh Krehel
 ;; Keywords: images, screenshots, download

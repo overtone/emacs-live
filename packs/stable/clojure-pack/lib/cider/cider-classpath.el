@@ -1,6 +1,6 @@
 ;;; cider-classpath.el --- Basic Java classpath browser
 
-;; Copyright © 2014-2015 Bozhidar Batsov
+;; Copyright © 2014-2016 Bozhidar Batsov and CIDER contributors
 
 ;; This program is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -24,9 +24,12 @@
 ;;; Code:
 
 (require 'cider-client)
-(require 'cider-interaction)
+(require 'cider-popup)
+(require 'cider-compat)
 
-(defvar cider-classpath-buffer "*Classpath*")
+(defvar cider-classpath-buffer "*cider-classpath*")
+
+(push cider-classpath-buffer cider-ancillary-buffers)
 
 (defvar cider-classpath-mode-map
   (let ((map (make-sparse-keymap)))
@@ -56,8 +59,7 @@
     (let ((inhibit-read-only t))
       (erase-buffer)
       (dolist (item items)
-        (insert item)
-        (newline))
+        (insert item "\n"))
       (goto-char (point-min)))))
 
 (defun cider-classpath-properties (text)
@@ -88,6 +90,8 @@
 (defun cider-classpath ()
   "List all classpath entries."
   (interactive)
+  (cider-ensure-connected)
+  (cider-ensure-op-supported "classpath")
   (with-current-buffer (cider-popup-buffer cider-classpath-buffer t)
     (cider-classpath-list (current-buffer)
                           (mapcar (lambda (name)
@@ -98,7 +102,9 @@
 (defun cider-open-classpath-entry ()
   "Open a classpath entry."
   (interactive)
-  (-when-let (entry (completing-read "Classpath entries: " (cider-sync-request:classpath)))
+  (cider-ensure-connected)
+  (cider-ensure-op-supported "classpath")
+  (when-let ((entry (completing-read "Classpath entries: " (cider-sync-request:classpath))))
     (find-file-other-window entry)))
 
 (provide 'cider-classpath)

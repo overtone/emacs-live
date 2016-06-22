@@ -1,6 +1,6 @@
 ;;; ob-dot.el --- org-babel functions for dot evaluation
 
-;; Copyright (C) 2009-2014 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2016 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;; Keywords: literate programming, reproducible research
@@ -53,7 +53,7 @@
 	     (value (cdr pair)))
 	 (setq body
 	       (replace-regexp-in-string
-		(concat "\$" (regexp-quote name))
+		(concat "$" (regexp-quote name))
 		(if (stringp value) value (format "%S" value))
 		body
 		t

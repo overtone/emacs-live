@@ -1,6 +1,6 @@
 ;;; org-notify.el --- Notifications for Org-mode
 
-;; Copyright (C) 2012, 2013, 2014  Free Software Foundation, Inc.
+;; Copyright (C) 2012-2016  Free Software Foundation, Inc.
 
 ;; Author: Peter Münster <pmrb@free.fr>
 ;; Keywords: notification, todo-list, alarm, reminder, pop-up
@@ -120,7 +120,7 @@ simple timestamp string."
   "Create one todo item."
   (macrolet ((get (k) `(plist-get list ,k))
              (pr (k v) `(setq result (plist-put result ,k ,v))))
-    (let* ((list (nth 1 heading))      (notify (or (get :notify) "default"))
+    (let* ((list (nth 1 heading))      (notify (or (get :NOTIFY) "default"))
            (deadline (org-notify-convert-deadline (get :deadline)))
 	   (heading (get :raw-value))
            result)
@@ -148,7 +148,7 @@ simple timestamp string."
                          'headline 'org-notify-make-todo)))))
 
 (defun org-notify-maybe-too-late (diff period heading)
-  "Print waring message, when notified significantly later than defined by
+  "Print warning message, when notified significantly later than defined by
 PERIOD."
   (if (> (/ diff period) 1.5)
       (message "Warning: notification for \"%s\" behind schedule!" heading))

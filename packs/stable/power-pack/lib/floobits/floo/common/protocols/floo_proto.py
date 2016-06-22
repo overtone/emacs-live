@@ -137,6 +137,7 @@ class FlooProtocol(base.BaseProtocol):
             if e.errno == iscon_errno:
                 pass
             elif e.errno in connect_errno:
+                msg.debug('connect_errno: ', str_e(e))
                 return utils.set_timeout(self._connect, 20, host, port, attempts + 1)
             else:
                 msg.error('Error connecting: ', str_e(e))
@@ -197,7 +198,7 @@ class FlooProtocol(base.BaseProtocol):
         if self._secure:
             with open(self._cert_path, 'wb') as cert_fd:
                 cert_fd.write(cert.CA_CERT.encode('utf-8'))
-        conn_msg = 'Connecting to %s:%s' % (self.host, self.port)
+        conn_msg = '%s:%s: Connecting...' % (self.host, self.port)
         if self.port != self._port or self.host != self._host:
             conn_msg += ' (proxying through %s:%s)' % (self._host, self._port)
         if host != self._host:
@@ -236,12 +237,15 @@ class FlooProtocol(base.BaseProtocol):
             sock_debug('Floobits: ssl.SSLError. This is expected sometimes.')
             if e.args[0] in [ssl.SSL_ERROR_WANT_READ, ssl.SSL_ERROR_WANT_WRITE]:
                 return False
+            self.stop()
+            editor.error_message('Floobits SSL handshake error: %s' % str(e))
+            sock_debug('SSLError args: %s' % ''.join([str(a) for a in e.args]))
         except Exception as e:
             msg.error('Error in SSL handshake: ', str_e(e))
         else:
             sock_debug('Successful handshake')
             self._needs_handshake = False
-            editor.status_message('SSL handshake completed to %s:%s' % (self.host, self.port))
+            editor.status_message('%s:%s: SSL handshake completed' % (self.host, self.port))
             return True
 
         self.reconnect()
@@ -331,6 +335,8 @@ class FlooProtocol(base.BaseProtocol):
             self._reconnect_timeout = utils.set_timeout(self.connect, self._reconnect_delay)
         elif self._retries == 0:
             editor.error_message('Floobits Error! Too many reconnect failures. Giving up.')
+            self.stop()
+            return
 
         # Only use proxy.floobits.com if we're trying to connect to floobits.com
         G.OUTBOUND_FILTERING = self.host == 'floobits.com' and self._retries % 4 == 0

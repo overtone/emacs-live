@@ -1,6 +1,6 @@
 ;;; org-crypt.el --- Public key encryption for org-mode entries
 
-;; Copyright (C) 2007-2014 Free Software Foundation, Inc.
+;; Copyright (C) 2007-2016 Free Software Foundation, Inc.
 
 ;; Emacs Lisp Archive Entry
 ;; Filename: org-crypt.el
@@ -104,10 +104,10 @@ t        : Disable auto-save-mode for the current buffer
 nil      : Leave auto-save-mode enabled.
            This may cause data to be written to disk unencrypted!
 
-'ask     : Ask user whether or not to disable auto-save-mode
+`ask'    : Ask user whether or not to disable auto-save-mode
            for the current buffer.
 
-'encrypt : Leave auto-save-mode enabled for the current buffer,
+`encrypt': Leave auto-save-mode enabled for the current buffer,
            but automatically re-encrypt all decrypted entries
            *before* auto-saving.
            NOTE: This only works for entries which have a tag
@@ -133,9 +133,10 @@ See `org-crypt-disable-auto-save'."
        (and
 	(eq org-crypt-disable-auto-save 'ask)
 	(y-or-n-p "org-decrypt: auto-save-mode may cause leakage.  Disable it for current buffer? ")))
-      (message (concat "org-decrypt: Disabling auto-save-mode for " (or (buffer-file-name) (current-buffer))))
-					; The argument to auto-save-mode has to be "-1", since
-					; giving a "nil" argument toggles instead of disabling.
+      (message "org-decrypt: Disabling auto-save-mode for %s"
+               (or (buffer-file-name) (current-buffer)))
+      ;; The argument to auto-save-mode has to be "-1", since
+      ;; giving a "nil" argument toggles instead of disabling.
       (auto-save-mode -1))
      ((eq org-crypt-disable-auto-save nil)
       (message "org-decrypt: Decrypting entry with auto-save-mode enabled.  This may cause leakage."))
@@ -190,7 +191,7 @@ See `org-crypt-disable-auto-save'."
           (insert encrypted-text)
           (when folded
             (goto-char start-heading)
-            (hide-subtree))
+            (outline-hide-subtree))
           nil)))))
 
 (defun org-decrypt-entry ()
@@ -224,7 +225,7 @@ See `org-crypt-disable-auto-save'."
 	    ;; outline property starts at the \n of the heading.
 	    (delete-region (1- (point)) end)
 	    ;; Store a checksum of the decrypted and the encrypted
-	    ;; text value.  This allow to reuse the same encrypted text
+	    ;; text value.  This allows reusing the same encrypted text
 	    ;; if the text does not change, and therefore avoid a
 	    ;; re-encryption process.
 	    (insert "\n" (propertize decrypted-text

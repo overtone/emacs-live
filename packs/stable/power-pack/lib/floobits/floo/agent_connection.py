@@ -38,8 +38,8 @@ class AgentConnection(floo_handler.FlooHandler):
         missing = [buf['path'] for buf in missing_bufs]
         changed = [buf['path'] for buf in changed_bufs]
 
-        to_upload = set(new_files + changed).difference(set(ignored))
-        to_remove = missing + ignored
+        to_remove = set(missing + ignored)
+        to_upload = set(new_files + changed).difference(to_remove)
         to_fetch = changed + missing
         to_upload_len = len(to_upload)
         to_remove_len = len(to_remove)

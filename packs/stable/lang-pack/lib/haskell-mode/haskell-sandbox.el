@@ -1,4 +1,4 @@
-;;; haskell-sandbox.el --- Support for sandboxes
+;;; haskell-sandbox.el --- Support for sandboxes -*- lexical-binding: t -*-
 
 ;; Copyright (c) 2014 Chris Done. All rights reserved.
 
@@ -21,7 +21,7 @@
 (require 'haskell-session)
 
 (defun haskell-sandbox-path (session)
-  "Is there a cabal sandbox?"
+  "If there is a haskell-session, return the path to the usual sandbox location."
   (concat (haskell-session-cabal-dir session)
           "/.cabal-sandbox"))
 

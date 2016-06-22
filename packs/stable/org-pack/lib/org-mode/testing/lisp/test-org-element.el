@@ -410,10 +410,14 @@ Some other text
    (equal ":results output"
 	  (org-test-with-temp-text "#+CALL: test[:results output]()"
 	    (org-element-property :inside-header (org-element-at-point)))))
-  ;; Parse arguments.
+  ;; Parse arguments, which can be nested.
   (should
    (equal "n=4"
 	  (org-test-with-temp-text "#+CALL: test(n=4)"
+	    (org-element-property :arguments (org-element-at-point)))))
+  (should
+   (equal "test()"
+	  (org-test-with-temp-text "#+CALL: test(test())"
 	    (org-element-property :arguments (org-element-at-point)))))
   ;; Parse end header.
   (should
@@ -926,7 +930,18 @@ Some other text
   ;; Handle non-empty blank line at the end of buffer.
   (should
    (org-test-with-temp-text "[fn:1] Definition\n "
-     (= (org-element-property :end (org-element-at-point)) (point-max)))))
+     (= (org-element-property :end (org-element-at-point)) (point-max))))
+  ;; Footnote with attributes.
+  (should
+   (= 1
+      (org-test-with-temp-text "#+attr_latex: :offset 0in\n[fn:1] A footnote."
+	(length
+	 (org-element-map (org-element-parse-buffer) 'footnote-definition
+	   #'identity)))))
+  (should
+   (org-test-with-temp-text "[fn:1] 1\n\n#+attr_latex: :offset 0in\n[fn:2] 2"
+     (goto-char (org-element-property :end (org-element-at-point)))
+     (looking-at "#"))))
 
 
 ;;;; Footnotes Reference.
@@ -1217,17 +1232,28 @@ Contents
       ;; Planning info.
       (should
        (org-test-with-temp-text "
-*************** Task
+*************** Task<point>
 DEADLINE: <2012-03-29 thu.>
 *************** END"
-	 (forward-line)
 	 (org-element-property :deadline (org-element-at-point))))
+      (should
+       (eq 'planning
+	   (org-test-with-temp-text "
+*************** Task
+<point>DEADLINE: <2012-03-29 thu.>
+*************** END"
+	     (org-element-type (org-element-at-point)))))
       (should-not
        (org-test-with-temp-text "
-*************** Task
+*************** Task<point>
 DEADLINE: <2012-03-29 thu.>"
-	 (forward-line)
 	 (org-element-property :deadline (org-element-at-point))))
+      (should-not
+       (eq 'planning
+	   (org-test-with-temp-text "
+*************** Task
+<point>DEADLINE: <2012-03-29 thu.>"
+	     (org-element-type (org-element-at-point)))))
       ;; Priority.
       (should
        (eq
@@ -1624,17 +1650,22 @@ e^{i\\pi}+1=0
        (equal (org-element-property :path (org-element-context)) file))))
   ;; ... multi-line link.
   (should
-   (equal "//orgmode.org"
-	  (org-test-with-temp-text "[[http://orgmode.\norg]]"
+   (equal "ls *.org"
+	  (org-test-with-temp-text "[[shell:ls\n*.org]]"
 	    (org-element-property :path (org-element-context)))))
   ;; Plain link.
   (should
    (org-test-with-temp-text "A link: http://orgmode.org"
      (org-element-map (org-element-parse-buffer) 'link 'identity)))
-  ;; Angular link.
+  ;; Angular link.  Follow RFC 3986.
   (should
-   (org-test-with-temp-text "A link: <http://orgmode.org>"
-     (org-element-map (org-element-parse-buffer) 'link 'identity nil t)))
+   (eq 'link
+       (org-test-with-temp-text "A link: <point><http://orgmode.org>"
+	 (org-element-type (org-element-context)))))
+  (should
+   (equal "//orgmode.org"
+       (org-test-with-temp-text "A link: <point><http://orgmode\n.org>"
+	 (org-element-property :path (org-element-context)))))
   ;; Link abbreviation.
   (should
    (equal "http"
@@ -2933,29 +2964,34 @@ DEADLINE: <2012-03-29 thu.> SCHEDULED: <2012-03-29 thu.> CLOSED: [2012-03-29 thu
 
 (ert-deftest test-org-element/link-interpreter ()
   "Test link interpreter."
-  ;; 1. Links targeted from a radio target.
+  ;; Links targeted from a radio target.
   (should (equal (let ((org-target-link-regexp "radio-target"))
 		   (org-test-parse-and-interpret "a radio-target"))
 		 "a radio-target\n"))
-  ;; 2. Regular links.
-  ;;
-  ;; 2.1. Without description.
+  ;; Links without description.
   (should (equal (org-test-parse-and-interpret "[[http://orgmode.org]]")
 		 "[[http://orgmode.org]]\n"))
-  ;; 2.2. With a description.
+  ;; Links with a description.
   (should (equal (org-test-parse-and-interpret
 		  "[[http://orgmode.org][Org mode]]")
 		 "[[http://orgmode.org][Org mode]]\n"))
-  ;; 2.3. Id links.
+  ;; File links.
+  (should
+   (equal (org-test-parse-and-interpret "[[file+emacs:todo.org]]")
+	  "[[file+emacs:todo.org]]\n"))
+  (should
+   (equal (org-test-parse-and-interpret "[[file:todo.org::*task]]")
+	  "[[file:todo.org::*task]]\n"))
+  ;; Id links.
   (should (equal (org-test-parse-and-interpret "[[id:aaaa]]") "[[id:aaaa]]\n"))
-  ;; 2.4. Custom-id links.
+  ;; Custom-id links.
   (should (equal (org-test-parse-and-interpret "[[#id]]") "[[#id]]\n"))
-  ;; 2.5 Code-ref links.
+  ;; Code-ref links.
   (should (equal (org-test-parse-and-interpret "[[(ref)]]") "[[(ref)]]\n"))
-  ;; 3. Normalize plain links.
+  ;; Normalize plain links.
   (should (equal (org-test-parse-and-interpret "http://orgmode.org")
 		 "[[http://orgmode.org]]\n"))
-  ;; 4. Normalize angular links.
+  ;; Normalize angular links.
   (should (equal (org-test-parse-and-interpret "<http://orgmode.org>")
 		 "[[http://orgmode.org]]\n")))
 
@@ -3296,54 +3332,58 @@ Text
   ;; Return closest object containing point.
   (should
    (eq 'underline
-       (org-test-with-temp-text "Some *text with _underline_ text*"
-	 (progn (search-forward "under")
-		(org-element-type (org-element-context))))))
+       (org-test-with-temp-text "Some *text with _under<point>line_ text*"
+	 (org-element-type (org-element-context)))))
   ;; Find objects in secondary strings.
   (should
    (eq 'underline
-       (org-test-with-temp-text "* Headline _with_ underlining"
-	 (progn (search-forward "w")
-		(org-element-type (org-element-context))))))
+       (org-test-with-temp-text "* Headline _<point>with_ underlining"
+	 (org-element-type (org-element-context)))))
   ;; Find objects in objects.
   (should
    (eq 'macro
-       (org-test-with-temp-text "| a | {{{macro}}} |"
-	 (progn (search-forward "{")
-		(org-element-type (org-element-context))))))
+       (org-test-with-temp-text "| a | {<point>{{macro}}} |"
+	 (org-element-type (org-element-context)))))
   (should
    (eq 'table-cell
-       (org-test-with-temp-text "| a | b {{{macro}}} |"
-	 (progn (search-forward "b")
-		(org-element-type (org-element-context))))))
+       (org-test-with-temp-text "| a | b<point> {{{macro}}} |"
+	 (org-element-type (org-element-context)))))
   ;; Find objects in planning lines.
   (should
    (eq 'timestamp
-       (org-test-with-temp-text "* H\n  SCHEDULED: <2012-03-29 thu.>"
-	 (search-forward "2012")
+       (org-test-with-temp-text "* H\n  SCHEDULED: <2012<point>-03-29 thu.>"
 	 (org-element-type (org-element-context)))))
   (should-not
    (eq 'timestamp
-       (org-test-with-temp-text "* H\n  SCHEDULED: <2012-03-29 thu.>"
-	 (search-forward "SCHEDULED")
+       (org-test-with-temp-text "* H\n  SCHEDULED<point>: <2012-03-29 thu.>"
+	 (org-element-type (org-element-context)))))
+  ;; Find objects in item tags.
+  (should
+   (eq 'bold
+       (org-test-with-temp-text "- *bo<point>ld* ::"
+	 (org-element-type (org-element-context)))))
+  (should-not
+   (eq 'bold
+       (org-test-with-temp-text "- *bold* ::<point>"
+	 (org-element-type (org-element-context)))))
+  (should-not
+   (eq 'bold
+       (org-test-with-temp-text "- *bold* ::\n<point>"
 	 (org-element-type (org-element-context)))))
   ;; Do not find objects in table rules.
   (should
    (eq 'table-row
-       (org-test-with-temp-text "| a | b |\n+---+---+\n| c | d |"
-	 (forward-line)
+       (org-test-with-temp-text "| a | b |\n|-<point>--|---|\n| c | d |"
 	 (org-element-type (org-element-context)))))
   ;; Find objects in parsed affiliated keywords.
   (should
    (eq 'macro
-       (org-test-with-temp-text "#+CAPTION: {{{macro}}}\n| a | b |."
-	 (progn (search-forward "{")
-		(org-element-type (org-element-context))))))
+       (org-test-with-temp-text "#+CAPTION: {<point>{{macro}}}\n| a | b |"
+	 (org-element-type (org-element-context)))))
   (should
    (eq 'bold
-       (org-test-with-temp-text "#+caption: *bold*\nParagraph"
-	 (progn (search-forward "*")
-		(org-element-type (org-element-context))))))
+       (org-test-with-temp-text "#+caption: *<point>bold*\nParagraph"
+	 (org-element-type (org-element-context)))))
   ;; Find objects at the end of buffer.
   (should
    (eq 'bold
@@ -3353,40 +3393,42 @@ Text
   ;; Correctly set `:parent' property.
   (should
    (eq 'paragraph
-       (org-test-with-temp-text "Some *bold* text"
-	 (progn (search-forward "bold")
-		(org-element-type
-		 (org-element-property :parent (org-element-context)))))))
+       (org-test-with-temp-text "Some *bold<point>* text"
+	 (org-element-type
+	  (org-element-property :parent (org-element-context))))))
   ;; Between two objects, return the second one.
   (should
    (eq 'macro
-       (org-test-with-temp-text "<<target>>{{{test}}}"
-	 (progn (search-forward "{")
-		(backward-char)
-		(org-element-type (org-element-context))))))
+       (org-test-with-temp-text "<<target>><point>{{{test}}}"
+	 (org-element-type (org-element-context)))))
   ;; Test optional argument.
   (should
    (eq 'underline
-       (org-test-with-temp-text "Some *text with _underline_ text*"
-	 (progn
-	   (search-forward "under")
-	   (org-element-type (org-element-context (org-element-at-point)))))))
+       (org-test-with-temp-text "Some *text with _under<point>line_ text*"
+	 (org-element-type (org-element-context (org-element-at-point))))))
   ;; Special case: bold object at the beginning of a headline.
   (should
    (eq 'bold
-       (org-test-with-temp-text "* *bold*"
-	 (search-forward "bo")
+       (org-test-with-temp-text "* *bo<point>ld*"
 	 (org-element-type (org-element-context)))))
   ;; Special case: incomplete cell at the end of a table row.
   (should
    (eq 'table-cell
-       (org-test-with-temp-text "|a|b|c"
-	 (goto-char (point-max))
+       (org-test-with-temp-text "|a|b|c<point>"
 	 (org-element-type (org-element-context)))))
   ;; Special case: objects in inline footnotes.
   (should
    (eq 'link
        (org-test-with-temp-text "[fn::[[<point>http://orgmode.org]]]"
+	 (org-element-type (org-element-context)))))
+  ;; Special case: tags looking like a link.
+  (should-not
+   (eq 'link
+       (org-test-with-temp-text "* Headline :file<point>:tags:"
+	 (org-element-type (org-element-context)))))
+  (should
+   (eq 'link
+       (org-test-with-temp-text "* Headline :file<point>:tags: :real:tag:"
 	 (org-element-type (org-element-context))))))
 
 
@@ -3586,7 +3628,21 @@ Text
 	 (let ((org-element-use-cache t))
 	   (org-element-at-point)
 	   (insert "+:")
-	   (org-element-type (org-element-at-point)))))))
+	   (org-element-type (org-element-at-point))))))
+  ;; Properly handle elements not altered by modifications but whose
+  ;; parents were removed from cache.
+  (should
+   (org-test-with-temp-text
+       "Paragraph\n\n\n\n#+begin_center\n<point>contents\n#+end_center"
+     (let ((org-element-use-cache t)
+	   (parent-end (point-max)))
+       (org-element-at-point)
+       (save-excursion (search-backward "Paragraph")
+		       (forward-line 2)
+		       (insert "\n  "))
+       (eq (org-element-property
+	    :end (org-element-property :parent (org-element-at-point)))
+	   (+ parent-end 3))))))
 
 
 (provide 'test-org-element)

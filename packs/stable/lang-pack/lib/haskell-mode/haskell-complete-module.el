@@ -1,4 +1,4 @@
-;;; haskell-complete-module.el --- A fast way to complete Haskell module names
+;;; haskell-complete-module.el --- A fast way to complete Haskell module names -*- lexical-binding: t -*-
 
 ;; Copyright (c) 2014 Chris Done. All rights reserved.
 
@@ -33,8 +33,7 @@
 
 (defun haskell-complete-module-read (prompt candidates)
   "Interactively auto-complete from a list of candidates."
-  (let ((continue t)
-        (stack (list))
+  (let ((stack (list))
         (pattern "")
         (result nil))
     (delete-dups candidates)

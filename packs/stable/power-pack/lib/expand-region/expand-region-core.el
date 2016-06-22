@@ -61,7 +61,7 @@
 
 ;; save-mark-and-excursion in Emacs 25 works like save-excursion did before
 (eval-when-compile
-  (when (not (fboundp 'save-mark-and-excursion))
+  (when (< emacs-major-version 25)
     (defmacro save-mark-and-excursion (&rest body)
       `(save-excursion ,@body))))
 
@@ -188,7 +188,7 @@ before calling `er/expand-region' for the first time."
          (msg (car msg-and-bindings))
          (bindings (cdr msg-and-bindings)))
     (when repeat-key
-      (set-temporary-overlay-map
+      (er/set-temporary-overlay-map
        (let ((map (make-sparse-keymap)))
          (dolist (binding bindings map)
            (define-key map (read-kbd-macro (car binding))
@@ -200,9 +200,10 @@ before calling `er/expand-region' for the first time."
        t)
       (or (minibufferp) (message "%s" msg)))))
 
-(when (not (fboundp 'set-temporary-overlay-map))
+(if (fboundp 'set-temporary-overlay-map)
+    (fset 'er/set-temporary-overlay-map 'set-temporary-overlay-map)
   ;; Backport this function from newer emacs versions
-  (defun set-temporary-overlay-map (map &optional keep-pred)
+  (defun er/set-temporary-overlay-map (map &optional keep-pred)
     "Set a new keymap that will only exist for a short period of time.
 The new keymap to use must be given in the MAP variable. When to
 remove the keymap depends on user input and KEEP-PRED:

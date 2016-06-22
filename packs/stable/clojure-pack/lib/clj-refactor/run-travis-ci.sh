@@ -10,4 +10,5 @@ echo "ECUKES_EMACS = $ECUKES_EMACS"
 "$ECUKES_EMACS" --version
 echo
 
+cask exec emacs -batch -Q -L . -eval "(progn (setq byte-compile-error-on-warn t) (batch-byte-compile))" clj-refactor.el
 exec ./run-tests.sh $TAGS

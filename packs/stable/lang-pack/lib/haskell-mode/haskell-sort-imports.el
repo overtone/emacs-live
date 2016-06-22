@@ -1,4 +1,4 @@
-;;; haskell-sort-imports.el --- Sort the list of Haskell imports at the point alphabetically
+;;; haskell-sort-imports.el --- Sort the list of Haskell imports at the point alphabetically -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2010  Chris Done
 
@@ -30,6 +30,8 @@
 
 ;;; Code:
 
+(require 'cl-lib)
+
 (defvar haskell-sort-imports-regexp
   (concat "^import[ ]+"
           "\\(qualified \\)?"
@@ -53,14 +55,15 @@ within that region."
           (progn (goto-char (region-beginning))
                  (haskell-sort-imports-goto-import-start))
         (haskell-sort-imports-goto-group-start))
-      (let ((start (point))
-            (imports (haskell-sort-imports-collect-imports)))
-        (delete-region start (point))
-        (mapc (lambda (import)
-                (insert import "\n"))
-              (sort imports (lambda (a b)
-                              (string< (haskell-sort-imports-normalize a)
-                                       (haskell-sort-imports-normalize b)))))
+      (let* ((start (point))
+             (imports (haskell-sort-imports-collect-imports))
+             (sorted (sort (cl-copy-list imports)
+                           (lambda (a b)
+                             (string< (haskell-sort-imports-normalize a)
+                                      (haskell-sort-imports-normalize b))))))
+        (when (not (equal imports sorted))
+          (delete-region start (point))
+          (mapc (lambda (import) (insert import "\n")) sorted))
         (goto-char start)
         (when (search-forward current-string nil t 1)
           (forward-char (- (length current-string)))

@@ -18,33 +18,17 @@
 (require 'ert)
 (require 's)
 
-(defun clojure-expected-ns ()
-  "Returns the namespace name that the file should have."
-  (let* ((project-dir (file-truename
-                       (locate-dominating-file default-directory
-                                               "project.clj")))
-         (relative (substring (file-truename (buffer-file-name)) (length project-dir) -4)))
-    (replace-regexp-in-string
-     "_" "-" (mapconcat 'identity (cdr (split-string relative "/")) "."))))
-
 (Setup
- (setq cljr-use-multiple-cursors t)
+ ;; Used in cljr--maybe-eval-ns-form
+ (defun cider-eval-ns-form (&rest _))
+ (defun cljr--ensure-op-supported (op) t)
+ (let ((tmp-dir(expand-file-name "tmp" clj-refactor-root-path)))
+   (when (file-directory-p tmp-dir)
+     (delete-directory tmp-dir t)))
  (yas-global-mode 1)
+ (setq cljr-use-multiple-cursors t)
  (cljr-add-keybindings-with-prefix "C-!")
  (add-hook 'clojure-mode-hook (lambda () (clj-refactor-mode))))
-
-(Before
- (save-all-buffers-dont-ask)
- (kill-matching-buffers-dont-ask "clj"))
-
-(defun save-all-buffers-dont-ask ()
-  (dolist (buffer (buffer-list))
-    (with-current-buffer buffer
-      (let ((filename (buffer-file-name)))
-        (when (and filename
-                   (or (file-exists-p filename)
-                       (s-ends-with? ".clj" filename)))
-          (save-buffer))))))
 
 (defun kill-matching-buffers-dont-ask (regexp &optional internal-too)
   (dolist (buffer (buffer-list))
@@ -52,12 +36,24 @@
       (when (and name (not (string-equal name ""))
                  (or internal-too (/= (aref name 0) ?\s))
                  (string-match regexp name))
-        (kill-buffer buffer)))))
+        (with-current-buffer buffer
+          (set-buffer-modified-p nil)
+          (kill-buffer))))))
+
+(defun kill-all-buffers-dont-ask (&optional internal-too)
+  (dolist (buffer (buffer-list))
+    (let ((name (buffer-name buffer)))
+      (when (and name (not (string-equal name ""))
+                 (or internal-too (/= (aref name 0) ?\s)))
+        (with-current-buffer buffer
+          (set-buffer-modified-p nil)
+          (kill-buffer))))))
+
+(Before
+ )
 
 (After
- (save-all-buffers-dont-ask)
- (kill-matching-buffers-dont-ask "clj")
- (delete-directory (expand-file-name "tmp" clj-refactor-root-path) t))
+ (kill-all-buffers-dont-ask))
 
 (Teardown
  ;; After when everything has been run

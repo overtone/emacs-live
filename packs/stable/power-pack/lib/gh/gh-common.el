@@ -66,16 +66,18 @@
 (defclass gh-user (gh-object)
   ((login :initarg :login)
    (id :initarg :id)
+   (avatar-url :initarg :avatar-url)
    (gravatar-url :initarg :gravatar-url)
    (url :initarg :url))
   "Github user object")
 
 (defmethod gh-object-read-into ((user gh-user) data)
   (call-next-method)
-  (with-slots (login id gravatar-url url)
+  (with-slots (login id avatar-url gravatar-url url)
       user
     (setq login (gh-read data 'login)
           id (gh-read data 'id)
+          avatar-url (gh-read data 'avatar_url)
           gravatar-url (gh-read data 'gravatar_url)
           url (gh-read data 'url))))
 

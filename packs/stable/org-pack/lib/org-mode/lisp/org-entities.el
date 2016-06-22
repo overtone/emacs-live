@@ -1,6 +1,6 @@
 ;;; org-entities.el --- Support for special entities in Org-mode
 
-;; Copyright (C) 2010-2015 Free Software Foundation, Inc.
+;; Copyright (C) 2010-2016 Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <carsten at orgmode dot org>,
 ;;         Ulf Stegemann <ulf at zeitform dot de>
@@ -296,11 +296,7 @@ packages to be loaded, add these packages to `org-latex-packages-alist'."
      ("pound" "\\pounds{}" nil "&pound;" "pound" "£" "£")
      ("yen" "\\textyen{}" nil "&yen;" "yen" "¥" "¥")
      ("euro" "\\texteuro{}" nil "&euro;" "EUR" "EUR" "€")
-     ("EUR" "\\EUR{}" nil "&euro;" "EUR" "EUR" "€")
-     ("EURdig" "\\EURdig{}" nil "&euro;" "EUR" "EUR" "€")
-     ("EURhv" "\\EURhv{}" nil "&euro;" "EUR" "EUR" "€")
-     ("EURcr" "\\EURcr{}" nil "&euro;" "EUR" "EUR" "€")
-     ("EURtm" "\\EURtm{}" nil "&euro;" "EUR" "EUR" "€")
+     ("EUR" "\\texteuro{}" nil "&euro;" "EUR" "EUR" "€")
 
      "** Property Marks"
      ("copy" "\\textcopyright{}" nil "&copy;" "(c)" "©" "©")
@@ -330,7 +326,7 @@ packages to be loaded, add these packages to `org-latex-packages-alist'."
      ("deg" "\\textdegree{}" nil "&deg;" "degree" "°" "°")
      ("prime" "\\prime" t "&prime;" "'" "'" "′")
      ("Prime" "\\prime{}\\prime" t "&Prime;" "''" "''" "″")
-     ("infin" "\\propto" t "&infin;" "[infinity]" "[infinity]" "∞")
+     ("infin" "\\infty" t "&infin;" "[infinity]" "[infinity]" "∞")
      ("infty" "\\infty" t "&infin;" "[infinity]" "[infinity]" "∞")
      ("prop" "\\propto" t "&prop;" "[proportional to]" "[proportional to]" "∝")
      ("propto" "\\propto" t "&prop;" "[proportional to]" "[proportional to]" "∝")
@@ -342,6 +338,8 @@ packages to be loaded, add these packages to `org-latex-packages-alist'."
      ("vee" "\\vee" t "&or;" "[logical or]" "[logical or]" "∨")
      ("cap" "\\cap" t "&cap;" "[intersection]" "[intersection]" "∩")
      ("cup" "\\cup" t "&cup;" "[union]" "[union]" "∪")
+     ("smile" "\\smile" t "&smile;" "[cup product]" "[cup product]" "⌣")
+     ("frown" "\\frown" t "&frown;" "[Cap product]" "[cap product]" "⌢")
      ("int" "\\int" t "&int;" "[integral]" "[integral]" "∫")
      ("therefore" "\\therefore" t "&there4;" "[therefore]" "[therefore]" "∴")
      ("there4" "\\therefore" t "&there4;" "[therefore]" "[therefore]" "∴")
@@ -363,8 +361,8 @@ packages to be loaded, add these packages to `org-latex-packages-alist'."
      ("lessgtr" "\\lessgtr" t "&lessgtr;" "[less than or greater than]" "[less than or greater than]" "≶")
      ("lesseqgtr" "\\lesseqgtr" t "&lesseqgtr;" "[less than or equal or greater than or equal]" "[less than or equal or greater than or equal]" "⋚")
      ("ll" "\\ll" t  "&Lt;" "<<" "<<" "≪")
-     ("Ll" "\lll" t "&Ll;" "<<<" "<<<" "⋘")
-     ("lll" "\lll" t "&Ll;" "<<<" "<<<" "⋘")
+     ("Ll" "\\lll" t "&Ll;" "<<<" "<<<" "⋘")
+     ("lll" "\\lll" t "&Ll;" "<<<" "<<<" "⋘")
      ("gg" "\\gg" t  "&Gt;" ">>" ">>" "≫")
      ("Gg" "\\ggg" t "&Gg;" ">>>" ">>>" "⋙")
      ("ggg" "\\ggg" t "&Gg;" ">>>" ">>>" "⋙")
@@ -497,11 +495,10 @@ packages to be loaded, add these packages to `org-latex-packages-alist'."
      ("rlm" "" nil "&rlm;" "" "" "‏")
 
      "** Smilies"
-     ("smile" "\\smile" t "&smile;" ":-)" ":-)" "⌣")
-     ("frown" "\\frown" t "&frown;" ":-(" ":-(" "⌢")
-     ("smiley" "\\smiley{}" nil "&#9786;" ":-)" ":-)" "☺")
-     ("blacksmile" "\\blacksmiley{}" nil "&#9787;" ":-)" ":-)" "☻")
-     ("sad" "\\frownie{}" nil "&#9785;" ":-(" ":-(" "☹")
+     ("smiley" "\\ddot\\smile" t "&#9786;" ":-)" ":-)" "☺")
+     ("blacksmile" "\\ddot\\smile" t "&#9787;" ":-)" ":-)" "☻")
+     ("sad" "\\ddot\\frown" t "&#9785;" ":-(" ":-(" "☹")
+     ("frowny" "\\ddot\\frown" t "&#9785;" ":-(" ":-(" "☹")
 
      "** Suits"
      ("clubs" "\\clubsuit" t "&clubs;" "[clubs]" "[clubs]" "♣")

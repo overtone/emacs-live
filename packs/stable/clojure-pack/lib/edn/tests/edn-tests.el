@@ -129,10 +129,9 @@
        (equal (hash-table-values m1) (hash-table-values m2))))
 
 (defun make-seeded-hash-table (&rest keys-and-values)
-  (let ((m (make-hash-table :test #'equal))
-        (kv-pairs (-partition 2 keys-and-values)))
-    (dolist (pair kv-pairs)
-      (puthash (car pair) (cadr pair) m))
+  (let ((m (make-hash-table :test #'equal)))
+    (while keys-and-values
+      (puthash (pop keys-and-values) (pop keys-and-values) m))
     m))
 
 (ert-deftest maps ()

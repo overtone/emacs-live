@@ -1,6 +1,6 @@
-;;; magit-log.el --- inspect Git history
+;;; magit-log.el --- inspect Git history  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2010-2015  The Magit Project Contributors
+;; Copyright (C) 2010-2016  The Magit Project Contributors
 ;;
 ;; You should have received a copy of the AUTHORS.md file which
 ;; lists all contributors.  If not, see http://magit.vc/authors.
@@ -33,13 +33,15 @@
 (require 'magit-diff)
 
 (declare-function magit-blame-chunk-get 'magit-blame)
-(declare-function magit-insert-head-header 'magit)
-(declare-function magit-insert-upstream-header 'magit)
+(declare-function magit-blob-visit 'magit)
+(declare-function magit-find-file-noselect 'magit)
+(declare-function magit-insert-head-branch-header 'magit)
+(declare-function magit-insert-upstream-branch-header 'magit)
 (declare-function magit-read-file-from-rev 'magit)
 (declare-function magit-show-commit 'magit)
-(defvar magit-blame-mode)
 (defvar magit-refs-indent-cherry-lines)
 (defvar magit-refs-show-commit-count)
+(defvar magit-status-sections-hook)
 
 (require 'ansi-color)
 (require 'crm)
@@ -56,13 +58,26 @@
   :group 'magit-log
   :type 'hook)
 
-(defcustom magit-log-buffer-name-format "*magit-log: %a*"
-  "Name format for buffers used to display log entries.
+(defcustom magit-log-arguments '("-n256" "--graph" "--decorate")
+  "The log arguments used in `magit-log-mode' buffers."
+  :package-version '(magit . "2.3.0")
+  :group 'magit-log
+  :group 'magit-commands
+  :type '(repeat (string :tag "Argument")))
 
-The following `format'-like specs are supported:
-%a the absolute filename of the repository toplevel.
-%b the basename of the repository toplevel."
-  :package-version '(magit . "2.1.0")
+(defcustom magit-log-remove-graph-args '("--follow" "--grep" "-G" "-S" "-L")
+  "The log arguments that cause the `--graph' argument to be dropped."
+  :package-version '(magit . "2.3.0")
+  :group 'magit-log
+  :type '(repeat (string :tag "Argument"))
+  :options '("--follow" "--grep" "-G" "-S" "-L"))
+
+(defcustom magit-log-revision-headers-format "\
+%+b
+Author:    %aN <%aE>
+Committer: %cN <%cE>"
+  "Additional format string used with the `++header' argument."
+  :package-version '(magit . "2.3.0")
   :group 'magit-log
   :type 'string)
 
@@ -73,42 +88,14 @@ Only considered when moving past the last entry with
   :group 'magit-log
   :type 'boolean)
 
-(defcustom magit-log-cutoff-length 256
-  "The maximum number of commits to show in log and reflog buffers."
-  :group 'magit-log
-  :type '(choice (const :tag "no limit") integer))
-(make-variable-buffer-local 'magit-log-cutoff-length)
-
-(defcustom magit-log-format-graph-function 'identity
-  "Function used to format graphs in log buffers.
-The function is called with one argument, the graph of a single
-line as a propertized string.  It has to return the formatted
-string.  Use `identity' to forgo changing the graph."
-  :package-version '(magit . "2.1.0")
-  :group 'magit-log
-  :type '(choice (function-item identity)
-                 (function-item magit-log-format-unicode-graph)
-                 function))
-
-(defcustom magit-log-format-unicode-graph-alist
-  '((?/ . ?╱) (?| . ?│) (?\\ . ?╲) (?* . ?◆) (?o . ?◇))
-  "Alist used by `magit-log-format-unicode-graph' to translate chars."
-  :package-version '(magit . "1.4.0")
-  :group 'magit-log
-  :type '(repeat (cons :format "%v\n"
-                       (character :format "replace %v ")
-                       (character :format "with %v"))))
-
 (defcustom magit-log-show-margin t
   "Whether to initially show the margin in log buffers.
 
 When non-nil the author name and date are initially displayed in
 the margin of log buffers.  The margin can be shown or hidden in
-the current buffer using the command `magit-toggle-margin'.
-
-When a log buffer contains a verbose log, then the margin is
-never displayed.  In status buffers this option is ignored but
-it is possible to show the margin using the mentioned command."
+the current buffer using the command `magit-toggle-margin'.  In
+status buffers this option is ignored but it is possible to show
+the margin using the mentioned command."
   :package-version '(magit . "2.1.0")
   :group 'magit-log
   :type 'boolean)
@@ -160,6 +147,13 @@ units, in what language, are being used."
                                   :tag "show full name" 7))
                (variable :tag "Duration spec variable")))
 
+(defcustom magit-log-show-refname-after-summary nil
+  "Whether to show refnames after commit summaries.
+This is useful if you use really long branch names."
+  :package-version '(magit . "2.2.0")
+  :group 'magit-log
+  :type 'boolean)
+
 (defface magit-log-graph
   '((((class color) (background light)) :foreground "grey30")
     (((class color) (background  dark)) :foreground "grey80"))
@@ -178,7 +172,22 @@ units, in what language, are being used."
   "Face for the date part of the log output."
   :group 'magit-faces)
 
+;;;; File Log
+
+(defcustom magit-log-buffer-file-locked t
+  "Whether `magit-log-buffer-file' uses a decicated buffer."
+  :package-version '(magit . "2.7.0")
+  :group 'magit-commands
+  :group 'magit-log
+  :type 'boolean)
+
 ;;;; Select Mode
+
+(defcustom magit-log-select-arguments '("-n256" "--decorate")
+  "The log arguments used in `magit-log-select-mode' buffers."
+  :package-version '(magit . "2.3.0")
+  :group 'magit-log
+  :type '(repeat (string :tag "Argument")))
 
 (defcustom magit-log-select-show-usage 'both
   "Whether to show usage information when selecting a commit from a log.
@@ -194,15 +203,6 @@ be nil, in which case no usage information is shown."
 
 ;;;; Cherry Mode
 
-(defcustom magit-cherry-buffer-name-format "*magit-cherry: %a*"
-  "Name format for buffers used to display commits not merged upstream.
-
-The following `format'-like specs are supported:
-%a the absolute filename of the repository toplevel.
-%b the basename of the repository toplevel."
-  :group 'magit-log
-  :type 'string)
-
 (defcustom magit-cherry-sections-hook
   '(magit-insert-cherry-headers
     magit-insert-cherry-commits)
@@ -213,15 +213,22 @@ The following `format'-like specs are supported:
 
 ;;;; Reflog Mode
 
-(defcustom magit-reflog-buffer-name-format "*magit-reflog: %a*"
-  "Name format for buffers used to display reflog entries.
+(defcustom magit-reflog-arguments '("-n256")
+  "The log arguments used in `magit-reflog-mode' buffers."
+  :package-version '(magit . "2.3.0")
+  :group 'magit-log
+  :group 'magit-commands
+  :type '(repeat (string :tag "Argument")))
 
-The following `format'-like specs are supported:
-%a the absolute filename of the repository toplevel.
-%b the basename of the repository toplevel."
+(defcustom magit-reflog-show-margin t
+  "Whether to initially show the margin in reflog buffers.
+
+When non-nil the author name and date are initially displayed in
+the margin of reflog buffers.  The margin can be shown or hidden
+in the current buffer using the command `magit-toggle-margin'."
   :package-version '(magit . "2.1.0")
   :group 'magit-log
-  :type 'string)
+  :type 'boolean)
 
 (defface magit-reflog-commit '((t :foreground "green"))
   "Face for commit commands in reflogs."
@@ -264,71 +271,239 @@ The following `format'-like specs are supported:
 (defcustom magit-log-section-commit-count 10
   "How many recent commits to show in certain log sections.
 How many recent commits `magit-insert-recent-commits' and
-`magit-insert-unpulled-or-recent-commits' (provided there
-are no unpulled commits) show."
+`magit-insert-unpulled-from-upstream-or-recent' (provided
+the upstream isn't ahead of the current branch) show."
   :package-version '(magit . "2.1.0")
   :group 'magit-status
   :type 'number)
 
-(defcustom magit-log-section-args nil
-  "Additional Git arguments used when creating log sections.
-Only `--graph', `--decorate', and `--show-signature' are
-supported.  This option is only a temporary kludge and will
-be removed again.  Note that due to an issue in Git the
-use of `--graph' is very slow with long histories.  See
-http://www.mail-archive.com/git@vger.kernel.org/msg51337.html"
-  :package-version '(magit . "2.1.0")
+(defcustom magit-log-section-arguments '("-n256" "--decorate")
+  "The log arguments used in buffers that show other things besides logs."
+  :package-version '(magit . "2.4.0")
+  :group 'magit-log
   :group 'magit-status
-  :type '(repeat (choice (const "--graph")
-                         (const "--decorate")
-                         (const "--show-signature"))))
+  :type '(repeat (string :tag "Argument")))
+
+(define-obsolete-variable-alias 'magit-log-section-args
+  'magit-log-section-arguments "2.2.0")
 
 ;;; Commands
 
-;;;###autoload (autoload 'magit-log-popup "magit-log" nil t)
-(magit-define-popup magit-log-popup
+(defvar magit-log-popup
+  '(:variable magit-log-arguments
+    :man-page "git-log"
+    :switches ((?g "Show graph"              "--graph")
+               (?c "Show graph in color"     "--color")
+               (?d "Show refnames"           "--decorate")
+               (?S "Show signatures"         "--show-signature")
+               (?u "Show diffs"              "--patch")
+               (?s "Show diffstats"          "--stat")
+               (?h "Show header"             "++header")
+               (?D "Simplify by decoration"  "--simplify-by-decoration")
+               (?f "Follow renames when showing single-file log" "--follow"))
+    :options  ((?n "Limit number of commits" "-n")
+               (?f "Limit to files"          "-- " magit-read-files)
+               (?a "Limit to author"         "--author=")
+               (?o "Order commits by"        "++order=" magit-log-select-order)
+               (?g "Search messages"         "--grep=")
+               (?G "Search changes"          "-G")
+               (?S "Search occurences"       "-S")
+               (?L "Trace line evolution"    "-L" magit-read-file-trace))
+    :actions  ((?l "Log current"             magit-log-current)
+               (?L "Log local branches"      magit-log-branches)
+               (?r "Reflog current"          magit-reflog-current)
+               (?o "Log other"               magit-log)
+               (?b "Log all branches"        magit-log-all-branches)
+               (?O "Reflog other"            magit-reflog)
+               (?h "Log HEAD"                magit-log-head)
+               (?a "Log all references"      magit-log-all)
+               (?H "Reflog HEAD"             magit-reflog-head))
+    :default-action magit-log-current
+    :max-action-columns 3))
+
+(defvar magit-log-mode-refresh-popup
+  '(:variable magit-log-arguments
+    :man-page "git-log"
+    :switches ((?g "Show graph"              "--graph")
+               (?c "Show graph in color"     "--color")
+               (?d "Show refnames"           "--decorate")
+               (?S "Show signatures"         "--show-signature")
+               (?u "Show diffs"              "--patch")
+               (?s "Show diffstats"          "--stat")
+               (?D "Simplify by decoration"  "--simplify-by-decoration")
+               (?f "Follow renames when showing single-file log" "--follow"))
+    :options  ((?n "Limit number of commits" "-n")
+               (?f "Limit to files"          "-- " magit-read-files)
+               (?a "Limit to author"         "--author=")
+               (?o "Order commits by"        "++order=" magit-log-select-order)
+               (?g "Search messages"         "--grep=")
+               (?G "Search changes"          "-G")
+               (?S "Search occurences"       "-S")
+               (?L "Trace line evolution"    "-L" magit-read-file-trace))
+    :actions  ((?g "Refresh"       magit-log-refresh)
+               (?t "Toggle margin" magit-toggle-margin)
+               (?s "Set defaults"  magit-log-set-default-arguments) nil
+               (?w "Save defaults" magit-log-save-default-arguments))
+    :max-action-columns 2))
+
+(defvar magit-reflog-mode-refresh-popup
+  '(:variable magit-reflog-arguments
+    :man-page "git-reflog"
+    :options  ((?n "Limit number of commits" "-n"))))
+
+(defvar magit-log-refresh-popup
+  '(:variable magit-log-arguments
+    :man-page "git-log"
+    :switches ((?g "Show graph"          "--graph")
+               (?c "Show graph in color" "--color")
+               (?d "Show refnames"       "--decorate"))
+    :options  ((?n "Limit number of commits" "-n")
+               (?o "Order commits by"        "++order=" magit-log-select-order))
+    :actions  ((?g "Refresh"       magit-log-refresh)
+               (?t "Toggle margin" magit-toggle-margin)
+               (?s "Set defaults"  magit-log-set-default-arguments) nil
+               (?w "Save defaults" magit-log-save-default-arguments))
+    :max-action-columns 2))
+
+(magit-define-popup-keys-deferred 'magit-log-popup)
+(magit-define-popup-keys-deferred 'magit-log-mode-refresh-popup)
+(magit-define-popup-keys-deferred 'magit-log-refresh-popup)
+
+(defun magit-read-file-trace (&rest _ignored)
+  (let ((file  (magit-read-file-from-rev "HEAD" "File"))
+        (trace (magit-read-string "Trace")))
+    (if (string-match
+         "^\\(/.+/\\|:[^:]+\\|[0-9]+,[-+]?[0-9]+\\)\\(:\\)?$" trace)
+        (concat trace (or (match-string 2 trace) ":") file)
+      (user-error "Trace is invalid, see man git-log"))))
+
+(defun magit-log-select-order (&rest _ignored)
+  (magit-read-char-case "Order commits by " t
+    (?t "[t]opography"     "topo")
+    (?a "[a]uthor date"    "author-date")
+    (?c "[c]ommitter date" "date")))
+
+(defun magit-log-arguments (&optional refresh)
+  (cond ((memq magit-current-popup
+               '(magit-log-popup magit-log-refresh-popup))
+         (magit-popup-export-file-args magit-current-popup-args))
+        ((derived-mode-p 'magit-log-mode)
+         (list (nth 1 magit-refresh-args)
+               (nth 2 magit-refresh-args)))
+        (refresh
+         (list magit-log-section-arguments nil))
+        (t
+         (-if-let (buffer (magit-mode-get-buffer 'magit-log-mode))
+             (with-current-buffer buffer
+               (list (nth 1 magit-refresh-args)
+                     (nth 2 magit-refresh-args)))
+           (list (default-value 'magit-log-arguments) nil)))))
+
+(defun magit-log-popup (arg)
   "Popup console for log commands."
-  'magit-log
-  :man-page "git-log"
-  :switches '((?g "Show graph"              "--graph")
-              (?d "Show refnames"           "--decorate")
-              (?S "Show signatures"         "--show-signature")
-              (?u "Show diffs"              "--patch")
-              (?s "Show diffstats"          "--stat")
-              (?D "Simplify by decoration"  "--simplify-by-decoration"))
-  :options  '((?f "Limit to files"          "-- "       magit-read-files)
-              (?a "Limit to author"         "--author=" read-from-minibuffer)
-              (?m "Search messages"         "--grep="   read-from-minibuffer)
-              (?p "Search patches"          "-G"        read-from-minibuffer))
-  :actions  '((?l "Log current"             magit-log-current)
-              (?L "Log local branches"      magit-log-branches)
-              (?r "Reflog current"          magit-reflog-current)
-              (?o "Log other"               magit-log)
-              (?b "Log all branches"        magit-log-all-branches)
-              (?O "Reflog other"            magit-reflog)
-              (?h "Log HEAD"                magit-log-head)
-              (?a "Log all references"      magit-log-all)
-              (?H "Reflog HEAD"             magit-reflog-head))
-  :default-arguments '("--graph" "--decorate")
-  :default-action 'magit-log-current
-  :max-action-columns 3)
+  (interactive "P")
+  (let ((magit-log-refresh-popup
+         (pcase major-mode
+           (`magit-log-mode magit-log-mode-refresh-popup)
+           (_               magit-log-refresh-popup)))
+        (magit-log-arguments
+         (-if-let (buffer (magit-mode-get-buffer 'magit-log-mode))
+             (with-current-buffer buffer
+               (magit-popup-import-file-args (nth 1 magit-refresh-args)
+                                             (nth 2 magit-refresh-args)))
+           (default-value 'magit-log-arguments))))
+    (magit-invoke-popup 'magit-log-popup nil arg)))
 
-(defvar magit-log-use-verbose-re
-  (concat "^" (regexp-opt '("--patch" "--stat")))
-  "Regexp matching arguments which trigger the use of verbose log.")
+;;;###autoload
+(defun magit-log-buffer-file-popup ()
+  "Popup console for log commands.
 
-(defvar magit-log-remove-graph-re
-  (concat "^" (regexp-opt '("-G" "--grep")))
-  "Regexp matching arguments which are not compatible with `--graph'.")
+This is a variant of `magit-log-popup' which shows the same popup
+but which limits the log to the file being visited in the current
+buffer."
+  (interactive)
+  (-if-let (file (magit-file-relative-name))
+      (let ((magit-log-arguments
+             (magit-popup-import-file-args
+              (-if-let (buffer (magit-mode-get-buffer 'magit-log-mode))
+                  (with-current-buffer buffer
+                    (nth 2 magit-refresh-args))
+                (default-value 'magit-log-arguments))
+              (list file))))
+        (magit-invoke-popup 'magit-log-popup nil nil))
+    (user-error "Buffer isn't visiting a file")))
 
-(defun magit-log-read-args (&optional use-current norev)
-  (let* ((args  (magit-log-arguments))
-         (files (--first (string-match-p "^-- " it) args)))
-    (when files
-      (setq args  (remove files args)
-            files (split-string (substring files 3) ",")))
-    `(,@(unless norev (list (magit-log-read-revs use-current)))
-      ,args ,files)))
+(defun magit-log-refresh-popup (arg)
+  "Popup console for changing log arguments in the current buffer."
+  (interactive "P")
+  (magit-log-refresh-assert)
+  (let ((magit-log-refresh-popup
+         (cond ((derived-mode-p 'magit-log-select-mode)
+                magit-log-refresh-popup)
+               ((derived-mode-p 'magit-log-mode)
+                (let ((def (copy-sequence magit-log-refresh-popup)))
+                  (plist-put def :switches (plist-get magit-log-popup :switches))
+                  (plist-put def :options  (plist-get magit-log-popup :options))
+                  def))
+               (t
+                magit-log-refresh-popup)))
+        (magit-log-arguments
+         (cond ((derived-mode-p 'magit-log-select-mode)
+                (cadr magit-refresh-args))
+               ((derived-mode-p 'magit-log-mode)
+                (magit-popup-import-file-args (nth 1 magit-refresh-args)
+                                              (nth 2 magit-refresh-args)))
+               (t
+                magit-log-section-arguments))))
+    (magit-invoke-popup 'magit-log-refresh-popup nil arg)))
+
+(defun magit-log-refresh (args files)
+  "Set the local log arguments for the current buffer."
+  (interactive (magit-log-arguments t))
+  (magit-log-refresh-assert)
+  (cond ((derived-mode-p 'magit-log-select-mode)
+         (setcar (cdr magit-refresh-args) args))
+        ((derived-mode-p 'magit-log-mode)
+         (setcdr magit-refresh-args (list args files)))
+        (t
+         (setq-local magit-log-section-arguments args)))
+  (magit-refresh))
+
+(defun magit-log-set-default-arguments (args files)
+  "Set the global log arguments for the current buffer."
+  (interactive (magit-log-arguments t))
+  (magit-log-refresh-assert)
+  (cond ((derived-mode-p 'magit-log-select-mode)
+         (customize-set-variable 'magit-log-select-arguments args)
+         (setcar (cdr magit-refresh-args) args))
+        ((derived-mode-p 'magit-log-mode)
+         (customize-set-variable 'magit-log-arguments args)
+         (setcdr magit-refresh-args (list args files)))
+        (t
+         (customize-set-variable 'magit-log-section-arguments args)
+         (kill-local-variable    'magit-log-section-arguments)))
+  (magit-refresh))
+
+(defun magit-log-save-default-arguments (args files)
+  "Set and save the global log arguments for the current buffer."
+  (interactive (magit-log-arguments t))
+  (magit-log-refresh-assert)
+  (cond ((derived-mode-p 'magit-log-select-mode)
+         (customize-save-variable 'magit-log-select-arguments args)
+         (setcar (cdr magit-refresh-args) args))
+        ((derived-mode-p 'magit-log-mode)
+         (customize-save-variable 'magit-log-arguments args)
+         (setcdr magit-refresh-args (list args files)))
+        (t
+         (customize-save-variable 'magit-log-section-arguments args)
+         (kill-local-variable     'magit-log-section-arguments)))
+  (magit-refresh))
+
+(defun magit-log-refresh-assert ()
+  (cond ((derived-mode-p 'magit-reflog-mode)
+         (user-error "Cannot change log arguments in reflog buffers"))
+        ((derived-mode-p 'magit-cherry-mode)
+         (user-error "Cannot change log arguments in cherry buffers"))))
 
 (defvar magit-log-read-revs-map
   (let ((map (make-sparse-keymap)))
@@ -342,7 +517,10 @@ http://www.mail-archive.com/git@vger.kernel.org/msg51337.html"
               '(crm--choose-completion-string))
              (minibuffer-completion-table #'crm--collection-fn)
              (minibuffer-completion-confirm t)
-             (crm-completion-table (magit-list-branch-names))
+             (crm-completion-table
+              `(,@(and (file-exists-p (magit-git-dir "FETCH_HEAD"))
+                       (list "FETCH_HEAD"))
+                ,@(magit-list-branch-names)))
              (crm-separator "\\(\\.\\.\\.?\\|[, ]\\)")
              (default (or (magit-branch-or-commit-at-point)
                           (unless use-current
@@ -362,7 +540,8 @@ http://www.mail-archive.com/git@vger.kernel.org/msg51337.html"
   "Show log for the current branch.
 When `HEAD' is detached or with a prefix argument show log for
 one or more revs read from the minibuffer."
-  (interactive (magit-log-read-args t))
+  (interactive (cons (magit-log-read-revs t)
+                     (magit-log-arguments)))
   (magit-log revs args files))
 
 ;;;###autoload
@@ -372,32 +551,22 @@ The user can input any revision or revisions separated by a
 space, or even ranges, but only branches and tags, and a
 representation of the commit at point, are available as
 completion candidates."
-  (interactive (magit-log-read-args nil))
-  (magit-mode-setup magit-log-buffer-name-format nil
-                    #'magit-log-mode
-                    #'magit-log-refresh-buffer
-                    (if (--any? (string-match-p magit-log-use-verbose-re it)
-                                args)
-                        'verbose
-                      'oneline)
-                    revs
-                    (if (--any? (string-match-p magit-log-remove-graph-re it)
-                                args)
-                        (delete "--graph" args)
-                      args)
-                    files)
+  (interactive (cons (magit-log-read-revs)
+                     (magit-log-arguments)))
+  (require 'magit)
+  (magit-mode-setup #'magit-log-mode revs args files)
   (magit-log-goto-same-commit))
 
 ;;;###autoload
 (defun magit-log-head (&optional args files)
   "Show log for `HEAD'."
-  (interactive (magit-log-read-args nil t))
+  (interactive (magit-log-arguments))
   (magit-log (list "HEAD") args files))
 
 ;;;###autoload
 (defun magit-log-branches (&optional args files)
   "Show log for all local branches and `HEAD'."
-  (interactive (magit-log-read-args nil t))
+  (interactive (magit-log-arguments))
   (magit-log (if (magit-get-current-branch)
                  (list "--branches")
                (list "HEAD" "--branches"))
@@ -406,7 +575,7 @@ completion candidates."
 ;;;###autoload
 (defun magit-log-all-branches (&optional args files)
   "Show log for all local and remote branches and `HEAD'."
-  (interactive (magit-log-read-args nil t))
+  (interactive (magit-log-arguments))
   (magit-log (if (magit-get-current-branch)
                  (list "--branches" "--remotes")
                (list "HEAD" "--branches" "--remotes"))
@@ -415,26 +584,40 @@ completion candidates."
 ;;;###autoload
 (defun magit-log-all (&optional args files)
   "Show log for all references and `HEAD'."
-  (interactive (magit-log-read-args nil t))
+  (interactive (magit-log-arguments))
   (magit-log (if (magit-get-current-branch)
                  (list "--all")
                (list "HEAD" "--all"))
              args files))
 
 ;;;###autoload
-(defun magit-log-buffer-file ()
-  "Show log for the file visited in the current buffer."
-  (interactive)
-  (-if-let (file (or buffer-file-name magit-buffer-file-name))
-      (magit-mode-setup magit-log-buffer-name-format nil
-                        #'magit-log-mode
-                        #'magit-log-refresh-buffer
-                        'oneline
-                        (list (or magit-buffer-refname
-                                  (magit-get-current-branch) "HEAD"))
-                        (magit-log-arguments)
-                        (list (file-relative-name file (magit-toplevel))))
-    (user-error "Buffer does not visit a file"))
+(defun magit-log-buffer-file (&optional follow beg end)
+  "Show log for the blob or file visited in the current buffer.
+With a prefix argument or when `--follow' is part of
+`magit-log-arguments', then follow renames."
+  (interactive (if (region-active-p)
+                   (list current-prefix-arg
+                         (1- (line-number-at-pos (region-beginning)))
+                         (1- (line-number-at-pos (region-end))))
+                 (list current-prefix-arg)))
+  (-if-let (file (magit-file-relative-name))
+      (magit-mode-setup-internal
+       #'magit-log-mode
+       (list (list (or magit-buffer-refname
+                       (magit-get-current-branch)
+                       "HEAD"))
+             (let ((args (car (magit-log-arguments))))
+               (when (and follow (not (member "--follow" args)))
+                 (push "--follow" args))
+               (when (and beg end)
+                 (setq args (cons (format "-L%s,%s:%s" beg end file)
+                                  (cl-delete "-L" args :test
+                                             'string-prefix-p)))
+                 (setq file nil))
+               args)
+             (and file (list file)))
+       magit-log-buffer-file-locked)
+    (user-error "Buffer isn't visiting a file"))
   (magit-log-goto-same-commit))
 
 ;;;###autoload
@@ -447,9 +630,7 @@ completion candidates."
 (defun magit-reflog (ref)
   "Display the reflog of a branch."
   (interactive (list (magit-read-local-branch-or-ref "Show reflog for")))
-  (magit-mode-setup magit-reflog-buffer-name-format nil
-                    #'magit-reflog-mode
-                    #'magit-reflog-refresh-buffer ref))
+  (magit-mode-setup #'magit-reflog-mode ref magit-reflog-arguments))
 
 ;;;###autoload
 (defun magit-reflog-head ()
@@ -457,28 +638,39 @@ completion candidates."
   (interactive)
   (magit-reflog "HEAD"))
 
-(defun magit-log-show-more-commits (&optional arg)
-  "Increase the number of commits shown in current log.
+(defun magit-log-toggle-commit-limit ()
+  "Toggle the number of commits the current log buffer is limited to.
+If the number of commits is currently limited, then remove that
+limit.  Otherwise set it to 256."
+  (interactive)
+  (magit-log-set-commit-limit (lambda (&rest _) nil)))
 
-With no prefix argument, show twice as many commits as before.
-With a numerical prefix argument, show this many additional
-commits.  With a non-numeric prefix argument, show all commits.
+(defun magit-log-double-commit-limit ()
+  "Double the number of commits the current log buffer is limited to."
+  (interactive)
+  (magit-log-set-commit-limit '*))
 
-When no limit was previously imposed in the current buffer, set
-the local limit to the default limit instead (or if that is nil
-then 100), regardless of the prefix argument.
+(defun magit-log-half-commit-limit ()
+  "Half the number of commits the current log buffer is limited to."
+  (interactive)
+  (magit-log-set-commit-limit '/))
 
-By default `magit-log-cutoff-length' commits are shown."
-  (interactive "P")
-  (setq magit-log-cutoff-length
-        (if magit-log-cutoff-length
-            (if arg
-                (and (numberp arg) (+ magit-log-cutoff-length arg))
-              (* magit-log-cutoff-length 2))
-          (or (default-value 'magit-log-cutoff-length) 100)))
-  (let ((old-point (point)))
-    (magit-refresh)
-    (goto-char old-point)))
+(defun magit-log-set-commit-limit (fn)
+  (let* ((val (car (magit-log-arguments t)))
+         (arg (--first (string-match "^-n\\([0-9]+\\)?$" it) val))
+         (num (and arg (string-to-number (match-string 1 arg))))
+         (num (if num (funcall fn num 2) 256)))
+    (setq val (delete arg val))
+    (setcar (cdr magit-refresh-args)
+            (if (and num (> num 0))
+                (cons (format "-n%i" num) val)
+              val)))
+  (magit-refresh))
+
+(defun magit-log-get-commit-limit ()
+  (--when-let (--first (string-match "^-n\\([0-9]+\\)?$" it)
+                       (car (magit-log-arguments t)))
+    (string-to-number (match-string 1 it))))
 
 (defun magit-log-bury-buffer (&optional arg)
   "Bury the current buffer or the revision buffer in the same frame.
@@ -487,8 +679,7 @@ prefix argument instead bury the revision buffer, provided it
 is displayed in the current frame."
   (interactive "p")
   (if (< arg 0)
-      (let* ((buf (magit-mode-get-buffer magit-revision-buffer-name-format
-                                         'magit-revision-mode))
+      (let* ((buf (magit-mode-get-buffer 'magit-revision-mode))
              (win (and buf (get-buffer-window buf (selected-frame)))))
         (if win
             (with-selected-window win
@@ -504,84 +695,110 @@ is displayed in the current frame."
     (set-keymap-parent map magit-mode-map)
     (define-key map "\C-c\C-b" 'magit-go-backward)
     (define-key map "\C-c\C-f" 'magit-go-forward)
-    (define-key map "+" 'magit-log-show-more-commits)
+    (define-key map "=" 'magit-log-toggle-commit-limit)
+    (define-key map "+" 'magit-log-double-commit-limit)
+    (define-key map "-" 'magit-log-half-commit-limit)
     (define-key map "q" 'magit-log-bury-buffer)
     map)
   "Keymap for `magit-log-mode'.")
 
 (define-derived-mode magit-log-mode magit-mode "Magit Log"
   "Mode for looking at Git log.
-This mode is documented in info node `(magit)History'.
 
-\\<magit-log-mode-map>\
+This mode is documented in info node `(magit)Log Buffer'.
+
+\\<magit-mode-map>\
 Type \\[magit-refresh] to refresh the current buffer.
-Type \\[magit-show-commit] or \\[magit-diff-show-or-scroll-up]\
- to visit the commit at point.
-Type \\[magit-merge-popup] to merge the commit at point.
-Type \\[magit-cherry-pick] to cherry-pick the commit at point.
-Type \\[magit-reset-head] to reset HEAD to the commit at point.
-\n\\{magit-log-mode-map}"
+Type \\[magit-visit-thing] or \\[magit-diff-show-or-scroll-up] \
+to visit the commit at point.
+
+Type \\[magit-branch-popup] to see available branch commands.
+Type \\[magit-merge-popup] to merge the branch or commit at point.
+Type \\[magit-cherry-pick-popup] to apply the commit at point.
+Type \\[magit-reset] to reset HEAD to the commit at point.
+
+\\{magit-log-mode-map}"
   :group 'magit-log
-  (magit-set-buffer-margin magit-log-show-margin)
   (hack-dir-local-variables-non-file-buffer))
 
-(defun magit-log-refresh-buffer (style revs args &optional files)
+(defvar magit-log-disable-graph-hack-args
+  '("-G" "--grep" "--author")
+  "Arguments which disable the graph speedup hack.")
+
+(defun magit-log-refresh-buffer (revs args files)
   (setq header-line-format
         (propertize
          (concat " Commits in " (mapconcat 'identity revs  " ")
                  (and files (concat " touching "
                                     (mapconcat 'identity files " "))))
          'face 'magit-header-line))
+  (unless (= (length files) 1)
+    (setq args (remove "--follow" args)))
+  (when (--any-p (string-match-p
+                  (concat "^" (regexp-opt magit-log-remove-graph-args)) it)
+                 args)
+    (setq args (remove "--graph" args)))
+  (unless (member "--graph" args)
+    (setq args (remove "--color" args)))
+  (-when-let* ((limit (magit-log-get-commit-limit))
+               (limit (* 2 limit)) ; increase odds for complete graph
+               (count (and (= (length revs) 1)
+                           (> limit 1024) ; otherwise it's fast enough
+                           (setq revs (car revs))
+                           (not (string-match-p "\\.\\." revs))
+                           (not (member revs '("--all" "--branches")))
+                           (-none-p (lambda (arg)
+                                      (--any-p (string-prefix-p it arg)
+                                               magit-log-disable-graph-hack-args))
+                                    args)
+                           (magit-git-string "rev-list" "--count"
+                                             "--first-parent" args revs))))
+    (setq revs (if (< (string-to-number count) limit)
+                   revs
+                 (format "%s~%s..%s" revs limit revs))))
   (magit-insert-section (logbuf)
-    (if (eq style 'oneline)
-        (magit-insert-log revs args files)
-      (magit-insert-log-verbose revs args files)))
-  (save-excursion
-    (goto-char (point-min))
-    (magit-format-log-margin)))
+    (magit-insert-log revs args files)))
 
 (defun magit-insert-log (revs &optional args files)
-  "Insert a oneline log section.
-For internal use; don't add to a hook."
-  (magit-git-wash (apply-partially 'magit-log-wash-log 'oneline)
-    "log" (magit-log-format-max-count) "--color"
-    (format "--format=%%h%s %s[%%an][%%at]%%s"
+  "Insert a log section.
+Do not add this to a hook variable."
+  (magit-git-wash (apply-partially #'magit-log-wash-log 'log)
+    "log"
+    (format "--format=%%h%s %s[%%aN][%%at]%%s%s"
             (if (member "--decorate" args) "%d" "")
             (if (member "--show-signature" args)
                 (progn (setq args (remove "--show-signature" args)) "%G?")
+              "")
+            (if (member "++header" args)
+                (if (member "--graph" (setq args (remove "++header" args)))
+                    (concat "\n" magit-log-revision-headers-format "\n")
+                  (concat "\n" magit-log-revision-headers-format "\n"))
               ""))
-    (if (member "--decorate" args)
-        (cons "--decorate=full" (remove "--decorate" args))
-      args)
-    revs "--" files))
-
-(defun magit-insert-log-verbose (revs &optional args files)
-  "Insert a multiline log section.
-For internal use; don't add to a hook."
-  (magit-git-wash (apply-partially 'magit-log-wash-log 'verbose)
-    "log" (magit-log-format-max-count) "--color"
-    (if (member "--decorate" args)
-        (cons "--decorate=full" (remove "--decorate" args))
-      args)
-    revs "--" files))
+    (progn
+      (--when-let (--first (string-match "^\\+\\+order=\\(.+\\)$" it) args)
+        (setq args (cons (format "--%s-order" (match-string 1 it))
+                         (remove it args))))
+      (if (member "--decorate" args)
+          (cons "--decorate=full" (remove "--decorate" args))
+        args))
+    "--use-mailmap" "--no-prefix" revs "--" files))
 
 (defvar magit-commit-section-map
   (let ((map (make-sparse-keymap)))
-    (define-key map "\r" 'magit-show-commit)
-    (define-key map "a"  'magit-cherry-apply)
-    (define-key map "v"  'magit-revert-no-commit)
+    (define-key map [remap magit-visit-thing] 'magit-show-commit)
+    (define-key map "a" 'magit-cherry-apply)
     map)
   "Keymap for `commit' sections.")
 
 (defvar magit-module-commit-section-map
   (let ((map (make-sparse-keymap)))
-    (define-key map "\r" 'magit-show-commit)
+    (define-key map [remap magit-visit-thing] 'magit-show-commit)
     map)
   "Keymap for `module-commit' sections.")
 
-(defconst magit-log-oneline-re
+(defconst magit-log-heading-re
   (concat "^"
-          "\\(?4:\\(?: *[-_/|\\*o.] *\\)+ *\\)?"   ; graph
+          "\\(?4:[-_/|\\*o. ]*\\)"                 ; graph
           "\\(?1:[0-9a-fA-F]+\\) "                 ; sha1
           "\\(?:\\(?3:([^()]+)\\) \\)?"            ; refs
           "\\(?7:[BGUN]\\)?"                       ; gpg
@@ -616,9 +833,7 @@ For internal use; don't add to a hook."
 (defconst magit-log-reflog-re
   (concat "^"
           "\\(?1:[^ ]+\\) "                        ; sha1
-          "\\[\\(?5:[^]]*\\)\\] "                  ; author
-          "\\(?6:[^ ]*\\) "                        ; date
-          "\\(?:\\(?:[^@]+@{\\(?9:[^}]+\\)} "      ; refsel
+          "\\(?:\\(?:[^@]+@{\\(?6:[^}]+\\)} "      ; date
           "\\(?10:merge \\|autosave \\|restart \\|[^:]+: \\)?" ; refsub
           "\\(?2:.*\\)?\\)\\| \\)$"))              ; msg
 
@@ -634,20 +849,12 @@ For internal use; don't add to a hook."
           "\\(?6:[^ ]+\\) "                        ; date
           "\\(?2:.*\\)$"))                         ; msg
 
-(defconst magit-log-verbose-re
-  (concat "^"
-          "\\(\\(?:[-_/|\\*o.] *\\)+ *\\)?"
-          "commit \\([0-9a-fA-F]+\\)"
-          "\\(?: \\(([^()]+)\\)\\)?"))
-
 (defvar magit-log-count nil)
 
-(defun magit-log-format-max-count ()
-  (and magit-log-cutoff-length
-       (format "-%d" magit-log-cutoff-length)))
-
 (defun magit-log-wash-log (style args)
-  (when (member "--color" args)
+  (setq args (-flatten args))
+  (when (and (member "--graph" args)
+             (member "--color" args))
     (let ((ansi-color-apply-face-function
            (lambda (beg end face)
              (put-text-property beg end 'font-lock-face
@@ -657,30 +864,27 @@ For internal use; don't add to a hook."
     (reverse-region (point-min) (point-max)))
   (let ((magit-log-count 0)
         (abbrev (magit-abbrev-length)))
-    (magit-wash-sequence
-     (if (eq style 'verbose)
-         (apply-partially 'magit-log-wash-verbose abbrev)
-       (apply-partially 'magit-log-wash-line style abbrev)))
+    (magit-wash-sequence (apply-partially 'magit-log-wash-rev style abbrev))
     (if (derived-mode-p 'magit-log-mode)
-        (when (= magit-log-count magit-log-cutoff-length)
+        (when (eq magit-log-count (magit-log-get-commit-limit))
           (magit-insert-section (longer)
             (insert-text-button
              (substitute-command-keys
               (format "Type \\<%s>\\[%s] to show more history"
                       'magit-log-mode-map
-                      'magit-log-show-more-commits))
-             'action (lambda (button)
-                       (magit-log-show-more-commits))
+                      'magit-log-double-commit-limit))
+             'action (lambda (_button)
+                       (magit-log-double-commit-limit))
              'follow-link t
              'mouse-face 'magit-section-highlight)))
       (unless (equal (car args) "cherry")
         (insert ?\n)))))
 
-(defun magit-log-wash-line (style abbrev)
+(defun magit-log-wash-rev (style abbrev)
   (when (derived-mode-p 'magit-log-mode)
     (cl-incf magit-log-count))
   (looking-at (pcase style
-                (`oneline    magit-log-oneline-re)
+                (`log        magit-log-heading-re)
                 (`cherry     magit-log-cherry-re)
                 (`module     magit-log-module-re)
                 (`reflog     magit-log-reflog-re)
@@ -688,94 +892,117 @@ For internal use; don't add to a hook."
                 (`bisect-vis magit-log-bisect-vis-re)
                 (`bisect-log magit-log-bisect-log-re)))
   (magit-bind-match-strings
-      (hash msg refs graph author date gpg cherry refsel refsub side) nil
-    (magit-delete-match)
-    (magit-insert-section section (commit hash)
-      (pcase style
-        (`stash      (setf (magit-section-type section) 'stash))
-        (`module     (setf (magit-section-type section) 'module-commit))
-        (`bisect-log (setq hash (magit-rev-parse "--short" hash))))
-      (when cherry
-        (when (and (derived-mode-p 'magit-refs-mode)
-                   magit-refs-show-commit-count)
-          (insert (make-string magit-refs-indent-cherry-lines ?\s)))
-        (magit-insert cherry (if (string= cherry "-")
-                                 'magit-cherry-equivalent
-                               'magit-cherry-unmatched) ?\s))
-      (when side
-        (magit-insert side (if (string= side "<")
-                               'magit-diff-removed
-                             'magit-diff-added) ?\s))
-      (insert (propertize hash 'face 'magit-hash) ?\s)
-      (when graph
-        (insert (funcall magit-log-format-graph-function graph)))
-      (when refs
-        (magit-insert (magit-format-ref-labels refs) nil ?\s))
-      (when refsub
-        (insert (format "%-2s " refsel))
-        (magit-insert
-         (magit-reflog-format-subject
-          (substring refsub 0 (if (string-match-p ":" refsub) -2 -1)))))
-      (when msg
-        (magit-insert msg (pcase (and gpg (aref gpg 0))
-                            (?G 'magit-signature-good)
-                            (?B 'magit-signature-bad)
-                            (?U 'magit-signature-untrusted))))
-      (when (memq style '(oneline reflog stash))
-        (goto-char (line-beginning-position))
-        (magit-format-log-margin author date))
-      (forward-line)))
-  (when (eq style 'oneline)
-    (let ((align (make-string (1+ abbrev) ? )))
-      (while (and (not (eobp)) (not (looking-at magit-log-oneline-re)))
-        (insert align)
-        (goto-char (line-beginning-position))
-        (magit-format-log-margin)
-        (forward-line))))
+      (hash msg refs graph author date gpg cherry _ refsub side) nil
+    (let ((align (not (member "--stat" (cadr magit-refresh-args)))))
+      (magit-delete-line)
+      (magit-insert-section section (commit hash)
+        (pcase style
+          (`stash      (setf (magit-section-type section) 'stash))
+          (`module     (setf (magit-section-type section) 'module-commit))
+          (`bisect-log (setq hash (magit-rev-parse "--short" hash))))
+        (when cherry
+          (when (and (derived-mode-p 'magit-refs-mode)
+                     magit-refs-show-commit-count)
+            (insert (make-string magit-refs-indent-cherry-lines ?\s)))
+          (insert (propertize cherry 'face (if (string= cherry "-")
+                                               'magit-cherry-equivalent
+                                             'magit-cherry-unmatched)))
+          (insert ?\s))
+        (when side
+          (insert (propertize side 'face (if (string= side "<")
+                                             'magit-cherry-equivalent
+                                           'magit-cherry-unmatched)))
+          (insert ?\s))
+        (when align
+          (insert (propertize hash 'face 'magit-hash) ?\s))
+        (when graph
+          (insert graph))
+        (unless align
+          (insert (propertize hash 'face 'magit-hash) ?\s))
+        (when (and refs (not magit-log-show-refname-after-summary))
+          (insert (magit-format-ref-labels refs) ?\s))
+        (when refsub
+          (insert (format "%-2s " (1- magit-log-count)))
+          (insert (magit-reflog-format-subject
+                   (substring refsub 0 (if (string-match-p ":" refsub) -2 -1)))))
+        (when msg
+          (insert (propertize msg 'face
+                              (pcase (and gpg (aref gpg 0))
+                                (?G 'magit-signature-good)
+                                (?B 'magit-signature-bad)
+                                (?U 'magit-signature-untrusted)))))
+        (when (and refs magit-log-show-refname-after-summary)
+          (insert ?\s)
+          (insert (magit-format-ref-labels refs)))
+        (insert ?\n)
+        (when (memq style '(log reflog stash))
+          (goto-char (line-beginning-position))
+          (when (and refsub
+                     (string-match "\\`\\([^ ]\\) \\+\\(..\\)\\(..\\)" date))
+            (setq date (+ (string-to-number (match-string 1 date))
+                          (* (string-to-number (match-string 2 date)) 60 60)
+                          (* (string-to-number (match-string 3 date)) 60))))
+          (save-excursion
+            (backward-char)
+            (magit-format-log-margin author date)))
+        (when (and (eq style 'log)
+                   (not (or (eobp) (looking-at magit-log-heading-re))))
+          (when (looking-at "")
+            (magit-insert-heading)
+            (delete-char 1)
+            (magit-insert-section (commit-header)
+              (forward-line)
+              (magit-insert-heading)
+              (re-search-forward "")
+              (backward-delete-char 1)
+              (forward-char)
+              (insert ?\n))
+            (delete-char 1))
+          (if (looking-at "^\\(---\\|\n\s\\|\ndiff\\)")
+              (let ((limit (save-excursion
+                             (and (re-search-forward magit-log-heading-re nil t)
+                                  (match-beginning 0)))))
+                (unless (magit-section-content magit-insert-section--current)
+                  (magit-insert-heading))
+                (delete-char (if (looking-at "\n") 1 4))
+                (magit-diff-wash-diffs (list "--stat") limit))
+            (when align
+              (setq align (make-string (1+ abbrev) ? )))
+            (when (and (not (eobp)) (not (looking-at magit-log-heading-re)))
+              (when align
+                (setq align (make-string (1+ abbrev) ? )))
+              (while (and (not (eobp)) (not (looking-at magit-log-heading-re)))
+                (when align
+                  (save-excursion (insert align)))
+                (magit-format-log-margin)
+                (forward-line))
+              ;; When `--format' is used and its value isn't one of the
+              ;; predefined formats, then `git-log' does not insert a
+              ;; separator line.
+              (save-excursion
+                (forward-line -1)
+                (looking-at "[-_/|\\*o. ]*"))
+              (setq graph (match-string 0))
+              (unless (string-match-p "[/\\]" graph)
+                (insert graph ?\n))))))))
   t)
-
-(defun magit-log-wash-verbose (abbrev)
-  (cl-incf magit-log-count)
-  (looking-at magit-log-verbose-re)
-  (magit-bind-match-strings (graph hash refs) nil
-    (magit-delete-match)
-    (magit-insert-section (commit hash)
-      (when graph (insert graph))
-      (when refs
-        (magit-insert (magit-format-ref-labels refs) nil ?\s))
-      (magit-insert hash 'magit-hash ?\s)
-      (forward-line)
-      (while (and (not (eobp)) (not (looking-at magit-log-verbose-re)))
-        (forward-line))))
-  t)
-
-(defun magit-log-format-unicode-graph (string)
-  "Translate ascii characters to unicode characters.
-Whether that actually is an improvment depends on the unicode
-support of the font in use.  The translation is done using the
-alist in `magit-log-format-unicode-graph-alist'."
-  (replace-regexp-in-string
-   "[/|\\*o ]"
-   (lambda (str)
-     (propertize
-      (string (or (cdr (assq (aref str 0)
-                             magit-log-format-unicode-graph-alist))
-                  (aref str 0)))
-      'face (get-text-property 0 'face str)))
-   string))
 
 (defun magit-format-log-margin (&optional author date)
-  (cl-destructuring-bind (width unit-width duration-spec)
-      magit-log-margin-spec
-    (if author
+  (-let [(width unit-width duration-spec) magit-log-margin-spec]
+    (when (and date (not author))
+      (setq width (+ (if (= unit-width 1) 1 (1+ unit-width))
+                     (if (derived-mode-p 'magit-log-mode) 1 0))))
+    (if date
         (magit-make-margin-overlay
-         (propertize (truncate-string-to-width
-                      author (- width 1 3 ; gap, digits
-                                (if (= unit-width 1) 1 (1+ unit-width))
-                                (if (derived-mode-p 'magit-log-mode) 1 0))
-                      nil ?\s (make-string 1 magit-ellipsis))
-                     'face 'magit-log-author)
-         " "
+         (and author
+              (concat (propertize (truncate-string-to-width
+                                   (or author "")
+                                   (- width 1 3 ; gap, digits
+                                      (if (= unit-width 1) 1 (1+ unit-width))
+                                      (if (derived-mode-p 'magit-log-mode) 1 0))
+                                   nil ?\s (make-string 1 magit-ellipsis))
+                                  'face 'magit-log-author)
+                      " "))
          (propertize (magit-format-duration
                       (abs (truncate (- (float-time)
                                         (string-to-number date))))
@@ -788,18 +1015,16 @@ alist in `magit-log-format-unicode-graph-alist'."
        (propertize (make-string (1- width) ?\s) 'face 'default)
        (propertize " " 'face 'fringe)))))
 
-(defun magit-format-duration (duration spec width)
-  (cl-destructuring-bind (char unit units weight)
-      (car spec)
+(defun magit-format-duration (duration spec &optional width)
+  (-let [(char unit units weight) (car spec)]
     (let ((cnt (round (/ duration weight 1.0))))
       (if (or (not (cdr spec))
               (>= (/ duration weight) 1))
-          (if (= width 1)
+          (if (eq width 1)
               (format "%3i%c" cnt char)
-            (format (format "%%3i %%-%is" width) cnt
-                    (if (= cnt 1) unit units)))
+            (format (if width (format "%%3i %%-%is" width) "%i %s")
+                    cnt (if (= cnt 1) unit units)))
         (magit-format-duration duration (cdr spec) width)))))
-
 
 (defun magit-log-maybe-show-more-commits (section)
   "Automatically insert more commit sections in a log.
@@ -807,37 +1032,71 @@ Only do so if `point' is on the \"show more\" section,
 and `magit-log-auto-more' is non-nil."
   (when (and (eq (magit-section-type section) 'longer)
              magit-log-auto-more)
-    (magit-log-show-more-commits)
+    (magit-log-double-commit-limit)
     (forward-line -1)
     (magit-section-forward)))
 
-(defun magit-log-maybe-show-commit (&optional section)
-  "Automatically show commit at point in another window.
-If the section at point is a `commit' section and the value of
-`magit-diff-auto-show-p' calls for it, then show that commit in
-another window, using `magit-show-commit'."
-  (--when-let
-      (or (and section
-               (eq (magit-section-type section) 'commit)
-               (or (and (magit-diff-auto-show-p 'log-follow)
-                        (get-buffer-window magit-revision-buffer-name-format))
-                   (and (magit-diff-auto-show-p 'log-oneline)
-                        (derived-mode-p 'magit-log-mode)))
-               (magit-section-value section))
-          (and magit-blame-mode
-               (magit-diff-auto-show-p 'blame-follow)
-               (get-buffer-window magit-revision-buffer-name-format)
-               (magit-blame-chunk-get :hash)))
-    (magit-show-commit it t)))
+(defvar magit--update-revision-buffer nil)
+
+(defun magit-log-maybe-update-revision-buffer (&optional _)
+  "When moving in the log buffer, update the revision buffer.
+If there is no revision buffer in the same frame, then do nothing."
+  (when (derived-mode-p 'magit-log-mode)
+    (magit-log-maybe-update-revision-buffer-1)))
+
+(defun magit-log-maybe-update-revision-buffer-1 ()
+  (unless magit--update-revision-buffer
+    (-when-let* ((commit (magit-section-when 'commit))
+                 (buffer (magit-mode-get-buffer 'magit-revision-mode nil t)))
+      (setq magit--update-revision-buffer (list commit buffer))
+      (run-with-idle-timer
+       magit-update-other-window-delay nil
+       (lambda ()
+         (-let [(rev buf) magit--update-revision-buffer]
+           (setq magit--update-revision-buffer nil)
+           (when (buffer-live-p buf)
+             (let ((magit-display-buffer-noselect t))
+               (apply #'magit-show-commit rev (magit-diff-arguments)))))
+         (setq magit--update-revision-buffer nil))))))
+
+(defvar magit--update-blob-buffer nil)
+
+(defun magit-log-maybe-update-blob-buffer (&optional _)
+  "When moving in the log buffer, update the blob buffer.
+If there is no blob buffer in the same frame, then do nothing."
+  (when (derived-mode-p 'magit-log-mode)
+    (magit-log-maybe-update-blob-buffer-1)))
+
+(defun magit-log-maybe-update-blob-buffer-1 ()
+  (unless magit--update-revision-buffer
+    (-when-let* ((commit (magit-section-when 'commit))
+                 (buffer (--first (with-current-buffer it magit-buffer-revision)
+                                  (-map #'window-buffer (window-list)))))
+        (setq magit--update-blob-buffer (list commit buffer))
+        (run-with-idle-timer
+         magit-update-other-window-delay nil
+         (lambda ()
+           (-let [(rev buf) magit--update-blob-buffer]
+             (setq magit--update-blob-buffer nil)
+             (when (buffer-live-p buf)
+               (save-excursion
+                 (with-selected-window (get-buffer-window buf)
+                   (with-current-buffer buf
+                     (magit-blob-visit (list (magit-rev-parse rev)
+                                             (magit-file-relative-name
+                                              magit-buffer-file-name))
+                                       (line-number-at-pos))))))))))))
 
 (defun magit-log-goto-same-commit ()
-  (--when-let
-      (and magit-previous-section
-           (derived-mode-p 'magit-log-mode)
-           (-when-let (value (magit-section-value magit-previous-section))
-             (--first (equal (magit-section-value it) value)
-                      (magit-section-children magit-root-section))))
-    (goto-char (magit-section-start it))))
+  (-when-let* ((prev magit-previous-section)
+               (rev  (cond ((magit-section-match 'commit prev)
+                            (magit-section-value prev))
+                           ((magit-section-match 'branch prev)
+                            (magit-rev-format
+                             "%h" (magit-section-value prev)))))
+               (same (--first (equal (magit-section-value it) rev)
+                              (magit-section-children magit-root-section))))
+    (goto-char (magit-section-start same))))
 
 ;;; Select Mode
 
@@ -858,20 +1117,33 @@ another window, using `magit-show-commit'."
 (put 'magit-log-select-quit :advertised-binding [?\C-c ?\C-k])
 
 (define-derived-mode magit-log-select-mode magit-log-mode "Magit Select"
-  "Mode for selecting a commit from history."
+  "Mode for selecting a commit from history.
+
+This mode is documented in info node `(magit)Select from log'.
+
+\\<magit-mode-map>\
+Type \\[magit-refresh] to refresh the current buffer.
+Type \\[magit-visit-thing] or \\[magit-diff-show-or-scroll-up] \
+to visit the commit at point.
+
+\\<magit-log-select-mode-map>\
+Type \\[magit-log-select-pick] to select the commit at point.
+Type \\[magit-log-select-quit] to abort without selecting a commit."
   :group 'magit-log
   (hack-dir-local-variables-non-file-buffer))
+
+(defun magit-log-select-refresh-buffer (rev args)
+  (magit-insert-section (logbuf)
+    (magit-insert-log rev args)))
 
 (defvar-local magit-log-select-pick-function nil)
 (defvar-local magit-log-select-quit-function nil)
 
-(defun magit-log-select (pick &optional msg quit branch args)
+(defun magit-log-select (pick &optional msg quit branch)
   (declare (indent defun))
-  (magit-mode-setup magit-log-buffer-name-format nil
-                    #'magit-log-select-mode
-                    #'magit-log-refresh-buffer 'oneline
-                    (list (or branch (magit-get-current-branch) "HEAD"))
-                    args)
+  (magit-mode-setup #'magit-log-select-mode
+                    (or branch (magit-get-current-branch) "HEAD")
+                    magit-log-select-arguments)
   (magit-log-goto-same-commit)
   (setq magit-log-select-pick-function pick)
   (setq magit-log-select-quit-function quit)
@@ -886,7 +1158,7 @@ another window, using `magit-show-commit'."
                 '((?p . "\\[magit-log-select-pick]")
                   (?q . "\\[magit-log-select-quit]")))))
     (when (memq magit-log-select-show-usage '(both header-line))
-      (setq header-line-format (concat " " msg)))
+      (setq header-line-format (propertize (concat " " msg) 'face 'bold)))
     (when (memq magit-log-select-show-usage '(both echo-area))
       (message "%s" msg))))
 
@@ -912,18 +1184,23 @@ commit as argument."
 (defvar magit-cherry-mode-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map magit-mode-map)
+    (define-key map "q" 'magit-log-bury-buffer)
+    (define-key map "L" 'magit-toggle-margin)
     map)
   "Keymap for `magit-cherry-mode'.")
 
 (define-derived-mode magit-cherry-mode magit-mode "Magit Cherry"
   "Mode for looking at commits not merged upstream.
 
-\\<magit-cherry-mode-map>\
-Type \\[magit-show-commit] or \\[magit-diff-show-or-scroll-up]\
- to visit the commit at point.
-Type \\[magit-cherry-pick] to cherry-pick the commit at point.
-\n\\{magit-cherry-mode-map}"
-  :group 'magit-modes
+\\<magit-mode-map>\
+Type \\[magit-refresh] to refresh the current buffer.
+Type \\[magit-visit-thing] or \\[magit-diff-show-or-scroll-up] \
+to visit the commit at point.
+
+Type \\[magit-cherry-pick-popup] to apply the commit at point.
+
+\\{magit-cherry-mode-map}"
+  :group 'magit-log
   (hack-dir-local-variables-non-file-buffer))
 
 ;;;###autoload
@@ -932,20 +1209,19 @@ Type \\[magit-cherry-pick] to cherry-pick the commit at point.
   (interactive
    (let  ((head (magit-read-branch "Cherry head")))
      (list head (magit-read-other-branch "Cherry upstream" head
-                                         (magit-get-tracked-branch head)))))
-  (magit-mode-setup magit-cherry-buffer-name-format nil
-                    #'magit-cherry-mode
-                    #'magit-cherry-refresh-buffer upstream head))
+                                         (magit-get-upstream-branch head)))))
+  (magit-mode-setup #'magit-cherry-mode upstream head))
 
-(defun magit-cherry-refresh-buffer (upstream head)
+(defun magit-cherry-refresh-buffer (_upstream _head)
   (magit-insert-section (cherry)
     (run-hooks 'magit-cherry-sections-hook)))
 
 (defun magit-insert-cherry-headers ()
   "Insert headers appropriate for `magit-cherry-mode' buffers."
-  (magit-insert-head-header (nth 1 magit-refresh-args))
-  (magit-insert-upstream-header (nth 1 magit-refresh-args)
-                                (nth 0 magit-refresh-args))
+  (magit-insert-head-branch-header (nth 1 magit-refresh-args))
+  (magit-insert-upstream-branch-header (nth 1 magit-refresh-args)
+                                       (nth 0 magit-refresh-args)
+                                       "Upstream: ")
   (insert ?\n))
 
 (defun magit-insert-cherry-commits ()
@@ -960,30 +1236,33 @@ Type \\[magit-cherry-pick] to cherry-pick the commit at point.
 (defvar magit-reflog-mode-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map magit-log-mode-map)
+    (define-key map "L" 'magit-toggle-margin)
     map)
   "Keymap for `magit-reflog-mode'.")
 
 (define-derived-mode magit-reflog-mode magit-log-mode "Magit Reflog"
   "Mode for looking at Git reflog.
-This mode is documented in info node `(magit)Reflogs'.
 
-\\<magit-reflog-mode-map>\
+This mode is documented in info node `(magit)Reflog'.
+
+\\<magit-mode-map>\
 Type \\[magit-refresh] to refresh the current buffer.
-Type \\[magit-show-commit] or \\[magit-diff-show-or-scroll-up]\
- to visit the commit at point.
-Type \\[magit-cherry-pick] to cherry-pick the commit at point.
-Type \\[magit-reset-head] to reset HEAD to the commit at point.
-\n\\{magit-reflog-mode-map}"
+Type \\[magit-visit-thing] or \\[magit-diff-show-or-scroll-up] \
+to visit the commit at point.
+
+Type \\[magit-cherry-pick-popup] to apply the commit at point.
+Type \\[magit-reset] to reset HEAD to the commit at point.
+
+\\{magit-reflog-mode-map}"
   :group 'magit-log
   (hack-dir-local-variables-non-file-buffer))
 
-(defun magit-reflog-refresh-buffer (ref)
+(defun magit-reflog-refresh-buffer (ref args)
   (setq header-line-format
         (propertize (concat " Reflog for " ref) 'face 'magit-header-line))
   (magit-insert-section (reflogbuf)
     (magit-git-wash (apply-partially 'magit-log-wash-log 'reflog)
-      "reflog" "show" "--format=%h [%an] %ct %gd %gs"
-      (magit-log-format-max-count) ref)))
+      "reflog" "show" "--format=%h %gd %gs" "--date=raw" args ref)))
 
 (defvar magit-reflog-labels
   '(("commit"      . magit-reflog-commit)
@@ -1019,130 +1298,135 @@ Type \\[magit-reset-head] to reset HEAD to the commit at point.
                             'magit-reflog-other)))))
 
 ;;; Log Sections
+;;;; Standard Log Sections
 
 (defvar magit-unpulled-section-map
   (let ((map (make-sparse-keymap)))
-    (define-key map "\r" 'magit-diff-unpulled)
+    (define-key map [remap magit-visit-thing] 'magit-diff-dwim)
     map)
-  "Keymap for the `unpulled' section.")
+  "Keymap for `unpulled' sections.")
 
-(magit-define-section-jumper unpulled "Unpulled commits")
+(magit-define-section-jumper magit-jump-to-unpulled-from-upstream
+  "Unpulled from @{upstream}" unpulled "..@{upstream}")
 
-(defun magit-insert-unpulled-commits ()
-  "Insert section showing unpulled commits."
-  (-when-let (tracked (magit-get-tracked-ref))
-    (magit-insert-section (unpulled)
-      (magit-insert-heading "Unpulled commits:")
-      (magit-insert-log (concat "HEAD.." tracked) magit-log-section-args))))
+(defun magit-insert-unpulled-from-upstream ()
+  "Insert commits that haven't been pulled from the upstream yet."
+  (when (magit-git-success "rev-parse" "@{upstream}")
+    (magit-insert-section (unpulled "..@{upstream}")
+      (magit-insert-heading
+        (format (propertize "Unpulled from %s:" 'face 'magit-section-heading)
+                (magit-get-upstream-branch)))
+      (magit-insert-log "..@{upstream}" magit-log-section-arguments)
+      (magit-section-cache-visibility))))
 
-(defun magit-insert-unpulled-or-recent-commits ()
-  "Insert section showing unpulled or recent commits.
-If an upstream is configured for the current branch and it is
-ahead of the current branch, then show the missing commits,
-otherwise show the last `magit-log-section-commit-count'
-commits."
-  (let ((tracked (magit-get-tracked-ref)))
-    (if (and tracked (not (equal (magit-rev-parse "HEAD")
-                                 (magit-rev-parse tracked))))
-        (magit-insert-unpulled-commits)
-      (magit-insert-recent-commits t))))
+(magit-define-section-jumper magit-jump-to-unpulled-from-pushremote
+  "Unpulled from <push-remote>" unpulled
+  (concat ".." (magit-get-push-branch)))
+
+(defun magit-insert-unpulled-from-pushremote ()
+  "Insert commits that haven't been pulled from the push-remote yet."
+  (--when-let (magit-get-push-branch)
+    (unless (and (equal (magit-rev-name it)
+                        (magit-rev-name "@{upstream}"))
+                 (or (memq 'magit-insert-unpulled-from-upstream
+                           magit-status-sections-hook)
+                     (memq 'magit-insert-unpulled-from-upstream-or-recent
+                           magit-status-sections-hook)))
+      (magit-insert-section (unpulled (concat ".." it))
+        (magit-insert-heading
+          (format (propertize "Unpulled from %s:" 'face 'magit-section-heading)
+                  (propertize it 'face 'magit-branch-remote)))
+        (magit-insert-log (concat ".." it) magit-log-section-arguments)
+        (magit-section-cache-visibility)))))
+
+(defvar magit-unpushed-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map [remap magit-visit-thing] 'magit-diff-dwim)
+    map)
+  "Keymap for `unpushed' sections.")
+
+(magit-define-section-jumper magit-jump-to-unpushed-to-upstream
+  "Unpushed to @{upstream}" unpushed "@{upstream}..")
+
+(defun magit-insert-unpushed-to-upstream ()
+  "Insert commits that haven't been pushed to the upstream yet."
+  (when (magit-git-success "rev-parse" "@{upstream}")
+    (magit-insert-section (unpushed "@{upstream}..")
+      (magit-insert-heading
+        (format (propertize "Unmerged into %s:" 'face 'magit-section-heading)
+                (magit-get-upstream-branch)))
+      (magit-insert-log "@{upstream}.." magit-log-section-arguments)
+      (magit-section-cache-visibility))))
+
+(magit-define-section-jumper magit-jump-to-unpushed-to-pushremote
+  "Unpushed to <push-remote>" unpushed
+  (concat (magit-get-push-branch) ".."))
+
+(defun magit-insert-unpushed-to-pushremote ()
+  "Insert commits that haven't been pushed to the push-remote yet."
+  (--when-let (magit-get-push-branch)
+    (unless (and (equal (magit-rev-name it)
+                        (magit-rev-name "@{upstream}"))
+                 (memq 'magit-insert-unpushed-to-upstream
+                       magit-status-sections-hook))
+      (magit-insert-section (unpushed (concat it ".."))
+        (magit-insert-heading
+          (format (propertize "Unpushed to %s:" 'face 'magit-section-heading)
+                  (propertize it 'face 'magit-branch-remote)))
+        (magit-insert-log (concat it "..") magit-log-section-arguments)
+        (magit-section-cache-visibility)))))
 
 (defun magit-insert-recent-commits (&optional collapse)
   "Insert section showing recent commits.
 Show the last `magit-log-section-commit-count' commits."
-  (magit-insert-section (recent nil collapse)
-    (magit-insert-heading "Recent commits:")
-    (magit-insert-log nil (cons (format "-%d" magit-log-section-commit-count)
-                                magit-log-section-args))))
+  (let* ((start (format "HEAD~%s" magit-log-section-commit-count))
+         (range (and (magit-rev-verify start)
+                     (concat start "..HEAD"))))
+    (magit-insert-section (recent range collapse)
+      (magit-insert-heading "Recent commits:")
+      (magit-insert-log range
+                        (cons (format "-%d" magit-log-section-commit-count)
+                              magit-log-section-arguments)))))
+
+(defun magit-insert-unpulled-from-upstream-or-recent ()
+  "Insert section showing unpulled or recent commits.
+If an upstream is configured for the current branch and it is
+ahead of the current branch, then show the commits that have
+not yet been pulled into the current branch.  If no upstream is
+configured or if the upstream is not ahead of the current branch,
+then show the last `magit-log-section-commit-count' commits."
+  (let ((upstream (magit-rev-parse "@{upstream}")))
+    (if (or (not upstream)
+            (equal upstream (magit-rev-parse "HEAD")))
+        (magit-insert-recent-commits t)
+      (magit-insert-unpulled-from-upstream))))
+
+;;;; Auxiliary Log Sections
 
 (defun magit-insert-unpulled-cherries ()
   "Insert section showing unpulled commits.
-Like `magit-insert-unpulled-commits' but prefix each commit
+Like `magit-insert-unpulled-to-upstream' but prefix each commit
 which has not been applied yet (i.e. a commit with a patch-id
-not shared with any local commit) with \"+\", and all others
-with \"-\"."
-  (-when-let (tracked (magit-get-tracked-ref))
-    (magit-insert-section (unpulled)
+not shared with any local commit) with \"+\", and all others with
+\"-\"."
+  (when (magit-git-success "rev-parse" "@{upstream}")
+    (magit-insert-section (unpulled "..@{upstream}")
       (magit-insert-heading "Unpulled commits:")
       (magit-git-wash (apply-partially 'magit-log-wash-log 'cherry)
-        "cherry" "-v" (magit-abbrev-arg) (magit-get-current-branch) tracked))))
-
-(defun magit-insert-unpulled-module-commits ()
-  "Insert sections for all submodules with unpulled commits.
-These sections can be expanded to show the respective commits."
-  (-when-let (modules (magit-get-submodules))
-    (magit-insert-section section (unpulled-modules)
-      (magit-insert-heading "Unpulled modules:")
-      (let ((topdir (magit-toplevel)))
-        (dolist (module modules)
-          (let ((default-directory
-                  (expand-file-name (file-name-as-directory module) topdir)))
-            (-when-let (tracked (magit-get-tracked-ref))
-              (magit-insert-section sec (file module t)
-                (magit-insert-heading
-                  (concat (propertize module 'face 'magit-diff-file-heading) ":"))
-                (magit-insert-submodule-commits
-                 section (concat "HEAD.." tracked)))))))
-      (if (> (point) (magit-section-content section))
-          (insert ?\n)
-        (magit-cancel-section)))))
-
-(defun magit-insert-submodule-commits (section range)
-  "For internal use, don't add to a hook."
-  (if (magit-section-hidden section)
-      (setf (magit-section-washer section)
-            (apply-partially #'magit-insert-submodule-commits section range))
-    (magit-git-wash (apply-partially 'magit-log-wash-log 'module)
-      "log" "--oneline" range)
-    (when (> (point) (magit-section-content section))
-      (delete-char -1))))
-
-(defvar magit-unpushed-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map "\r" 'magit-diff-unpushed)
-    map)
-  "Keymap for the `unpushed' section.")
-
-(magit-define-section-jumper unpushed "Unpushed commits")
-
-(defun magit-insert-unpushed-commits ()
-  "Insert section showing unpushed commits."
-  (-when-let (tracked (magit-get-tracked-ref))
-    (magit-insert-section (unpushed)
-      (magit-insert-heading "Unpushed commits:")
-      (magit-insert-log (concat tracked "..HEAD") magit-log-section-args))))
+        "cherry" "-v" (magit-abbrev-arg)
+        (magit-get-current-branch) "@{upstream}"))))
 
 (defun magit-insert-unpushed-cherries ()
   "Insert section showing unpushed commits.
-Like `magit-insert-unpushed-commits' but prefix each commit
+Like `magit-insert-unpushed-to-upstream' but prefix each commit
 which has not been applied to upstream yet (i.e. a commit with
 a patch-id not shared with any upstream commit) with \"+\", and
 all others with \"-\"."
-  (-when-let (tracked (magit-get-tracked-ref))
-    (magit-insert-section (unpushed)
+  (when (magit-git-success "rev-parse" "@{upstream}")
+    (magit-insert-section (unpushed "@{upstream}..")
       (magit-insert-heading "Unpushed commits:")
       (magit-git-wash (apply-partially 'magit-log-wash-log 'cherry)
-        "cherry" "-v" (magit-abbrev-arg) tracked))))
-
-(defun magit-insert-unpushed-module-commits ()
-  "Insert sections for all submodules with unpushed commits.
-These sections can be expanded to show the respective commits."
-  (-when-let (modules (magit-get-submodules))
-    (magit-insert-section section (unpushed-modules)
-      (magit-insert-heading "Unpushed modules:")
-      (let ((topdir (magit-toplevel)))
-        (dolist (module modules)
-          (let ((default-directory
-                  (expand-file-name (file-name-as-directory module) topdir)))
-            (-when-let (tracked (magit-get-tracked-ref))
-              (magit-insert-section sec (file module t)
-                (magit-insert-heading
-                  (concat (propertize module 'face 'magit-diff-file-heading) ":"))
-                (magit-insert-submodule-commits
-                 section (concat tracked "..HEAD")))))))
-      (if (> (point) (magit-section-content section))
-          (insert ?\n)
-        (magit-cancel-section)))))
+        "cherry" "-v" (magit-abbrev-arg) "@{upstream}"))))
 
 ;;; Buffer Margins
 
@@ -1156,17 +1440,24 @@ These sections can be expanded to show the respective commits."
   (interactive)
   (unless (derived-mode-p 'magit-log-mode 'magit-status-mode 'magit-refs-mode)
     (user-error "Buffer doesn't contain any logs"))
-  (when (and (derived-mode-p 'magit-log-mode)
-             (eq (car magit-refresh-args) 'verbose))
-    (user-error "Log margin is redundant when showing verbose logs"))
   (magit-set-buffer-margin (not (cdr (window-margins)))))
 
+(defun magit-maybe-show-margin ()
+  "Maybe show the margin, depending on the major-mode and an option.
+Supported modes are `magit-log-mode' and `magit-reflog-mode',
+and the respective options are `magit-log-show-margin' and
+`magit-reflog-show-margin'."
+  (if (local-variable-p 'magit-show-margin)
+      (magit-set-buffer-margin magit-show-margin)
+    (pcase major-mode
+      (`magit-log-mode    (magit-set-buffer-margin magit-log-show-margin))
+      (`magit-reflog-mode (magit-set-buffer-margin magit-reflog-show-margin)))))
+
 (defun magit-set-buffer-margin (enable)
-  (let ((width (and enable
-                    (if (and (derived-mode-p 'magit-log-mode)
-                             (eq (car magit-refresh-args) 'verbose))
-                        0 ; temporarily hide redundant margin
-                      (car magit-log-margin-spec)))))
+  (let ((width (cond ((not enable) nil)
+                     ((derived-mode-p 'magit-reflog-mode)
+                      (+ (cadr magit-log-margin-spec) 5))
+                     (t (car magit-log-margin-spec)))))
     (setq magit-show-margin width)
     (when (and enable magit-set-buffer-margin-refresh)
       (magit-refresh))
@@ -1186,7 +1477,9 @@ These sections can be expanded to show the respective commits."
 
 (defun magit-make-margin-overlay (&rest strings)
   ;; Don't put the overlay on the complete line to work around #1880.
-  (let ((o (make-overlay (1+ (point)) (line-end-position) nil t)))
+  (let ((o (make-overlay (1+ (line-beginning-position))
+                         (line-end-position)
+                         nil t)))
     (overlay-put o 'evaporate t)
     (overlay-put o 'before-string
                  (propertize "o" 'display
@@ -1194,6 +1487,10 @@ These sections can be expanded to show the respective commits."
                                    (apply #'concat strings))))))
 
 ;;; magit-log.el ends soon
+
+(define-obsolete-function-alias 'magit-insert-unpulled-or-recent-commits
+  'magit-insert-unpulled-from-upstream-or-recent "Magit 2.4.0")
+
 (provide 'magit-log)
 ;; Local Variables:
 ;; coding: utf-8

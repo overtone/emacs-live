@@ -48,6 +48,7 @@ code such as the following to your emacs startup file:
 ## About
 
 Author: Steve Purcell <steve at sanityinc dot com>
+
 Homepage: https://github.com/purcell/elisp-slime-nav
 
 This little library was extracted from the author's

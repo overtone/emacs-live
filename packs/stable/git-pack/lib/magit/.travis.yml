@@ -1,7 +1,7 @@
 language: generic
 env:
   global:
-    - CURL=curl -fsSkL --retry 9 --retry-delay 9
+    - CURL="curl -fsSkL --retry 9 --retry-delay 9"
   matrix:
     # - EMACS=emacs24 ## This is 24.3 which is too old to run magit
     - EMACS=emacs-snapshot
@@ -26,7 +26,15 @@ install:
         sudo apt-get -qq install emacs-snapshot-el;
     fi
   - $CURL https://raw.githubusercontent.com/magnars/dash.el/master/dash.el -o dash.el
+  - $CURL https://raw.githubusercontent.com/magit/with-editor/master/with-editor.el -o with-editor.el
   - $EMACS --version
 script:
-  - make lisp EMACSBIN=$EMACS
-  - make test EMACSBIN=$EMACS
+  - git config --global user.name "A U Thor"
+  - git config --global user.email a.u.thor@example.com
+  - make lisp EMACSBIN=$EMACS DASH_DIR=$PWD
+  - make test EMACSBIN=$EMACS DASH_DIR=$PWD
+notifications:
+  email:
+    # Default is change, but that includes a new branch's 1st success.
+    on_success: never
+    on_failure: always # The default.

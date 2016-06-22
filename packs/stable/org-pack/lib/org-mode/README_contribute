@@ -58,10 +58,10 @@ development.
      new mechanism to make sure all changes end up in the right
      place.
 
-   - Creating and pushing a change to the Org-mode core requires
-     you also to provide ChangeLog entries.  Just press `C-x 4 a'
-     in each function or variable you have modified and describe
-     the change you made in the ChangeLog buffer/file.
+   - Org mode no longer uses ChangeLog entries to document
+     changes.  Instead, special commit messages are used, as
+     described in the `CONTRIBUTE' file in the main Emacs
+     repository.
 
    - Among other things, Org-mode is widely appreciated because
      of its simplicity, cleanness and consistency.  We should try

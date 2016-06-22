@@ -1,6 +1,5 @@
 (live-add-pack-lib "haskell-mode")
 (require 'haskell-font-lock)
-(require 'haskell-simple-indent)
 (require 'haskell-mode)
 
 

@@ -1,6 +1,6 @@
 ;;; ox-koma-letter.el --- KOMA Scrlttr2 Back-End for Org Export Engine
 
-;; Copyright (C) 2007-2015  Free Software Foundation, Inc.
+;; Copyright (C) 2007-2016  Free Software Foundation, Inc.
 
 ;; Author: Nicolas Goaziou <n.goaziou AT gmail DOT com>
 ;;         Alan Schmitt <alan.schmitt AT polytechnique DOT org>
@@ -204,13 +204,27 @@ then the opening will be implicitly set as the headline title."
 
 (defcustom org-koma-letter-closing ""
   "Letter's closing, as a string.
-This option can also be set with the CLOSING keyword."
+This option can also be set with the CLOSING keyword.  Moreover,
+when:
+  (1) there's no CLOSING keyword or it is empty;
+  (2) `org-koma-letter-headline-is-opening-maybe' is non-nil;
+  (3) the letter contains a headline with the special
+      tag closing;
+then the opening will be set as the title of the closing special
+heading."
   :group 'org-export-koma-letter
   :type 'string)
 
 (defcustom org-koma-letter-signature ""
   "Signature, as a string.
-This option can also be set with the SIGNATURE keyword."
+This option can also be set with the SIGNATURE keyword.
+Moreover, when:
+  (1) there's no CLOSING keyword or it is empty;
+  (2) `org-koma-letter-headline-is-opening-maybe' is non-nil;
+  (3) the letter contains a headline with the special
+      tag closing;
+then the signature will be  set as the content of the
+closing special heading."
   :group 'org-export-koma-letter
   :type 'string)
 
@@ -352,16 +366,13 @@ A headline is only used if #+OPENING is not set.  See also
   :type 'boolean)
 
 (defcustom org-koma-letter-prefer-subject nil
-  "Non-nil means title should be interpret as subject if subject is missing.
+  "Non-nil means title should be interpreted as subject if subject is missing.
 This option can also be set with the OPTIONS keyword,
-e.g. \"title-subject:t\".
-
-This may be useful for older documents where the SUBJECT keyword
-was not present."
+e.g. \"title-subject:t\"."
     :group 'org-export-koma-letter
     :type 'boolean)
 
-(defconst org-koma-letter-special-tags-in-letter '(to from)
+(defconst org-koma-letter-special-tags-in-letter '(to from closing)
   "Header tags related to the letter itself.")
 
 (defconst org-koma-letter-special-tags-after-closing '(ps encl cc)
@@ -384,7 +395,7 @@ was not present."
   :options-alist
   '((:latex-class "LATEX_CLASS" nil org-koma-letter-default-class t)
     (:lco "LCO" nil org-koma-letter-class-option-file)
-    (:author "AUTHOR" nil (org-koma-letter--get-value org-koma-letter-author) t)
+    (:author "AUTHOR" nil (org-koma-letter--get-value org-koma-letter-author) parse)
     (:author-changed-in-buffer-p "AUTHOR" nil nil t)
     (:from-address "FROM_ADDRESS" nil org-koma-letter-from-address newline)
     (:phone-number "PHONE_NUMBER" nil org-koma-letter-phone-number)
@@ -392,8 +403,8 @@ was not present."
     (:to-address "TO_ADDRESS" nil nil newline)
     (:place "PLACE" nil org-koma-letter-place)
     (:subject "SUBJECT" nil nil parse)
-    (:opening "OPENING" nil org-koma-letter-opening)
-    (:closing "CLOSING" nil org-koma-letter-closing)
+    (:opening "OPENING" nil org-koma-letter-opening parse)
+    (:closing "CLOSING" nil org-koma-letter-closing parse)
     (:signature "SIGNATURE" nil org-koma-letter-signature newline)
     (:special-headings nil "special-headings"
 		       org-koma-letter-prefer-special-headings)
@@ -424,7 +435,8 @@ was not present."
     (:inbuffer-with-backaddress nil "backaddress" 'koma-letter:empty)
     (:inbuffer-with-email nil "email" 'koma-letter:empty)
     (:inbuffer-with-foldmarks nil "foldmarks" 'koma-letter:empty)
-    (:inbuffer-with-phone nil "phone" 'koma-letter:empty))
+    (:inbuffer-with-phone nil "phone" 'koma-letter:empty)
+    (:inbuffer-with-place nil "place" 'koma-letter:empty))
   :translate-alist '((export-block . org-koma-letter-export-block)
 		     (export-snippet . org-koma-letter-export-snippet)
 		     (headline . org-koma-letter-headline)
@@ -468,27 +480,27 @@ return a string or nil."
 	  (t value))))
 
 (defun org-koma-letter--special-contents-as-macro
-  (keywords &optional keep-newlines no-tag)
-  "Process KEYWORDS  members of `org-koma-letter-special-contents'.
+    (keywords &optional keep-newlines no-tag)
+  "Process KEYWORDS members of `org-koma-letter-special-contents'.
 KEYWORDS is a list of symbols.  Return them as a string to be
 formatted.
 
 The function is used for inserting content of special headings
 such as PS.
 
-If KEEP-NEWLINES is t newlines will not be removed.  If NO-TAG is
-t the content in `org-koma-letter-special-contents' will not be
-wrapped in a macro named whatever the members of KEYWORDS are
-called."
+If KEEP-NEWLINES is non-nil leading and trailing newlines are not
+removed.  If NO-TAG is non-nil the content in
+`org-koma-letter-special-contents' are not wrapped in a macro
+named whatever the members of KEYWORDS are called."
   (mapconcat
-   #'(lambda (keyword)
-       (let* ((name (org-koma-letter--get-value keyword))
-	      (value (org-koma-letter--get-tagged-contents name)))
-	 (when value
-	   (if no-tag (if keep-newlines value (org-trim value))
-	     (format "\\%s{%s}\n"
-		     name
-		     (if keep-newlines value (org-trim value)))))))
+   (lambda (keyword)
+     (let* ((name (org-koma-letter--get-value keyword))
+	    (value (org-koma-letter--get-tagged-contents name)))
+       (cond ((not value) nil)
+	     (no-tag (if keep-newlines value (org-trim value)))
+	     (t (format "\\%s{%s}\n"
+			name
+			(if keep-newlines value (org-trim value)))))))
    keywords
    ""))
 
@@ -581,27 +593,7 @@ holding export options."
    (and (plist-get info :time-stamp-file)
         (format-time-string "%% Created %Y-%m-%d %a %H:%M\n"))
    ;; Document class and packages.
-   (let* ((class (plist-get info :latex-class))
-	  (class-options (plist-get info :latex-class-options))
-	  (header (nth 1 (assoc class org-latex-classes)))
-	  (document-class-string
-	   (and (stringp header)
-		(if (not class-options) header
-		  (replace-regexp-in-string
-		   "^[ \t]*\\\\documentclass\\(\\(\\[[^]]*\\]\\)?\\)"
-		   class-options header t nil 1)))))
-     (if (not document-class-string)
-	 (user-error "Unknown LaTeX class `%s'" class)
-       (org-latex-guess-babel-language
-	(org-latex-guess-inputenc
-	 (org-element-normalize-string
-	  (org-splice-latex-header
-	   document-class-string
-	   org-latex-default-packages-alist ; Defined in org.el.
-	   org-latex-packages-alist nil     ; Defined in org.el.
-	   (concat (org-element-normalize-string (plist-get info :latex-header))
-		   (plist-get info :latex-header-extra)))))
-	info)))
+   (org-latex--make-header info)
    ;; Settings.  They can come from three locations, in increasing
    ;; order of precedence: global variables, LCO files and in-buffer
    ;; settings.  Thus, we first insert settings coming from global
@@ -619,33 +611,37 @@ holding export options."
    ;; Date.
    (format "\\date{%s}\n" (org-export-data (org-export-get-date info) info))
    ;; Hyperref, document start, and subject and title.
-   (let ((with-subject (plist-get info :with-subject)))
-     (when (and with-subject (plist-get info :with-title))
-       (concat
-	(unless (eq with-subject t)
-	  (format "\\KOMAoption{subject}{%s}\n"
-		  (if (symbolp with-subject) with-subject
-		    (mapconcat #'symbol-name with-subject ","))))
-	(let* ((title-as-subject (plist-get info :with-title-as-subject))
-	       (subject* (org-string-nw-p
-			  (org-export-data (plist-get info :subject) info)))
-	       (title* (and (plist-get info :with-title)
-			    (org-string-nw-p
-			     (org-export-data (plist-get info :title) info))))
-	       (subject (if title-as-subject (or subject* title*) subject*))
-	       (title (if title-as-subject (and subject* title*) title*))
-	       (hyperref-template (plist-get info :latex-hyperref-template))
-	       (spec (append (list (cons ?t (or title subject "")))
-			     (org-latex--format-spec info))))
-	  (concat
-	   ;; Hyperref.
-	   (format-spec hyperref-template spec)
-	   ;; Document start.
-	   "\\begin{document}\n\n"
-	   ;; Subject and title.
-	   (when subject (format "\\setkomavar{subject}{%s}\n" subject))
-	   (when title (format "\\setkomavar{title}{%s}\n" title))
-	   (when (or (org-string-nw-p title) (org-string-nw-p subject)) "\n"))))))
+   (let* ((with-subject (plist-get info :with-subject))
+	  (with-title (plist-get info :with-title))
+	  (title-as-subject (and with-subject
+				 (plist-get info :with-title-as-subject)))
+	  (subject* (org-string-nw-p
+		     (org-export-data (plist-get info :subject) info)))
+	  (title* (and with-title
+		       (org-string-nw-p
+			(org-export-data (plist-get info :title) info))))
+	  (subject (cond ((not with-subject) nil)
+			 (title-as-subject (or subject* title*))
+			 (t subject*)))
+	  (title (cond ((not with-title) nil)
+		       (title-as-subject (and subject* title*))
+		       (t title*)))
+	  (hyperref-template (plist-get info :latex-hyperref-template))
+	  (spec (append (list (cons ?t (or title subject "")))
+			(org-latex--format-spec info))))
+     (concat
+      (when (and with-subject (not (eq with-subject t)))
+	(format "\\KOMAoption{subject}{%s}\n"
+		(if (symbolp with-subject) with-subject
+		  (mapconcat #'symbol-name with-subject ","))))
+      ;; Hyperref.
+      (format-spec hyperref-template spec)
+      ;; Document start.
+      "\\begin{document}\n\n"
+      ;; Subject and title.
+      (when subject (format "\\setkomavar{subject}{%s}\n" subject))
+      (when title (format "\\setkomavar{title}{%s}\n" title))
+      (when (or (org-string-nw-p title) (org-string-nw-p subject)) "\n")))
    ;; Letter start.
    (format "\\begin{letter}{%%\n%s}\n\n"
 	   (org-koma-letter--determine-to-and-from info 'to))
@@ -664,7 +660,17 @@ holding export options."
    ;; Letter body.
    contents
    ;; Closing.
-   (format "\n\\closing{%s}\n" (plist-get info :closing))
+   (format "\n\\closing{%s}\n"
+	   (org-export-data
+	    (or (org-string-nw-p (plist-get info :closing))
+		(when (plist-get info :with-headline-opening)
+		  (org-element-map (plist-get info :parse-tree) 'headline
+		    (lambda (head)
+		      (when (eq (org-koma-letter--special-tag head info)
+				'closing)
+			(org-element-property :title head)))
+		    info t)))
+	    info))
    (org-koma-letter--special-contents-as-macro
     (plist-get info :with-after-closing))
    ;; Letter end.
@@ -710,18 +716,32 @@ a communication channel."
           (format "\\KOMAoption{fromphone}{%s}\n"
                   (if (plist-get info :with-phone) "true" "false")))
      ;; Signature.
-     (let ((signature (plist-get info :signature)))
-       (and (org-string-nw-p signature)
-            (funcall check-scope 'signature)
-            (format "\\setkomavar{signature}{%s}\n" signature)))
+     (let* ((heading-val
+	     (and (plist-get info :with-headline-opening)
+		  (org-string-nw-p
+		   (org-trim
+		    (org-export-data
+		     (org-koma-letter--get-tagged-contents 'closing)
+		     info)))))
+	    (signature (org-string-nw-p (plist-get info :signature)))
+	    (signature-scope (funcall check-scope 'signature)))
+       (and (or (and signature signature-scope)
+		heading-val)
+	    (not (and (eq scope 'global) heading-val))
+	    (format "\\setkomavar{signature}{%s}\n"
+		    (if signature-scope signature heading-val))))
      ;; Back address.
      (and (funcall check-scope 'with-backaddress)
           (format "\\KOMAoption{backaddress}{%s}\n"
                   (if (plist-get info :with-backaddress) "true" "false")))
      ;; Place.
-     (and (funcall check-scope 'place)
-          (format "\\setkomavar{place}{%s}\n"
-                  (if (plist-get info :with-place) (plist-get info :place) "")))
+     (let ((with-place-set (funcall check-scope 'with-place))
+	   (place-set (funcall check-scope 'place)))
+       (and (or (and with-place-set place-set)
+		(and (eq scope 'buffer) (or with-place-set place-set)))
+	    (format "\\setkomavar{place}{%s}\n"
+		    (if (plist-get info :with-place) (plist-get info :place)
+		      ""))))
      ;; Folding marks.
      (and (funcall check-scope 'with-foldmarks)
           (let ((foldmarks (plist-get info :with-foldmarks)))

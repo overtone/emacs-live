@@ -1,6 +1,6 @@
 ;;; ob-latex.el --- org-babel functions for latex "evaluation"
 
-;; Copyright (C) 2009-2014 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2016 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;; Keywords: literate programming, reproducible research
@@ -205,7 +205,7 @@ This function is called by `org-babel-execute-src-block'."
   "Generate a file from a pdf file using imagemagick."
   (let ((cmd (concat "convert " im-in-options " " pdffile " "
 		     im-out-options " " out-file)))
-    (message (concat "Converting pdffile file " cmd  "..."))
+    (message "Converting pdffile file %s..." cmd)
     (shell-command cmd)))
 
 (defun org-babel-latex-tex-to-pdf (file)

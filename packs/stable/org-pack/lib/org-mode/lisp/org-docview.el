@@ -1,6 +1,6 @@
 ;;; org-docview.el --- support for links to doc-view-mode buffers
 
-;; Copyright (C) 2009-2015 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2016 Free Software Foundation, Inc.
 
 ;; Author: Jan Böcker <jan.boecker at jboecker dot de>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -61,7 +61,7 @@
       (setq path (org-link-escape (expand-file-name path)))
       (cond
        ((eq format 'html) (format "<a href=\"%s\">%s</a>" path desc))
-       ((eq format 'latex) (format "\href{%s}{%s}" path desc))
+       ((eq format 'latex) (format "\\href{%s}{%s}" path desc))
        ((eq format 'ascii) (format "%s (%s)" desc path))
        (t path)))))
 

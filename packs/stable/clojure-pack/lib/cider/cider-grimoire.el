@@ -1,6 +1,6 @@
 ;;; cider-grimoire.el --- Grimoire integration -*- lexical-binding: t -*-
 
-;; Copyright © 2014-2015 Bozhidar Batsov
+;; Copyright © 2014-2016 Bozhidar Batsov and CIDER contributors
 ;;
 ;; Author: Bozhidar Batsov <bozhidar@batsov.com>
 
@@ -25,18 +25,26 @@
 
 ;;; Code:
 
-(require 'cider-interaction)
+(require 'cider-client)
+(require 'cider-common)
+(require 'cider-compat)
+(require 'cider-popup)
+
+(require 'nrepl-client)
+
 (require 'url-vars)
 
 (defconst cider-grimoire-url "http://conj.io/")
 
+(defconst cider-grimoire-buffer "*cider-grimoire*")
+
 (defun cider-grimoire-replace-special (name)
   "Convert the dashes in NAME to a grimoire friendly format."
-  (->> name
-       (replace-regexp-in-string "\\?" "_QMARK_")
-       (replace-regexp-in-string "\\." "_DOT_")
-       (replace-regexp-in-string "\\/" "_SLASH_")
-       (replace-regexp-in-string "\\(\\`_\\)\\|\\(_\\'\\)" "")))
+  (thread-last name
+    (replace-regexp-in-string "\\?" "_QMARK_")
+    (replace-regexp-in-string "\\." "_DOT_")
+    (replace-regexp-in-string "\\/" "_SLASH_")
+    (replace-regexp-in-string "\\(\\`_\\)\\|\\(_\\'\\)" "")))
 
 (defun cider-grimoire-url (name ns)
   "Generate a grimoire search v0 url from NAME, NS."
@@ -45,8 +53,8 @@
       (concat base-url  "search/v0/" ns "/" (cider-grimoire-replace-special name) "/"))))
 
 (defun cider-grimoire-web-lookup (symbol)
-  "Look up the grimoire documentation for SYMBOL."
-  (-if-let (var-info (cider-var-info symbol))
+  "Open the grimoire documentation for SYMBOL in a web browser."
+  (if-let ((var-info (cider-var-info symbol)))
       (let ((name (nrepl-dict-get var-info "name"))
             (ns (nrepl-dict-get var-info "ns")))
         (browse-url (cider-grimoire-url name ns)))
@@ -57,16 +65,16 @@
   "Open grimoire documentation in the default web browser.
 
 Prompts for the symbol to use, or uses the symbol at point, depending on
-the value of `cider-prompt-for-symbol'. With prefix arg ARG, does the
+the value of `cider-prompt-for-symbol'.  With prefix arg ARG, does the
 opposite of what that option dictates."
   (interactive "P")
   (funcall (cider-prompt-for-symbol-function arg)
-           "Grimoire doc for: "
+           "Grimoire doc for"
            #'cider-grimoire-web-lookup))
 
 (defun cider-create-grimoire-buffer (content)
   "Create a new grimoire buffer with CONTENT."
-  (with-current-buffer (cider-popup-buffer "*cider grimoire*" t)
+  (with-current-buffer (cider-popup-buffer cider-grimoire-buffer t)
     (read-only-mode -1)
     (insert content)
     (read-only-mode +1)
@@ -75,7 +83,7 @@ opposite of what that option dictates."
 
 (defun cider-grimoire-lookup (symbol)
   "Look up the grimoire documentation for SYMBOL."
-  (-if-let (var-info (cider-var-info symbol))
+  (if-let ((var-info (cider-var-info symbol)))
       (let ((name (nrepl-dict-get var-info "name"))
             (ns (nrepl-dict-get var-info "ns"))
             (url-request-method "GET")
@@ -96,11 +104,15 @@ opposite of what that option dictates."
   "Open grimoire documentation in a popup buffer.
 
 Prompts for the symbol to use, or uses the symbol at point, depending on
-the value of `cider-prompt-for-symbol'. With prefix arg ARG, does the
+the value of `cider-prompt-for-symbol'.  With prefix arg ARG, does the
 opposite of what that option dictates."
   (interactive "P")
+  (when (derived-mode-p 'clojurescript-mode)
+    (user-error "`cider-grimoire' doesn't support ClojureScript"))
   (funcall (cider-prompt-for-symbol-function arg)
-           "Grimoire doc for: "
+           "Grimoire doc for"
            #'cider-grimoire-lookup))
 
 (provide 'cider-grimoire)
+
+;;; cider-grimoire.el ends here

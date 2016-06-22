@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 # coding: utf-8
-import os
 import sys
 import optparse
 from floo import emacs_handler
-from floo.common import migrations
 from floo.common import reactor
 from floo.common import utils
 from floo.common import shared as G
@@ -36,13 +34,6 @@ def main():
         sys.exit(1)
 
     utils.reload_settings()
-
-    if not os.path.exists(G.FLOORC_JSON_PATH):
-        migrations.migrate_floorc()
-        utils.reload_settings()
-
-    migrations.rename_floobits_dir()
-    migrations.migrate_symlinks()
 
     try:
         utils.normalize_persistent_data()

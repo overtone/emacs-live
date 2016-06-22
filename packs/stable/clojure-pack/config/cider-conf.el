@@ -1,3 +1,4 @@
+(live-add-pack-lib "spinner.el")
 (live-add-pack-lib "cider")
 (require 'cider)
 (require 'cider-apropos)
@@ -14,12 +15,10 @@
 
 (add-hook 'cider-repl-mode-hook
           (lambda ()
-            (cider-turn-on-eldoc-mode)
             (paredit-mode 1)))
 
 (add-hook 'cider-mode-hook
            (lambda ()
-             (cider-turn-on-eldoc-mode)
              (paredit-mode 1)))
 
 (setq cider-popup-stacktraces t)
@@ -39,8 +38,8 @@
 ;; Specify the print length to be 100 to stop infinite sequences killing
 ;; things. This might be dangerous for some people relying on
 ;; *print-length* being larger. Consider a work around
-(defun live-nrepl-set-print-length ()
-  (nrepl-send-string-sync "(set! *print-length* 100)" "clojure.core"))
+;; (defun live-nrepl-set-print-length ()
+;;   (nrepl-send-string-sync "(set! *print-length* 100)" "clojure.core"))
 
 (add-hook 'nrepl-connected-hook 'live-nrepl-set-print-length)
 

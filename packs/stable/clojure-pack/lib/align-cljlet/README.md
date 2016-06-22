@@ -1,3 +1,10 @@
+# Notice:
+
+This project is now deprecated in favour of the alignment features in
+clojure-mode 5.1.
+
+See: https://github.com/clojure-emacs/clojure-mode#vertical-alignment
+
 # Description:
 
 'align-cljlet' is an emacs addin for aligning let-like forms. This
@@ -60,3 +67,8 @@ invoke:
  M-x align-cljlet
 
 You may wish to bind this to a specific key.
+
+# Contributors
+
+- Glen Stampoultzis
+- Reid D McKenzie

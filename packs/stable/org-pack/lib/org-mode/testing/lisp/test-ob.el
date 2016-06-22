@@ -1289,16 +1289,33 @@ echo \"$data\"
 (ert-deftest test-ob/preserve-results-indentation ()
   "Preserve indentation when executing a src block."
   (should
-   (equal '(2 2)
-	  (org-test-with-temp-text
-	      "  #+begin_src emacs-lisp\n  (+ 1 1)\n  #+end_src"
-	    (org-babel-execute-src-block)
-	    (buffer-string)
-	    (let ((case-fold-search t)) (search-forward "#+results:"))
-	    ;; Check if both #+RESULTS: keyword and actual results are
-	    ;; indented by 2 columns.
-	    (list (org-get-indentation)
-		  (progn (forward-line) (org-get-indentation)))))))
+   (equal
+    '(2 2)
+    (org-test-with-temp-text "  #+begin_src emacs-lisp\n(+ 1 1)\n  #+end_src"
+      (org-babel-execute-src-block)
+      (let ((case-fold-search t)) (search-forward "RESULTS"))
+      (list (org-get-indentation)
+	    (progn (forward-line) (org-get-indentation))))))
+  (should
+   (equal
+    '(2 2)
+    (org-test-with-temp-text
+	"  #+name: block\n  #+begin_src emacs-lisp\n(+ 1 1)\n  #+end_src"
+      (org-babel-execute-src-block)
+      (let ((case-fold-search t)) (search-forward "RESULTS"))
+      (list (org-get-indentation)
+	    (progn (forward-line) (org-get-indentation))))))
+  ;; Don't get fooled by TAB-based indentation.
+  (should
+   (equal
+    '(6 6)
+    (org-test-with-temp-text
+	"\t  #+begin_src emacs-lisp\n\t  (+ 1 1)\n\t  #+end_src"
+      (setq tab-width 4)
+      (org-babel-execute-src-block)
+      (let ((case-fold-search t)) (search-forward "RESULTS"))
+      (list (org-get-indentation)
+	    (progn (forward-line) (org-get-indentation)))))))
 
 (ert-deftest test-ob/safe-header-args ()
   "Detect safe and unsafe header args."
@@ -1459,6 +1476,72 @@ echo \"$data\"
   ;; ... with internal escaped backslash-escaped double quote
   (should (equal "foo\\\"bar"
 		 (org-babel-script-escape "\"foo\\\\\\\"bar\""))))
+
+(ert-deftest ob/process-params-no-duplicates ()
+    (should (equal (org-babel-process-params '((:colname-names . 1)
+                                               (:rowname-names . 1)
+                                               (:result-params . 1)
+                                               (:result-type . 1)
+                                               (:var . "\"foo\"")))
+                   '((:var)
+		     (:colname-names . 1)
+		     (:rowname-names . 1)
+		     (:result-params . 1)
+		     (:result-type . value)))))
+
+(defun org-test-ob/update-block-body ()
+  "Test `org-babel-update-block-body' specifications."
+  (should
+   (equal "#+begin_src elisp\n  2\n#+end_src"
+	  (let ((org-edit-src-content-indentation 2))
+	    (org-test-with-temp-text "#+begin_src elisp\n(+ 1 1)\n#+end_src"
+	      (org-babel-update-block-body "2")
+	      (buffer-string)))))
+  ;; Preserve block indentation.
+  (should
+   (equal "  #+begin_src elisp\n   2\n  #+end_src"
+	  (let ((org-edit-src-content-indentation 1))
+	    (org-test-with-temp-text
+		"  #+begin_src elisp\n  (+ 1 1)\n  #+end_src"
+	      (org-babel-update-block-body "2")
+	      (buffer-string)))))
+  ;; Ignore NEW-BODY global indentation.
+  (should
+   (equal "#+begin_src elisp\n  2\n#+end_src"
+	  (let ((org-edit-src-content-indentation 2))
+	    (org-test-with-temp-text "#+begin_src elisp\n(+ 1 1)\n#+end_src"
+	      (org-babel-update-block-body "      2")
+	      (buffer-string)))))
+  ;; When indentation should be preserved ignore the two rules above.
+  (should
+   (equal "  #+begin_src elisp\n2\n  #+end_src"
+	  (let ((org-edit-src-content-indentation 1)
+		(org-src-preserve-indentation t))
+	    (org-test-with-temp-text
+		"  #+begin_src elisp\n  (+ 1 1)\n  #+end_src"
+	      (org-babel-update-block-body "2")
+	      (buffer-string)))))
+  (should
+   (equal "  #+begin_src elisp -i\n2\n  #+end_src"
+	  (let ((org-edit-src-content-indentation 1))
+	    (org-test-with-temp-text
+		"  #+begin_src elisp -i\n  (+ 1 1)\n  #+end_src"
+	      (org-babel-update-block-body "2")
+	      (buffer-string)))))
+  (should
+   (equal "#+begin_src elisp\n      2\n#+end_src"
+	  (let ((org-edit-src-content-indentation 2)
+		(org-src-preserve-indentation t))
+	    (org-test-with-temp-text "#+begin_src elisp\n(+ 1 1)\n#+end_src"
+	      (org-babel-update-block-body "      2")
+	      (buffer-string)))))
+  (should
+   (equal "#+begin_src elisp -i\n      2\n#+end_src"
+	  (let ((org-edit-src-content-indentation 2)
+		(org-src-preserve-indentation t))
+	    (org-test-with-temp-text "#+begin_src elisp -i\n(+ 1 1)\n#+end_src"
+	      (org-babel-update-block-body "      2")
+	      (buffer-string))))))
 
 (provide 'test-ob)
 

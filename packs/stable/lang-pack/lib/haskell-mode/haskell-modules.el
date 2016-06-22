@@ -1,4 +1,4 @@
-;;; haskell-modules.el ---
+;;; haskell-modules.el --- -*- lexical-binding: t -*-
 
 ;; Copyright (c) 2014 Chris Done. All rights reserved.
 
@@ -23,9 +23,12 @@
 (require 'haskell-navigate-imports)
 (require 'haskell-complete-module)
 (require 'haskell-sandbox)
+(require 'haskell-customize)
 
 (defun haskell-add-import (&optional module)
-  "Add an import to the import list."
+  "Add an import to the import list.  Sorts and aligns imports,
+unless `haskell-stylish-on-save' is set, in which case we defer
+to stylish-haskell."
   (interactive)
   (save-excursion
     (goto-char (point-max))
@@ -35,8 +38,8 @@
                  (haskell-complete-module-read
                   "Module: "
                   (haskell-session-all-modules (haskell-modules-session))))))
-    (haskell-sort-imports)
-    (haskell-align-imports)))
+    (unless haskell-stylish-on-save (haskell-sort-imports)
+            (haskell-align-imports))))
 
 (defun haskell-import-for-module (module)
   "Get import statements for the given module."
@@ -48,9 +51,8 @@
               "\n"))))
 
 ;;;###autoload
-(defun haskell-session-installed-modules (session &optional dontcreate)
-  "Get the modules installed in the current package set.
-If DONTCREATE is non-nil don't create a new session."
+(defun haskell-session-installed-modules (_session &optional _dontcreate)
+  "Get the modules installed in the current package set."
   ;; TODO: Again, this makes HEAVY use of unix utilities. It'll work
   ;; fine in Linux, probably okay on OS X, and probably not at all on
   ;; Windows. Again, if someone wants to test on Windows and come up

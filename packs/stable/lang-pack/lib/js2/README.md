@@ -1,4 +1,4 @@
-About [![Build Status](https://travis-ci.org/mooz/js2-mode.png?branch=master)](https://travis-ci.org/mooz/js2-mode)
+About [![Build Status](https://travis-ci.org/mooz/js2-mode.svg?branch=master)](https://travis-ci.org/mooz/js2-mode) [![MELPA](https://melpa.org/packages/js2-mode-badge.svg)](https://melpa.org/#/js2-mode)
 ======
 
 Improved JavaScript editing mode for GNU Emacs ([description here](http://elpa.gnu.org/packages/js2-mode.html)).
@@ -12,7 +12,7 @@ The stable versions are hosted at [GNU ELPA](http://elpa.gnu.org/)
 (<kbd>M-x list-packages</kbd>).
 
 You can also install the latest development version from
-[Melpa](http://melpa.milkbox.net/#installing).
+[MELPA](https://melpa.org/#/getting-started).
 
 Emacs 22 and 23
 ===============

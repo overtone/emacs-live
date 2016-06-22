@@ -63,13 +63,17 @@
    (created-at :initarg :created-at)
    (updated-at :initarg :updated-at)
    (closed-at :initarg :closed-at)
-   (merged-at :initarg :merged-at)))
+   (merged-at :initarg :merged-at)
+   (head :initarg :head :initform nil)
+   (base :initarg :base :initform nil)
+
+   (ref-cls :allocation :class :initform gh-repos-ref)))
 
 (defmethod gh-object-read-into ((stub gh-pulls-request-stub) data)
   (call-next-method)
   (with-slots (url html-url diff-url patch-url issue-url number
                    state title body created-at updated-at
-                   closed-at merged-at)
+                   closed-at merged-at head base)
       stub
     (setq url (gh-read data 'url)
           html-url (gh-read data 'html_url)
@@ -83,7 +87,13 @@
           created-at (gh-read data 'created_at)
           updated-at (gh-read data 'updated_at)
           closed-at (gh-read data 'closed_at)
-          merged-at (gh-read data 'merged_at))))
+          merged-at (gh-read data 'merged_at)
+          head (gh-object-read (or (oref stub :head)
+                                   (oref stub ref-cls))
+                                (gh-read data 'head))
+          base (gh-object-read (or (oref stub :base)
+                                   (oref stub ref-cls))
+                                (gh-read data 'base)))))
 
 ;;;###autoload
 (defclass gh-pulls-request (gh-pulls-request-stub)
@@ -96,8 +106,6 @@
    (additions :initarg :additions)
    (deletions :initarg :deletions)
    (changed-files :initarg :changed-files)
-   (head :initarg :head :initform nil)
-   (base :initarg :base :initform nil)
 
    (ref-cls :allocation :class :initform gh-repos-ref)
    (user-cls :allocation :class :initform gh-user))
@@ -107,7 +115,7 @@
   (call-next-method)
   (with-slots (merged mergeable
                       merged-by comments user commits additions
-                      deletions changed-files head base)
+                      deletions changed-files)
       req
     (setq merged (gh-read data 'merged)
           mergeable (gh-read data 'mergeable)
@@ -119,13 +127,7 @@
           commits (gh-read data 'commits)
           additions (gh-read data 'additions)
           deletions (gh-read data 'deletions)
-          changed-files (gh-read data 'changed_files)
-          head (gh-object-read (or (oref req :head)
-                                   (oref req ref-cls))
-                                (gh-read data 'head))
-          base (gh-object-read (or (oref req :base)
-                                   (oref req ref-cls))
-                                (gh-read data 'base)))))
+          changed-files (gh-read data 'changed_files))))
 
 (defmethod gh-pulls-req-to-new ((req gh-pulls-request))
   (let ((head (oref req :head))

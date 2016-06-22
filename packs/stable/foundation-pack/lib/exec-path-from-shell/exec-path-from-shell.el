@@ -89,16 +89,10 @@
   "Double-quote S, escaping any double-quotes already contained in it."
   (concat "\"" (replace-regexp-in-string "\"" "\\\\\"" s) "\""))
 
-(defun exec-path-from-shell--tcsh-p (shell)
-  "Return non-nil if SHELL appears to be tcsh."
-  (and shell (string-match "tcsh$" shell)))
-
-(defun exec-path-from-shell--login-arg (shell)
-  "Return the name of the --login arg for SHELL."
-  (if (exec-path-from-shell--tcsh-p shell) "-d" "-l"))
-
 (defcustom exec-path-from-shell-arguments
-  (list (exec-path-from-shell--login-arg (getenv "SHELL")) "-i")
+  (if (string-match-p "t?csh$" (getenv "SHELL"))
+      (list "-d")
+    (list "-l" "-i"))
   "Additional arguments to pass to the shell.
 
 The default value denotes an interactive login shell."
@@ -112,7 +106,7 @@ The default value denotes an interactive login shell."
 
 (defun exec-path-from-shell--standard-shell-p (shell)
   "Return non-nil iff SHELL supports the standard ${VAR-default} syntax."
-  (not (string-match "\\(fish\\|tcsh\\)$" shell)))
+  (not (string-match "\\(fish\\|t?csh\\)$" shell)))
 
 (defun exec-path-from-shell-printf (str &optional args)
   "Return the result of printing STR in the user's shell.
@@ -154,14 +148,19 @@ shell-escaped, so they may contain $ etc."
 
 Execute $SHELL according to `exec-path-from-shell-arguments'.
 The result is a list of (NAME . VALUE) pairs."
-  (let* ((dollar-names (mapcar (lambda (n) (format "${%s-}" n)) names))
+  (let* ((random-default (md5 (format "%s%s%s" (emacs-pid) (random) (current-time))))
+         (dollar-names (mapcar (lambda (n) (format "${%s-%s}" n random-default)) names))
          (values (split-string (exec-path-from-shell-printf
                                 (mapconcat #'identity (make-list (length names) "%s") "\\000")
                                 dollar-names) "\0")))
     (let (result)
       (while names
         (prog1
-            (push (cons (car names) (car values)) result)
+            (let ((value (car values)))
+              (push (cons (car names)
+                          (unless (string-equal random-default value)
+                            value))
+                    result))
           (setq values (cdr values)
                 names (cdr names))))
       result)))

@@ -3,6 +3,7 @@ import errno
 import json
 import re
 import hashlib
+import time
 import webbrowser
 
 from functools import wraps
@@ -84,6 +85,7 @@ def reload_settings():
     floorc_settings = load_floorc_json()
     for name, val in floorc_settings.items():
         setattr(G, name, val)
+    validate_auth(G.AUTH)
     if G.SHARE_DIR:
         G.BASE_DIR = G.SHARE_DIR
     G.BASE_DIR = os.path.realpath(os.path.expanduser(G.BASE_DIR))
@@ -98,7 +100,11 @@ def reload_settings():
 
 
 def load_floorc_json():
-    s = {}
+    # Expose a few settings for curious users to tweak
+    s = {
+        'expert_mode': False,
+        'debug': False,
+    }
     try:
         with open(G.FLOORC_JSON_PATH, 'r') as fd:
             floorc_json = fd.read()
@@ -123,16 +129,31 @@ def save_floorc_json(s):
         floorc_json[k.lower()] = v
     msg.log('Writing ', floorc_json)
     with open(G.FLOORC_JSON_PATH, 'w') as fd:
-        fd.write(json.dumps(floorc_json, indent=4, sort_keys=True))
+        fd.write(json.dumps(floorc_json, indent=4, sort_keys=True, separators=(',', ': ')))
+
+
+def validate_auth(auth):
+    if type(auth) != dict:
+        msg.error('floorc.json validation error: Auth section is not an object!')
+        return False
+    for k, v in auth.items():
+        if type(v) != dict:
+            msg.error('floorc.json validation error: host "', k, '" has invalid auth credentials. Did you put a setting in the auth section?')
+            return False
+        for key in ['username', 'api_key', 'secret']:
+            if not v.get(key):
+                msg.error('floorc.json validation error: host "', k, '" missing "', key, '"')
+                return False
+    return True
 
 
 def can_auth(host=None):
     if host is None:
         host = len(G.AUTH) and list(G.AUTH.keys())[0] or G.DEFAULT_HOST
     auth = G.AUTH.get(host)
-    if not auth:
-        return False
-    return bool((auth.get('username') or auth.get('api_key')) and auth.get('secret'))
+    if type(auth) == dict:
+        return bool((auth.get('username') or auth.get('api_key')) and auth.get('secret'))
+    return False
 
 
 cancelled_timeouts = set()
@@ -182,6 +203,21 @@ set_timeout._top_timeout_id = 0
 def cancel_timeout(timeout_id):
     if timeout_id in timeout_ids:
         cancelled_timeouts.add(timeout_id)
+
+
+rate_limits = {}
+
+
+def rate_limit(name, timeout, func, *args, **kwargs):
+    if rate_limits.get(name):
+        return
+    rate_limits[name] = time.time()
+    func(*args, **kwargs)
+
+    def delete_limit():
+        del rate_limits[name]
+
+    set_timeout(delete_limit, timeout, *args, **kwargs)
 
 
 def parse_url(workspace_url):
@@ -237,6 +273,12 @@ def to_workspace_url(r):
         port = ':%s' % port
     host = r.get('host', G.DEFAULT_HOST)
     workspace_url = '%s://%s%s/%s/%s' % (proto, host, port, r['owner'], r['workspace'])
+    p = r.get('path')
+    if p:
+        workspace_url += '/file/%s' % p
+        line = r.get('line')
+        if line:
+            workspace_url += ':%s' % line
     return workspace_url
 
 
@@ -287,7 +329,7 @@ def update_floo_file(path, data):
         floo_json = data
 
     with open(path, 'w') as floo_fd:
-        floo_fd.write(json.dumps(floo_json, indent=4, sort_keys=True))
+        floo_fd.write(json.dumps(floo_json, indent=4, sort_keys=True, separators=(',', ': ')))
 
 
 def read_floo_file(path):
@@ -515,7 +557,8 @@ def has_browser():
         "Chromium",
         "Firefox",
         "Safari",
-        "Opera"
+        "Opera",
+        "windows-default",
     ]
     for browser in valid_browsers:
         try:

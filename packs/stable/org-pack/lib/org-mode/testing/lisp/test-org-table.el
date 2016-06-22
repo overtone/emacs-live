@@ -1453,7 +1453,11 @@ See also `test-org-table/copy-field'."
     "a\nb"
     (let ((org-export-filter-table-cell-functions (list (lambda (c b i) "filter"))))
       (orgtbl-to-generic (org-table-to-lisp "| a |\n|---|\n| b |")
-			 '(:hline nil))))))
+			 '(:hline nil)))))
+  ;; Macros, even if unknown, are returned as-is.
+  (should
+   (equal "{{{macro}}}"
+	  (orgtbl-to-generic (org-table-to-lisp "| {{{macro}}} |") nil))))
 
 (ert-deftest test-org-table/to-latex ()
   "Test `orgtbl-to-latex' specifications."
@@ -1604,7 +1608,7 @@ See also `test-org-table/copy-field'."
 	    (org-table-sort-lines t ?a)
 	    (buffer-string))))
   (should
-   (equal "| C |\n| b |\n| a |\n"
+   (equal "| b |\n| a |\n| C |\n"
 	  (org-test-with-temp-text "| <point>a |\n| C |\n| b |\n"
 	    (org-table-sort-lines nil ?A)
 	    (buffer-string))))
@@ -1762,6 +1766,86 @@ is t, then new columns should be added as needed"
   <point>#+TBLFM: $1=2*$PROP_time_constant;t"
 		   (org-table-calc-current-TBLFM)
 		   (buffer-string)))))
+
+(ert-deftest test-org-table/end-on-hline ()
+  "Test with a table ending on a hline."
+  (should
+   (equal
+    (org-test-with-temp-text
+	"
+| 1 | 2 | 3 |
+| 4 | 5 | 6 |
+|   |   |   |
+|---+---+---|
+<point>#+TBLFM: @3$2..@3$>=vsum(@1..@2)"
+      (org-table-calc-current-TBLFM)
+      (buffer-string))
+    "
+| 1 | 2 | 3 |
+| 4 | 5 | 6 |
+|   | 7 | 9 |
+|---+---+---|
+#+TBLFM: @3$2..@3$>=vsum(@1..@2)")))
+
+(ert-deftest test-org-table/named-field ()
+  "Test formula with a named field."
+  (should
+   (org-string-match-p
+    "| +| +1 +|"
+    (org-test-with-temp-text "
+|   |      |
+| ^ | name |
+<point>#+TBLFM: $name=1"
+      (org-table-calc-current-TBLFM)
+      (buffer-string))))
+  (should
+   (org-string-match-p
+    "| +| +1 +|"
+    (org-test-with-temp-text "
+| _ | name |
+|   |      |
+<point>#+TBLFM: $name=1"
+      (org-table-calc-current-TBLFM)
+      (buffer-string)))))
+
+(ert-deftest test-org-table/named-column ()
+  "Test formula with a named field."
+  (should
+   (org-string-match-p
+    "| +| +1 +| +1 +|"
+    (org-test-with-temp-text "
+| ! | name |   |
+|   |    1 |   |
+<point>#+TBLFM: @2$3=$name"
+      (org-table-calc-current-TBLFM)
+      (buffer-string)))))
+
+(ert-deftest test-org-table/tab-indent ()
+  "Test named fields with tab indentation."
+  (should
+   (org-string-match-p
+    "| # | 111 |"
+    (org-test-with-temp-text
+	"
+	| ! |  sum |      | a |  b |   c |
+	|---+------+------+---+----+-----|
+	| # | 1011 | 1000 | 1 | 10 | 100 |
+	<point>#+TBLFM: $2=$a+$b+$c
+"
+      (org-table-calc-current-TBLFM)
+      (buffer-string)))))
+
+(ert-deftest test-org-table/first-rc ()
+  "Test \"$<\" constructs in formulas."
+  (should
+   (org-string-match-p
+    "| 1 | 2 |"
+    (org-test-with-temp-text
+	"|   | 2 |
+<point>#+TBLFM: $<=1"
+      (org-table-calc-current-TBLFM)
+      (buffer-string)))))
+
 
 (provide 'test-org-table)
 

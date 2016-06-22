@@ -1,5 +1,35 @@
 Revision history for git-gutter.el
 
+Revision 0.89 2016/06/11
+    - Fix wrong argument passing of run-with-idle-timer(#128)
+
+Revision 0.88 2016/05/21
+    - Improve performance(#125)
+    - Optimize putting signs(#123)
+    - Support visual line(#122)
+    - Add statistic commands(#118)
+
+Revision 0.87 2016/01/27
+    - Fix mixing face issue(#115)
+
+Revision 0.86 2016/01/24
+    - Add mark hunk command(#112)
+    - Refactoring code
+    - Remove old magit hook setting, it is no longer used(#110)
+    - Update unchanged line at linum update(#109
+    - Don't upgrade index at invoking 'git diff'(#105)
+
+Revision 0.85 2015/12/10
+    - Use EVM for travis-ci
+    - Update documents
+    - Improve older commands based on git-gutter-mode
+    - Refactoring
+
+Revision 0.84 2015/11/23
+    - Fix staging command issue on Windows(#101)
+    - Add ask flag for staging and reverting command(#96)
+    - Fix dead buffer issue for live-update(#92)
+
 Revision 0.83 2015/05/01
     - Fix narrow region issue in staging hunk
 

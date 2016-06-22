@@ -27,7 +27,11 @@ class BaseHandler(event_emitter.EventEmitter):
         if not d:
             return
         req_id = self.proto.put(d)
-        self.req_ids[req_id] = d.get('name', '?')
+
+        name = d.get('name', '?')
+        if name != "pong":
+            self.req_ids[req_id] = name
+
         return req_id
 
     def on_data(self, name, data):

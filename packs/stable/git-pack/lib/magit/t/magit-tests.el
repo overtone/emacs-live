@@ -1,183 +1,263 @@
 ;;; magit-tests.el --- tests for Magit
 
-;; Copyright (C) 2011-2015  The Magit Project Contributors
+;; Copyright (C) 2011-2016  The Magit Project Contributors
 ;;
 ;; License: GPLv3
 
 ;;; Code:
 
 (require 'cl-lib)
+(require 'dash)
 (require 'ert)
+
 (require 'magit)
 
-;;; Utilities
-
-(defmacro magit-tests--silentio (&rest body)
-  ;; Once upon a time there was a dynamic `flet'...
-  (declare (indent defun))
-  (let ((orig (cl-gensym)))
-    `(let ((,orig (symbol-function 'message)))
-       (fset 'message (lambda (&rest silentio)))
-       (prog1 (progn ,@body)
-	 (fset 'message ,orig)))))
-
-(defmacro magit-tests--with-temp-dir (&rest body)
+(defmacro magit-with-test-directory (&rest body)
   (declare (indent 0) (debug t))
-  (let ((dir (cl-gensym)))
-    `(let ((,dir (file-name-as-directory (make-temp-file "dir" t))))
-       (unwind-protect
-           (let ((default-directory ,dir)) ,@body)
-         (delete-directory ,dir t)))))
+  (let ((dir (make-symbol "dir")))
+    `(let ((,dir (file-name-as-directory (make-temp-file "magit-" t)))
+           (process-environment process-environment))
+       (push "GIT_AUTHOR_NAME=A U Thor" process-environment)
+       (push "GIT_AUTHOR_EMAIL=a.u.thor@example.com" process-environment)
+       (condition-case err
+           (cl-letf (((symbol-function #'message) (lambda (&rest _))))
+             (let ((default-directory ,dir))
+               ,@body))
+         (error (message "Keeping test directory:\n  %s" ,dir)
+                (signal (car err) (cdr err))))
+       (delete-directory ,dir t))))
 
-(defmacro magit-tests--with-temp-repo (&rest body)
+(defmacro magit-with-test-repository (&rest body)
   (declare (indent 0) (debug t))
-  `(magit-tests--with-temp-dir
-     (magit-call-git "init" ".")
-     (magit-tests--silentio ,@body)))
+  `(magit-with-test-directory (magit-git "init" ".") ,@body))
 
-(defmacro magit-tests--with-temp-clone (url &rest body)
-  (declare (indent 1) (debug t))
-  (let ((repo (cl-gensym)))
-    `(let ((,repo ,(or url 'default-directory)))
-       (magit-tests--with-temp-dir
-         (magit-call-git "clone" ,repo ".")
-         ,@body))))
+;;; Git
 
-(defmacro magit-tests--with-open-file (filename &rest body)
-  (declare (indent 1) (debug t))
-  (let ((buffer (make-symbol "*buffer*")))
-    `(let (,buffer)
-       (unwind-protect
-           (progn
-             (setq ,buffer (find-file-literally ,filename))
-             ,@body)
-         (when ,buffer (kill-buffer ,buffer))))))
+(ert-deftest magit--with-safe-default-directory ()
+  (magit-with-test-directory
+    (let ((find-file-visit-truename nil))
+      (should (equal (magit-toplevel "repo/")
+                     (magit-toplevel (expand-file-name "repo/"))))
+      (should (equal (magit-toplevel "repo")
+                     (magit-toplevel (expand-file-name "repo/")))))))
 
-(defun magit-tests--modify-file (filename)
-  (with-temp-file (expand-file-name filename)
-    (insert (make-temp-name "content"))))
+(ert-deftest magit-toplevel:basic ()
+  (let ((find-file-visit-truename nil))
+    (magit-with-test-directory
+      (magit-git "init" "repo")
+      (magit-test-magit-toplevel)
+      (should (equal (magit-toplevel   "repo/.git/")
+                     (expand-file-name "repo/")))
+      (should (equal (magit-toplevel   "repo/.git/objects/")
+                     (expand-file-name "repo/")))
+      (should (equal (magit-toplevel   "repo-link/.git/")
+                     (expand-file-name "repo-link/")))
+      (should (equal (magit-toplevel   "repo-link/.git/objects/")
+                     ;; We could theoretically return "repo-link/"
+                     ;; here by going up until `--git-dir' gives us
+                     ;; "." .  But that would be a bit risky and Magit
+                     ;; never goes there anyway, so it's not worth it.
+                     ;; But in the doc-string we say we cannot do it.
+                     (expand-file-name "repo/"))))))
 
-(defun magit-tests--modify-and-commit (filename)
-  (magit-tests--modify-file filename)
-  (magit-call-git "add" filename)
-  (magit-call-git "-c" "user.name=foo bar"
-                  "-c" "user.email=foo@bar.baz"
-                  "commit"
-                  "-m" (symbol-name (cl-gensym "message"))
-                  "--" filename))
+(ert-deftest magit-toplevel:tramp ()
+  (let ((find-file-visit-truename nil))
+    (magit-with-test-directory
+      (setq default-directory
+            (concat (format "/sudo:%s@localhost:" (user-login-name))
+                    default-directory))
+      (magit-git "init" "repo")
+      (magit-test-magit-toplevel)
+      (should (equal (magit-toplevel   "repo/.git/")
+                     (expand-file-name "repo/")))
+      (should (equal (magit-toplevel   "repo/.git/objects/")
+                     (expand-file-name "repo/")))
+      (should (equal (magit-toplevel   "repo-link/.git/")
+                     (expand-file-name "repo-link/")))
+      (should (equal (magit-toplevel   "repo-link/.git/objects/")
+                     (expand-file-name "repo/"))))))
 
-(defun magit-tests--should-have-section (type info)
-  (magit-status-internal default-directory)
-  (message (buffer-string))
-  (should (--first (equal (magit-section-value it) info)
-                   (magit-section-children
-                    (magit-get-section `((,type) (status)))))))
+(ert-deftest magit-toplevel:submodule ()
+  (let ((find-file-visit-truename nil))
+    (magit-with-test-directory
+      (magit-git "init" "remote")
+      (let ((default-directory (expand-file-name "remote/")))
+        (magit-git "commit" "-m" "init" "--allow-empty"))
+      (magit-git "init" "super")
+      (setq default-directory (expand-file-name "super/"))
+      (magit-git "submodule" "add" "../remote" "repo/")
+      (magit-test-magit-toplevel)
+      (should (equal (magit-toplevel   ".git/modules/repo/")
+                     (expand-file-name "repo/")))
+      (should (equal (magit-toplevel   ".git/modules/repo/objects/")
+                     (expand-file-name "repo/"))))))
 
-;;; Tests
-;;;; status
+(defun magit-test-magit-toplevel ()
+  ;; repo
+  (make-directory "repo/subdir/subsubdir" t)
+  (should (equal (magit-toplevel   "repo/")
+                 (expand-file-name "repo/")))
+  (should (equal (magit-toplevel   "repo/")
+                 (expand-file-name "repo/")))
+  (should (equal (magit-toplevel   "repo/subdir/")
+                 (expand-file-name "repo/")))
+  (should (equal (magit-toplevel   "repo/subdir/subsubdir/")
+                 (expand-file-name "repo/")))
+  ;; repo-link
+  (make-symbolic-link "repo" "repo-link")
+  (should (equal (magit-toplevel   "repo-link/")
+                 (expand-file-name "repo-link/")))
+  (should (equal (magit-toplevel   "repo-link/subdir/")
+                 (expand-file-name "repo-link/")))
+  (should (equal (magit-toplevel   "repo-link/subdir/subsubdir/")
+                 (expand-file-name "repo-link/")))
+  ;; *subdir-link
+  (make-symbolic-link "repo/subdir"           "subdir-link")
+  (make-symbolic-link "repo/subdir/subsubdir" "subsubdir-link")
+  (should (equal (magit-toplevel   "subdir-link/")
+                 (expand-file-name "repo/")))
+  (should (equal (magit-toplevel   "subdir-link/subsubdir/")
+                 (expand-file-name "repo/")))
+  (should (equal (magit-toplevel   "subsubdir-link")
+                 (expand-file-name "repo/")))
+  ;; subdir-link-indirect
+  (make-symbolic-link "subdir-link" "subdir-link-indirect")
+  (should (equal (magit-toplevel   "subdir-link-indirect")
+                 (expand-file-name "repo/")))
+  ;; wrap/*link
+  (magit-git "init" "wrap")
+  (make-symbolic-link "../repo"                  "wrap/repo-link")
+  (make-symbolic-link "../repo/subdir"           "wrap/subdir-link")
+  (make-symbolic-link "../repo/subdir/subsubdir" "wrap/subsubdir-link")
+  (should (equal (magit-toplevel   "wrap/repo-link/")
+                 (expand-file-name "wrap/repo-link/")))
+  (should (equal (magit-toplevel   "wrap/subdir-link")
+                 (expand-file-name "repo/")))
+  (should (equal (magit-toplevel   "wrap/subsubdir-link")
+                 (expand-file-name "repo/"))))
 
-(ert-deftest magit-status-untracked ()
-  (magit-tests--with-temp-repo
-    (magit-tests--modify-file "file")
-    (magit-tests--modify-file "file with space")
-    (magit-tests--modify-file "φιλε")
-    (magit-tests--should-have-section 'untracked "file")
-    (magit-tests--should-have-section 'untracked "file with space")
-    (magit-tests--should-have-section 'untracked "φιλε")))
-
-(ert-deftest magit-status-staged-modified ()
-  (magit-tests--with-temp-repo
-    (magit-tests--modify-file "file")
-    (magit-status-internal default-directory)
-    (magit-stage-modified t)
-    (magit-tests--should-have-section 'staged "file")))
-
-(ert-deftest magit-status-staged-modified-with-space ()
-  (magit-tests--with-temp-repo
-    (magit-tests--modify-file "file with space")
-    (magit-status-internal default-directory)
-    (magit-stage-modified t)
-    (magit-tests--should-have-section 'staged "file with space")))
-
-(ert-deftest magit-status-modified ()
-  (magit-tests--with-temp-repo
-    (magit-tests--modify-and-commit "file")
-    (magit-tests--modify-file "file")
-    (magit-status-internal default-directory)
-    (magit-tests--should-have-section 'unstaged "file")))
-
-(ert-deftest magit-status-modified-with-space ()
-  (magit-tests--with-temp-repo
-    (magit-tests--modify-and-commit "file with space")
-    (magit-tests--modify-file "file with space")
-    (magit-status-internal default-directory)
-    (magit-tests--should-have-section 'unstaged "file with space")))
-
-(ert-deftest magit-status-unpushed ()
-  (magit-tests--with-temp-repo
-    (magit-tests--modify-and-commit "file")
-
-    (magit-tests--with-temp-clone default-directory
-      (magit-tests--modify-and-commit "file")
-      (magit-tests--should-have-section
-       'unpushed (magit-rev-parse "--short" "HEAD"))
-
-      (magit-tests--modify-and-commit "file")
-      (magit-tests--should-have-section
-       'unpushed (magit-rev-parse "--short" "HEAD")))))
-
-(ert-deftest magit-get-next-tag ()
-  (magit-tests--with-temp-repo
-    (magit-tests--modify-and-commit "file")
-
-    (magit-tests--with-temp-clone default-directory
-     ;; no tag, return nil
-     (should (equal nil (magit-get-next-tag)))
-     ;; tag is not annotated, return nil
-     (magit-call-git "tag" "FIRST")
-     (should (equal "FIRST" (magit-git-string "describe" "--contains" "FIRST")))
-     (should (equal nil (magit-get-next-tag)))
-     (magit-call-git "tag" "-d" "FIRST"))))
-
-;;;; config
-
-(ert-deftest magit-config-get-boolean ()
-  (magit-tests--with-temp-repo
-    (magit-call-git "config" "a.b" "true")
-    (should (magit-get-boolean "a.b"))
-    (should (magit-get-boolean "a" "b"))
-
-    (magit-call-git "config" "a.b" "false")
+(ert-deftest magit-get-boolean ()
+  (magit-with-test-repository
+    (magit-git "config" "a.b" "true")
+    (should     (magit-get-boolean "a.b"))
+    (should     (magit-get-boolean "a" "b"))
+    (magit-git "config" "a.b" "false")
     (should-not (magit-get-boolean "a.b"))
     (should-not (magit-get-boolean "a" "b"))))
 
-;;;; branch and remotes
-(ert-deftest magit-list-branch ()
-  (magit-tests--with-temp-repo
-    (magit-tests--modify-and-commit "file")
-    (should (member "master" (magit-list-branch-names)))
-    (should (member "master" (magit-list-local-branch-names)))
-    (should (null (magit-list-remote-branch-names)))
+(ert-deftest magit-get-{current|next}-tag ()
+  (magit-with-test-repository
+    (magit-git "commit" "-m" "1" "--allow-empty")
+    (should (equal (magit-get-current-tag) nil))
+    (should (equal (magit-get-next-tag)    nil))
+    (magit-git "tag" "1")
+    (should (equal (magit-get-current-tag) "1"))
+    (should (equal (magit-get-next-tag)    nil))
+    (magit-git "commit" "-m" "2" "--allow-empty")
+    (magit-git "tag" "2")
+    (should (equal (magit-get-current-tag) "2"))
+    (should (equal (magit-get-next-tag)    nil))
+    (magit-git "commit" "-m" "3" "--allow-empty")
+    (should (equal (magit-get-current-tag) "2"))
+    (should (equal (magit-get-next-tag)    nil))
+    (magit-git "commit" "-m" "4" "--allow-empty")
+    (magit-git "tag" "4")
+    (magit-git "reset" "HEAD~")
+    (should (equal (magit-get-current-tag) "2"))
+    (should (equal (magit-get-next-tag)    "4"))))
 
-    (magit-tests--with-temp-clone default-directory
-      (should (member "origin/master" (magit-list-branch-names)))
-      (should-not (member "origin/master" (magit-list-local-branch-names)))
+(ert-deftest magit-list-{|local-|remote-}branch-names ()
+  (magit-with-test-repository
+    (magit-git "commit" "-m" "init" "--allow-empty")
+    (magit-git "update-ref" "refs/remotes/foobar/master" "master")
+    (magit-git "update-ref" "refs/remotes/origin/master" "master")
+    (should (equal (magit-list-branch-names)
+                   (list "master" "foobar/master" "origin/master")))
+    (should (equal (magit-list-local-branch-names)
+                   (list "master")))
+    (should (equal (magit-list-remote-branch-names)
+                   (list "foobar/master" "origin/master")))
+    (should (equal (magit-list-remote-branch-names "origin")
+                   (list "origin/master")))
+    (should (equal (magit-list-remote-branch-names "origin" t)
+                   (list "master")))))
 
-      (should (member "origin/master" (magit-list-remote-branch-names)))
-      (should (member "origin/master" (magit-list-remote-branch-names "origin")))
+(ert-deftest magit-process:match-prompt-nil-when-no-match ()
+  (should (null (magit-process-match-prompt '("^foo: ?$") "bar: "))))
 
-      (should-not (member "origin/master" (magit-list-remote-branch-names "foo")))
-      (should (member "master" (magit-list-remote-branch-names "origin" t)))
+(ert-deftest magit-process:match-prompt-non-nil-when-match ()
+  (should (magit-process-match-prompt '("^foo: ?$") "foo: ")))
 
-      (should-not (member "master" (magit-list-remote-branch-names "foo" t))))))
+(ert-deftest magit-process:match-prompt-match-non-first-prompt ()
+  (should (magit-process-match-prompt '("^bar: ?$ " "^foo: ?$") "foo: ")))
+
+(ert-deftest magit-process:match-prompt-suffixes-prompt ()
+  (let ((prompts '("^foo: ?$")))
+    (should (equal (magit-process-match-prompt prompts "foo:")  "foo: "))
+    (should (equal (magit-process-match-prompt prompts "foo: ") "foo: "))))
+
+(ert-deftest magit-process:match-prompt-preserves-match-group ()
+  (let* ((prompts '("^foo '\\(?99:.*\\)': ?$"))
+         (prompt (magit-process-match-prompt prompts "foo 'bar':")))
+    (should (equal prompt "foo 'bar': "))
+    (should (equal (match-string 99 "foo 'bar':") "bar"))))
+
+(ert-deftest magit-process:password-prompt ()
+  (let ((magit-process-find-password-functions
+         (list (lambda (host) (when (string= host "www.host.com") "mypasswd")))))
+    (cl-letf (((symbol-function 'process-send-string)
+               (lambda (process string) string)))
+      (should (string-equal (magit-process-password-prompt
+                             nil "Password for 'www.host.com':")
+                            "mypasswd\n")))))
+
+;;; Status
+
+(defun magit-test-get-section (list file)
+  (magit-status-internal default-directory)
+  (--first (equal (magit-section-value it) file)
+           (magit-section-children
+            (magit-get-section `(,list (status))))))
+
+(ert-deftest magit-status:file-sections ()
+  (magit-with-test-repository
+    (cl-flet ((modify (file) (with-temp-file file
+                               (insert (make-temp-name "content")))))
+      (modify "file")
+      (modify "file with space")
+      (modify "file with äöüéλ")
+      (should (magit-test-get-section '(untracked) "file"))
+      (should (magit-test-get-section '(untracked) "file with space"))
+      (should (magit-test-get-section '(untracked) "file with äöüéλ"))
+      (magit-stage-modified t)
+      (should (magit-test-get-section '(staged) "file"))
+      (should (magit-test-get-section '(staged) "file with space"))
+      (should (magit-test-get-section '(staged) "file with äöüéλ"))
+      (magit-git "add" ".")
+      (modify "file")
+      (modify "file with space")
+      (modify "file with äöüéλ")
+      (should (magit-test-get-section '(unstaged) "file"))
+      (should (magit-test-get-section '(unstaged) "file with space"))
+      (should (magit-test-get-section '(unstaged) "file with äöüéλ")))))
+
+(ert-deftest magit-status:log-sections ()
+  (magit-with-test-repository
+    (magit-git "commit" "-m" "common" "--allow-empty")
+    (magit-git "commit" "-m" "unpulled" "--allow-empty")
+    (magit-git "remote" "add" "origin" "/origin")
+    (magit-git "update-ref" "refs/remotes/origin/master" "master")
+    (magit-git "branch" "--set-upstream-to=origin/master")
+    (magit-git "reset" "--hard" "HEAD~")
+    (magit-git "commit" "-m" "unpushed" "--allow-empty")
+    (should (magit-test-get-section
+             '(unpulled . "..@{upstream}")
+             (magit-rev-parse "--short" "origin/master")))
+    (should (magit-test-get-section
+             '(unpushed . "@{upstream}..")
+             (magit-rev-parse "--short" "master")))))
 
 ;;; magit-tests.el ends soon
-
-(defconst magit-tests-font-lock-keywords
-  '(("(magit-tests--with-temp-\\(?:clone\\|dir\\|repo\\)\\_>" . 1)))
-
-(font-lock-add-keywords 'emacs-lisp-mode magit-tests-font-lock-keywords)
-
 (provide 'magit-tests)
 ;; Local Variables:
 ;; indent-tabs-mode: nil

@@ -1,6 +1,6 @@
 ;;; ob-R.el --- org-babel functions for R code evaluation
 
-;; Copyright (C) 2009-2015 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2016 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;;	Dan Davison
@@ -381,8 +381,8 @@ Has four %s escapes to be filled in:
 (defun org-babel-R-evaluate-external-process
   (body result-type result-params column-names-p row-names-p)
   "Evaluate BODY in external R process.
-If RESULT-TYPE equals 'output then return standard output as a
-string.  If RESULT-TYPE equals 'value then return the value of the
+If RESULT-TYPE equals `output' then return standard output as a
+string.  If RESULT-TYPE equals `value' then return the value of the
 last statement in BODY, as elisp."
   (case result-type
     (value
@@ -409,8 +409,8 @@ last statement in BODY, as elisp."
 (defun org-babel-R-evaluate-session
   (session body result-type result-params column-names-p row-names-p)
   "Evaluate BODY in SESSION.
-If RESULT-TYPE equals 'output then return standard output as a
-string.  If RESULT-TYPE equals 'value then return the value of the
+If RESULT-TYPE equals `output' then return standard output as a
+string.  If RESULT-TYPE equals `value' then return the value of the
 last statement in BODY, as elisp."
   (case result-type
     (value

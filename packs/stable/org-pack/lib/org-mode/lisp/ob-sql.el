@@ -1,6 +1,6 @@
 ;;; ob-sql.el --- org-babel functions for sql evaluation
 
-;; Copyright (C) 2009-2014 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2016 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;; Keywords: literate programming, reproducible research
@@ -119,7 +119,7 @@ This function is called by `org-babel-execute-src-block'."
                     ('dbi (format "dbish --batch %s < %s | sed '%s' > %s"
 				  (or cmdline "")
 				  (org-babel-process-file-name in-file)
-				  "/^+/d;s/^\|//;s/(NULL)/ /g;$d"
+				  "/^+/d;s/^|//;s/(NULL)/ /g;$d"
 				  (org-babel-process-file-name out-file)))
                     ('monetdb (format "mclient -f tab %s < %s > %s"
                                       (or cmdline "")
@@ -202,7 +202,7 @@ This function is called by `org-babel-execute-src-block'."
    (lambda (pair)
      (setq body
 	   (replace-regexp-in-string
-	    (format "\$%s" (car pair))  ;FIXME: "\$" == "$"!
+	    (format "$%s" (car pair))
 	    (let ((val (cdr pair)))
               (if (listp val)
                   (let ((data-file (org-babel-temp-file "sql-data-")))

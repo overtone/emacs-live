@@ -1,6 +1,6 @@
 ;;; ob-abc.el --- org-babel functions for template evaluation
 
-;; Copyright (C) Free Software Foundation
+;; Copyright (C) 2013-2016 Free Software Foundation, Inc.
 
 ;; Author: William Waites
 ;; Keywords: literate programming, music

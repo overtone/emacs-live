@@ -1,6 +1,6 @@
 ;;; ox-icalendar.el --- iCalendar Back-End for Org Export Engine
 
-;; Copyright (C) 2004-2014 Free Software Foundation, Inc.
+;; Copyright (C) 2004-2016 Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;;      Nicolas Goaziou <n dot goaziou at gmail dot com>
@@ -76,8 +76,8 @@ for timed events.  If non-zero, alarms are created.
 
 (defcustom org-icalendar-exclude-tags nil
   "Tags that exclude a tree from export.
-This variable allows to specify different exclude tags from other
-back-ends.  It can also be set with the ICAL_EXCLUDE_TAGS
+This variable allows specifying different exclude tags from other
+back-ends.  It can also be set with the ICALENDAR_EXCLUDE_TAGS
 keyword."
   :group 'org-export-icalendar
   :type '(repeat (string :tag "Tag")))
@@ -450,7 +450,7 @@ or subject for the event."
     ;; characters with literal \n.
     (replace-regexp-in-string
      "[ \t]*\n" "\\n"
-     (replace-regexp-in-string "[\\,;]" "\\\&" s)
+     (replace-regexp-in-string "[\\,;]" "\\\\\\&" s)
      nil t)))
 
 (defun org-icalendar-fold-string (s)
@@ -679,7 +679,7 @@ Return VTODO component as a string."
 			(org-element-property :scheduled entry))
 		   ;; If we can't use a scheduled time for some
 		   ;; reason, start task now.
-		   (let ((now (decode-time (current-time))))
+		   (let ((now (decode-time)))
 		     (list 'timestamp
 			   (list :type 'active
 				 :minute-start (nth 1 now)
@@ -901,14 +901,16 @@ This function assumes major mode for current buffer is
 			    (buffer-substring
 			     (point) (progn (outline-next-heading) (point)))))))))
 		   (forward-line)))))
-	   'icalendar t '(:ascii-charset utf-8 :ascii-links-to-notes nil))))
+	   'icalendar t
+	   '(:ascii-charset utf-8 :ascii-links-to-notes nil
+			    :icalendar-include-todo all))))
     (with-temp-file file
       (insert
        (org-icalendar--vcalendar
 	org-icalendar-combined-name
 	user-full-name
-	org-icalendar-combined-description
 	(or (org-string-nw-p org-icalendar-timezone) (cadr (current-time-zone)))
+	org-icalendar-combined-description
 	contents)))
     (run-hook-with-args 'org-icalendar-after-save-hook file)))
 

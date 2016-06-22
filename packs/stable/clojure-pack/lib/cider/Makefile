@@ -1,7 +1,6 @@
 EMACS ?= emacs
 EMACSFLAGS = -L .
 CASK = cask
-VAGRANT = vagrant
 VERSION = $(shell git describe --tags --abbrev=0 | sed 's/^v//')
 PACKAGE_NAME = cider-$(VERSION)
 
@@ -22,19 +21,26 @@ elpa:
 	$(CASK) update
 	touch $@
 
-.PHONY: build
+.PHONY: build version
 build : elpa $(OBJECTS)
 
-.PHONY: test
-test : build
+version:
+	$(EMACS) --version
+
+test-checks : version
+	$(CASK) exec $(EMACS) --no-site-file --no-site-lisp --batch \
+		-l test/cider-checks.el ./
+
+test-bytecomp : version $(ELS:.el=.elc-test)
+
+%.elc-test : %.el elpa
+	$(CASK) exec $(EMACS) --no-site-file --no-site-lisp --batch \
+		-l test/cider-bytecomp-warnings.el $<
+
+test : version build
 	$(CASK) exec $(EMACS) --no-site-file --no-site-lisp --batch \
 		$(EMACSFLAGS) \
 		-l test/run-tests
-
-.PHONY: virtual-test
-virtual-test :
-	$(VAGRANT) up
-	$(VAGRANT) ssh -c "make -C /vagrant EMACS=$(EMACS) clean test"
 
 .PHONY: clean
 clean :

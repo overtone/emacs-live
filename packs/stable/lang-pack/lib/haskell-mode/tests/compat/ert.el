@@ -66,6 +66,7 @@
 
 ;;; UI customization options.
 
+;;;###autoload
 (defgroup ert ()
   "ERT, the Emacs Lisp regression testing tool."
   :prefix "ert-"

@@ -1,5 +1,5 @@
 ;;; ox-publish.el --- Publish Related Org Mode Files as a Website
-;; Copyright (C) 2006-2015 Free Software Foundation, Inc.
+;; Copyright (C) 2006-2016 Free Software Foundation, Inc.
 
 ;; Author: David O'Toole <dto@gnu.org>
 ;; Maintainer: Carsten Dominik <carsten DOT dominik AT gmail DOT com>
@@ -67,7 +67,7 @@ produced.")
 
 (defcustom org-publish-project-alist nil
   "Association list to control publishing behavior.
-Each element of the alist is a publishing 'project.'  The CAR of
+Each element of the alist is a publishing project.  The CAR of
 each element is a string, uniquely identifying the project.  The
 CDR of each element is in one of the following forms:
 
@@ -75,12 +75,12 @@ CDR of each element is in one of the following forms:
    alternating keys and values, specifying parameters for the
    publishing process.
 
-     \(:property value :property value ... )
+     (:property value :property value ... )
 
 2. A meta-project definition, specifying of a list of
    sub-projects:
 
-     \(:components (\"project-1\" \"project-2\" ...))
+     (:components (\"project-1\" \"project-2\" ...))
 
 When the CDR of an element of org-publish-project-alist is in
 this second form, the elements of the list after `:components'
@@ -236,7 +236,7 @@ If you create a site-map file, adjust the sorting like this:
   `:sitemap-sort-files'
 
     The site map is normally sorted alphabetically.  You can
-    change this behaviour setting this to `anti-chronologically',
+    change this behavior setting this to `anti-chronologically',
     `chronologically', or nil.
 
   `:sitemap-ignore-case'
@@ -717,7 +717,7 @@ If `:auto-sitemap' is set, publish the sitemap too.  If
 (defun org-publish-org-sitemap (project &optional sitemap-filename)
   "Create a sitemap of pages in set defined by PROJECT.
 Optionally set the filename of the sitemap with SITEMAP-FILENAME.
-Default for SITEMAP-FILENAME is 'sitemap.org'."
+Default for SITEMAP-FILENAME is `sitemap.org'."
   (let* ((project-plist (cdr project))
 	 (dir (file-name-as-directory
 	       (plist-get project-plist :base-directory)))
@@ -1139,7 +1139,7 @@ This function is meant to be used as a final out filter.  See
 
 Return value is an internal reference, as a string.
 
-This function allows to resolve external links like:
+This function allows the resolution of external links like:
 
   [[file.org::*fuzzy][description]]
   [[file.org::#custom-id][description]]
@@ -1229,7 +1229,7 @@ If FREE-CACHE, empty the cache."
   (setq org-publish-cache nil))
 
 (defun org-publish-cache-file-needs-publishing
-  (filename &optional pub-dir pub-func base-dir)
+    (filename &optional pub-dir pub-func base-dir)
   "Check the timestamp of the last publishing of FILENAME.
 Return non-nil if the file needs publishing.  Also check if
 any included files have been more recently published, so that
@@ -1250,12 +1250,18 @@ the file including them will be republished as well."
 	(while (re-search-forward "^[ \t]*#\\+INCLUDE:" nil t)
 	  (let* ((element (org-element-at-point))
 		 (included-file
-		  (and (eq (org-element-type element) 'keyword)
-		       (let ((value (org-element-property :value element)))
-			 (and value
-			      (string-match "^\\(\".+?\"\\|\\S-+\\)" value)
-			      (org-remove-double-quotes
-			       (match-string 1 value)))))))
+                  (and (eq (org-element-type element) 'keyword)
+                       (let ((value (org-element-property :value element)))
+                         (and value
+                              (string-match
+			       "\\`\\(\".+?\"\\|\\S-+\\)\\(?:\\s-+\\|$\\)"
+			       value)
+                              (let ((m (match-string 1 value)))
+                                (org-remove-double-quotes
+				 ;; Ignore search suffix.
+                                 (if (string-match "\\(::\\(.*?\\)\\)\"?\\'" m)
+                                     (substring m 0 (match-beginning 0))
+                                   m))))))))
 	    (when included-file
 	      (add-to-list 'included-files-ctime
 			   (org-publish-cache-ctime-of-src

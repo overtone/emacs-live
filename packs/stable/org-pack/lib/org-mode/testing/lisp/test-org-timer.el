@@ -178,6 +178,14 @@ Also, mute output from `message'."
 	      (org-timer-set-timer 10))
 	    (test-org-timer/with-current-time test-org-timer/time1
 	      (org-timer))
+	    (org-trim (buffer-string)))))
+  (should
+   (equal "0:00:04"
+	  (test-org-timer/with-temp-text ""
+	    (test-org-timer/with-current-time test-org-timer/time0
+	      (org-timer-set-timer "3:30"))
+	    (test-org-timer/with-current-time test-org-timer/time1
+	      (org-timer))
 	    (org-trim (buffer-string))))))
 
 (ert-deftest test-org-timer/pause-timer ()

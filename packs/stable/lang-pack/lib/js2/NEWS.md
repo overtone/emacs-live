@@ -2,6 +2,40 @@
 
 ## Next
 
+* Object properties are highlighted using a different face:
+  `js2-object-property`, which has no color by default.
+* `js2-getter-setter-node` is renamed to `js2-method-node`, together with
+  its related functions.  It already handles generator methods, and we
+  added support for async methods (see below), so the old name would get
+  more confusing.
+* Support for default parameters in destructuring.  It should work for both
+  objects and arrays, in both literals and function arguments.
+* New mode: `js2-jsx-mode`, deriving from `js2-mode`.  Supports indentation of
+  JSXElement expressions wrapped within parentheses or as function arguments.
+  Indentation is customizable via `sgml-attribute-offset`.
+* Experimental support for ES7 stage 3 async/await.
+
+## 20150909
+
+* `js2-mode` now derives from `js-mode`. That means the former
+  function will run `js-mode-hook`, as well as `js2-mode-hook`. The
+  key bindings will default to `js-mode-map` where they're not set in
+  `js2-mode-map`. And in Emacs 25 or later (including the snapshot
+  builds), `js2-mode` uses the indentation code from `js-mode`.  Where
+  feasible, the user options (and functions) now have aliases, but if
+  you're using Emacs 25 and you see an indentation-related setting
+  that stopped working, try looking for a corresponding one in the
+  `js` group: `M-x customize-group RET js RET`.
+
+* New command: `js2-jump-to-definition`. It's bound to `M-.` by
+  default, via remapping `js-find-symbol`. To get back to the default
+  `M-.` binding (e.g. `find-tag`), put this in your init file:
+
+      (eval-after-load 'js (define-key js-mode-map (kbd "M-.") nil))
+
+## 20150713
+
+* More comprehensive strict mode warnings and syntax errors.
 * New minor mode: `js2-highlight-unused-variables-mode`.
 * `js2-pretty-multiline-declarations` can take the value `dynamic` now.
 

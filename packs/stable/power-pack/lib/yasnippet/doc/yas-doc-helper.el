@@ -1,6 +1,6 @@
 ;;; yas-doc-helper.el --- Help generate documentation for YASnippet
 
-;; Copyright (C) 2012  João Távora
+;; Copyright (C) 2012, 2013  Free Software Foundation, Inc.
 
 ;; Author: João Távora <joaotavora@gmail.com>
 ;; Keywords: convenience
@@ -155,7 +155,8 @@
   (let ((org-publish-use-timestamps-flag nil)
         (org-export-copy-to-kill-ring nil)
         (org-confirm-babel-evaluate nil)
-        (make-backup-files nil))
+        (make-backup-files nil)
+        (org-html-htmlize-output-type 'css))
     (org-publish "yasnippet" 'force)))
 
 

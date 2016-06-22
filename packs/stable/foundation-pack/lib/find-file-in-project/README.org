@@ -1,43 +1,135 @@
-* find-file-in-project (v3.5)
-Find files in a project quickly.
+* find-file-in-project (v4.8)
+Find files in a project quickly, on *any operating system*.
 
-This program provides a couple methods for quickly finding any file in a given project. It depends on [[http://www.gnu.org/software/findutils/][GNU find]].
+This program provides a couple methods for quickly finding any file in a given project. It depends on [[http://www.gnu.org/software/findutils/][GNU Find]].
 
-By default, it will *automatically* search file in project managed by [[http://git-scm.com/][Git]]. But you can easily switch to other types of projects.
+By default, it will *automatically* search file in directory managed by *git/subversion/mercurial*. But you can easily switch to other types of projects.
 
 Features:
-- The only dependency is GNU find
-- Works on *Windows*/Cygwin/Linux/Mac
-- Furthing tweaking of GNU find through flag `ffip-find-options` is possible
+- Only dependency is GNU Find
+- Works perfectly on any OS (Windows included)
+- It's quick. Tested with 50,000+ files
+- Tweaking of GNU find through flag =ffip-find-options= is possible
+- Versatile. For keyword "helloWorld", "HelloWorld.html" "hello-world.css", "HelloWorld.js" are searched
 * Install
-Please install through [[http://melpa.org/#/find-file-in-project][melpa]]
-* Setup
-It works out of the box for project using Git.
+Please use [[http://melpa.org/#/find-file-in-project][melpa]].
 
-If your project uses other VCS (subversion, for example), add below line into ~/.emacs:
+[[https://github.com/abo-abo/swiper][Ivy-mode]] is the dependency which is installed automatically if you use melpa.
+
+Since v3.7, Emacs 24.3 is required.
+* Setup
+** Windows
+Windows setup is as easy as *install [[http://cygwin.com][Cygwin]] or [[https://msys2.github.io/][MYSYS2]] at default directory of any driver*. =GNU Find= executable will be detected automatically.
+
+You can also manually specify the location of find executable,
 #+begin_src elisp
-(setq ffip-project-file ".svn")
+(if (eq system-type 'windows-nt)
+    (setq ffip-find-executable "c:\\\\cygwin64\\\\bin\\\\find")
 #+end_src
+
+** Linux and OS X
+NO setup needed.
 * Usage
-`M-x find-file-in-project`
+Project root is *automatically* detected if Git/Mercurical/Subversion used.
+
+You can override the default root directory by set the variable =ffip-project-root=,
+#+begin_src elisp
+(setq ffip-project-root "~/projs/PROJECT_DIR")
+#+end_src
+** =M-x find-file-in-project-by-selected=
+Use the *selected region as keyword to search file*. If no region selected, you need provide the keyword. Keyword could contain wildcard which passed to Find as value of =-name= option
+
+If parameter is passed , file will be opened in new window.
+** =M-x find-directory-in-project-by-selected=
+Use the *selected region as keyword to find directory*. If no region selected, you need provide the keyword. Keyword could contain wildcard which passed to Find as value of =-iwholname= option
+
+If parameter is passed , directory will be opened in new window.
+** =M-x find-file-in-project=
+Starts search immediately
+** =M-x ffip-create-project-file=
+Create .dir-locals.el which "[[http://www.gnu.org/software/emacs/manual/html_node/emacs/Directory-Variables.html][defines the same set of local variables to all the files in a certain directory and its subdirector]]".
+
+You can use it to setup find-file-in-project variable like "ffip-project-root".
+
+See [[http://www.gnu.org/software/emacs/manual/html_node/emacs/Directory-Variables.html][Emacs manual]] for technical details.
+** =M-x find-file-in-current-directory= and =M-x find-file-in-current-directory-by-selected=
+Like =M-x find-file-in-project= and =M-x find-file-in-project-by-selected= but find only in current directory.
 * Tips
-** Per project setup
+Please note all tips are OPTIONAL. find-file-in-project works out of box in 99% cases.
+** You prefer ido-mode?
+#+begin_src elisp
+(ido-mode 1)
+(setq ffip-prefer-ido-mode t)
+#+end_src
+** APIs
+- "ffip-get-project-root-directory" return the full path of current project
+** Per-project setup using Emacs lisp
+Here is complete setup you could insert into "~/.emacs.d/init.el",
 #+begin_src elisp
 ;; if the full path of current file is under SUBPROJECT1 or SUBPROJECT2
 ;; OR if I'm reading my personal issue track document,
-(when (ffip-current-full-filename-match-pattern-p "\\(/SUBPROJECT1\\|/SUBPROJECT2\\|issue-track.org\\)")
-  ;; set the root directory into "~/projs/PROJECT_DIR"
-  (setq-local ffip-project-root ("~/projs/PROJECT_DIR"))
-  ;; well, I'm not interested in concatenated BIG js file
-  (setq-local ffip-find-options "-not -size +64k")
-  ;; for this project, I'm only interested certain types of files
-  (setq-local ffip-patterns '("*.html" "*.js" "*.css" "*.java" "*.xml" "*.js")))
+(defun my-setup-develop-environment ()
+  (interactive)
+  (when (ffip-current-full-filename-match-pattern-p "\\(/|/PROJECT_DIR\\|issue-track.org\\)")
+    ;; Though PROJECT_DIR is team's project, I care only its sub-directory "subproj1""
+    (setq-local ffip-project-root "~/projs/PROJECT_DIR/subproj1")
+    ;; well, I'm not interested in concatenated BIG js file or file in dist/
+    (setq-local ffip-find-options "-not -size +64k -not -iwholename '*/dist/*'")
+    ;; for this project, I'm only interested certain types of files
+    (setq-local ffip-patterns '("*.html" "*.js" "*.css" "*.java" "*.xml" "*.js"))
+    ;; exclude below directories and files
+    (setq-local ffip-prune-patterns '("*/.git/*" "*/node_modules/*" "*/index.js")))
+  ;; insert more WHEN statements below this line for other projects
+  )
+;; most major modes inherit from prog-mode, so below line is enough
+(add-hook 'prog-mode-hook 'my-setup-develop-environment)
 #+end_src
-** Specify root directory explicitly on BOTH Cygwin and Windows
+** Per-directory setup using .dir-locals.el
+All variables may be overridden on a per-directory basis in your .dir-locals.el. See (info "(Emacs) Directory Variables") for details.
+
+You only need place .dir-locals.el into your project root directory.
+
+Here is a sample .dir-locals.el,
+#+begin_src elisp
+((nil . ((ffip-project-root . "~/projs/PROJECT_DIR")
+         (ffip-find-options . "-not -size +64k -not -iwholename '*/dist/*'")
+         (ffip-patterns . ("*.html" "*.js" "*.css" "*.java" "*.xml" "*.js"))
+         (ffip-prune-patterns . ("*/.git/*" "*/node_modules/*" "*/index.js"))
+         )))
+#+end_src
+
+Please use either per-directory setup or per-project setup, *NOT* both.
+** Specify root directory on Windows
 #+begin_src elisp
 (if (eq system-type 'windows-nt)
+    ;; Native Windows
     (setq ffip-project-root "C:/Users/myname/projs/myproj1")
+  ;; Cygwin
   (setq ffip-project-root "~/projs/myprojs1"))
 #+end_src
+** Search multiple file name patterns
+The variable =ffip-filename-rules' create some extra file names for
+search when calling =find-file-in-project-by-selected'. For example,
+When file basename =helloWorld' provided, =HelloWorld', =hello-world'
+are added as the file name search patterns.
+
+=C-h v ffip-filename-rules' to see its default value.
+
+As other variables, it could be customized per project,
+#+begin_src elisp
+(setq-local ffip-filename-rules
+            '(ffip-filename-identity
+              (ffip-filename-dashes-to-camelcase ffip-filename-camelcase-to-dashes)))
+#+end_src
+
+That's especially useful when you are doing web frontend development.
+** Search files in a directory
+You could =(setq ffip-match-path-instead-of-filename t)= before =M-x find-file-in-project-by-selected=.
+
+For example, if you want to search files belonging to directory "elpa" or the file name containing "elpa", you can =M-x find-file-in-project-by-selected ENTER elpa=.
+** More keybinding tips
+=C-h i g (ivy) Enter' for more key-binding tips.
+* Development
+Please note *only =ivy-read= from ivy-mode is used*. DO NOT use other APIs from ivy-mode. The less APIs used, the more stable this package will be.
 * Bug Report
 Check [[https://github.com/technomancy/find-file-in-project]]

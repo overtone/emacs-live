@@ -108,14 +108,24 @@
    Yet another way to create a nice snippet menu is to write into
    =.yas-make-groups= a menu definition. TODO
 
-* TODO The =.yas-setup.el= file
+* The =.yas-setup.el= file
 
-** TODO
+  If there is file named =.yas-setup.el= in a mode's snippet
+  subdirectory, it is loaded along with the snippets.  Utility
+  functions used by the snippets can be put here.
 
-* TODO The =.yas-compiled-snippet.el= file
+* The =.yas-compiled-snippet.el= file
 
-** TODO
+   You may compile a top-level snippet directory with the
+   =yas-compile-directory= function, which will create a
+   =.yas-compiled-snippets.el= file under each mode subdirectory,
+   which contains definitions for all snippets in the subdirectory.
+   Compilation helps improve loading time.
 
-* TODO The =.yas-skip= file
+   Alternatively, you may compile all directories in the list
+   =yas-snippet-dirs= with the =yas-recompile-all= function.
 
-** TODO
+* The =.yas-skip= file
+
+  A =.yas-skip= file in a mode's snippet subdirectory tells YASnippet
+  not to load snippets from there.

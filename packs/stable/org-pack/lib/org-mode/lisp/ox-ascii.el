@@ -1,6 +1,6 @@
 ;;; ox-ascii.el --- ASCII Back-End for Org Export Engine
 
-;; Copyright (C) 2012-2015 Free Software Foundation, Inc.
+;; Copyright (C) 2012-2016 Free Software Foundation, Inc.
 
 ;; Author: Nicolas Goaziou <n.goaziou at gmail dot com>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -35,10 +35,10 @@
 
 ;;; Define Back-End
 ;;
-;; The following setting won't allow to modify preferred charset
+;; The following setting won't allow modifying preferred charset
 ;; through a buffer keyword or an option item, but, since the property
-;; will appear in communication channel nonetheless, it allows to
-;; override `org-ascii-charset' variable on the fly by the ext-plist
+;; will appear in communication channel nonetheless, it allows
+;; overriding `org-ascii-charset' variable on the fly by the ext-plist
 ;; mechanism.
 ;;
 ;; We also install a filter for headlines and sections, in order to
@@ -216,7 +216,7 @@ original Org buffer at the same place."
   :package-version '(Org . "8.0")
   :type '(choice
 	  (const :tag "Replicate original spacing" nil)
-	  (cons :tag "Set an uniform spacing"
+	  (cons :tag "Set a uniform spacing"
 		(integer :tag "Number of blank lines before contents")
 		(integer :tag "Number of blank lines after contents"))))
 
@@ -921,14 +921,17 @@ channel."
 	     (format
 	      "[%s] %s"
 	      anchor
-	      (if (not dest) (org-ascii--translate "Unknown reference" info)
+	      (if (stringp dest)	; External file.
+		  dest
 		(format
 		 (org-ascii--translate "See section %s" info)
 		 (if (org-export-numbered-headline-p dest info)
 		     (mapconcat #'number-to-string
-				(org-export-get-headline-number dest info) ".")
+				(org-export-get-headline-number dest info)
+				".")
 		   (org-export-data (org-element-property :title dest) info)))))
-	     width info) "\n\n")))
+	     width info)
+	    "\n\n")))
 	;; Do not add a link that cannot be resolved and doesn't have
 	;; any description: destination is already visible in the
 	;; paragraph.

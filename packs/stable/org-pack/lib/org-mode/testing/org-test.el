@@ -134,7 +134,7 @@ executable."
 
 (defun org-test-buffer (&optional file)
   "TODO:  Setup and return a buffer to work with.
-If file is non-nil insert it's contents in there.")
+If file is non-nil insert its contents in there.")
 
 (defun org-test-compare-with-file (&optional file)
   "TODO:  Compare the contents of the test buffer with FILE.

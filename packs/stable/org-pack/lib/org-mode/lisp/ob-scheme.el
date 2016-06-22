@@ -1,6 +1,6 @@
 ;;; ob-scheme.el --- org-babel functions for Scheme
 
-;; Copyright (C) 2010-2014 Free Software Foundation, Inc.
+;; Copyright (C) 2010-2016 Free Software Foundation, Inc.
 
 ;; Authors: Eric Schulte
 ;;	    Michael Gauland
@@ -109,7 +109,7 @@ For a named session, the buffer name will be the session name.
 
 If the session is unnamed (nil), generate a name.
 
-If the session is 'none', use nil for the session name, and
+If the session is `none', use nil for the session name, and
 org-babel-scheme-execute-with-geiser will use a temporary session."
   (let ((result
 	 (cond ((not name)

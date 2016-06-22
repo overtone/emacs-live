@@ -28,8 +28,11 @@ Screenshots
 Installation
 ------------
 
-You can install `popup.el` from [MELPA](http://melpa.org/) with package.el.
+You can install `popup.el` from [MELPA](https://melpa.org/) with package.el.
 popwin is tested under GNU Emacs 24 or later.
+
+Alternatively, users of Debian 9 or later or Ubuntu 16.04 or later may
+simply `apt-get install elpa-popup`.
 
 Popup Items
 -----------
@@ -334,11 +337,20 @@ Here is an example:
 
     (popup-cascade-menu '(("Top1" "Sub1" "Sub2") "Top2"))
 
+
+### Customize Variables
+
+#### `popup-isearch-regexp-builder-function`
+
+Function used to construct a regexp from a pattern. You may for instance
+provide a function that replaces spaces by '.+' if you like helm or ivy style
+of completion. Default value is `#'regexp-quote`.
+
 ----
 
 Copyright (C) 2011-2015  Tomohiro Matsuyama <<m2ym.pub@gmail.com>>
 
-[melpa-link]: http://melpa.org/#/popup
-[melpa-stable-link]: http://stable.melpa.org/#/popup
-[melpa-badge]: http://melpa.org/packages/popup-badge.svg
-[melpa-stable-badge]: http://stable.melpa.org/packages/popup-badge.svg
+[melpa-link]: https://melpa.org/#/popup
+[melpa-stable-link]: https://stable.melpa.org/#/popup
+[melpa-badge]: https://melpa.org/packages/popup-badge.svg
+[melpa-stable-badge]: https://stable.melpa.org/packages/popup-badge.svg

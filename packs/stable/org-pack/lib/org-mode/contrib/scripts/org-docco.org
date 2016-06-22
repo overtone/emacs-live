@@ -5,7 +5,7 @@
 
 The =docco= tool (see http://jashkenas.github.com/docco/) generates
 HTML from JavaScript source code providing an attractive side-by-side
-display of source code and comments.  This file (see [[http://orgmode.org/w/?p=org-mode.git;a=blob_plain;f=contrib/scripts/org-docco.org;hb=HEAD][org-docco.org]])
+display of source code and comments.  This file (see [[http://orgmode.org/cgit.cgi/org-mode.git/plain/contrib/scripts/org-docco.org][org-docco.org]])
 generates the same type of output from Org-mode documents with code
 embedded in code blocks.
 

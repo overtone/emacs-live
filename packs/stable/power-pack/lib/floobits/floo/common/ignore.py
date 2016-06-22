@@ -2,6 +2,7 @@ import os
 import errno
 import fnmatch
 import stat
+import subprocess
 
 try:
     from . import msg, utils
@@ -11,21 +12,22 @@ except ImportError:
     import msg
     from exc_fmt import str_e
 
-IGNORE_FILES = ['.gitignore', '.hgignore', '.flignore', '.flooignore']
+IGNORE_FILES = ['.gitignore', '.hgignore', '.flooignore']
 HIDDEN_WHITELIST = ['.floo'] + IGNORE_FILES
 BLACKLIST = [
     '.DS_Store',
-    '.git',
-    '.svn',
-    '.hg',
+    '.git/',
+    '.svn/',
+    '.hg/',
 ]
 
-# TODO: grab global git ignores:
-# gitconfig_file = popen("git config -z --get core.excludesfile", "r");
+NEGATE_PREFIXES = ['!', '^']
+
 DEFAULT_IGNORES = [
     '#*',
     '*.o',
     '*.pyc',
+    '*.pyo',
     '*~',
     'extern/',
     'node_modules/',
@@ -36,6 +38,21 @@ MAX_FILE_SIZE = 1024 * 1024 * 5
 
 IS_IG_IGNORED = 1
 IS_IG_CHECK_CHILD = 2
+
+
+def get_git_excludesfile():
+    global_ignore = None
+    try:
+        p = subprocess.Popen(['git', 'config -z --get core.excludesfile'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        result = p.communicate()
+        global_ignore = result[0]
+        if not global_ignore:
+            return
+        global_ignore = os.path.realpath(os.path.expanduser(global_ignore.decode('utf-8')))
+        msg.log('git core.excludesfile is ', global_ignore)
+    except Exception as e:
+        msg.error('Error getting git core.excludesfile:', str_e(e))
+    return global_ignore
 
 
 def create_flooignore(path):
@@ -51,7 +68,11 @@ def create_flooignore(path):
 
 
 def create_ignore_tree(path):
+    create_flooignore(path)
     ig = Ignore(path)
+    global_ignore = get_git_excludesfile()
+    if global_ignore:
+        ig.load(global_ignore)
     ig.ignores['/DEFAULT/'] = BLACKLIST
     ig.recurse(ig)
     return ig
@@ -100,6 +121,11 @@ class Ignore(object):
                 msg.error('Error stat()ing path ', p_path, ': ', str_e(e))
                 continue
 
+            if stat.S_ISREG(s.st_mode) and p in HIDDEN_WHITELIST:
+                # Don't count these whitelisted files in size
+                self.files.append(p_path)
+                continue
+
             is_dir = stat.S_ISDIR(s.st_mode)
             if root.is_ignored(p_path, is_dir, True):
                 continue
@@ -130,6 +156,9 @@ class Ignore(object):
                 continue
             if ignore[0] == '#':
                 continue
+            if ignore in NEGATE_PREFIXES:
+                # Just an exclamation mark or caret? This is some messed up pattern. Skip it.
+                continue
             msg.debug('Adding ', ignore, ' to ignore patterns')
             rules.insert(0, ignore)
         self.ignores[ignore_file] = rules
@@ -147,14 +176,14 @@ class Ignore(object):
             for p in c.list_paths():
                 yield p
 
-    def is_ignored_message(self, rel_path, pattern, ignore_file, exclude):
+    def is_ignored_message(self, rel_path, pattern, ignore_file, negate):
         path = os.path.join(self.path, rel_path)
-        exclude_msg = ''
-        if exclude:
-            exclude_msg = '__NOT__ '
+        negate_msg = ''
+        if negate:
+            negate_msg = '__NOT__ '
         if ignore_file == '/TOO_BIG/':
-            return '%s %signored because it is too big (more than %s bytes)' % (path, exclude_msg, MAX_FILE_SIZE)
-        return '%s %signored by pattern %s in %s' % (path, exclude_msg, pattern, os.path.join(self.path, ignore_file))
+            return '%s %signored because it is too big (more than %s bytes)' % (path, negate_msg, MAX_FILE_SIZE)
+        return '%s %signored by pattern %s in %s' % (path, negate_msg, pattern, os.path.join(self.path, ignore_file))
 
     def is_ignored(self, path, is_dir=None, log=False):
         if is_dir is None:
@@ -170,14 +199,20 @@ class Ignore(object):
     def _is_ignored(self, rel_path, is_dir, log):
         base_path, file_name = os.path.split(rel_path)
 
+        if not is_dir and file_name in HIDDEN_WHITELIST:
+            return False
+
         for ignore_file, patterns in self.ignores.items():
             for pattern in patterns:
                 orig_pattern = pattern
-                exclude = False
+                negate = False
                 match = False
-                if pattern[0] == "!":
-                    exclude = True
+                if pattern[0] in NEGATE_PREFIXES:
+                    negate = True
                     pattern = pattern[1:]
+
+                if not pattern:
+                    continue
 
                 if pattern[0] == '/':
                     match = fnmatch.fnmatch(rel_path, pattern[1:])
@@ -185,14 +220,18 @@ class Ignore(object):
                     if len(pattern) > 0 and pattern[-1] == '/':
                         if is_dir:
                             pattern = pattern[:-1]
-                    if fnmatch.fnmatch(file_name, pattern):
+                    if file_name == pattern:
+                        match = True
+                    elif base_path == pattern or (pattern[-1] == '/' and base_path == pattern[:-1]):
+                        match = True
+                    elif fnmatch.fnmatch(file_name, pattern):
                         match = True
                     elif fnmatch.fnmatch(rel_path, pattern):
                         match = True
                 if match:
                     if log:
-                        msg.log(self.is_ignored_message(rel_path, orig_pattern, ignore_file, exclude))
-                    if exclude:
+                        msg.log(self.is_ignored_message(rel_path, orig_pattern, ignore_file, negate))
+                    if negate:
                         return False
                     return True
 

@@ -1,6 +1,6 @@
 ;;; org-habit.el --- The habit tracking code for Org-mode
 
-;; Copyright (C) 2009-2015 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2016 Free Software Foundation, Inc.
 
 ;; Author: John Wiegley <johnw at gnu dot org>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -181,7 +181,7 @@ This list represents a \"habit\" for the rest of this module."
 	(error "Habit %s has no scheduled date" habit-entry))
       (unless scheduled-repeat
 	(error
-	 "Habit '%s' has no scheduled repeat period or has an incorrect one"
+	 "Habit `%s' has no scheduled repeat period or has an incorrect one"
 	 habit-entry))
       (setq sr-days (org-habit-duration-to-days scheduled-repeat)
 	    sr-type (progn (string-match "[\\.+]?\\+" scheduled-repeat)

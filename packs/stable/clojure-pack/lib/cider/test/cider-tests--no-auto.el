@@ -1,6 +1,6 @@
 ;;; cider-tests--no-auto.el --- Non-automated tests -*- lexical-binding: t -*-
 
-;; Copyright © 2014-2015 Jeff Valk
+;; Copyright © 2014-2016 Jeff Valk, Bozhidar Batsov and CIDER contributors
 
 ;; Author: Jeff Valk <jv@jeffvalk.com>
 
@@ -32,7 +32,7 @@
 
 (require 'ert)
 (require 'cider)
-(require 'dash)
+(require 'cider-compat)
 (require 'cl-lib)
 
 ;;; Docs
@@ -45,14 +45,14 @@ leading line of all dashes and trailing nil (when no doc is present) are removed
 from the latter. Remaining content is compared for string equality."
   (let ((repl-doc (with-temp-buffer
                     (let ((form (format "(clojure.repl/doc %s)" sym)))
-                      (insert (nrepl-dict-get (nrepl-send-sync-request form)
+                      (insert (nrepl-dict-get (cider-nrepl-send-sync-request form)
                                               "out"))
                       (goto-char (point-min))
                       (while (re-search-forward "^  nil\n" nil t)
                         (replace-match ""))
                       (goto-line 2)
                       (buffer-substring (point) (point-max)))))
-        (cider-doc (-if-let (doc-buffer (cider-doc-buffer-for sym))
+        (cider-doc (if-let (doc-buffer (cider-doc-buffer-for sym))
                        (with-current-buffer doc-buffer
                          (let ((inhibit-read-only t))
                            (goto-char (point-min))
@@ -71,7 +71,7 @@ from the latter. Remaining content is compared for string equality."
 (defun cider-test-all-docs ()
   "Verify docs for all special forms and every public var in `clojure/core'."
   (let ((syms (read
-               (nrepl-sync-request:eval
+               (cider-nrepl-sync-request:eval
                 "(->> (merge @#'clojure.repl/special-doc-map
                      (->> (ns-map 'clojure.core)
                           (filter (every-pred
@@ -79,7 +79,7 @@ from the latter. Remaining content is compared for string equality."
                                   (complement (comp :private meta val))))))
                      (keys)
                      (remove '#{.}))" ; emacs lisp chokes on the dot symbol
-                nil nil t))))
+                ))))
     (let (untested diffs)
       (dolist (sym syms)
         (let ((name (cond ((symbolp sym) (symbol-name sym))

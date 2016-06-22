@@ -1,6 +1,6 @@
 ;;; org-bbdb.el --- Support for links to BBDB entries from within Org-mode
 
-;; Copyright (C) 2004-2014 Free Software Foundation, Inc.
+;; Copyright (C) 2004-2016 Free Software Foundation, Inc.
 
 ;; Authors: Carsten Dominik <carsten at orgmode dot org>
 ;;       Thomas Baumann <thomas dot baumann at ch dot tum dot de>
@@ -37,7 +37,7 @@
 ;; the diary using bbdb-anniv.el.
 ;;
 ;; Put the following in /somewhere/at/home/diary.org and make sure
-;; that this file is in `org-agenda-files`
+;; that this file is in `org-agenda-files'.
 ;;
 ;; %%(org-bbdb-anniversaries)
 ;;

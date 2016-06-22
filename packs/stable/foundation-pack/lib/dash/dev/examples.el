@@ -1,7 +1,26 @@
-;; -*- lexical-binding: t -*-
+;;; examples.el --- Examples/tests for dash.el's API  -*- lexical-binding: t -*-
+
+;; Copyright (C) 2015 Free Software Foundation, Inc.
+
+;; This program is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+;;; Commentary:
 
 ;; Only the first three examples per function are shown in the docs,
 ;; so make those good.
+
+;;; Code:
 
 (require 'dash)
 
@@ -13,12 +32,12 @@
 ;; around differences in implementation between systems. Use the `~>'
 ;; symbol instead of `=>' to test the expected and actual values with
 ;; `approx-equal'
-(defvar epsilon 1e-15)
+(defvar dash--epsilon 1e-15)
 (defun approx-equal (u v)
   (or (= u v)
       (< (/ (abs (- u v))
         (max (abs u) (abs v)))
-     epsilon)))
+     dash--epsilon)))
 
 (def-example-group "Maps"
   "Functions in this category take a transforming function, which
@@ -160,7 +179,15 @@ new list."
   (defexamples -select-by-indices
     (-select-by-indices '(4 10 2 3 6) '("v" "e" "l" "o" "c" "i" "r" "a" "p" "t" "o" "r")) => '("c" "o" "l" "o" "r")
     (-select-by-indices '(2 1 0) '("a" "b" "c")) => '("c" "b" "a")
-    (-select-by-indices '(0 1 2 0 1 3 3 1) '("f" "a" "r" "l")) => '("f" "a" "r" "f" "a" "l" "l" "a")))
+    (-select-by-indices '(0 1 2 0 1 3 3 1) '("f" "a" "r" "l")) => '("f" "a" "r" "f" "a" "l" "l" "a"))
+
+  (defexamples -select-columns
+    (-select-columns '(0 2) '((1 2 3) (a b c) (:a :b :c))) => '((1 3) (a c) (:a :c))
+    (-select-columns '(1) '((1 2 3) (a b c) (:a :b :c))) => '((2) (b) (:b))
+    (-select-columns nil '((1 2 3) (a b c) (:a :b :c))) => '(nil nil nil))
+
+  (defexamples -select-column
+    (-select-column 1 '((1 2 3) (a b c) (:a :b :c))) => '(2 b :b)))
 
 (def-example-group "List to list"
   "Bag of various functions which modify input list."
@@ -179,7 +206,10 @@ new list."
   (defexamples -flatten
     (-flatten '((1))) => '(1)
     (-flatten '((1 (2 3) (((4 (5))))))) => '(1 2 3 4 5)
-    (-flatten '(1 2 (3 . 4))) => '(1 2 (3 . 4)))
+    (-flatten '(1 2 (3 . 4))) => '(1 2 (3 . 4))
+    (-flatten '(nil nil nil)) => nil
+    (-flatten '(nil (1) nil)) => '(1)
+    (-flatten '(nil (nil) nil)) => nil)
 
   (defexamples -flatten-n
     (-flatten-n 1 '((1 2) ((3 4) ((5 6))))) => '(1 2 (3 4) ((5 6)))
@@ -378,7 +408,10 @@ new list."
     (-is-suffix? '(3 4 5) '(1 2 3 4 5)) => t
     (-is-suffix? '(1 2 3 4 5) '(3 4 5)) => nil
     (-is-suffix? '(3 5) '(1 2 3 4 5)) => nil
-    (-is-suffix? '(3 4 5) '(1 2 3 5)) => nil)
+    (-is-suffix? '(3 4 5) '(1 2 3 5)) => nil
+    (let ((l '(1 2 3)))
+      (list (-is-suffix? '(3) l)
+            l)) => '(t (1 2 3)))
 
   (defexamples -is-infix?
     (-is-infix? '(1 2 3) '(1 2 3 4 5)) => t
@@ -733,7 +766,26 @@ new list."
   (defexamples -->
     (--> "def" (concat "abc" it "ghi")) => "abcdefghi"
     (--> "def" (concat "abc" it "ghi") (upcase it)) => "ABCDEFGHI"
-    (--> "def" (concat "abc" it "ghi") upcase) => "ABCDEFGHI"))
+    (--> "def" (concat "abc" it "ghi") upcase) => "ABCDEFGHI")
+
+  (defexamples -some->
+    (-some-> '(2 3 5)) => '(2 3 5)
+    (-some-> 5 square) => 25
+    (-some-> 5 even? square) => nil
+    (-some-> nil square) => nil)
+
+  (defexamples -some->>
+    (-some->> '(1 2 3) (-map 'square)) => '(1 4 9)
+    (-some->> '(1 3 5) (-last 'even?) (+ 100)) => nil
+    (-some->> '(2 4 6) (-last 'even?) (+ 100)) => 106
+    (-some->> '("A" "B" :c) (-filter 'stringp) (-reduce 'concat)) => "AB"
+    (-some->> '(:a :b :c) (-filter 'stringp) (-reduce 'concat)) => nil)
+
+  (defexamples -some-->
+    (-some--> "def" (concat "abc" it "ghi")) => "abcdefghi"
+    (-some--> nil (concat "abc" it "ghi")) => nil
+    (-some--> '(1 3 5) (-filter 'even? it) (append it it) (-map 'square it)) => nil
+    (-some--> '(2 4 6) (-filter 'even? it) (append it it) (-map 'square it)) => '(4 16 36 4 16 36)))
 
 (def-example-group "Binding"
   "Convenient versions of `let` and `let*` constructs combined with flow control."
@@ -876,6 +928,13 @@ new list."
     (-let [(&plist 'a a) (list 'a 1 'b 2)] a) => 1
     (-let [(&plist 'a [a b]) (list 'a [1 2] 'b 3)] (list a b)) => '(1 2)
     (-let [(&plist 'a [a b] 'c c) (list 'a [1 2] 'c 3)] (list a b c)) => '(1 2 3)
+    ;; mixing dot and &alist
+    (-let (((x y &alist 'a a 'c c) (list 1 2 '(a . b) '(e . f) '(g . h) '(c . d)))) (list x y a c)) => '(1 2 b d)
+    (-let (((_ _ &alist 'a a 'c c) (list 1 2 '(a . b) '(e . f) '(g . h) '(c . d)))) (list a c)) => '(b d)
+    (-let (((x y . (&alist 'a a 'c c)) (list 1 2 '(a . b) '(e . f) '(g . h) '(c . d)))) (list x y a c)) => '(1 2 b d)
+    (-let (((_ _ . (&alist 'a a 'c c)) (list 1 2 '(a . b) '(e . f) '(g . h) '(c . d)))) (list a c)) => '(b d)
+    (-let (((x y (&alist 'a a 'c c)) (list 1 2 '((a . b) (e . f) (g . h) (c . d))))) (list x y a c)) => '(1 2 b d)
+    (-let (((_ _ . ((&alist 'a a 'c c))) (list 1 2 '((a . b) (e . f) (g . h) (c . d))))) (list a c)) => '(b d)
     ;; test the &as form
     (-let (((items &as first . rest) (list 1 2 3))) (list first rest items)) => '(1 (2 3) (1 2 3))
     (-let [(all &as [vect &as a b] bar) (list [1 2] 3)] (list a b bar vect all)) => '(1 2 3 [1 2] ([1 2] 3))
@@ -1068,3 +1127,5 @@ new list."
 ;; Local Variables:
 ;; eval: (font-lock-add-keywords nil '(("defexamples\\|def-example-group\\| => \\| !!> \\| ~>" (0 'font-lock-keyword-face)) ("(defexamples[[:blank:]]+\\(.*\\)" (1 'font-lock-function-name-face))))
 ;; End:
+
+;;; examples.el ends here

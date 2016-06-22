@@ -141,8 +141,8 @@
   (set-buffer-multibyte t)
   (destructuring-bind (req resp) req-resp
     (condition-case err
-        (progn
-          (oset resp :-req req)
+        (let ((responses-req (clone req)))
+          (oset resp :-req responses-req)
           (gh-url-response-init resp (current-buffer)))
       (error
        (let ((num (oref req :num-retries)))

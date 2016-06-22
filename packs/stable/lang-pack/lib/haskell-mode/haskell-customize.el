@@ -1,4 +1,4 @@
-;;; haskell-customize.el --- Customization settings
+;;; haskell-customize.el --- Customization settings -*- lexical-binding: t -*-
 
 ;; Copyright (c) 2014 Chris Done. All rights reserved.
 
@@ -22,6 +22,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Customization variables
 
+(defcustom haskell-process-load-or-reload-prompt nil
+  "Nil means there will be no prompts on starting REPL. Defaults will be accepted."
+  :type 'boolean
+  :group 'haskell-interactive)
+
+;;;###autoload
 (defgroup haskell nil
   "Major mode for editing Haskell programs."
   :link '(custom-manual "(haskell-mode)")
@@ -43,8 +49,22 @@ Used for locating additional package data files.")
 
 (defcustom haskell-process-type
   'auto
-  "The inferior Haskell process type to use."
-  :type '(choice (const auto) (const ghci) (const cabal-repl) (const cabal-ghci))
+  "The inferior Haskell process type to use.
+
+When set to 'auto (the default), the directory contents and
+available programs will be used to make a best guess at the
+process type:
+
+If the project directory or one of its parents contains a
+\"cabal.sandbox.config\" file, then cabal-repl will be used.
+
+If there's a \"stack.yaml\" file and the \"stack\" executable can
+be located, then stack-ghci will be used.
+
+Otherwise if there's a *.cabal file, cabal-repl will be used.
+
+If none of the above apply, ghci will be used."
+  :type '(choice (const auto) (const ghci) (const cabal-repl) (const stack-ghci))
   :group 'haskell-interactive)
 
 (defcustom haskell-process-wrapper-function
@@ -84,9 +104,10 @@ when showing type information about symbols."
   :type 'boolean
   :safe 'booleanp)
 
-(defvar haskell-process-end-hook nil
+(defvar haskell-process-ended-functions (list 'haskell-process-prompt-restart)
   "Hook for when the haskell process ends.")
 
+;;;###autoload
 (defgroup haskell-interactive nil
   "Settings for REPL interaction via `haskell-interactive-mode'"
   :link '(custom-manual "(haskell-mode)haskell-interactive-mode")
@@ -94,19 +115,28 @@ when showing type information about symbols."
 
 (defcustom haskell-process-path-ghci
   "ghci"
-  "The path for starting ghci."
+  "The path for starting ghci.
+This can either be a single string or a list of strings, where the
+first elements is a string and the remaining elements are arguments,
+which will be prepended to `haskell-process-args-ghci'."
   :group 'haskell-interactive
   :type '(choice string (repeat string)))
 
 (defcustom haskell-process-path-cabal
   "cabal"
-  "Path to the `cabal' executable."
+  "Path to the `cabal' executable.
+This can either be a single string or a list of strings, where the
+first elements is a string and the remaining elements are arguments,
+which will be prepended to `haskell-process-args-cabal-repl'."
   :group 'haskell-interactive
   :type '(choice string (repeat string)))
 
-(defcustom haskell-process-path-cabal-ghci
-  "cabal-ghci"
-  "The path for starting cabal-ghci."
+(defcustom haskell-process-path-stack
+  "stack"
+  "The path for starting stack.
+This can either be a single string or a list of strings, where the
+first elements is a string and the remaining elements are arguments,
+which will be prepended to `haskell-process-args-stack-ghci'."
   :group 'haskell-interactive
   :type '(choice string (repeat string)))
 
@@ -118,13 +148,19 @@ when showing type information about symbols."
 
 (defcustom haskell-process-args-cabal-repl
   '("--ghc-option=-ferror-spans")
-  "Additional arguments to for `cabal repl' invocation.
+  "Additional arguments for `cabal repl' invocation.
 Note: The settings in `haskell-process-path-ghci' and
 `haskell-process-args-ghci' are not automatically reused as `cabal repl'
 currently invokes `ghc --interactive'. Use
 `--with-ghc=<path-to-executable>' if you want to use a different
 interactive GHC frontend; use `--ghc-option=<ghc-argument>' to
 pass additional flags to `ghc'."
+  :group 'haskell-interactive
+  :type '(repeat (string :tag "Argument")))
+
+(defcustom haskell-process-args-stack-ghci
+  '("--ghc-options=-ferror-spans")
+  "Additional arguments for `stack ghci' invocation."
   :group 'haskell-interactive
   :type '(repeat (string :tag "Argument")))
 
@@ -324,21 +360,24 @@ when Data.Map is the candidate.
 
 (defcustom haskell-language-extensions
   '()
-  "Language extensions in use. Should be in format: -XFoo, -XNoFoo etc."
-  :group 'shm
+  "Language extensions in use. Should be in format: -XFoo,
+-XNoFoo etc. The idea is that various tools written with HSE (or
+any haskell-mode code that needs to be aware of syntactical
+properties; such as an indentation mode) that don't know what
+extensions to use can use this variable. Examples: hlint,
+hindent, structured-haskell-mode, tool-de-jour, etc.
+
+You can set this per-project with a .dir-locals.el file, in the
+same vein as `haskell-indent-spaces'."
+  :group 'haskell
   :type '(repeat 'string))
 
-(defcustom haskell-ghc-supported-extensions
-  (split-string (shell-command-to-string "ghc --supported-extensions"))
-  "List of language extensions supported by the installed version of GHC."
+(defcustom haskell-stylish-on-save nil
+  "Whether to run stylish-haskell on the buffer before saving.
+If this is true, `haskell-add-import' will not sort or align the
+imports."
   :group 'haskell
-  :type '(repeat string))
-
-(defcustom haskell-ghc-supported-options
-  (split-string (shell-command-to-string "ghc --show-options"))
-  "List of options supported by the installed version of GHC."
-  :group 'haskell
-  :type '(repeat string))
+  :type 'boolean)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Accessor functions
@@ -346,24 +385,19 @@ when Data.Map is the candidate.
 (defun haskell-process-type ()
   "Return `haskell-process-type', or a guess if that variable is 'auto."
   (if (eq 'auto haskell-process-type)
-      (if (locate-dominating-file
-           default-directory
-           (lambda (d)
-             (or (file-directory-p (expand-file-name ".cabal-sandbox" d))
-                 (cl-find-if (lambda (f) (string-match-p ".\\.cabal\\'" f)) (directory-files d)))))
-          'cabal-repl
-        'ghci)
+      (cond
+       ;; User has explicitly initialized this project with cabal
+       ((locate-dominating-file default-directory "cabal.sandbox.config")
+        'cabal-repl)
+       ((and (locate-dominating-file default-directory "stack.yaml")
+             (executable-find "stack"))
+        'stack-ghci)
+       ((locate-dominating-file
+         default-directory
+         (lambda (d)
+           (cl-find-if (lambda (f) (string-match-p ".\\.cabal\\'" f)) (directory-files d))))
+        'cabal-repl)
+       (t 'ghci))
     haskell-process-type))
-
-;;;###autoload
-(defun haskell-customize ()
-  "Browse the haskell customize sub-tree.
-This calls 'customize-browse' with haskell as argument and makes
-sure all haskell customize definitions have been loaded."
-  (interactive)
-  ;; make sure all modules with (defcustom ...)s are loaded
-  (mapc 'require
-        '(haskell-checkers haskell-compile haskell-doc haskell-font-lock haskell-indentation haskell-indent haskell-interactive-mode haskell-menu haskell-process inf-haskell))
-  (customize-browse 'haskell))
 
 (provide 'haskell-customize)

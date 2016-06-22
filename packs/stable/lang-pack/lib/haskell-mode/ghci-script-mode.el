@@ -1,4 +1,4 @@
-;;; ghci-script-mode.el --- GHCi scripts major mode
+;;; ghci-script-mode.el --- GHCi scripts major mode -*- lexical-binding: t -*-
 
 ;; Copyright (c) 2014 Chris Done. All rights reserved.
 
@@ -55,8 +55,8 @@
 (define-key ghci-script-mode-map (kbd "C-c C-l") 'ghci-script-mode-load)
 
 (defun ghci-script-mode-load ()
-  (interactive)
   "Load the current script file into the GHCi session."
+  (interactive)
   (let ((buffer (haskell-session-interactive-buffer (haskell-session)))
         (filename (buffer-file-name)))
     (save-buffer)

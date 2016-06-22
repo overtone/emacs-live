@@ -1,6 +1,6 @@
 ;;; ob-perl.el --- org-babel functions for perl evaluation
 
-;; Copyright (C) 2009-2014 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2016 Free Software Foundation, Inc.
 
 ;; Authors: Dan Davison
 ;;	 Eric Schulte
@@ -127,8 +127,8 @@ specifying a var of the same value."
 
 (defun org-babel-perl-evaluate (session ibody &optional result-type result-params)
   "Pass BODY to the Perl process in SESSION.
-If RESULT-TYPE equals 'output then return a list of the outputs
-of the statements in BODY, if RESULT-TYPE equals 'value then
+If RESULT-TYPE equals `output' then return a list of the outputs
+of the statements in BODY, if RESULT-TYPE equals `value' then
 return the value of the last statement in BODY, as elisp."
   (when session (error "Sessions are not supported for Perl"))
   (let* ((body (concat org-babel-perl-preface ibody))

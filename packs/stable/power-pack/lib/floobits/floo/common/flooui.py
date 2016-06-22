@@ -268,7 +268,13 @@ class FlooUI(event_emitter.EventEmitter):
                 prompt = 'Workspace names may only contain [A-Za-z0-9_\-\.]. Choose another name: '
                 continue
 
-            prompt = 'Workspace %s/%s already exists. Choose another name: ' % (owner, name)
+            yes = yield self.user_y_or_n, context, 'Workspace %s/%s already exists. Overwrite?' % (owner, name), 'Yes'
+            if yes:
+                # TODO: this doesn't set permissions on the workspace correctly
+                self.remote_connect(context, host, owner, name, dir_to_share, utils.JOIN_ACTION.PROMPT)
+                return
+
+            prompt = 'Workspace %s/%s already exists. Choose new name: ' % (owner, name)
 
     def join_workspace_by_url(self, context, workspace_url, possible_dirs=None):
         try:
@@ -293,7 +299,7 @@ class FlooUI(event_emitter.EventEmitter):
                 continue
             userNames.add(username)
         if not userNames:
-            editor.error_message("There are no other users that can be followed at this time." +
+            editor.error_message("There are no other users that can be followed at this time. " +
                                  "NOTE: you can only follow users who have highlight permission.")
             cb and cb()
             return

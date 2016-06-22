@@ -1,12 +1,18 @@
 # git-gutter.el [![travis badge][travis-badge]][travis-link] [![melpa badge][melpa-badge]][melpa-link] [![melpa stable badge][melpa-stable-badge]][melpa-stable-link]
 
 ## Introduction
+
 `git-gutter.el` is port of [GitGutter](https://github.com/jisaacks/GitGutter)
-which is a plugin of Sublime Text. `git-gutter.el` also supports `Mercurial`
-and `Subversion` and `Bazaar`.
+which is a plugin of Sublime Text.
 
 
-`git-gutter.el` also supports TRAMP so you can use `git-gutter.el` for remote files.
+## Features
+
+- Asynchronous updating
+- [Live updating](#live-updating)
+- [Support multiple VCS](#backends)
+- Support Tramp
+- Work without `vc-mode`
 
 
 ## Screenshot
@@ -18,9 +24,6 @@ and `Subversion` and `Bazaar`.
 
 * Emacs 24 or higher
 * [Git](http://git-scm.com/)(1.7.0 or higher)
-
-
-If you use `git-gutter.el` for Subversion, please use Subversion 1.8 or higher.
 
 
 ## git-gutter.el vs [git-gutter-fringe.el](https://github.com/syohex/emacs-git-gutter-fringe)
@@ -63,14 +66,19 @@ Following example of enabling `git-gutter` for some mode.
 ## Commands
 
 `git-gutter.el` provides following commands.
+**Obsoleted interfaces will be removed when 1.0 released.**
 
 #### `git-gutter:next-hunk`
 
-Jump to next hunk(alias `git-gutter:next-diff`)
+Jump to next hunk
 
 #### `git-gutter:previous-hunk`
 
-Jump to previous hunk(alias `git-gutter:previous-diff`)
+Jump to previous hunk
+
+#### `git-gutter:mark-hunk`
+
+Mark current hunk.
 
 #### `git-gutter:set-start-revision`
 
@@ -96,14 +104,6 @@ Revert current hunk
 
 Show changes from last commit or Update change information.
 Please execute this command if diff information is not be updated.
-
-#### `git-gutter:clear`
-
-Clear changes
-
-#### `git-gutter:toggle`
-
-Toggle git-gutter
 
 #### `git-gutter:linum-setup`
 
@@ -140,6 +140,9 @@ Update git-gutter information of buffers in all visible window.
 
 ;; Revert current hunk
 (global-set-key (kbd "C-x v r") 'git-gutter:revert-hunk)
+
+;; Mark current hunk
+(global-set-key (kbd "C-x v SPC") #'git-gutter:mark-hunk)
 ```
 
 
@@ -204,7 +207,14 @@ character.
 
 ### Backends
 
-`git-gutter.el` supports `Git`, `Mercurial`, `Subversion` and `Bazaar` backends.
+`git-gutter.el` supports following version control systems
+
+- [Git](http://git-scm.com/)(1.7.0 or higher)
+- [Mercurial](https://www.mercurial-scm.org/)
+- [Subversion](https://subversion.apache.org/)(1.8 or higher)
+- [Bazaar](http://bazaar.canonical.com/en/)
+
+
 You can set backends which `git-gutter.el` will be used.
 Default value of `git-gutter:handled-backends` is `'(git)`. If you want to use
 `git-gutter.el` for other VCS, please change value of `git-gutter:handled-backends` as below.
@@ -244,6 +254,19 @@ to `non-nil`.
 ```
 
 Default is `nil`.
+
+### Show signs at gutter by visual lines
+
+Emacs folds long line if `truncate-lines` is `nil`. If `git-gutter:visual-line` is
+non-nil, `git-gutter` puts sign by visual lines.
+
+```lisp
+(custom-set-variables
+ '(git-gutter:visual-line t))
+```
+
+Default bahavior is that signs are put by logical lines.
+value of `git-gutter:visual-line` is `nil`.
 
 ### Show Unchanged Information
 
@@ -298,6 +321,17 @@ You can pass `git diff` option to set `git-gutter:diff-option`.
  '(git-gutter:diff-option "-w"))
 ```
 
+### Don't ask whether commit/revert or not
+
+`git-gutter.el` always asks you whether commit/revert or not. If you don't want,
+please set `git-gutter:ask-p` to `nil`.
+
+```lisp
+;; Don't ask me!!
+(custom-set-variables
+ '(git-gutter:ask-p nil))
+```
+
 ### Log/Message Level
 
 ```lisp
@@ -313,6 +347,23 @@ Default value is 4(`0` is lowest, `4` is highest).
 Run hook `git-gutter-mode-on-hook` when `git-gutter-mode` is turn on, and
 run hook `git-gutter-mode-off-hook` when `git-gutter-mode` is turn off.
 
+## Statistic
+
+`git-gutter.el` provides some statistic API. This is useful for knowing how much
+code you changed etc. To display them in mode-line is also useful.
+
+#### `(git-gutter:buffer-hunks)`
+
+Cound unstaged hunks in current buffer.
+
+#### `(git-gutter:all-hunks)`
+
+Cound unstaged hunks in all buffers
+
+#### `(git-gutter:statistic)`
+
+Return statistic unstaged hunks in current buffer. Return value is dot-list.
+First element is total added lines, second element is total deleted lines.
 
 ## See Also
 
@@ -326,16 +377,12 @@ Vim version of GitGutter
 
 ### [diff-hl](https://github.com/dgutov/diff-hl)
 
-`diff-hl` has more features than `git-gutter.el` and is `vc` friendly.
+`diff-hl` is similar tool based on `vc`.
 
 ### [git-gutter-plus](https://github.com/nonsequitur/git-gutter-plus)
 
-Fork of `git-gutter.el`.
-
-
-### Another implementation of git-gutter.el
-
-[How to write another implementation](wiki/Write-another-git-gutter.el-implementation)
+Fork of `git-gutter.el`. Some features which are not provided `git-gutter.el` provides.
+However git-gutter-plus updates diff information synchronously.
 
 [travis-badge]: https://travis-ci.org/syohex/emacs-git-gutter.svg
 [travis-link]: https://travis-ci.org/syohex/emacs-git-gutter

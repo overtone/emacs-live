@@ -1,10 +1,10 @@
 ;;; auto-compile.el --- automatically compile Emacs Lisp libraries
 
-;; Copyright (C) 2008-2014  Jonas Bernoulli
+;; Copyright (C) 2008-2016  Jonas Bernoulli
 
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
 ;; Created: 20080830
-;; Package-Requires: ((cl-lib "0.5") (dash "2.1") (packed "0.3.5"))
+;; Package-Requires: ((emacs "24.3") (dash "2.12.1") (packed "0.5.3"))
 ;; Homepage: https://github.com/tarsius/auto-compile
 ;; Keywords: compile, convenience, lisp
 
@@ -49,20 +49,31 @@
 ;; Setup
 ;; -----
 
-;; To reduce the risk of loading outdated byte code files, enable
-;; `auto-compile-on-load-mode' as early as possible, preferably even
-;; before the package manager.  If your Emacs supports it, then also
-;; set `load-prefer-newer' to t even before requiring `auto-compile'.
-;; Then also enable `auto-compile-on-save-mode'.
+;; To reduce the risk of loading outdated byte code files, you should
+;; set `load-prefer-newer' and enable `auto-compile-on-load-mode' as
+;; early as possible.  Then also enable `auto-compile-on-save-mode'.
+;; You should also consider not byte-compiling your personal init
+;; file, or setting `load-prefer-newer' in a system-wide init file.
 
+;; If you use `package.el' then use something like this:
+;;
+;;     ;;; init.el --- user init file      -*- no-byte-compile: t -*-
+;;     (setq load-prefer-newer t)
+;;     (package-initialize)
+;;     (require 'auto-compile)
+;;     (auto-compile-on-load-mode)
+;;     (auto-compile-on-save-mode)
+
+;; otherwise:
+;;
 ;;     ;;; init.el --- user init file      -*- no-byte-compile: t -*-
 ;;     (setq load-prefer-newer t)
 ;;     (add-to-list 'load-path "/path/to/dash")
 ;;     (add-to-list 'load-path "/path/to/packed")
 ;;     (add-to-list 'load-path "/path/to/auto-compile")
 ;;     (require 'auto-compile)
-;;     (auto-compile-on-load-mode 1)
-;;     (auto-compile-on-save-mode 1)
+;;     (auto-compile-on-load-mode)
+;;     (auto-compile-on-save-mode)
 
 ;; Usage
 ;; -----
@@ -481,7 +492,7 @@ pretend the byte code file exists.")
               (check-parens))
           (error
            (message (error-message-string check-parens))
-           (auto-compile-handle-compile-error file buf)
+           (auto-compile-handle-compile-error file buf start)
            (throw 'auto-compile nil))))
       (setq dest (byte-compile-dest-file file))
       (when (or start
@@ -502,7 +513,7 @@ pretend the byte code file exists.")
                   (kill-local-variable auto-compile-pretend-byte-compiled))))
           (file-error
            (message "Byte-compiling %s failed" file)
-           (auto-compile-handle-compile-error file buf)
+           (auto-compile-handle-compile-error file buf start)
            (setq success nil)))
         (when (and auto-compile-update-autoloads
                    (setq loaddefs (packed-loaddefs-file)))
@@ -541,18 +552,21 @@ pretend the byte code file exists.")
      (auto-compile-ding)
      (message "Deleting %s...failed" dest))))
 
-(defun auto-compile-handle-compile-error (file buf)
+(defun auto-compile-handle-compile-error (file buf &optional start)
   (auto-compile-ding)
-  (let ((dest (byte-compile-dest-file file)))
-    (when (file-exists-p dest)
-      (auto-compile-delete-dest dest t)))
-  (when (or buf
-            (and auto-compile-visit-failed
-                 (setq buf (find-file-noselect file))))
-    (with-current-buffer buf
-      (setq auto-compile-pretend-byte-compiled t)
-      (when auto-compile-mark-failed-modified
-        (set-buffer-modified-p t)))))
+  (let (update)
+    (let ((dest (byte-compile-dest-file file)))
+      (when (file-exists-p dest)
+        (setq update t)
+        (auto-compile-delete-dest dest t)))
+    (when (or buf
+              (and auto-compile-visit-failed
+                   (setq buf (find-file-noselect file))))
+      (with-current-buffer buf
+        (when (or update start)
+          (setq auto-compile-pretend-byte-compiled t))
+        (when auto-compile-mark-failed-modified
+          (set-buffer-modified-p t))))))
 
 (defun auto-compile-handle-autoloads-error (dest)
   (auto-compile-ding)
@@ -697,6 +711,7 @@ This is especially useful during rebase sessions."
 
 ;;; Auto-Compile-On-Load Mode
 
+;;;###autoload
 (define-minor-mode auto-compile-on-load-mode
   "Before loading a library recompile it if it needs recompilation.
 

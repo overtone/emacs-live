@@ -1,6 +1,6 @@
 ;;; ox-texinfo.el --- Texinfo Back-End for Org Export Engine
 
-;; Copyright (C) 2012-2015 Free Software Foundation, Inc.
+;; Copyright (C) 2012-2016 Free Software Foundation, Inc.
 ;; Author: Jonathan Leech-Pepin <jonathan.leechpepin at gmail dot com>
 ;; Keywords: outlines, hypermedia, calendar, wp
 
@@ -133,7 +133,7 @@
 (defcustom org-texinfo-coding-system nil
   "Default document encoding for Texinfo output.
 
-If `nil' it will default to `buffer-file-coding-system'."
+If nil it will default to `buffer-file-coding-system'."
   :group 'org-export-texinfo
   :type 'coding-system)
 
@@ -153,9 +153,9 @@ If `nil' it will default to `buffer-file-coding-system'."
 If #+TEXINFO_CLASS is set in the buffer, use its value and the
 associated information.  Here is the structure of each cell:
 
-  \(class-name
+  (class-name
     header-string
-    \(numbered-section . unnumbered-section)
+    (numbered-section . unnumbered-section)
     ...)
 
 
@@ -1589,7 +1589,7 @@ Return INFO file name or an error if it couldn't be produced."
 				(file-name-directory full-name)
 			      default-directory))
 	 errors)
-    (message (format "Processing Texinfo file %s..." file))
+    (message "Processing Texinfo file %s..." file)
     (save-window-excursion
       ;; Replace %b, %f and %o with appropriate values in each command
       ;; before applying it.  Output is redirected to "*Org INFO
@@ -1611,8 +1611,8 @@ Return INFO file name or an error if it couldn't be produced."
 	;; Check for process failure.  Provide collected errors if
 	;; possible.
 	(if (not (file-exists-p infofile))
-	    (error (concat (format "INFO file %s wasn't produced" infofile)
-			   (when errors (concat ": " errors))))
+	    (error "INFO file %s wasn't produced%s" infofile
+		   (if errors (concat ": " errors) ""))
 	  ;; Else remove log files, when specified, and signal end of
 	  ;; process to user, along with any error encountered.
 	  (when org-texinfo-remove-logfiles
@@ -1655,7 +1655,7 @@ none."
 		  (re-search-forward "requires a sectioning" nil t))
 	    (setq errors (concat errors " [invalid section command]")))
 	  (when (save-excursion
-		  (re-search-forward "\\[unexpected\]" nil t))
+		  (re-search-forward "\\[unexpected\ ]" nil t))
 	    (setq errors (concat errors " [unexpected error]")))
 	  (when (save-excursion
 		  (re-search-forward "misplaced " nil t))

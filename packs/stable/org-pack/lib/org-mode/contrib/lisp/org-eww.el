@@ -1,6 +1,6 @@
 ;;; org-eww.el --- Store url and kill from Eww mode for Org
 
-;; Copyright (C) 2014 Free Software Foundation, Inc.
+;; Copyright (C) 2014-2016 Free Software Foundation, Inc.
 
 ;; Author: Marco Wahl <marcowahlsoft>a<gmailcom>
 ;; Keywords: link, eww
@@ -87,7 +87,10 @@ Return t if there is no next link; otherwise, return nil."
   "Copy current buffer content or active region with `org-mode' style links.
 This will encode `link-title' and `link-location' with
 `org-make-link-string', and insert the transformed test into the kill ring,
-so that it can be yanked into an Org-mode buffer with links working correctly."
+so that it can be yanked into an Org-mode buffer with links working correctly.
+
+Further lines starting with a star get quoted with a comma to keep
+the structure of the org file."
   (interactive)
   (let* ((regionp (org-region-active-p))
          (transform-start (point-min))
@@ -138,7 +141,13 @@ so that it can be yanked into an Org-mode buffer with links working correctly."
           (setq return-content
                 (concat return-content
                         (buffer-substring (point) transform-end))))
-      (org-kill-new return-content)
+      ;; quote lines starting with *
+      (org-kill-new
+       (with-temp-buffer
+	 (insert return-content)
+	 (goto-char 0)
+	 (replace-regexp "^\*" ",*")
+	 (buffer-string)))
       (message "Transforming links...done, use C-y to insert text into Org-mode file"))))
 
 

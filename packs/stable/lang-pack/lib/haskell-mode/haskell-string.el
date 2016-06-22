@@ -1,4 +1,4 @@
-;;; haskell-string.el --- Haskell related string utilities
+;;; haskell-string.el --- Haskell related string utilities -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2013  Herbert Valerio Riedel
 
@@ -58,7 +58,7 @@ Note: The implementation currently only supports ASCII
 (defun haskell-string-literal-encode (str &optional no-quotes)
   "Encode STR according Haskell escape rules using 7-bit ASCII representation.
 
-The serialization has been implement to closely match the
+The serialization has been implemented to closely match the
 behaviour of GHC's Show instance for Strings.
 
 If NO-QUOTES is non-nil, omit wrapping result in quotes.

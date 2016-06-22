@@ -1,6 +1,6 @@
 ;;; clojure-mode-font-lock-test.el --- Clojure Mode: Font lock test suite  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2014-2015 Bozhidar Batsov <bozhidar@batsov.com>
+;; Copyright (C) 2014-2016 Bozhidar Batsov <bozhidar@batsov.com>
 
 ;; This file is not part of GNU Emacs.
 
@@ -41,6 +41,17 @@
      (goto-char (point-min))
      ,@body))
 
+(defmacro clojurex-test-with-temp-buffer (content &rest body)
+  "Evaluate BODY in a temporary buffer with CONTENTS."
+  (declare (debug t)
+           (indent 1))
+  `(with-temp-buffer
+     (insert ,content)
+     (clojurex-mode)
+     (font-lock-fontify-buffer)
+     (goto-char (point-min))
+     ,@body))
+
 (defun clojure-get-face-at-range (start end)
   (let ((start-face (get-text-property start 'face))
         (all-faces (cl-loop for i from start to end collect (get-text-property i 'face))))
@@ -56,6 +67,16 @@ buffer."
   (if content
       (clojure-test-with-temp-buffer content
         (clojure-get-face-at-range start end))
+    (clojure-get-face-at-range start end)))
+
+(defun clojurex-test-face-at (start end &optional content)
+  "Get the face between START and END in CONTENT.
+
+If CONTENT is not given, return the face at the specified range in the current
+buffer."
+  (if content
+      (clojurex-test-with-temp-buffer content
+                                      (clojure-get-face-at-range start end))
     (clojure-get-face-at-range start end)))
 
 (defconst clojure-test-syntax-classes
@@ -80,7 +101,48 @@ POS."
 
 (ert-deftest clojure-mode-syntax-table/fontify-clojure-keyword ()
   :tags '(fontification syntax-table)
-  (should (eq (clojure-test-face-at 2 11 "{:something 20}") 'clojure-keyword-face)))
+  (should (equal (clojure-test-face-at 2 11 "{:something 20}") '(clojure-keyword-face))))
+
+(ert-deftest clojure-mode-syntax-table/stuff-in-backticks ()
+  :tags '(fontification syntax-table)
+  (should (equal (clojure-test-face-at 1 2 "\"`#'s/trim`\"") font-lock-string-face))
+  (should (equal (clojure-test-face-at 3 10 "\"`#'s/trim`\"") '(font-lock-constant-face font-lock-string-face)))
+  (should (equal (clojure-test-face-at 11 12 "\"`#'s/trim`\"") font-lock-string-face))
+  (should (equal (clojure-test-face-at 1 1 ";`#'s/trim`") font-lock-comment-delimiter-face))
+  (should (equal (clojure-test-face-at 2 2 ";`#'s/trim`") font-lock-comment-face))
+  (should (equal (clojure-test-face-at 3 10 ";`#'s/trim`") '(font-lock-constant-face font-lock-comment-face)))
+  (should (equal (clojure-test-face-at 11 11 ";`#'s/trim`") font-lock-comment-face)))
+
+(ert-deftest clojure-mode-syntax-table/stuff-in-backticks ()
+  :tags '(fontification syntax-table)
+  (should (equal (clojure-test-face-at 1 2 "\"a\\bc\\n\"") font-lock-string-face))
+  (should (equal (clojure-test-face-at 3 4 "\"a\\bc\\n\"") '(bold font-lock-string-face)))
+  (should (equal (clojure-test-face-at 5 5 "\"a\\bc\\n\"") font-lock-string-face))
+  (should (equal (clojure-test-face-at 6 7 "\"a\\bc\\n\"") '(bold font-lock-string-face)))
+  (should (equal (clojure-test-face-at 4 5 "#\"a\\bc\\n\"") '(bold font-lock-string-face))))
+
+(ert-deftest clojure-mode-syntax-table/fontify-namespaced-keyword ()
+  :tags '(fontification syntax-table)
+  (should (equal (clojure-test-face-at 9 11 "(:alias/def x 10)") '(clojure-keyword-face)))
+  (should (equal (clojure-test-face-at 2 2 "{:alias/some 20}")  '(clojure-keyword-face)))
+  (should (equal (clojure-test-face-at 3 7 "{:alias/some 20}")  '(font-lock-type-face clojure-keyword-face)))
+  (should (equal (clojure-test-face-at 8 8 "{:alias/some 20}")  '(default clojure-keyword-face)))
+  (should (equal (clojure-test-face-at 9 12 "{:alias/some 20}") '(clojure-keyword-face)))
+  (should (equal (clojure-test-face-at 2 2 "{:a.ias/some 20}")  '(clojure-keyword-face)))
+  (should (equal (clojure-test-face-at 3 7 "{:a.ias/some 20}")  '(font-lock-type-face clojure-keyword-face)))
+  (should (equal (clojure-test-face-at 8 8 "{:a.ias/some 20}")  '(default clojure-keyword-face)))
+  (should (equal (clojure-test-face-at 9 12 "{:a.ias/some 20}") '(clojure-keyword-face))))
+
+(ert-deftest clojure-mode-syntax-table/fontify-let-when-while-type-forms ()
+  :tags '(fontification syntax-table)
+  (should (equal (clojure-test-face-at 2 11 "(when-alist [x 1]\n  ())") 'font-lock-keyword-face))
+  (should (equal (clojure-test-face-at 2 12 "(while-alist [x 1]\n  ())") 'font-lock-keyword-face))
+  (should (equal (clojure-test-face-at 2 10 "(let-alist [x 1]\n  ())") 'font-lock-keyword-face)))
+
+(ert-deftest clojure-mode-syntax-table/comment-macros ()
+  :tags '(fontification syntax-table)
+  (should (not (clojure-test-face-at 1 2 "#_ \n;; some crap\n (lala 0101\n lao\n\n 0 0i)")))
+  (should (equal (clojure-test-face-at 5 41 "#_ \n;; some crap\n (lala 0101\n lao\n\n 0 0i)") 'font-lock-comment-face)))
 
 (ert-deftest clojure-mode-syntax-table/type ()
   :tags '(fontification syntax-table)
@@ -108,23 +170,31 @@ POS."
 (ert-deftest clojure-mode-syntax-table/namespaced-symbol ()
   :tags '(fontification syntax-table)
   (clojure-test-with-temp-buffer "clo.core/something"
-    (should (eq (clojure-test-face-at 9 9) nil))
+    (should (eq (clojure-test-face-at 9 9) 'default))
     (should (eq (clojure-test-face-at 1 8) 'font-lock-type-face))
-    (should (eq (clojure-test-face-at 10 18) nil))))
+    (should (eq (clojure-test-face-at 10 18) nil)))
+  (clojure-test-with-temp-buffer "a/something"
+    (should (eq (clojure-test-face-at 1 1) 'font-lock-type-face))
+    (should (eq (clojure-test-face-at 3 12) 'nil))
+    (should (eq (clojure-test-face-at 2 2) 'default)))
+  (clojure-test-with-temp-buffer "abc/something"
+    (should (eq (clojure-test-face-at 1 3) 'font-lock-type-face))
+    (should (eq (clojure-test-face-at 5 14) 'nil))
+    (should (eq (clojure-test-face-at 4 4) 'default))))
 
 (ert-deftest clojure-mode-syntax-table/static-method ()
   :tags '(fontification syntax-table)
   (clojure-test-with-temp-buffer "Class/methodName"
     (should (eq (clojure-test-face-at 1 5) 'font-lock-type-face))
-    (should (eq (clojure-test-face-at 6 6) nil))
+    (should (eq (clojure-test-face-at 6 6) 'default))
     (should (eq (clojure-test-face-at 7 16) 'clojure-interop-method-face)))
   (clojure-test-with-temp-buffer "SomeClass/methodName"
     (should (eq (clojure-test-face-at 1 9) 'font-lock-type-face))
-    (should (eq (clojure-test-face-at 10 10) nil))
+    (should (eq (clojure-test-face-at 10 10) 'default))
     (should (eq (clojure-test-face-at 11 20) 'clojure-interop-method-face)))
   (clojure-test-with-temp-buffer "clojure.lang.Var/someMethod"
     (should (eq (clojure-test-face-at 1 16) 'font-lock-type-face))
-    (should (eq (clojure-test-face-at 17 17) nil))
+    (should (eq (clojure-test-face-at 17 17) 'default))
     (should (eq (clojure-test-face-at 18 27) 'clojure-interop-method-face))))
 
 (ert-deftest clojure-mode-syntax-table/interop-method ()
@@ -142,15 +212,20 @@ POS."
 (ert-deftest clojure-mode-syntax-table/class-constant ()
   :tags '(fontification syntax-table)
   (clojure-test-with-temp-buffer "Class/CONST_NAME"
-    (should (eq (clojure-test-face-at 6 6) nil))
+    (should (eq (clojure-test-face-at 6 6) 'default))
     (should (eq (clojure-test-face-at 1 5) 'font-lock-type-face))
     (should (eq (clojure-test-face-at 7 16) 'font-lock-constant-face))))
 
 (ert-deftest clojure-mode-syntax-table/namespaced-def ()
   :tags '(fontification syntax-table)
+  (clojure-test-with-temp-buffer "(_c4/defconstrainedfn bar [] nil)"
+    (should (eq (clojure-test-face-at 2 4) 'font-lock-type-face))
+    (should (eq (clojure-test-face-at 5 5) 'default))
+    (should (eq (clojure-test-face-at 6 18) 'font-lock-keyword-face))
+    (should (eq (clojure-test-face-at 23 25) 'font-lock-function-name-face)))
   (clojure-test-with-temp-buffer "(clo/defbar foo nil)"
     (should (eq (clojure-test-face-at 2 4) 'font-lock-type-face))
-    (should (eq (clojure-test-face-at 5 5) nil))
+    (should (eq (clojure-test-face-at 5 5) 'default))
     (should (eq (clojure-test-face-at 6 11) 'font-lock-keyword-face))
     (should (eq (clojure-test-face-at 13 15) 'font-lock-function-name-face))))
 
@@ -172,12 +247,37 @@ POS."
     (should (eq (clojure-test-face-at 2 5) 'font-lock-keyword-face))
     (should (eq (clojure-test-face-at 7 9) 'font-lock-function-name-face))))
 
+(ert-deftest clojure-mode-syntax-table/custom-def-with-special-chars1 ()
+  :tags '(fontification syntax-table)
+  (clojure-test-with-temp-buffer "(defn* foo [x] x)"
+    (should (eq (clojure-test-face-at 2 6) 'font-lock-keyword-face))
+    (should (eq (clojure-test-face-at 8 10) 'font-lock-function-name-face))))
+
+(ert-deftest clojure-mode-syntax-table/custom-def-with-special-chars2 ()
+  :tags '(fontification syntax-table)
+  (clojure-test-with-temp-buffer "(defsomething! foo [x] x)"
+    (should (eq (clojure-test-face-at 2 14) 'font-lock-keyword-face))
+    (should (eq (clojure-test-face-at 16 18) 'font-lock-function-name-face))))
+
+(ert-deftest clojure-mode-syntax-table/custom-def-with-special-chars3 ()
+  :tags '(fontification syntax-table)
+  (clojure-test-with-temp-buffer "(def-something foo [x] x)"
+    (should (eq (clojure-test-face-at 2 14) 'font-lock-keyword-face))
+    (should (eq (clojure-test-face-at 16 18) 'font-lock-function-name-face))))
+
+(ert-deftest clojure-mode-syntax-table/fn ()
+  :tags '(fontification syntax-table)
+  (clojure-test-with-temp-buffer "(fn foo [x] x)"
+    (should (eq (clojure-test-face-at 2 3) 'font-lock-keyword-face))
+    (should (eq (clojure-test-face-at 5 7) 'font-lock-function-name-face))))
+
 (ert-deftest clojure-mode-syntax-table/lambda-params ()
   :tags '(fontification syntax-table)
-  (clojure-test-with-temp-buffer "#(+ % %2 %3)"
+  (clojure-test-with-temp-buffer "#(+ % %2 %3 %&)"
     (should (eq (clojure-test-face-at 5 5) 'font-lock-variable-name-face))
     (should (eq (clojure-test-face-at 7 8) 'font-lock-variable-name-face))
-    (should (eq (clojure-test-face-at 10 11) 'font-lock-variable-name-face))))
+    (should (eq (clojure-test-face-at 10 11) 'font-lock-variable-name-face))
+    (should (eq (clojure-test-face-at 13 14) 'font-lock-variable-name-face))))
 
 (ert-deftest clojure-mode-syntax-table/nil ()
   :tags '(fontification syntax-table)
@@ -196,7 +296,7 @@ POS."
   :tags '(fontification syntax-table)
   (clojure-test-with-temp-buffer "^:meta-data"
     (should (eq (clojure-test-face-at 1 1) nil))
-    (should (eq (clojure-test-face-at 2 11) 'clojure-keyword-face))))
+    (should (equal (clojure-test-face-at 2 11) '(clojure-keyword-face)))))
 
 (ert-deftest clojure-mode-syntax-table/characters ()
   :tags '(fontification syntax-table)
@@ -209,10 +309,10 @@ POS."
   (should (eq (clojure-test-face-at 1 2 "\\,") 'clojure-character-face))
   (should (eq (clojure-test-face-at 1 2 "\\;") 'clojure-character-face)))
 
-(ert-deftest clojure-mode-syntax-table/cljx ()
+(ert-deftest clojurex-mode-syntax-table/cljx ()
   :tags '(fontification syntax-table)
-  (should (eq (clojure-test-face-at 1 5 "#+clj x") 'font-lock-preprocessor-face))
-  (should (eq (clojure-test-face-at 1 6 "#+cljs x") 'font-lock-preprocessor-face)))
+  (should (eq (clojurex-test-face-at 1 5 "#+clj x") 'font-lock-preprocessor-face))
+  (should (eq (clojurex-test-face-at 1 6 "#+cljs x") 'font-lock-preprocessor-face)))
 
 (ert-deftest clojure-mode-syntax-table/refer-ns ()
   :tags '(fontification syntax-table)
@@ -232,9 +332,5 @@ POS."
   (should (eq (clojure-test-face-at 1 10 "[ns name]") nil)))
 
 (provide 'clojure-mode-font-lock-test)
-
-;; Local Variables:
-;; indent-tabs-mode: nil
-;; End:
 
 ;;; clojure-mode-font-lock-test.el ends here

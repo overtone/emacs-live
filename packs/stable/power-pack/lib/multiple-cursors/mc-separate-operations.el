@@ -33,7 +33,8 @@
 (defun mc/insert-numbers (arg)
   "Insert increasing numbers for each cursor, starting at 0 or ARG."
   (interactive "P")
-  (setq mc--insert-numbers-number (or arg 0))
+  (setq mc--insert-numbers-number (or (and arg (prefix-numeric-value arg))
+                                      0))
   (mc/for-each-cursor-ordered
    (mc/execute-command-for-fake-cursor 'mc--insert-number-and-increase cursor)))
 
@@ -52,6 +53,32 @@
                             (mc/cursor-beg cursor)
                             (mc/cursor-end cursor)) strings))))
     (nreverse strings)))
+
+;;;###autoload
+(defun mc/insert-letters (arg)
+  "Insert increasing letters for each cursor, starting at 0 or ARG.
+     Where letter[0]=a letter[2]=c letter[26]=aa"
+  (interactive "P")
+  (setq mc--insert-letters-number (or (and arg (prefix-numeric-value arg))
+                                      0))
+  (mc/for-each-cursor-ordered
+   (mc/execute-command-for-fake-cursor 'mc--insert-letter-and-increase cursor)))
+
+(defun mc--number-to-letters (number)
+  (let ((letter
+	 (char-to-string
+	  (+ (mod number 26) ?a)))
+	(number2 (/ number 26)))
+    (if (> number2 0)
+	(concat (mc--number-to-letters (- number2 1)) letter)
+      letter)))
+
+(defvar mc--insert-letters-number 0)
+
+(defun mc--insert-letter-and-increase ()
+  (interactive)
+  (insert (mc--number-to-letters mc--insert-letters-number))
+  (setq mc--insert-letters-number (1+ mc--insert-letters-number)))
 
 (defvar mc--strings-to-replace nil)
 
@@ -85,6 +112,37 @@
     (mc/execute-command-for-all-cursors 'mark-sexp))
   (setq mc--strings-to-replace (sort (mc--ordered-region-strings) 'string<))
   (mc--replace-region-strings))
+
+
+;;;###autoload
+(defun mc/vertical-align (character)
+  "Aligns all cursors vertically with a given CHARACTER to the one with the
+highest colum number (the rightest).
+Might not behave as intended if more than one cursors are on the same line."
+  (interactive "c")
+  (let ((rightest-column (current-column)))
+    (mc/execute-command-for-all-cursors
+     (lambda () "get the rightest cursor"
+       (interactive)
+       (setq rightest-column (max (current-column) rightest-column))
+       ))
+    (mc/execute-command-for-all-cursors
+     (lambda ()
+       (interactive)
+       (let ((missing-spaces (- rightest-column (current-column))))
+	 (save-excursion (insert (make-string missing-spaces character)))
+	 (forward-char missing-spaces)
+	 )
+       ))
+      )
+    )
+
+;;;###autoload
+(defun mc/vertical-align-with-space ()
+  "Aligns all cursors with whitespace like `mc/vertical-align' does"
+  (interactive)
+  (mc/vertical-align 32)
+  )
 
 (provide 'mc-separate-operations)
 ;;; mc-separate-operations.el ends here

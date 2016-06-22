@@ -1,4 +1,4 @@
-;;; inf-haskell.el --- Interaction with an inferior Haskell process
+;;; inf-haskell.el --- Interaction with an inferior Haskell process -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009  Free Software Foundation, Inc.
 
@@ -42,6 +42,7 @@
 ;; Dynamically scoped variables.
 (defvar find-tag-marker-ring)
 
+;;;###autoload
 (defgroup inferior-haskell nil
   "Settings for REPL interaction via `inferior-haskell-mode'"
   :link '(custom-manual "(haskell-mode)inferior-haskell-mode")
@@ -214,9 +215,9 @@ setting up the inferior-haskell buffer."
 
 (defun inferior-haskell-send-decl-post-filter (string)
   (when (and inferior-haskell-send-decl-post-filter-on
-             #1=(string-match inferior-haskell-multiline-prompt-re string))
+             (string-match inferior-haskell-multiline-prompt-re string))
     ;; deleting sequence of `%s|' multiline promts
-    (while #1#
+    (while (string-match inferior-haskell-multiline-prompt-re string)
       (setq string (substring string (match-end 0))))
     ;; deleting regular prompts
     (setq string (replace-regexp-in-string comint-prompt-regexp "" string)
@@ -227,7 +228,7 @@ setting up the inferior-haskell buffer."
 (defvar inferior-haskell-seen-prompt nil)
 (make-variable-buffer-local 'inferior-haskell-seen-prompt)
 
-(defun inferior-haskell-spot-prompt (string)
+(defun inferior-haskell-spot-prompt (_string)
   (let ((proc (get-buffer-process (current-buffer))))
     (when proc
       (save-excursion
@@ -271,7 +272,7 @@ The process PROC should be associated to a comint buffer."
            )
       (or (when cabal
             (with-current-buffer cabal
-              (let ((hsd (haskell-cabal-get-setting "hs-source-dirs")))
+              (let ((hsd (haskell-cabal--get-field "hs-source-dirs")))
                 (if (null hsd)
                     ;; If there's a Cabal file with no Hs-Source-Dirs, then
                     ;; just use the Cabal file's directory.
@@ -679,7 +680,6 @@ Insert the output into the current buffer."
       (message "Generating module alist... done")
       module-alist)))
 
-
 (defcustom inferior-haskell-module-alist-file
   ;; (expand-file-name "~/.inf-haskell-module-alist")
   (expand-file-name (concat "inf-haskell-module-alist-"
@@ -778,7 +778,7 @@ we load it."
   (let* (;; Find the module and look it up in the alist
          (module (inferior-haskell-get-module sym))
          (full-name (inferior-haskell-map-internal-ghc-ident (concat module "." sym)))
-         (success (string-match "\\(.*\\)\\.\\(.*\\)" full-name))
+         (_success (string-match "\\(.*\\)\\.\\(.*\\)" full-name))
          (module (match-string 1 full-name))
          (sym (match-string 2 full-name))
          (alist-record (assoc module (inferior-haskell-module-alist)))
@@ -797,26 +797,26 @@ we load it."
 
 (defvar inf-haskell-mode-map
   (let ((map (make-sparse-keymap)))
-    ;; (define-key map [?\M-C-x]     'inferior-haskell-send-defun)
-    ;; (define-key map [?\C-x ?\C-e] 'inferior-haskell-send-last-sexp)
-    ;; (define-key map [?\C-c ?\C-r] 'inferior-haskell-send-region)
-    (define-key map [?\C-x ?\C-d] 'inferior-haskell-send-decl)
-    (define-key map [?\C-c ?\C-z] 'switch-to-haskell)
-    (define-key map [?\C-c ?\C-l] 'inferior-haskell-load-file)
+    ;; (define-key map (kbd "M-C-x")    'inferior-haskell-send-defun)
+    ;; (define-key map (kbd "C-x C-e") 'inferior-haskell-send-last-sexp)
+    ;; (define-key map (kbd "C-c C-r") 'inferior-haskell-send-region)
+    (define-key map (kbd "C-x C-d") 'inferior-haskell-send-decl)
+    (define-key map (kbd "C-c C-z") 'switch-to-haskell)
+    (define-key map (kbd "C-c C-l") 'inferior-haskell-load-file)
     ;; I think it makes sense to bind inferior-haskell-load-and-run to C-c
     ;; C-r, but since it used to be bound to `reload' until June 2007, I'm
     ;; going to leave it out for now.
-    ;; (define-key map [?\C-c ?\C-r] 'inferior-haskell-load-and-run)
-    (define-key map [?\C-c ?\C-b] 'switch-to-haskell)
-    ;; (define-key map [?\C-c ?\C-s] 'inferior-haskell-start-process)
+    ;; (define-key map (kbd "C-c C-r") 'inferior-haskell-load-and-run)
+    (define-key map (kbd "C-c C-b") 'switch-to-haskell)
+    ;; (define-key map (kbd "C-c C-s") 'inferior-haskell-start-process)
     ;; That's what M-; is for.
     (define-key map (kbd "C-c C-t") 'inferior-haskell-type)
     (define-key map (kbd "C-c C-i") 'inferior-haskell-info)
     (define-key map (kbd "C-c M-.") 'inferior-haskell-find-definition)
     (define-key map (kbd "C-c C-d") 'inferior-haskell-find-haddock)
-    (define-key map [?\C-c ?\C-v] 'haskell-check)
+    (define-key map (kbd "C-c C-v") 'haskell-check)
     map)
-  "Keymap for using inf-haskell.")
+  "Keymap for using `inf-haskell-mode'.")
 
 ;;;###autoload
 (define-minor-mode inf-haskell-mode

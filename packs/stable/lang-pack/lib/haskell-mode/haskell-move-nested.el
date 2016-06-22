@@ -1,4 +1,4 @@
-;;; haskell-move-nested.el --- Change the column of text nested below a line
+;;; haskell-move-nested.el --- Change the column of text nested below a line -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2010  Chris Done
 

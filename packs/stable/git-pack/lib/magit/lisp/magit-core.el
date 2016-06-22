@@ -1,6 +1,6 @@
-;;; magit-core.el --- core functionality
+;;; magit-core.el --- core functionality  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2010-2015  The Magit Project Contributors
+;; Copyright (C) 2010-2016  The Magit Project Contributors
 ;;
 ;; You should have received a copy of the AUTHORS.md file which
 ;; lists all contributors.  If not, see http://magit.vc/authors.
@@ -36,6 +36,7 @@
 (require 'magit-mode)
 (require 'magit-popup)
 (require 'magit-process)
+(require 'magit-autorevert)
 
 (defgroup magit nil
   "Controlling Git from Emacs."

@@ -16,6 +16,8 @@
 (add-to-list 'auto-mode-alist '("\\.thor$" . ruby-mode))
 
 (add-to-list 'auto-mode-alist '("Capfile$" . ruby-mode))
+(add-to-list 'auto-mode-alist '("Fastfile$" . ruby-mode))
+(add-to-list 'auto-mode-alist '("Podfile$" . ruby-mode))
 (add-to-list 'auto-mode-alist '("Vagrantfile$" . ruby-mode))
 
 (defun ruby-interpolate ()
