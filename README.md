@@ -104,9 +104,9 @@ host and the correct port) for full Emacs REPL/autocompletion joy.
 
 ### Screenshots
 
-<img src="https://github.com/downloads/overtone/live-coding-emacs/live-coding-config-in-use.png" alt="Screenshot 1" title="Live Coding Config Screenshot 1" />
+![Screenshot 1](https://github.com/downloads/overtone/live-coding-emacs/live-coding-config-in-use.png "Live Coding Config Screenshot 1")
 
-<img src="https://github.com/downloads/overtone/live-coding-emacs/live-coding-config-in-use-2.png" alt="Screenshot 2" title="Live Coding Config Screenshot 2" />
+![Screenshot 2](https://github.com/downloads/overtone/live-coding-emacs/live-coding-config-in-use-2.png "Live Coding Config Screenshot 2")
 
 ### Video
 
