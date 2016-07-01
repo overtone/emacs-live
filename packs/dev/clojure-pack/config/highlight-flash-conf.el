@@ -91,6 +91,8 @@
   (define-eval-sexp-fu-flash-command cider-pprint-eval-last-sexp
     (eval-sexp-fu-flash (live-bounds-of-cider-last-sexp)))
 
+  (define-eval-sexp-fu-flash-command cider-eval-defun-at-point
+    (eval-sexp-fu-flash (live-bounds-of-defun)))
   (progn
     ;; Defines:
     ;; `eval-sexp-fu-cider-sexp-inner-list',
