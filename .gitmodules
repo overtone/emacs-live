@@ -169,3 +169,6 @@
 [submodule "packs/dev/clojure-pack/vendor/submodules/seq-el"]
 	path = packs/dev/clojure-pack/vendor/submodules/seq-el
 	url = git@github.com:NicolasPetton/seq.el.git
+[submodule "packs/dev/clojure-pack/vendor/submodules/peg"]
+	path = packs/dev/clojure-pack/vendor/submodules/peg
+	url = git@github.com:emacsmirror/peg.git
