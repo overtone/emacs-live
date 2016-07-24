@@ -1,10 +1,12 @@
-#!/bin/zsh
+#!/bin/sh
 
 echo "clearing out live packs"
-rm -rf ~/.emacs.d/packs/stable
-
-echo "creating new live pack dir"
-mkdir ~/.emacs.d/packs/stable
+find ~/.emacs.d/packs/stable \
+     -maxdepth 1 \
+     ! -name 'stable' \
+     ! -name '.gitkeep' \
+     -type d \
+     -exec rm -Rf {} \;
 
 echo "copying content from dev packs"
 cp -pRL ~/.emacs.d/packs/dev/* ~/.emacs.d/packs/stable/
