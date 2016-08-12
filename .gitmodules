@@ -157,6 +157,12 @@
 [submodule "packs/dev/clojure-pack/vendor/submodules/rainbow-delimiters"]
 	path = packs/dev/clojure-pack/vendor/submodules/rainbow-delimiters
 	url = https://github.com/Fanael/rainbow-delimiters
+[submodule "packs/dev/foundation-pack/vendor/submodules/swiper"]
+	path = packs/dev/foundation-pack/vendor/submodules/swiper
+	url = git://github.com/abo-abo/swiper.git
+[submodule "packs/dev/foundation-pack/vendor/submodules/with-editor"]
+	path = packs/dev/foundation-pack/vendor/submodules/with-editor
+	url = git://github.com/magit/with-editor.git
 [submodule "packs/dev/clojure-pack/vendor/submodules/jump-el"]
 	path = packs/dev/clojure-pack/vendor/submodules/jump-el
 	url = git@github.com:eschulte/jump.el.git
@@ -172,3 +178,9 @@
 [submodule "packs/dev/clojure-pack/vendor/submodules/peg"]
 	path = packs/dev/clojure-pack/vendor/submodules/peg
 	url = git@github.com:emacsmirror/peg.git
+[submodule "packs/dev/power-pack/vendor/submodules/marshal"]
+	path = packs/dev/power-pack/vendor/submodules/marshal
+	url = git@github.com:sigma/marshal.el.git
+[submodule "packs/dev/power-pack/vendor/submodules/ht"]
+	path = packs/dev/power-pack/vendor/submodules/ht
+	url = git@github.com:Wilfred/ht.el.git
