@@ -8,4 +8,6 @@
 (live-add-pack-lib "gh")
 (live-add-pack-lib "pcache")
 (live-add-pack-lib "logito")
+(live-add-pack-lib "marshal")
+(live-add-pack-lib "ht")
 (require 'gist)
