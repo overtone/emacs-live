@@ -184,3 +184,6 @@
 [submodule "packs/dev/power-pack/vendor/submodules/ht"]
 	path = packs/dev/power-pack/vendor/submodules/ht
 	url = git@github.com:Wilfred/ht.el.git
+[submodule "packs/dev/foundation-pack/vendor/submodules/hydra"]
+	path = packs/dev/foundation-pack/vendor/submodules/hydra
+	url = git://github.com/abo-abo/hydra.git
