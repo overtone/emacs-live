@@ -36,6 +36,14 @@
 
 # Emacs Live
 
+------------------------------------------------------------------------
+This fork tries to keep things up-to-date as much as possible (especially
+the `clojure-pack` and `cider`, which is the one I use the most). I also
+avoid committing here the `packs/stable` folder so every time you make
+a change to `packs/dev` be sure you execute: `packs/update-live-packs`.
+
+------------------------------------------------------------------------
+
 An opinionated set of defaults for getting started with a specific focus
 on live coding with [Overtone](http://overtone.github.io) and
 [Quil](http://github.com/quil/quil). However, it's not just a one trick
