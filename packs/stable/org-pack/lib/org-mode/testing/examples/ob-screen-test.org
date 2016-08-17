@@ -1,5 +1,0 @@
-#+Title: a collection of examples for ob-screen tests
-#+begin_src screen :session create-tmpdir
-  mkdir -p $TMPDIR
-  cd $TMPDIR
-#+end_src

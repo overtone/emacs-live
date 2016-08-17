@@ -1,1 +1,0 @@
-# Emacs Live Clojure Pack

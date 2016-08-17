@@ -1,2 +1,0 @@
-#+TITLE: Macro templates
-#+MACRO: included-macro success
