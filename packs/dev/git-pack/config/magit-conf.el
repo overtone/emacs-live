@@ -1,5 +1,5 @@
 ;;; git-pack/magit-conf.el
-
+(live-add-pack-lib "with-editor")
 (live-add-pack-lib "magit/lisp")
 (require 'magit)
 
