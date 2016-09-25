@@ -175,7 +175,7 @@
 	url = git://github.com/magit/with-editor.git
 [submodule "packs/dev/clojure-pack/vendor/submodules/hydra"]
 	path = packs/dev/clojure-pack/vendor/submodules/hydra
-	url = git@github.com:abo-abo/hydra.git
+	url = git://github.com/abo-abo/hydra.git
 [submodule "packs/dev/clojure-pack/vendor/submodules/jump.el"]
 	path = packs/dev/clojure-pack/vendor/submodules/jump.el
-	url = git@github.com:eschulte/jump.el.git
+	url = git://github.com/eschulte/jump.el.git
