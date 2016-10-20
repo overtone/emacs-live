@@ -17,7 +17,7 @@ which is a plugin of Sublime Text.
 
 ## Screenshot
 
-![git-gutter.el](image/git-gutter1.png)
+![Screenshot of git-gutter.el](image/git-gutter1.png)
 
 
 ## Requirements
@@ -76,6 +76,10 @@ Jump to next hunk
 
 Jump to previous hunk
 
+#### `git-gutter:end-of-hunk`
+
+Move to end of current hunk
+
 #### `git-gutter:mark-hunk`
 
 Mark current hunk.
@@ -128,7 +132,7 @@ Update git-gutter information of buffers in all visible window.
 ;; If you enable git-gutter-mode for some modes
 (add-hook 'ruby-mode-hook 'git-gutter-mode)
 
-(global-set-key (kbd "C-x C-g") 'git-gutter:toggle)
+(global-set-key (kbd "C-x C-g") 'git-gutter)
 (global-set-key (kbd "C-x v =") 'git-gutter:popup-hunk)
 
 ;; Jump to next/previous hunk
@@ -162,7 +166,7 @@ You can stop timer by `git-gutter:cancel-update-timer` and starts by `git-gutter
 
 ### Look and feel
 
-![git-gutter-multichar](image/git-gutter-multichar.png)
+![Screenshot of multiple characters in gutter](image/git-gutter-multichar.png)
 
 You can change the signs and those faces.
 
@@ -189,7 +193,7 @@ Default is " GitGutter"
 
 ### Using full width characters
 
-![git-gutter-fullwidth](image/git-gutter-fullwidth.png)
+![Screenshot of using full-width character as diff sign](image/git-gutter-fullwidth.png)
 
 Emacs has `char-width` function which returns character width.
 `git-gutter.el` uses it for calculating character length of the signs.
@@ -270,7 +274,7 @@ value of `git-gutter:visual-line` is `nil`.
 
 ### Show Unchanged Information
 
-![git-gutter-unchanged](image/git-gutter-unchanged.png)
+![Screenshot of highlighting unchanged lines](image/git-gutter-unchanged.png)
 
 `git-gutter.el` can view unchanged information by setting `git-gutter:unchanged-sign`.
 Like following.
@@ -285,7 +289,7 @@ Default value of `git-gutter:unchanged-sign` is `nil`.
 
 ### Show a separator column
 
-![git-gutter-separator](image/git-gutter-separator.png)
+![Screenshot of showing separator between buffer and gutter](image/git-gutter-separator.png)
 
 `git-gutter.el` can display an additional separator character at the right of the changed
 signs. This is mostly useful when running emacs in a console.

@@ -31,6 +31,13 @@
      (add-to-list 'ac-modes 'cider-repl-mode)))
 #+end_src
 
+   By default, entries in the popup menu will also display the namespace that
+   the symbol belongs to. To disable this behavior, add to your init file:
+
+#+begin_src el
+(setq ac-cider-show-ns nil)
+#+end_src
+
    If you want to trigger auto-complete using TAB in CIDER buffers, add this to
    your configuration file (but note that it is incompatible with =(setq
    tab-always-indent 'complete)=):

@@ -4,9 +4,9 @@ experience. The majority of the minor modes listed here should be enabled for bo
 
 ## clj-refactor
 
-[clr-refactor](https://github.com/clojure-emacs/clj-refactor.el) builts on top
+[clr-refactor](https://github.com/clojure-emacs/clj-refactor.el) builds on top
 of clojure-mode and CIDER and adds a ton of extra functionality (e.g. the
-ability to thread/untread expression, find and replace usages, introduce let
+ability to thread/unthread expression, find and replace usages, introduce let
 bindings, extract function and so on).
 
 A full list of features is available
@@ -24,6 +24,18 @@ your CIDER version.**
 Emacs rendition of the web-based
 [official Clojure Cheatsheet](http://clojure.org/api/cheatsheet), that's easily
 searchable via Helm.
+
+## helm-cider
+
+[helm-cider](https://github.com/clojure-emacs/helm-cider) provides Helm
+interface for certain CIDER commands (e.g. `cider-apropos`).
+
+## cider-hydra
+
+[cider-hydra](https://github.com/clojure-emacs/cider-hydra) provides a nice way
+to navigate groups of related CIDER commands.
+
+You can think of it as a fancier [which-key](https://github.com/justbur/emacs-which-key).
 
 ## squiggly-clojure
 

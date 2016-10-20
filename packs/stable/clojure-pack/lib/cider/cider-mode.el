@@ -207,12 +207,14 @@ Configure `cider-cljs-lein-repl' to change the ClojureScript REPL to use."]
      :active (seq-remove #'null cider-ancillary-buffers)]
     ("nREPL" :active cider-connections
      ["Describe session" cider-describe-nrepl-session]
-     ["Close session" cider-close-nrepl-session]))
+     ["Close session" cider-close-nrepl-session]
+     ["Toggle message logging" nrepl-toggle-message-logging]))
   "Menu for CIDER mode")
 
 (defconst cider-mode-eval-menu
   '("CIDER Eval" :visible cider-connections
     ["Eval top-level sexp" cider-eval-defun-at-point]
+    ["Eval current sexp" cider-eval-sexp-at-point]
     ["Eval last sexp" cider-eval-last-sexp]
     ["Eval selected region" cider-eval-region]
     ["Eval ns form" cider-eval-ns-form]
@@ -224,6 +226,7 @@ Configure `cider-cljs-lein-repl' to change the ClojureScript REPL to use."]
     ["Eval last sexp in popup buffer" cider-pprint-eval-last-sexp]
     ["Eval last sexp and replace" cider-eval-last-sexp-and-replace]
     ["Eval last sexp to REPL" cider-eval-last-sexp-to-repl]
+    ["Eval last sexp and pretty-print to REPL" cider-pprint-eval-last-sexp-to-repl]
     ["Insert last sexp in REPL" cider-insert-last-sexp-in-repl]
     ["Eval top-level sexp to comment" cider-eval-defun-to-comment]
     "--"
@@ -286,14 +289,12 @@ Configure `cider-cljs-lein-repl' to change the ClojureScript REPL to use."]
     (define-key map (kbd "C-c C-c") #'cider-eval-defun-at-point)
     (define-key map (kbd "C-x C-e") #'cider-eval-last-sexp)
     (define-key map (kbd "C-c C-e") #'cider-eval-last-sexp)
-    (define-key map (kbd "C-c C-w") #'cider-eval-last-sexp-and-replace)
+    (define-key map (kbd "C-c C-v") 'cider-eval-commands-map)
     (define-key map (kbd "C-c M-;") #'cider-eval-defun-to-comment)
     (define-key map (kbd "C-c M-e") #'cider-eval-last-sexp-to-repl)
     (define-key map (kbd "C-c M-p") #'cider-insert-last-sexp-in-repl)
     (define-key map (kbd "C-c C-p") #'cider-pprint-eval-last-sexp)
     (define-key map (kbd "C-c C-f") #'cider-pprint-eval-defun-at-point)
-    (define-key map (kbd "C-c C-r") #'cider-eval-region)
-    (define-key map (kbd "C-c C-n") #'cider-eval-ns-form)
     (define-key map (kbd "C-c M-:") #'cider-read-and-eval)
     (define-key map (kbd "C-c C-u") #'cider-undef)
     (define-key map (kbd "C-c C-m") #'cider-macroexpand-1)
@@ -657,19 +658,26 @@ before point."
   :type 'boolean
   :package-version '(cider "0.12.0"))
 
+(defvar cider--debug-mode-response)
+(defvar cider--debug-mode)
+
 (defun cider--help-echo (_ obj pos)
   "Return the help-echo string for OBJ at POS.
 See \(info \"(elisp) Special Properties\")"
   (while-no-input
     (when (and (bufferp obj) (cider-connected-p)
-               cider-use-tooltips)
+               cider-use-tooltips (not help-at-pt-display-when-idle))
       (with-current-buffer obj
         (ignore-errors
           (save-excursion
             (goto-char pos)
             (when-let ((sym (cider-symbol-at-point)))
               (if (member sym (get-text-property (point) 'cider-locals))
-                  (format "`%s' is a local" sym)
+                  (concat (format "`%s' is a local" sym)
+                          (when cider--debug-mode
+                            (let* ((locals (nrepl-dict-get cider--debug-mode-response "locals"))
+                                   (local-val (cadr (assoc sym locals))))
+                              (format " with value:\n%s" local-val))))
                 (let* ((info (cider-sync-request:info sym))
                        (candidates (nrepl-dict-get info "candidates")))
                   (if candidates

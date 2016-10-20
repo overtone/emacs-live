@@ -39,6 +39,7 @@
 (require 'cider-client)
 (require 'cider-compat)
 (require 'cider-util)
+(require 'nrepl-dict)
 
 (defconst cider-browse-ns-buffer "*cider-ns-browser*")
 
@@ -53,7 +54,7 @@
     (set-keymap-parent map cider-popup-buffer-mode-map)
     (define-key map "d" #'cider-browse-ns-doc-at-point)
     (define-key map "s" #'cider-browse-ns-find-at-point)
-    (define-key map [return] #'cider-browse-ns-operate-at-point)
+    (define-key map (kbd "RET") #'cider-browse-ns-operate-at-point)
     (define-key map "^" #'cider-browse-ns-all)
     (define-key map "n" #'next-line)
     (define-key map "p" #'previous-line)
@@ -73,17 +74,25 @@
   (setq-local truncate-lines t)
   (setq-local cider-browse-ns-current-ns nil))
 
-(defun cider-browse-ns--text-face (text)
-  "Match TEXT with a face."
+(defun cider-browse-ns--text-face (var-meta)
+  "Return font-lock-face for a var.
+VAR-META contains the metadata information used to decide a face.
+Presence of \"arglists-str\" and \"macro\" indicates a macro form.
+Only \"arglists-str\" indicates a function. Otherwise, its a variable.
+If the NAMESPACE is not loaded in the REPL, assume TEXT is a fn."
   (cond
-   ((string-match-p "\\." text) 'font-lock-type-face)
-   ((string-match-p "\\`*" text) 'font-lock-variable-name-face)
-   (t 'font-lock-function-name-face)))
+   ((not var-meta) 'font-lock-function-name-face)
+   ((and (nrepl-dict-contains var-meta "arglists")
+         (string= (nrepl-dict-get var-meta "macro") "true"))
+    'font-lock-keyword-face)
+   ((nrepl-dict-contains var-meta "arglists") 'font-lock-function-name-face)
+   (t 'font-lock-variable-name-face)))
 
-(defun cider-browse-ns--properties (text)
-  "Decorate TEXT with a clickable keymap and a face."
-  (let ((face (cider-browse-ns--text-face text)))
-    (propertize text
+(defun cider-browse-ns--properties (var var-meta)
+  "Decorate VAR with a clickable keymap and a face.
+VAR-META is used to decide a font-lock face."
+  (let ((face (cider-browse-ns--text-face var-meta)))
+    (propertize var
                 'font-lock-face face
                 'mouse-face 'highlight
                 'keymap cider-browse-ns-mouse-map)))
@@ -105,6 +114,34 @@ contents of the buffer are not reset before inserting TITLE and ITEMS."
                             'cider-browse-ns-current-ns ns)))
       (goto-char (point-min)))))
 
+(defun cider-browse-ns--first-doc-line (doc)
+  "Return the first line of the given DOC string.
+If the first line of the DOC string contains multiple sentences, only
+the first sentence is returned.  If the DOC string is nil, a Not documented
+string is returned."
+  (if doc
+      (let* ((split-newline (split-string doc "\n"))
+             (first-line (car split-newline)))
+        (cond
+         ((string-match "\\. " first-line) (substring first-line 0 (match-end 0)))
+         ((= 1 (length split-newline)) first-line)
+         (t (concat first-line "..."))))
+    "Not documented."))
+
+(defun cider-browse-ns--items (namespace)
+  "Return the items to show in the namespace browser of the given NAMESPACE.
+Each item consists of a ns-var and the first line of its docstring."
+  (let* ((ns-vars-with-meta (cider-sync-request:ns-vars-with-meta namespace))
+         (propertized-ns-vars (nrepl-dict-map #'cider-browse-ns--properties ns-vars-with-meta)))
+    (mapcar (lambda (ns-var)
+              (let* ((doc (nrepl-dict-get-in ns-vars-with-meta (list ns-var "doc")))
+                     ;; to avoid (read nil)
+                     ;; it prompts the user for a Lisp expression
+                     (doc (when doc (read doc)))
+                     (first-doc-line (cider-browse-ns--first-doc-line doc)))
+                (concat ns-var " " (propertize first-doc-line 'font-lock-face 'font-lock-doc-face))))
+            propertized-ns-vars)))
+
 ;; Interactive Functions
 
 ;;;###autoload
@@ -112,14 +149,10 @@ contents of the buffer are not reset before inserting TITLE and ITEMS."
   "List all NAMESPACE's vars in BUFFER."
   (interactive (list (completing-read "Browse namespace: " (cider-sync-request:ns-list))))
   (with-current-buffer (cider-popup-buffer cider-browse-ns-buffer t)
-    (let ((vars (cider-sync-request:ns-vars namespace)))
-      (cider-browse-ns--list (current-buffer)
-                             namespace
-                             (mapcar (lambda (var)
-                                       (format "%s"
-                                               (cider-browse-ns--properties var)))
-                                     vars))
-      (setq-local cider-browse-ns-current-ns namespace))))
+    (cider-browse-ns--list (current-buffer)
+                           namespace
+                           (cider-browse-ns--items namespace))
+    (setq-local cider-browse-ns-current-ns namespace)))
 
 ;;;###autoload
 (defun cider-browse-ns-all ()
@@ -130,14 +163,14 @@ contents of the buffer are not reset before inserting TITLE and ITEMS."
       (cider-browse-ns--list (current-buffer)
                              "All loaded namespaces"
                              (mapcar (lambda (name)
-                                       (cider-browse-ns--properties name))
+                                       (cider-browse-ns--properties name nil))
                                      names))
       (setq-local cider-browse-ns-current-ns nil))))
 
 (defun cider-browse-ns--thing-at-point ()
   "Get the thing at point.
 Return a list of the type ('ns or 'var) and the value."
-  (let ((line (cider-string-trim (thing-at-point 'line))))
+  (let ((line (car (split-string (cider-string-trim (thing-at-point 'line)) " "))))
     (if (string-match "\\." line)
         (list 'ns line)
       (list 'var (format "%s/%s"

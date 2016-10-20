@@ -56,8 +56,7 @@ The page size can be also changed interactively within the inspector."
 (defvar cider-inspector-mode-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map cider-popup-buffer-mode-map)
-    (define-key map [return] #'cider-inspector-operate-on-point)
-    (define-key map "\C-m"   #'cider-inspector-operate-on-point)
+    (define-key map (kbd "RET") #'cider-inspector-operate-on-point)
     (define-key map [mouse-1] #'cider-inspector-operate-on-click)
     (define-key map "l" #'cider-inspector-pop)
     (define-key map "g" #'cider-inspector-refresh)
@@ -97,12 +96,10 @@ The page size can be also changed interactively within the inspector."
   (cider-inspect-expr (cider-defun-at-point) (cider-current-ns)))
 
 ;;;###autoload
-(defun cider-inspect-read-and-inspect ()
-  "Read an expression from the minibuffer and inspect its result."
+(defun cider-inspect-last-result ()
+  "Inspect the most recent eval result."
   (interactive)
-  (when-let ((expression (cider-read-from-minibuffer "Inspect expression: "
-                                                     (cider-sexp-at-point))))
-    (cider-inspect-expr expression (cider-current-ns))))
+  (cider-inspect-expr "*1" (cider-current-ns)))
 
 ;;;###autoload
 (defun cider-inspect (&optional arg)
@@ -114,97 +111,151 @@ With a second prefix argument it prompts for an expression to eval and inspect."
   (pcase arg
     (1 (cider-inspect-last-sexp))
     (4 (cider-inspect-defun-at-point))
-    (16 (cider-inspect-read-and-inspect))))
+    (16 (call-interactively #'cider-inspect-expr))))
+
+(defvar cider-inspector-location-stack nil
+  "A stack used to save point locations in inspector buffers.
+These locations are used to emulate save-excursion between
+`cider-inspector-push' and `cider-inspector-pop' operations.")
+
+(defvar cider-inspector-page-location-stack nil
+  "A stack used to save point locations in inspector buffers.
+These locations are used to emulate save-excursion between
+`cider-inspector-next-page' and `cider-inspector-prev-page' operations.")
+
+(defvar cider-inspector-last-command nil
+  "Contains the value of the most recently used `cider-inspector-*' command.
+This is used as an alternative to the built-in `last-command'. Whenever we
+invoke any command through M-x and its variants, the value of `last-command'
+is not set to the command it invokes.")
 
 ;; Operations
-(defun cider-inspector--value-handler (_buffer value)
-  (cider-make-popup-buffer cider-inspector-buffer 'cider-inspector-mode)
-  (cider-inspector-render cider-inspector-buffer value)
-  (cider-popup-buffer-display cider-inspector-buffer t))
-
-(defun cider-inspector--out-handler (_buffer value)
-  (cider-emit-interactive-eval-output value))
-
-(defun cider-inspector--err-handler (_buffer err)
-  (cider-emit-interactive-eval-err-output err))
-
-(defun cider-inspector-response-handler (buffer)
-  "Create an inspector response handler for BUFFER.
-
-The \"value\" slot of each successive response (if it exists) will be
-rendered into `cider-inspector-buffer'.  Once a response is received with a
-\"status\" slot containing \"done\", `cider-inspector-buffer' will be
-displayed.
-
-Used for all inspector nREPL ops."
-  (nrepl-make-response-handler buffer
-                               #'cider-inspector--value-handler
-                               #'cider-inspector--out-handler
-                               #'cider-inspector--err-handler
-                               #'identity))
-
+;;;###autoload
 (defun cider-inspect-expr (expr ns)
-  "Evaluate EXPR in NS and inspect its value."
-  (cider--prep-interactive-eval expr)
-  (cider-nrepl-send-request
-   (append (nrepl--eval-request expr (cider-current-session) ns)
-           (list "inspect" "true"
-                 "page-size" (or cider-inspector-page-size 32)))
-   (cider-inspector-response-handler (current-buffer))))
+  "Evaluate EXPR in NS and inspect its value.
+Interactively, EXPR is read from the minibuffer, and NS the
+current buffer's namespace."
+  (interactive (list (cider-read-from-minibuffer "Inspect expression: " (cider-sexp-at-point))
+                     (cider-current-ns)))
+  (when-let (value (cider-sync-request:inspect-expr expr ns (or cider-inspector-page-size 32)))
+    (cider-inspector--render-value value)))
 
 (defun cider-inspector-pop ()
   (interactive)
-  (cider-nrepl-send-request
-   (list "op" "inspect-pop"
-         "session" (cider-current-session))
-   (cider-inspector-response-handler (current-buffer))))
+  (setq cider-inspector-last-command 'cider-inspector-pop)
+  (when-let (value (cider-sync-request:inspect-pop))
+    (cider-inspector--render-value value)))
 
 (defun cider-inspector-push (idx)
-  (cider-nrepl-send-request
-   (list "op" "inspect-push"
-         "idx" idx
-         "session" (cider-current-session))
-   (cider-inspector-response-handler (current-buffer))))
+  (push (point) cider-inspector-location-stack)
+  (when-let (value (cider-sync-request:inspect-push idx))
+    (cider-inspector--render-value value)))
 
 (defun cider-inspector-refresh ()
   (interactive)
-  (cider-nrepl-send-request
-   (list "op" "inspect-refresh"
-         "session" (cider-current-session))
-   (cider-inspector-response-handler (current-buffer))))
+  (when-let (value (cider-sync-request:inspect-refresh))
+    (cider-inspector--render-value value)))
 
 (defun cider-inspector-next-page ()
   "Jump to the next page when inspecting a paginated sequence/map.
 
 Does nothing if already on the last page."
   (interactive)
-  (cider-nrepl-send-request
-   (list "op" "inspect-next-page"
-         "session" (cider-current-session))
-   (cider-inspector-response-handler (current-buffer))))
+  (push (point) cider-inspector-page-location-stack)
+  (when-let (value (cider-sync-request:inspect-next-page))
+    (cider-inspector--render-value value)))
 
 (defun cider-inspector-prev-page ()
   "Jump to the previous page when expecting a paginated sequence/map.
 
 Does nothing if already on the first page."
   (interactive)
-  (cider-nrepl-send-request
-   (list "op" "inspect-prev-page"
-         "session" (cider-current-session))
-   (cider-inspector-response-handler (current-buffer))))
+  (setq cider-inspector-last-command 'cider-inspector-prev-page)
+  (when-let (value (cider-sync-request:inspect-prev-page))
+    (cider-inspector--render-value value)))
 
 (defun cider-inspector-set-page-size (page-size)
   "Set the page size in pagination mode to the specified PAGE-SIZE.
 
 Current page will be reset to zero."
-  (interactive "nPage size:")
-  (cider-nrepl-send-request
-   (list "op" "inspect-set-page-size"
-         "session" (cider-current-session)
-         "page-size" page-size)
-   (cider-inspector-response-handler (current-buffer))))
+  (interactive "nPage size: ")
+  (when-let (value (cider-sync-request:inspect-set-page-size page-size))
+    (cider-inspector--render-value value)))
+
+;; nREPL interactions
+(defun cider-sync-request:inspect-pop ()
+  "Move one level up in the inspector stack."
+  (thread-first (list "op" "inspect-pop"
+                      "session" (cider-current-session))
+    (cider-nrepl-send-sync-request)
+    (nrepl-dict-get "value")))
+
+(defun cider-sync-request:inspect-push (idx)
+  "Inspect the inside value specified by IDX."
+  (thread-first (list "op" "inspect-push"
+                      "idx" idx
+                      "session" (cider-current-session))
+    (cider-nrepl-send-sync-request)
+    (nrepl-dict-get "value")))
+
+(defun cider-sync-request:inspect-refresh ()
+  "Re-render the currently inspected value."
+  (thread-first (list "op" "inspect-refresh"
+                      "session" (cider-current-session))
+    (cider-nrepl-send-sync-request)
+    (nrepl-dict-get "value")))
+
+(defun cider-sync-request:inspect-next-page ()
+  "Jump to the next page in paginated collection view."
+  (thread-first (list "op" "inspect-next-page"
+                      "session" (cider-current-session))
+    (cider-nrepl-send-sync-request)
+    (nrepl-dict-get "value")))
+
+(defun cider-sync-request:inspect-prev-page ()
+  "Jump to the previous page in paginated collection view."
+  (thread-first (list "op" "inspect-prev-page"
+                      "session" (cider-current-session))
+    (cider-nrepl-send-sync-request)
+    (nrepl-dict-get "value")))
+
+(defun cider-sync-request:inspect-set-page-size (page-size)
+  "Set the page size in paginated view to PAGE-SIZE."
+  (thread-first (list "op" "inspect-set-page-size"
+                      "page-size" page-size
+                      "session" (cider-current-session))
+    (cider-nrepl-send-sync-request)
+    (nrepl-dict-get "value")))
+
+(defun cider-sync-request:inspect-expr (expr ns page-size)
+  "Evaluate EXPR in context of NS and inspect its result.
+Set the page size in paginated view to PAGE-SIZE."
+  (thread-first (append (nrepl--eval-request expr (cider-current-session) ns)
+                        (list "inspect" "true"
+                              "page-size" page-size))
+    (cider-nrepl-send-sync-request)
+    (nrepl-dict-get "value")))
 
 ;; Render Inspector from Structured Values
+(defun cider-inspector--render-value (value)
+  (cider-make-popup-buffer cider-inspector-buffer 'cider-inspector-mode)
+  (cider-inspector-render cider-inspector-buffer value)
+  (cider-popup-buffer-display cider-inspector-buffer t)
+  (with-current-buffer cider-inspector-buffer
+    (when (eq cider-inspector-last-command 'cider-inspector-pop)
+      (setq cider-inspector-last-command nil)
+      ;; Prevents error message being displayed when we try to pop
+      ;; from the top-level of a data struture
+      (when cider-inspector-location-stack
+        (goto-char (pop cider-inspector-location-stack))))
+
+    (when (eq cider-inspector-last-command 'cider-inspector-prev-page)
+      (setq cider-inspector-last-command nil)
+      ;; Prevents error message being displayed when we try to
+      ;; go to a prev-page from the first page
+      (when cider-inspector-page-location-stack
+        (goto-char (pop cider-inspector-page-location-stack))))))
+
 (defun cider-inspector-render (buffer str)
   (with-current-buffer buffer
     (cider-inspector-mode)
@@ -328,6 +379,10 @@ that value.
            (cider-inspector-operate-on-point))
           (t
            (error "No clickable part here")))))
+
+;;;###autoload
+(define-obsolete-function-alias 'cider-inspect-read-and-inspect
+  'cider-inspect-expr "0.13.0")
 
 (provide 'cider-inspector)
 

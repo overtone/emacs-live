@@ -31,7 +31,7 @@
 (require 'cider-popup)
 (require 'cider-client)
 (require 'cider-grimoire)
-(require 'nrepl-client)
+(require 'nrepl-dict)
 (require 'org-table)
 (require 'button)
 (require 'easymenu)
@@ -163,7 +163,7 @@
 (defvar cider-docview-file)
 (defvar cider-docview-line)
 
-(define-derived-mode cider-docview-mode special-mode "Doc"
+(define-derived-mode cider-docview-mode help-mode "Doc"
   "Major mode for displaying CIDER documentation
 
 \\{cider-docview-mode-map}"
@@ -365,6 +365,17 @@ Tables are marked to be ignored by line wrap."
         (cider-docview-format-tables buffer) ; may contain literals, emphasis
         (cider-docview-wrap-text buffer))))) ; ignores code, table blocks
 
+(defun cider--abbreviate-file-protocol (file-with-protocol)
+  "Abbreviate the file-path in `file:/path/to/file'."
+  (if (string-match "\\`file:\\(.*\\)" file-with-protocol)
+      (let ((file (match-string 1 file-with-protocol))
+            (proj-dir (clojure-project-dir)))
+        (if (and proj-dir
+                 (file-in-directory-p file proj-dir))
+            (file-relative-name file proj-dir)
+          file))
+    file-with-protocol))
+
 (defun cider-docview-render-info (buffer info)
   "Emit into BUFFER formatted INFO for the Clojure or Java symbol."
   (let* ((ns      (nrepl-dict-get info "ns"))
@@ -383,8 +394,11 @@ Tables are marked to be ignored by line wrap."
          (javadoc (nrepl-dict-get info "javadoc"))
          (super   (nrepl-dict-get info "super"))
          (ifaces  (nrepl-dict-get info "interfaces"))
+         (spec    (nrepl-dict-get info "spec"))
          (clj-name  (if ns (concat ns "/" name) name))
-         (java-name (if member (concat class "/" member) class)))
+         (java-name (if member (concat class "/" member) class))
+         (see-also (nrepl-dict-get info "see-also")))
+    (cider--help-setup-xref (list #'cider-doc-lookup (format "%s/%s" ns name)) nil buffer)
     (with-current-buffer buffer
       (cl-flet ((emit (text &optional face)
                       (insert (if face
@@ -403,7 +417,11 @@ Tables are marked to be ignored by line wrap."
         (when (or forms args)
           (insert " ")
           (save-excursion
-            (emit (cider-font-lock-as-clojure (substring (or forms args) 1 -1))))
+            (emit (cider-font-lock-as-clojure
+                   ;; All `defn's use ([...] [...]), but some special forms use
+                   ;; (...). We only remove the parentheses on the former.
+                   (replace-regexp-in-string "\\`(\\(\\[.*\\]\\))\\'" "\\1"
+                                             (or forms args)))))
           ;; It normally doesn't happen, but it's technically conceivable for
           ;; the args string to contain unbalanced sexps, so `ignore-errors'.
           (ignore-errors
@@ -438,10 +456,36 @@ Tables are marked to be ignored by line wrap."
                                         (browse-url (button-get x 'url))))
           (insert ".\n"))
         (insert "\n")
-        (insert-text-button "[source]"
-                            'follow-link t
-                            'action (lambda (_x)
-                                      (cider-docview-source)))
+        (when spec
+          (emit "Spec: " 'font-lock-function-name-face)
+          (mapc (lambda (s) (insert s "\n")) spec)
+          (insert "\n"))
+        (if cider-docview-file
+            (progn
+              (insert (propertize (if class java-name clj-name)
+                                  'font-lock-face 'font-lock-function-name-face)
+                      " is defined in ")
+              (insert-text-button (cider--abbreviate-file-protocol cider-docview-file)
+                                  'follow-link t
+                                  'action (lambda (_x)
+                                            (cider-docview-source)))
+              (insert "."))
+          (insert "Definition location unavailable."))
+        (when see-also
+          (insert "\n\n Also see: ")
+          (mapc (lambda (ns-sym)
+                  (let* ((ns-sym-split (split-string ns-sym "/"))
+                         (see-also-ns (car ns-sym-split))
+                         (see-also-sym (cadr ns-sym-split))
+                         ;; if the var belongs to the same namespace,
+                         ;; we omit the namespace to save some screen space
+                         (symbol (if (equal ns see-also-ns) see-also-sym ns-sym)))
+                    (insert-button symbol
+                                   'type 'help-xref
+                                   'help-function (apply-partially #'cider-doc-lookup symbol)))
+                  (insert " "))
+                see-also))
+        (cider--doc-make-xrefs)
         (let ((beg (point-min))
               (end (point-max)))
           (nrepl-dict-map (lambda (k v)

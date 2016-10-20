@@ -31,6 +31,8 @@ specific `clojure-mode` release.**
   - [Vertical alignment](#vertical-alignment)
 - [Refactoring support](#refactoring-support)
   - [Threading macros](#threading-macros-related-features)
+  - [Cycling things](#cycling-things)
+  - [Convert collection](#convert-collection)
 - [Related packages](#related-packages)
 - [REPL Interaction](#repl-interaction)
   - [Basic REPL](#basic-repl)
@@ -257,6 +259,20 @@ argument do not thread the last form. See demonstration on the
 
 Unwind and remove the threading macro. See demonstration on the
 [clj-refactor.el wiki](https://github.com/clojure-emacs/clj-refactor.el/wiki/cljr-unwind-all).
+
+### Cycling things
+
+* Cycle privacy
+
+Cycle privacy of `def`s or `defn`s. Use metadata explicitly with setting `clojure-use-metadata-for-privacy` to `t` for `defn`s too. See demonstration on the [clj-refactor.el wiki](https://github.com/clojure-emacs/clj-refactor.el/wiki/cljr-cycle-privacy).
+
+* Cycle if/if-not
+
+Find the closest if or if-not up the syntax tree and toggle it. Also transpose the "else" and "then" branches, keeping the semantics the same as before. See demonstration on the [clj-refactor.el wiki](https://github.com/clojure-emacs/clj-refactor.el/wiki/cljr-cycle-if).
+
+### Convert collection
+
+Convert any given collection at point to list, quoted list, map, vector or set.
 
 ## Related packages
 

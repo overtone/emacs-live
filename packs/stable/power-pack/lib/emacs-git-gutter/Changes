@@ -1,5 +1,10 @@
 Revision history for git-gutter.el
 
+Revision 0.90 2016/09/04
+    - Add moving command which moves to end of hunk(#135)
+    - Refactoring for customization(#134)
+    - Add display flag(#130)
+
 Revision 0.89 2016/06/11
     - Fix wrong argument passing of run-with-idle-timer(#128)
 

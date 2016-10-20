@@ -220,7 +220,16 @@ namespace-qualified function of zero arity."
   "Face used to highlight compilation warnings in Clojure buffers."
   :group 'cider)
 
-(defvar cider-required-nrepl-version "0.2.12"
+(defconst cider-clojure-artifact-id "org.clojure/clojure"
+  "Artifact identifier for Clojure.")
+
+(defconst cider-minimum-clojure-version "1.7.0"
+  "Minimum supported version of Clojure.")
+
+(defconst cider-latest-clojure-version "1.8.0"
+  "Latest supported version of Clojure.")
+
+(defconst cider-required-nrepl-version "0.2.12"
   "The minimum nREPL version that's known to work properly with CIDER.")
 
 ;;; Minibuffer
@@ -577,12 +586,13 @@ in the buffer."
 (defun cider-company-docsig (thing)
   "Return signature for THING."
   (let* ((eldoc-info (cider-eldoc-info thing))
-         (ns (nth 0 eldoc-info))
-         (symbol (nth 1 eldoc-info))
-         (arglists (nth 2 eldoc-info)))
+         (ns (lax-plist-get eldoc-info "ns"))
+         (symbol (lax-plist-get eldoc-info "symbol"))
+         (arglists (lax-plist-get eldoc-info "arglists")))
     (when eldoc-info
       (format "%s: %s"
-              (cider-eldoc-format-thing ns symbol thing)
+              (cider-eldoc-format-thing ns symbol thing
+                                        (cider-eldoc-thing-type eldoc-info))
               (cider-eldoc-format-arglist arglists 0)))))
 
 (defun cider-stdin-handler (&optional buffer)
@@ -641,15 +651,36 @@ REPL buffer.  This is controlled via
 `cider-interactive-eval-output-destination'."
   (cider--emit-interactive-eval-output output 'cider-repl-emit-interactive-stderr))
 
-(defun cider-interactive-eval-handler (&optional buffer point)
+(defun cider--make-fringe-overlays-for-region (beg end)
+  "Place eval indicators on all sexps between BEG and END."
+  (with-current-buffer (if (markerp end)
+                           (marker-buffer end)
+                         (current-buffer))
+    (save-excursion
+      (goto-char beg)
+      (condition-case nil
+          (while (progn (clojure-forward-logical-sexp)
+                        (and (<= (point) end)
+                             (not (eobp))))
+            (cider--make-fringe-overlay (point)))
+        (scan-error nil)))))
+
+(defun cider-interactive-eval-handler (&optional buffer place)
   "Make an interactive eval handler for BUFFER.
-If POINT is non-nil, it is the position where the evaluated sexp ends.  It
-can be used to display the evaluation result."
-  (let ((eval-buffer (current-buffer))
-        (point (when point (copy-marker point))))
+PLACE is used to display the evaluation result.
+If non-nil, it can be the position where the evaluated sexp ends,
+or it can be a list with (START END) of the evaluated region."
+  (let* ((eval-buffer (current-buffer))
+         (beg (car-safe place))
+         (end (or (car-safe (cdr-safe place)) place))
+         (beg (when beg (copy-marker beg)))
+         (end (when end (copy-marker end))))
     (nrepl-make-response-handler (or buffer eval-buffer)
                                  (lambda (_buffer value)
-                                   (cider--display-interactive-eval-result value point))
+                                   (if beg
+                                       (cider--make-fringe-overlays-for-region beg end)
+                                     (cider--make-fringe-overlay end))
+                                   (cider--display-interactive-eval-result value end))
                                  (lambda (_buffer out)
                                    (cider-emit-interactive-eval-output out))
                                  (lambda (_buffer err)
@@ -663,8 +694,10 @@ can be used to display the evaluation result."
     (nrepl-make-response-handler (or buffer eval-buffer)
                                  (lambda (buffer value)
                                    (cider--display-interactive-eval-result value)
-                                   (with-current-buffer buffer
-                                     (run-hooks 'cider-file-loaded-hook)))
+                                   (when (buffer-live-p buffer)
+                                     (with-current-buffer buffer
+                                       (cider--make-fringe-overlays-for-region (point-min) (point-max))
+                                       (run-hooks 'cider-file-loaded-hook))))
                                  (lambda (_buffer value)
                                    (cider-emit-interactive-eval-output value))
                                  (lambda (_buffer err)
@@ -1040,7 +1073,7 @@ arguments and only proceed with evaluation if it returns nil."
       (cider--prep-interactive-eval form)
       (cider-nrepl-request:eval
        form
-       (or callback (cider-interactive-eval-handler nil end))
+       (or callback (cider-interactive-eval-handler nil bounds))
        ;; always eval ns forms in the user namespace
        ;; otherwise trying to eval ns form for the first time will produce an error
        (if (cider-ns-form-p form) "user" (cider-current-ns))
@@ -1071,6 +1104,14 @@ If invoked with a PREFIX argument, print the result in the current buffer."
     (backward-kill-sexp)
     (cider-interactive-eval last-sexp (cider-eval-print-handler))))
 
+(defun cider-eval-sexp-at-point (&optional prefix)
+  "Evaluate the expression around point.
+If invoked with a PREFIX argument, print the result in the current buffer."
+  (interactive "P")
+  (save-excursion
+    (goto-char (cadr (cider-sexp-at-point 'bounds)))
+    (cider-eval-last-sexp prefix)))
+
 (defun cider-eval-defun-to-comment (loc)
   "Evaluate the \"top-level\" form and insert result as comment at LOC.
 
@@ -1092,6 +1133,20 @@ If invoked with a PREFIX argument, switch to the REPL buffer."
   (cider-interactive-eval nil
                           (cider-insert-eval-handler (cider-current-connection))
                           (cider-last-sexp 'bounds))
+  (when prefix
+    (cider-switch-to-repl-buffer)))
+
+(defun cider-pprint-eval-last-sexp-to-repl (&optional prefix)
+  "Evaluate the expression preceding point and insert its pretty-printed result in the REPL.
+If invoked with a PREFIX argument, switch to the REPL buffer."
+  (interactive "P")
+  (let* ((conn-buffer (cider-current-connection))
+         (right-margin (max fill-column
+                            (1- (window-width (get-buffer-window conn-buffer))))))
+    (cider-interactive-eval nil
+                            (cider-insert-eval-handler conn-buffer)
+                            (cider-last-sexp 'bounds)
+                            (cider--nrepl-pprint-request-plist (or right-margin fill-column))))
   (when prefix
     (cider-switch-to-repl-buffer)))
 
@@ -1176,13 +1231,17 @@ otherwise it's evaluated interactively."
     (save-excursion
       (goto-char (match-beginning 0))
       (if sync
-          (cider-nrepl-sync-request:eval (cider-defun-at-point))
+          ;; The first interactive eval on a file can load a lot of libs. This
+          ;; can easily lead to more than 10 sec.
+          (let ((nrepl-sync-request-timeout 30))
+            (cider-nrepl-sync-request:eval (cider-defun-at-point)))
         (cider-eval-defun-at-point)))))
 
-(defun cider-read-and-eval ()
-  "Read a sexp from the minibuffer and output its result to the echo area."
+(defun cider-read-and-eval (&optional value)
+  "Read a sexp from the minibuffer and output its result to the echo area.
+If VALUE is non-nil, it is inserted into the minibuffer as initial input."
   (interactive)
-  (let* ((form (cider-read-from-minibuffer "Clojure Eval: "))
+  (let* ((form (cider-read-from-minibuffer "Clojure Eval: " value))
          (override cider-interactive-eval-override)
          (ns-form (if (cider-ns-form-p form) "" (format "(ns %s)" (cider-current-ns)))))
     (with-current-buffer (get-buffer-create cider-read-eval-buffer)
@@ -1193,6 +1252,32 @@ otherwise it's evaluated interactively."
       (insert form)
       (let ((cider-interactive-eval-override override))
         (cider-interactive-eval form)))))
+
+(defun cider-read-and-eval-defun-at-point ()
+  "Insert the toplevel form at point in the minibuffer and output its result.
+The point is placed next to the function name in the minibuffer to allow
+passing arguments."
+  (interactive)
+  (let* ((fn-name (cadr (split-string (cider-defun-at-point))))
+         (form (concat "(" fn-name ")")))
+    (cider-read-and-eval (cons form (length form)))))
+
+;; Eval keymap
+
+(defvar cider-eval-commands-map
+  (let ((map (define-prefix-command 'cider-eval-commands-map)))
+    ;; single key bindings defined last for display in menu
+    (define-key map (kbd "w") #'cider-eval-last-sexp-and-replace)
+    (define-key map (kbd "r") #'cider-eval-region)
+    (define-key map (kbd "n") #'cider-eval-ns-form)
+    (define-key map (kbd "v") #'cider-eval-sexp-at-point)
+    (define-key map (kbd ".") #'cider-read-and-eval-defun-at-point)
+    ;; duplicates with C- for convenience
+    (define-key map (kbd "C-w") #'cider-eval-last-sexp-and-replace)
+    (define-key map (kbd "C-r") #'cider-eval-region)
+    (define-key map (kbd "C-n") #'cider-eval-ns-form)
+    (define-key map (kbd "C-v") #'cider-eval-sexp-at-point)
+    (define-key map (kbd "C-.") #'cider-read-and-eval-defun-at-point)))
 
 
 ;; Connection and REPL
@@ -1284,9 +1369,9 @@ See `cider-mode'."
          (var-name (nrepl-dict-get trace-response "var-name"))
          (var-status (nrepl-dict-get trace-response "var-status")))
     (pcase var-status
-      ("not-found" (error "Var %s not found" (cider-propertize sym 'var)))
-      ("not-traceable" (error "Var %s can't be traced because it's not bound to a function" (cider-propertize var-name 'var)))
-      (_ (message "Var %s %s" (cider-propertize var-name 'var) var-status)))))
+      ("not-found" (error "Var %s not found" (cider-propertize sym 'fn)))
+      ("not-traceable" (error "Var %s can't be traced because it's not bound to a function" (cider-propertize var-name 'fn)))
+      (_ (message "Var %s %s" (cider-propertize var-name 'fn) var-status)))))
 
 (defun cider-toggle-trace-var (arg)
   "Toggle var tracing.
@@ -1362,6 +1447,9 @@ Defaults to the current ns.  With prefix arg QUERY, prompts for a ns."
 
        ((member "invoked-before" status)
         (log-echo (format "Successfully called %s\n" before) 'font-lock-string-face))
+
+       ((member "invoked-not-resolved" status)
+        (log-echo "Could not resolve refresh function\n" 'font-lock-string-face))
 
        (reloading
         (log-echo (format "Reloading %s\n" reloading) 'font-lock-string-face))
@@ -1709,7 +1797,7 @@ With a prefix argument, prompt for function to run instead of -main."
                                         completions nil t nil
                                         'cider--namespace-history def)
                        name))))
-        (user-error "No %s var defined in any namespace" (cider-propertize name 'var))))))
+        (user-error "No %s var defined in any namespace" (cider-propertize name 'fn))))))
 
 (provide 'cider-interaction)
 

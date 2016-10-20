@@ -164,6 +164,17 @@ values of customisable variables."
 (ala/bala top
   |one)")
 
+;; we can pass a lambda to explicitely set the column
+(put-clojure-indent 'arsymbol (lambda (indent-point state) 0))
+
+(check-indentation symbol-with-lambda
+  "
+(arsymbol
+ |one)"
+  "
+(arsymbol
+|one)")
+
 (check-indentation form-with-metadata
   "
 (ns ^:doc app.core
@@ -269,8 +280,26 @@ values of customisable variables."
     ([item a]
      (* a (:qty item)))))")
 
+(def-full-indent-test deftype-allow-multiarity
+  "(deftype Banana []
+  Fruit
+  (subtotal
+    ([item]
+     (* 158 (:qty item)))
+    ([item a]
+     (* a (:qty item)))))")
+
 (def-full-indent-test defprotocol
   "(defprotocol IFoo
+  (foo [this]
+    \"Why is this over here?\")
+  (foo-2
+    [this]
+    \"Why is this over here?\"))")
+
+
+(def-full-indent-test definterface
+  "(definterface IFoo
   (foo [this]
     \"Why is this over here?\")
   (foo-2
@@ -314,6 +343,15 @@ values of customisable variables."
   "(defrecord TheNameOfTheRecord [a pretty long argument list]
   SomeType (assoc [_ x]
              (.assoc pretty x 10)))")
+
+(def-full-indent-test defrecord-allow-multiarity
+  "(defrecord Banana []
+  Fruit
+  (subtotal
+    ([item]
+     (* 158 (:qty item)))
+    ([item a]
+     (* a (:qty item)))))")
 
 (def-full-indent-test letfn
   "(letfn [(f [x]
@@ -564,40 +602,6 @@ x
     (insert "{:a 2, ,:c 4}")
     (call-interactively #'clojure-align)
     (should (string= (buffer-string) "{:a 2, :c 4}"))))
-
-;;; Misc
-
-(defun non-func (form-a form-b)
-  (with-temp-buffer
-    (clojure-mode)
-    (insert form-a)
-    (save-excursion (insert form-b))
-    (clojure--not-function-form-p)))
-
-(ert-deftest non-function-form ()
-  (dolist (form '(("#?@ " "(c d)")
-                  ("#?@" "(c d)")
-                  ("#? " "(c d)")
-                  ("#?" "(c d)")
-                  ("" "[asda]")
-                  ("" "{a b}")
-                  ("#" "{a b}")
-                  ("" "(~)")))
-    (should (apply #'non-func form)))
-  (dolist (form '("(c d)"
-                  "(.c d)"
-                  "(:c d)"
-                  "(c/a d)"
-                  "(.c/a d)"
-                  "(:c/a d)"
-                  "(c/a)"
-                  "(:c/a)"
-                  "(.c/a)"))
-    (should-not (non-func "" form))
-    (should-not (non-func "^hint" form))
-    (should-not (non-func "#macro" form))
-    (should-not (non-func "^hint " form))
-    (should-not (non-func "#macro " form))))
 
 (provide 'clojure-mode-indentation-test)
 

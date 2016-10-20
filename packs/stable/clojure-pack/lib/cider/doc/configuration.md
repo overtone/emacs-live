@@ -4,14 +4,6 @@ experience.
 
 ## Basic configuration
 
-* Enable `eldoc` in Clojure buffers:
-
-```el
-(add-hook 'cider-mode-hook #'eldoc-mode)
-```
-
-![Eldoc](images/eldoc.png)
-
 * Suppress auto-enabling of `cider-mode` in `clojure-mode` buffers, when starting
   CIDER:
 
@@ -34,15 +26,16 @@ above allows you to override this (somewhat non-standard) behavior.
 (setq cider-prompt-for-symbol nil)
 ```
 
-* Don't log communication with the nREPL server:
+* Log communication with the nREPL server:
 
 ```el
-(setq nrepl-log-messages nil)
+(setq nrepl-log-messages t)
 ```
 
-Basically, this will dispose of buffers like `*nrepl-messages conn-name*`. The
-communication log is invaluable for debugging CIDER issues, so you're generally
-advised to keep it around.
+Basically, this will result in the creation of buffers like `*nrepl-messages
+conn-name*`. The communication log is invaluable for debugging CIDER issues, so
+you're generally advised to enable logging when you need to debug something
+nREPL related.
 
 * You can hide the `*nrepl-connection*` and `*nrepl-server*` buffers
 from appearing in some buffer switching commands like
@@ -75,7 +68,7 @@ make the hidden buffers visible. They'll always be visible in
 * Change the result prefix for interactive evaluation (by default it's `=> `):
 
 ```el
-(setq cider-interactive-eval-result-prefix ";; => ")
+(setq cider-eval-result-prefix ";; => ")
 ```
 
 To remove the prefix altogether just set it to an empty string(`""`).
@@ -111,6 +104,54 @@ To remove the prefix altogether just set it to an empty string(`""`).
 ```
 
 More details can be found [here](https://github.com/clojure-emacs/cider/issues/930).
+
+* You can hide all nREPL middleware details from `cider-browse-ns*` and `cider-apropos*`
+  commands by customizing the variable `cider-filter-regexps`. It should be a list of
+  regexps matching the pattern of namespaces you want to filter out.
+
+  Its default value is `'("^cider.nrepl" "^refactor-nrepl" "^clojure.tools.nrepl")`,
+  the most commonly used middleware collections/packages.
+
+  An important thing to note is that this list of regexps is passed on to the middleware
+  without any pre-processing. So, the regexps have to be in Clojure format (with twice the number of backslashes)
+  and not Emacs Lisp. For example, to achieve the above effect, you could also set `cider-filter-regexps` to `'(".*nrepl")`.
+
+  To customize `cider-filter-regexps`, you could use the Emacs customize UI,
+  with <kbd>M-x</kbd> `customize-variable` <kbd>RET</kbd> `cider-filter-regexps`.
+
+  Or by including a similar snippet along with the other CIDER configuration.
+
+```el
+(setq cider-filter-regexps '(".*nrepl"))
+```
+
+## Configuring eldoc
+
+* Enable `eldoc` in Clojure buffers:
+
+```el
+(add-hook 'cider-mode-hook #'eldoc-mode)
+```
+
+![Eldoc](images/eldoc.png)
+
+* CIDER also would show the eldoc for the symbol at point. So in (map inc ...)
+when the cursor is over inc its eldoc would be displayed. You can turn off this
+behaviour by:
+
+```el
+(setq cider-eldoc-display-for-symbol-at-point nil)
+```
+
+* CIDER respects the value of `eldoc-echo-area-use-multiline-p` when
+displaying documentation in the minibuffer. You can customize this variable to change
+its behaviour.
+
+| eldoc-echo-area-use-multiline-p | Behaviour |
+| ------------- | ------------- |
+| `t`  | Never attempt to truncate messages. Complete symbol name and function arglist or variable documentation will be displayed even if echo area must be resized to fit.|
+| `nil`  | Messages are always truncated to fit in a single line of display in the echo area.  |
+| `truncate-sym-name-if-fit` or anything non-nil | Symbol name may be truncated if it will enable the function arglist or documentation string to fit on a single line. Otherwise, behavior is just like `t` case. |
 
 ## Overlays
 

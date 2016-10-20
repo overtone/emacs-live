@@ -71,6 +71,7 @@
 (require 'seq)
 (require 'cider-compat)
 (require 'cl-lib)
+(require 'nrepl-dict)
 (require 'queue)
 (require 'tramp)
 
@@ -122,6 +123,11 @@ Setting this to nil disables the timeout functionality."
 (defcustom nrepl-hide-special-buffers nil
   "Control the display of some special buffers in buffer switching commands.
 When true some special buffers like the server buffer will be hidden."
+  :type 'boolean
+  :group 'nrepl)
+
+(defcustom nrepl-prompt-to-kill-server-buffer-on-quit t
+  "If non-nil, prompt the user for confirmation before killing the nrepl server buffer and associated process."
   :type 'boolean
   :group 'nrepl)
 
@@ -249,15 +255,6 @@ PROJECT-DIR, HOST and PORT are as in `nrepl-make-buffer-name'."
 
 
 ;;; Utilities
-(defmacro nrepl-dbind-response (response keys &rest body)
-  "Destructure an nREPL RESPONSE dict.
-Bind the value of the provided KEYS and execute BODY."
-  (declare (debug (form (&rest symbolp) body)))
-  `(let ,(cl-loop for key in keys
-                  collect `(,key (nrepl-dict-get ,response ,(format "%s" key))))
-     ,@body))
-(put 'nrepl-dbind-response 'lisp-indent-function 2)
-
 (defun nrepl-op-supported-p (op connection)
   "Return t iff the given operation OP is supported by the nREPL CONNECTION."
   (with-current-buffer connection
@@ -284,144 +281,6 @@ Bind the value of the provided KEYS and execute BODY."
     (with-temp-buffer
       (insert-file-contents file)
       (buffer-string))))
-
-
-;;; nREPL dict
-
-(defun nrepl-dict (&rest key-vals)
-  "Create nREPL dict from KEY-VALS."
-  (cons 'dict key-vals))
-
-(defun nrepl-dict-p (object)
-  "Return t if OBJECT is an nREPL dict."
-  (and (listp object)
-       (eq (car object) 'dict)))
-
-(defun nrepl-dict-empty-p (dict)
-  "Return t if nREPL dict DICT is empty."
-  (null (cdr dict)))
-
-(defun nrepl-dict-contains (dict key)
-  "Return nil if nREPL dict DICT doesn't contain KEY.
-If DICT does contain KEY, then a non-nil value is returned.  Due to the
-current implementation, this return value is the tail of DICT's key-list
-whose car is KEY.  Comparison is done with `equal'."
-  (member key (nrepl-dict-keys dict)))
-
-(defun nrepl-dict-get (dict key &optional default)
-  "Get from DICT value associated with KEY, optional DEFAULT if KEY not in DICT.
-If dict is nil, return nil.  If DEFAULT not provided, and KEY not in DICT,
-return nil.  If DICT is not an nREPL dict object, an error is thrown."
-  (when dict
-    (if (nrepl-dict-p dict)
-        (if (nrepl-dict-contains dict key)
-            (lax-plist-get (cdr dict) key)
-          default)
-      (error "Not an nREPL dict object: %s" dict))))
-
-(defun nrepl-dict-put (dict key value)
-  "Associate in DICT, KEY to VALUE.
-Return new dict.  Dict is modified by side effects."
-  (if (null dict)
-      (list 'dict key value)
-    (if (not (nrepl-dict-p dict))
-        (error "Not an nREPL dict object: %s" dict)
-      (setcdr dict (lax-plist-put (cdr dict) key value))
-      dict)))
-
-(defun nrepl-dict-keys (dict)
-  "Return all the keys in the nREPL DICT."
-  (if (nrepl-dict-p dict)
-      (cl-loop for l on (cdr dict) by #'cddr
-               collect (car l))
-    (error "Not an nREPL dict")))
-
-(defun nrepl-dict-vals (dict)
-  "Return all the values in the nREPL DICT."
-  (if (nrepl-dict-p dict)
-      (cl-loop for l on (cdr dict) by #'cddr
-               collect (cadr l))
-    (error "Not an nREPL dict")))
-
-(defun nrepl-dict-map (fn dict)
-  "Map FN on nREPL DICT.
-FN must accept two arguments key and value."
-  (if (nrepl-dict-p dict)
-      (cl-loop for l on (cdr dict) by #'cddr
-               collect (funcall fn (car l) (cadr l)))
-    (error "Not an nREPL dict")))
-
-(defun nrepl-dict-merge (dict1 dict2)
-  "Destructively merge DICT2 into DICT1.
-Keys in DICT2 override those in DICT1."
-  (let ((base (or dict1 '(dict))))
-    (nrepl-dict-map (lambda (k v)
-                      (nrepl-dict-put base k v))
-                    (or dict2 '(dict)))
-    base))
-
-(defun nrepl-dict-get-in (dict keys)
-  "Return the value in a nested DICT.
-KEYS is a list of keys.  Return nil if any of the keys is not present or if
-any of the values is nil."
-  (let ((out dict))
-    (while (and keys out)
-      (setq out (nrepl-dict-get out (pop keys))))
-    out))
-
-(defun nrepl-dict-flat-map (function dict)
-  "Map FUNCTION over DICT and flatten the result.
-FUNCTION follows the same restrictions as in `nrepl-dict-map', and it must
-also alway return a sequence (since the result will be flattened)."
-  (when dict
-    (apply #'append (nrepl-dict-map function dict))))
-
-(defun nrepl--cons (car list-or-dict)
-  "Generic cons of CAR to LIST-OR-DICT."
-  (if (eq (car list-or-dict) 'dict)
-      (cons 'dict (cons car (cdr list-or-dict)))
-    (cons car list-or-dict)))
-
-(defun nrepl--nreverse (list-or-dict)
-  "Generic `nreverse' which works on LIST-OR-DICT."
-  (if (eq (car list-or-dict) 'dict)
-      (cons 'dict (nreverse (cdr list-or-dict)))
-    (nreverse list-or-dict)))
-
-(defun nrepl--push (obj stack)
-  "Cons OBJ to the top element of the STACK."
-  ;; stack is assumed to be a list
-  (if (eq (caar stack) 'dict)
-      (cons (cons 'dict (cons obj (cdar stack)))
-            (cdr stack))
-    (cons (if (null stack)
-              obj
-            (cons obj (car stack)))
-          (cdr stack))))
-
-(defun nrepl--merge (dict1 dict2 &optional no-join)
-  "Join nREPL dicts DICT1 and DICT2 in a meaningful way.
-String values for non \"id\" and \"session\" keys are concatenated. Lists
-are appended. nREPL dicts merged recursively. All other objects are
-accumulated into a list. DICT1 is modified destructively and
-then returned.
-If NO-JOIN is given, return the first non nil dict."
-  (if no-join
-      (or dict1 dict2)
-    (cond ((null dict1) dict2)
-          ((null dict2) dict1)
-          ((stringp dict1) (concat dict1 dict2))
-          ((nrepl-dict-p dict1)
-           (nrepl-dict-map
-            (lambda (k2 v2)
-              (nrepl-dict-put dict1 k2
-                              (nrepl--merge (nrepl-dict-get dict1 k2) v2
-                                            (member k2 '("id" "session")))))
-            dict2)
-           dict1)
-          ((and (listp dict2) (listp dict1)) (append dict1 dict2))
-          ((listp dict1) (append dict1 (list dict2)))
-          (t (list dict1 dict2)))))
 
 
 ;;; Bencode
@@ -497,7 +356,10 @@ object is a root list or dict."
         (goto-char end)
         ;; normalise any platform-specific newlines
         (let* ((original (buffer-substring-no-properties beg end))
-               (result (replace-regexp-in-string "\r" "" original)))
+               ;; handle both \n\r and \r\n
+               (result (replace-regexp-in-string "\r\n\\|\n\r" "\n" original))
+               ;; we don't handle single carriage returns, insert newline
+               (result (replace-regexp-in-string "\r" "\n" result)))
           (cons nil (nrepl--push result stack))))))
    ;; integer
    ((looking-at "i\\(-?[0-9]+\\)e")
@@ -740,7 +602,8 @@ Do nothing if there is a REPL connected to that server."
   (with-current-buffer server-buf
     ;; Don't kill the server if there is a REPL connected to it.
     (when (and (not nrepl-client-buffers)
-               (y-or-n-p "Also kill server process and buffer? "))
+               (or (not nrepl-prompt-to-kill-server-buffer-on-quit)
+                   (y-or-n-p "Also kill server process and buffer? ")))
       (let ((proc (get-buffer-process server-buf)))
         (when (process-live-p proc)
           (set-process-query-on-exit-flag proc nil)
@@ -1124,6 +987,7 @@ the port, and the client buffer."
           (save-excursion
             (goto-char (process-mark process))
             (insert output)
+            (ansi-color-apply-on-region (process-mark process) (point))
             (set-marker (process-mark process) (point)))
           (when moving
             (goto-char (process-mark process))
@@ -1167,11 +1031,15 @@ the port, and the client buffer."
 
 ;;; Messages
 
-(defcustom nrepl-log-messages t
+(defcustom nrepl-log-messages nil
   "If non-nil, log protocol messages to an nREPL messages buffer.
 
 This is extremely useful for debug purposes, as it allows you to
-inspect the communication between Emacs and an nREPL server."
+inspect the communication between Emacs and an nREPL server.
+
+Enabling the logging might have a negative impact on performance,
+so it's not recommended to keep it enabled unless you need to
+debug something."
   :type 'boolean
   :group 'nrepl)
 
@@ -1190,9 +1058,12 @@ operations.")
 
 (defvar nrepl-messages-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "n") #'next-line)
-    (define-key map (kbd "p") #'previous-line)
+    (define-key map (kbd "n")   #'next-line)
+    (define-key map (kbd "p")   #'previous-line)
     (define-key map (kbd "TAB") #'forward-button)
+    (define-key map (kbd "RET") #'nrepl-log-expand-button)
+    (define-key map (kbd "e")   #'nrepl-log-expand-button)
+    (define-key map (kbd "E")   #'nrepl-log-expand-all-buttons)
     (define-key map (kbd "<backtab>") #'backward-button)
     map))
 
@@ -1216,11 +1087,8 @@ operations.")
 
 (defun nrepl-log-message (msg type)
   "Log the nREPL MSG.
-
-TYPE is either request or response.
-
-The message is logged to a buffer described by
-`nrepl-message-buffer-name-template'."
+TYPE is either request or response.  The message is logged to a buffer
+described by `nrepl-message-buffer-name-template'."
   (when nrepl-log-messages
     (with-current-buffer (nrepl-messages-buffer (current-buffer))
       (setq buffer-read-only nil)
@@ -1229,11 +1097,22 @@ The message is logged to a buffer described by
         (re-search-forward "^(" nil t)
         (delete-region (point-min) (- (point) 1)))
       (goto-char (point-max))
-      (nrepl--pp (nrepl-decorate-msg msg type)
-                 (nrepl--message-color (lax-plist-get (cdr msg) "id")))
+      (nrepl-log-pp-object (nrepl-decorate-msg msg type)
+                           (nrepl-log--message-color (lax-plist-get (cdr msg) "id"))
+                           t)
       (when-let ((win (get-buffer-window)))
         (set-window-point win (point-max)))
       (setq buffer-read-only t))))
+
+(defun nrepl-toggle-message-logging ()
+  "Toggle the value of `nrepl-log-messages' between nil and t.
+
+This in effect enables or disables the logging of nREPL messages."
+  (interactive)
+  (setq nrepl-log-messages (not nrepl-log-messages))
+  (if nrepl-log-messages
+      (message "nREPL message logging enabled")
+    (message "nREPL message logging disabled")))
 
 (defcustom nrepl-message-colors
   '("red" "brown" "coral" "orange" "green" "deep sky blue" "blue" "dark violet")
@@ -1241,7 +1120,58 @@ The message is logged to a buffer described by
   :type '(repeat color)
   :group 'nrepl)
 
-(defun nrepl--message-color (id)
+(defun nrepl-log-expand-button (&optional button)
+  "Expand the objects hidden in BUTTON's :nrepl-object property.
+BUTTON defaults the button at point."
+  (interactive)
+  (if-let ((button (or button (button-at (point)))))
+      (let* ((start (overlay-start button))
+             (end   (overlay-end   button))
+             (obj   (overlay-get button :nrepl-object))
+             (inhibit-read-only t))
+        (save-excursion
+          (goto-char start)
+          (delete-overlay button)
+          (delete-region start end)
+          (nrepl-log-pp-object obj)
+          (delete-char -1)))
+    (error "No button at point")))
+
+(defun nrepl-log-expand-all-buttons ()
+  "Expand all buttons in nREPL log buffer."
+  (interactive)
+  (if (not (eq major-mode 'nrepl-messages-mode))
+      (user-error "Not in a `nrepl-messages-mode'")
+    (save-excursion
+      (let* ((pos (point-min))
+             (button (next-button pos)))
+        (while button
+          (setq pos (overlay-start button))
+          (nrepl-log-expand-button button)
+          (setq button (next-button pos)))))))
+
+(defun nrepl-log--expand-button-mouse (event)
+  "Expand the text hidden under overlay button.
+EVENT gives the button position on window."
+  (interactive "e")
+  (pcase (elt event 1)
+    (`(,window ,_ ,_ ,_ ,_ ,point . ,_)
+     (with-selected-window window
+       (nrepl-log-expand-button (button-at point))))))
+
+(defun nrepl-log-insert-button (label object)
+  "Insert button with LABEL and :nrepl-object property as OBJECT."
+  (insert-button label
+                 :nrepl-object object
+                 'action #'nrepl-log-expand-button
+                 'face 'link
+                 'help-echo "RET: Expand object."
+                 ;; Workaround for bug#1568 (don't use local-map here; it
+                 ;; overwrites major mode map.)
+                 'keymap `(keymap (mouse-1 . nrepl-log--expand-button-mouse)))
+  (insert "\n"))
+
+(defun nrepl-log--message-color (id)
   "Return the color to use when pretty-printing the nREPL message with ID.
 If ID is nil, return nil."
   (when id
@@ -1249,63 +1179,62 @@ If ID is nil, return nil."
       (mod (length nrepl-message-colors))
       (nth nrepl-message-colors))))
 
-(defcustom nrepl-dict-max-message-size 5
-  "Max number of lines a dict can have before being truncated.
-Set this to nil to prevent truncation."
-  :type 'integer)
+(defun nrepl-log--pp-listlike (object &optional foreground button)
+  "Pretty print nREPL list like OBJECT.
+FOREGROUND and BUTTON are as in `nrepl-log-pp-object'."
+  (cl-flet ((color (str)
+                   (propertize str 'face
+                               (append '(:weight ultra-bold)
+                                       (when foreground `(:foreground ,foreground))))))
+    (let ((head (format "(%s" (car object))))
+      (insert (color head))
+      (let ((indent (+ 2 (- (current-column) (length head))))
+            (l (point)))
+        (if (null (cdr object))
+            (insert ")\n")
+          (insert " \n")
+          (cl-loop for l on (cdr object) by #'cddr
+                   do (let ((str (format "%s%s  " (make-string indent ?\s)
+                                         (propertize (car l) 'face
+                                                     ;; Only highlight top-level keys.
+                                                     (unless (eq (car object) 'dict)
+                                                       'font-lock-keyword-face)))))
+                        (insert str)
+                        (nrepl-log-pp-object (cadr l) nil button)))
+          (when (eq (car object) 'dict)
+            (delete-char -1))
+          (insert (color ")\n")))))))
 
-(defun nrepl--expand-button (button)
-  "Expand the text hidden under overlay BUTTON."
-  (delete-overlay button))
-
-(defun nrepl--expand-button-mouse (event)
-  "Expand the text hidden under overlay button.
-EVENT gives the button position on window."
-  (interactive "e")
-  (pcase (elt event 1)
-    (`(,window ,_ ,_ ,_ ,_ ,point . ,_)
-     (with-selected-window window
-       (nrepl--expand-button (button-at point))))))
-
-(define-button-type 'nrepl--collapsed-dict
-  'display "..."
-  'action #'nrepl--expand-button
-  'face 'link
-  'help-echo "RET: Expand dict.")
-
-(defun nrepl--pp (object &optional foreground)
-  "Pretty print nREPL OBJECT, delimited using FOREGROUND."
-  (if (not (and (listp object)
-                (memq (car object) '(<-- --> dict))))
-      (progn (when (stringp object)
-               (setq object (substring-no-properties object)))
-             (pp object (current-buffer))
-             (unless (listp object) (insert "\n")))
-    (let* ((head (format "(%s" (car object))))
-      (cl-flet ((color (str)
-                       (propertize str 'face (append '(:weight ultra-bold)
-                                                     (when foreground `(:foreground ,foreground))))))
-        (insert (color head))
-        (let ((indent (+ 2 (- (current-column) (length head))))
-              (l (point)))
-          (if (null (cdr object))
-              (insert ")\n")
-            (insert " \n")
-            (cl-loop for l on (cdr object) by #'cddr
-                     do (let ((str (format "%s%s  " (make-string indent ? ) (car l))))
-                          (insert str)
-                          (nrepl--pp (cadr l))))
-            (when (eq (car object) 'dict)
-              (delete-char -1)
-              (let ((truncate-lines t))
-                (when (and nrepl-dict-max-message-size
-                           (> (count-screen-lines l (point) t)
-                              nrepl-dict-max-message-size))
-                  (make-button (1+ l) (point)
-                               :type 'nrepl--collapsed-dict
-                               ;; Workaround for bug#1568.
-                               'local-map '(keymap (mouse-1 . nrepl--expand-button-mouse))))))
-            (insert (color ")\n"))))))))
+(defun nrepl-log-pp-object (object &optional foreground button)
+  "Pretty print nREPL OBJECT, delimited using FOREGROUND.
+If BUTTON is non-nil, try making a button from OBJECT instead of inserting
+it into the buffer."
+  (let ((min-dict-fold-size   1)
+        (min-list-fold-size   10)
+        (min-string-fold-size 60))
+    (if-let ((head (car-safe object)))
+        ;; list-like objects
+        (cond
+         ;; top level dicts (always expanded)
+         ((memq head '(<-- -->))
+          (nrepl-log--pp-listlike object foreground button))
+         ;; inner dicts
+         ((eq head 'dict)
+          (if (and button (> (length object) min-dict-fold-size))
+              (nrepl-log-insert-button "(dict ...)" object)
+            (nrepl-log--pp-listlike object foreground button)))
+         ;; lists
+         (t
+          (if (and button (> (length object) min-list-fold-size))
+              (nrepl-log-insert-button (format "(%s ...)" (prin1-to-string head)) object)
+            (pp object (current-buffer)))))
+      ;; non-list objects
+      (if (stringp object)
+          (if (and button (> (length object) min-string-fold-size))
+              (nrepl-log-insert-button (format "\"%s...\"" (substring object 0 min-string-fold-size)) object)
+            (insert (prin1-to-string object) "\n"))
+        (pp object (current-buffer))
+        (insert "\n")))))
 
 (defun nrepl-messages-buffer-name (conn)
   "Return the name for the message buffer matching CONN."

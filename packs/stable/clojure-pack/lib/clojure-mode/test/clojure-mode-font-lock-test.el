@@ -298,6 +298,19 @@ POS."
     (should (eq (clojure-test-face-at 1 1) nil))
     (should (equal (clojure-test-face-at 2 11) '(clojure-keyword-face)))))
 
+(ert-deftest clojure-mode-syntax-table/keyword-allowed-chars ()
+  :tags '(fontification syntax-table)
+  (should (equal (clojure-test-face-at 1 8 ":aaa#bbb") '(clojure-keyword-face))))
+
+(ert-deftest clojure-mode-syntax-table/keyword-disallowed-chars ()
+  :tags '(fontification syntax-table)
+  (should (eq (clojure-test-face-at 1 5 ":aaa@bbb") 'various-faces))
+  (should (equal (clojure-test-face-at 1 4 ":aaa@bbb") '(clojure-keyword-face)))
+  (should (eq (clojure-test-face-at 1 5 ":aaa~bbb") 'various-faces))
+  (should (equal (clojure-test-face-at 1 4 ":aaa~bbb") '(clojure-keyword-face)))
+  (should (eq (clojure-test-face-at 1 5 ":aaa@bbb") 'various-faces))
+  (should (equal (clojure-test-face-at 1 4 ":aaa@bbb") '(clojure-keyword-face))))
+
 (ert-deftest clojure-mode-syntax-table/characters ()
   :tags '(fontification syntax-table)
   (should (eq (clojure-test-face-at 1 2 "\\a") 'clojure-character-face))

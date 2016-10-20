@@ -2,6 +2,28 @@
 
 ## Up next
 
+- New config setting `cljr-libspec-whitelist` to prevent libspecs which appear unused but are side-effecting at load from being pruned.
+- [#301] (https://github.com/clojure-emacs/clj-refactor.el/issues/301) `ad`  has gained a prefix to declare the symbol under the cursor.
+- [#312](https://github.com/clojure-emacs/clj-refactor.el/issues/312) Allow `sut` alias to be customized.
+- [#305](https://github.com/clojure-emacs/clj-refactor.el/issues/305) Don't call lookup-alias for non namespaced keywords at all when slash is typed. However trigger lookup alias with the leading :: stripped off the prefix if the keyword is namespaced.
+
+### Changes
+
+- [#302] (https://github.com/clojure-emacs/clj-refactor.el/issues/302) `ad` now understands def-like things, e.g. defs created by Schema.
+- When inserting ns form to blank clojure-ish file, check if cider is available and connected for better detecting the expected namespace.
+- Remove the warning about missing nREPl ops.
+- Remove threading macro related features because they are moved to Clojure mode. However, the usual mnemonics for these features still work only they reference the Clojure mode implementations.
+- Remove cycle privacy, cycle if and cycle collection type features. They are moved to Clojure mode. The usual mnemonics for cycle privacy and cycle if features still work only they refer the Clojure mode implementations. Cycle collection type got reworked into convert collection to list, quoted list, map, vector and set. *Cycle* collection type is no longer supported.
+
+### Bugs fixed
+
+- [#299](https://github.com/clojure-emacs/clj-refactor.el/issues/299) `ml` moves cursor
+- [#309](https://github.com/clojure-emacs/clj-refactor.el/issues/309)  `am` creates alias for fully-qualified symbols.
+- [#313](https://github.com/clojure-emacs/clj-refactor.el/issues/313)  teach `pf` about function literals using `%&`.
+- [#320](https://github.com/clojure-emacs/clj-refactor.el/issues/320) `*data-readers*` ignored when searching for macros.
+- [#339](https://github.com/clojure-emacs/clj-refactor.el/issues/339) Teach stop refer to understand multiline refer clauses.
+- [#341](https://github.com/clojure-emacs/clj-refactor.el/issues/341) Avoid creating circular dependencies with move form when source namespace refers to the target namespace with a require.
+
 ## 2.2.0
 
 - Smarten up `cljr-stop-referring` to replace `:refer :all` style require with alias and apply the alias to all occurrences of symbols from the referred namespace.

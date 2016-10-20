@@ -25,8 +25,9 @@
 ;;; Code:
 
 (require 'cider-compat)
-(require 'nrepl-client)
+(require 'nrepl-dict)
 (require 'cider-util)
+(require 'tramp)
 
 (defcustom cider-prompt-for-symbol t
   "Controls when to prompt for symbol when a command requires one.
@@ -235,6 +236,22 @@ existing file ending with URL has been found."
       (-1 t) ; -
       (16 t) ; empty empty
       (_ nil))))
+
+(defun cider-abbreviate-ns (namespace)
+  "Return a string that abbreviates NAMESPACE."
+  (when namespace
+    (let* ((names (reverse (split-string namespace "\\.")))
+           (lastname (car names)))
+      (concat (mapconcat (lambda (s) (concat (substring s 0 1) "."))
+                         (reverse (cdr names))
+                         "")
+              lastname))))
+
+(defun cider-last-ns-segment (namespace)
+  "Return the last segment of NAMESPACE."
+  (when namespace
+    (car (reverse (split-string namespace "\\.")))))
+
 
 (provide 'cider-common)
 ;;; cider-common.el ends here

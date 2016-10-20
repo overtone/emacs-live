@@ -17,7 +17,7 @@ Keyboard shortcut                    | Description
 <kbd>C-c M-o</kbd>    | Switch between the Clojure and ClojureScript REPLs for the current project.
 <kbd>C-c C-u</kbd>    | Kill all text from the prompt to the current point.
 <kbd>C-c C-b</kbd> <br/> <kbd>C-c C-c</kbd>| Interrupt any pending evaluations.
-<kbd>C-up</kbd> <br/> <kbd>C-down</kbd> | Goto to previous/next input in history.
+<kbd>C-up</kbd> <br/> <kbd>C-down</kbd> | Go to to previous/next input in history.
 <kbd>M-p</kbd> <br/> <kbd>M-n</kbd> | Search the previous/next item in history using the current input as search pattern. If <kbd>M-p/M-n</kbd> is typed two times in a row, the second invocation uses the same search pattern (even if the current input has changed).
 <kbd>M-s</kbd> <br/> <kbd>M-r</kbd> | Search forward/reverse through command history with regex.
 <kbd>C-c C-n</kbd> <br/> <kbd>C-c C-p</kbd> | Move between the current and previous prompts in the REPL buffer. Pressing <kbd>RET</kbd> on a line with old input copies that line to the newest prompt.
@@ -36,6 +36,7 @@ Keyboard shortcut                    | Description
 <kbd>C-c M-t v</kbd> | Toggle var tracing.
 <kbd>C-c M-t n</kbd> | Toggle namespace tracing.
 <kbd>C-c C-t t</kbd> <br/> <kbd>C-c C-t C-t</kbd> | Run test at point.
+<kbd>C-c C-t g</kbd> <br/> <kbd>C-c C-t C-g</kbd> | Re-run the last test you ran.
 <kbd>C-c C-t n</kbd> <br/> <kbd>C-c C-t C-n</kbd> | Run tests for current namespace.
 <kbd>C-c C-t l</kbd> <br/> <kbd>C-c C-t C-l</kbd> | Run tests for all loaded namespaces.
 <kbd>C-c C-t p</kbd> <br/> <kbd>C-c C-t C-p</kbd> | Run tests for all project namespaces. This loads the additional namespaces.

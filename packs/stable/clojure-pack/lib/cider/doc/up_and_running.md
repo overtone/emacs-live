@@ -6,7 +6,7 @@ command).
 
 ## Setting up a Leiningen or Boot project (optional)
 
-[Leiningen][] is the de facto standard build/project
+[Leiningen][] is the de-facto standard build/project
 management tool for Clojure. [Boot][] is a newer build tool
 offering abstractions and libraries to construct more complex build
 scenarios. Both have a similar scope to the Maven build tool favoured by Java
@@ -77,28 +77,36 @@ ClojureScript support relies on the
 [piggieback][] nREPL middleware being
 present in your REPL session.
 
-1. Add the following dependencies to your `project.clj`
+Add the following dependencies to your project (`project.clj` in Leiningen based project
+or `built.boot` in Boot project):
 
 ```clojure
 [com.cemerick/piggieback "0.2.1"]
 [org.clojure/clojure "1.7.0"]
 ```
 
-   as well as the following option:
+as well as `piggieback` nREPL middleware:
 
+in `project.clj`:
 ```clojure
 :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
 ```
 
-2. Issue <kbd>M-x</kbd> `customize-variable` <kbd>RET</kbd> `cider-cljs-lein-repl` if
-   you'd like to change the REPL used (the default is `rhino`).
+or in `built.boot`:
+```clojure
+(task-options!
+  repl {:middleware '[cemerick.piggieback/wrap-cljs-repl]})
+```
 
-3. Open a file in your project and issue <kbd>M-x</kbd>
-   `cider-jack-in-clojurescript` <kbd>RET</kbd>. This will start up the nREPL
-   server, and then create two REPL buffers for you, one in Clojure and one in
-   ClojureScript. All usual CIDER commands will be automatically directed to the
-   appropriate REPL, depending on whether you're visiting a `.clj` or a `.cljs`
-   file.
+Issue <kbd>M-x</kbd> `customize-variable` <kbd>RET</kbd> `cider-cljs-lein-repl` if
+you'd like to change the REPL used (the default is `rhino`).
+
+Open a file in your project and issue <kbd>M-x</kbd>
+`cider-jack-in-clojurescript` <kbd>RET</kbd>. This will start up the nREPL
+server, and then create two REPL buffers for you, one in Clojure and one in
+ClojureScript. All usual CIDER commands will be automatically directed to the
+appropriate REPL, depending on whether you're visiting a `.clj` or a `.cljs`
+file.
 
 ### Browser-connected ClojureScript REPL
 
@@ -130,10 +138,26 @@ documentation lookup, the namespace browser, and macroexpansion).
 1. Add this to your dependencies in `build.boot`:
 
 ```clojure
-[adzerk/boot-cljs-repl   "0.3.0"]
-[com.cemerick/piggieback "0.2.1"  :scope "test"]
+[adzerk/boot-cljs     "1.7.228-1" :scope "test"]
+[adzerk/boot-cljs-repl   "0.3.0"  :scope "test"]
+[pandeiro/boot-http      "0.7.2"  :scope "test"]
 [weasel                  "0.7.0"  :scope "test"]
-[org.clojure/tools.nrepl "0.2.12" :scope "test"]
+[com.cemerick/piggieback "0.2.1"  :scope "test"]
+```
+
+and this at the end of `build.boot`:
+
+```clojure
+(require
+ '[adzerk.boot-cljs :refer [cljs]]
+ '[adzerk.boot-cljs-repl :refer [cljs-repl start-repl]]
+ '[pandeiro.boot-http :refer [serve]])
+
+(deftask dev []
+  (comp (serve)
+        (watch)
+        (cljs-repl) ; order is important!!
+        (cljs)))
 ```
 
 2. Start `boot dev` in a terminal.
@@ -142,7 +166,7 @@ documentation lookup, the namespace browser, and macroexpansion).
 
 4. Execute `(start-repl)` at the prompt: `boot.user> (start-repl)`.
 
-5. Connect to the running server with your browser.
+5. Connect to the running server with your browser. The address is printed on the terminal, but it's probably `http://localhost:3000`.
 
 For more information visit [boot-cljs-repl](https://github.com/adzerk-oss/boot-cljs-repl).
 

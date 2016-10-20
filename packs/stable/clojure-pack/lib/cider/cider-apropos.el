@@ -31,7 +31,7 @@
 
 (require 'cider-client)
 (require 'cider-popup)
-(require 'nrepl-client)
+(require 'nrepl-dict)
 
 (require 'clojure-mode)
 (require 'apropos)
@@ -40,6 +40,18 @@
 (defconst cider-apropos-buffer "*cider-apropos*")
 
 (push cider-apropos-buffer cider-ancillary-buffers)
+
+(defcustom cider-apropos-actions '(("display-doc" . cider-doc-lookup)
+                                   ("find-def" . cider--find-var)
+                                   ("lookup-on-grimoire" . cider-grimoire-lookup))
+  "Controls the actions to be applied on the symbol found by an apropos search.
+The first action key in the list will be selected as default.  If the list
+contains only one action key, the associated action function will be
+applied automatically.  An action function can be any function that receives
+the symbol found by the apropos search as argument."
+  :type '(alist :key-type string :value-type function)
+  :group 'cider
+  :package-version '(cider . "0.13.0"))
 
 (defun cider-apropos-doc (button)
   "Display documentation for the symbol represented at BUTTON."
@@ -139,17 +151,16 @@ optionally search doc strings (based on DOCS-P), include private vars
 
 (defun cider-apropos-act-on-symbol (symbol)
   "Apply selected action on SYMBOL."
-  (let ((action (completing-read (format "Choose action to apply to `%s`: " symbol)
-                                 '("display-doc"
-                                   "find-def"
-                                   "lookup-on-grimoire"
-                                   "quit"))))
-    (pcase action
-      ("display-doc" (cider-doc-lookup symbol))
-      ("find-def" (cider--find-var symbol))
-      ("lookup-on-grimoire" (cider-grimoire-lookup symbol))
-      ("quit" nil)
-      (_ (user-error "Unknown action `%s`" action)))))
+  (let* ((first-action-key (car (car cider-apropos-actions)))
+         (action-key (if (= 1 (length cider-apropos-actions))
+                         first-action-key
+                       (completing-read (format "Choose action to apply to `%s` (default %s): "
+                                                symbol first-action-key)
+                                        cider-apropos-actions nil nil nil nil first-action-key)))
+         (action-fn (cdr (assoc action-key cider-apropos-actions))))
+    (if action-fn
+        (funcall action-fn symbol)
+      (user-error "Unknown action `%s`" action-key))))
 
 ;;;###autoload
 (defun cider-apropos-select (query &optional ns docs-p privates-p case-sensitive-p)
@@ -184,7 +195,7 @@ optionally search doc strings (based on DOCS-P), include private vars
   (interactive)
   (cider-ensure-connected)
   (cider-ensure-op-supported "apropos")
-  (cider-apropos (read-string "Search for Clojure documentation (a regular expression): ") nil t))
+  (cider-apropos-select (read-string "Search for Clojure documentation (a regular expression): ") nil t))
 
 (provide 'cider-apropos)
 

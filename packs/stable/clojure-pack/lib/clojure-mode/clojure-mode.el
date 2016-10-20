@@ -10,7 +10,7 @@
 ;;       Artur Malabarba <bruce.connor.am@gmail.com>
 ;; URL: http://github.com/clojure-emacs/clojure-mode
 ;; Keywords: languages clojure clojurescript lisp
-;; Version: 5.4.0
+;; Version: 5.5.2
 ;; Package-Requires: ((emacs "24.3"))
 
 ;; This file is not part of GNU Emacs.
@@ -78,7 +78,7 @@
   :link '(url-link :tag "Github" "https://github.com/clojure-emacs/clojure-mode")
   :link '(emacs-commentary-link :tag "Commentary" "clojure-mode"))
 
-(defconst clojure-mode-version "5.4.0"
+(defconst clojure-mode-version "5.5.2"
   "The current version of `clojure-mode'.")
 
 (defface clojure-keyword-face
@@ -205,6 +205,20 @@ Out-of-the box clojure-mode understands lein, boot and gradle."
     (define-key map (kbd "C-c C-r l") #'clojure-thread-last-all)
     (define-key map (kbd "C-c C-r C-a") #'clojure-unwind-all)
     (define-key map (kbd "C-c C-r a") #'clojure-unwind-all)
+    (define-key map (kbd "C-c C-r C-p") #'clojure-cycle-privacy)
+    (define-key map (kbd "C-c C-r p") #'clojure-cycle-privacy)
+    (define-key map (kbd "C-c C-r C-(") #'clojure-convert-collection-to-list)
+    (define-key map (kbd "C-c C-r (") #'clojure-convert-collection-to-list)
+    (define-key map (kbd "C-c C-r C-'") #'clojure-convert-collection-to-quoted-list)
+    (define-key map (kbd "C-c C-r '") #'clojure-convert-collection-to-quoted-list)
+    (define-key map (kbd "C-c C-r C-{") #'clojure-convert-collection-to-map)
+    (define-key map (kbd "C-c C-r {") #'clojure-convert-collection-to-map)
+    (define-key map (kbd "C-c C-r C-[") #'clojure-convert-collection-to-vector)
+    (define-key map (kbd "C-c C-r [") #'clojure-convert-collection-to-vector)
+    (define-key map (kbd "C-c C-r C-#") #'clojure-convert-collection-to-set)
+    (define-key map (kbd "C-c C-r #") #'clojure-convert-collection-to-set)
+    (define-key map (kbd "C-c C-r C-i") #'clojure-cycle-if)
+    (define-key map (kbd "C-c C-r i") #'clojure-cycle-if)
     (define-key map (kbd "C-c C-r n i") #'clojure-insert-ns-form)
     (define-key map (kbd "C-c C-r n h") #'clojure-insert-ns-form-at-point)
     (define-key map (kbd "C-c C-r n u") #'clojure-update-ns)
@@ -213,11 +227,19 @@ Out-of-the box clojure-mode understands lein, boot and gradle."
       '("Clojure"
         ["Toggle between string & keyword" clojure-toggle-keyword-string]
         ["Align expression" clojure-align]
+        ["Cycle privacy" clojure-cycle-privacy]
+        ["Cycle if, if-not" clojure-cycle-if]
         ("ns forms"
          ["Insert ns form at the top" clojure-insert-ns-form]
          ["Insert ns form here" clojure-insert-ns-form-at-point]
          ["Update ns form" clojure-update-ns]
          ["Sort ns form" clojure-sort-ns])
+        ("Convert collection"
+         ["Convert to list" clojure-convert-collection-to-list]
+         ["Convert to quoted list" clojure-convert-collection-to-quoted-list]
+         ["Convert to map" clojure-convert-collection-to-map]
+         ["Convert to vector" clojure-convert-collection-to-vector]
+         ["Convert to set" clojure-convert-collection-to-set])
         ("Refactor -> and ->>"
          ["Thread once more" clojure-thread]
          ["Fully thread a form with ->" clojure-thread-first-all]
@@ -232,15 +254,15 @@ Out-of-the box clojure-mode understands lein, boot and gradle."
 
 (defvar clojure-mode-syntax-table
   (let ((table (copy-syntax-table emacs-lisp-mode-syntax-table)))
-    (modify-syntax-entry ?~ "'   " table)
     (modify-syntax-entry ?\{ "(}" table)
     (modify-syntax-entry ?\} "){" table)
     (modify-syntax-entry ?\[ "(]" table)
     (modify-syntax-entry ?\] ")[" table)
+    (modify-syntax-entry ?? "_ p" table) ; ? is a prefix outside symbols
+    (modify-syntax-entry ?# "_ p" table) ; # is allowed inside keywords (#399)
+    (modify-syntax-entry ?~ "'" table)
     (modify-syntax-entry ?^ "'" table)
     (modify-syntax-entry ?@ "'" table)
-    ;; Make hash a usual word character
-    (modify-syntax-entry ?# "_ p" table)
     table)
   "Syntax table for Clojure mode.
 Inherits from `emacs-lisp-mode-syntax-table'.")
@@ -322,9 +344,7 @@ instead of to `clojure-mode-map'."
 
 (defun clojure-mode-variables ()
   "Set up initial buffer-local variables for Clojure mode."
-  (setq-local imenu-create-index-function
-              (lambda ()
-                (imenu--generic-function '((nil clojure-match-next-def 0)))))
+  (add-to-list 'imenu-generic-expression '(nil clojure-match-next-def 0))
   (setq-local indent-tabs-mode nil)
   (setq-local paragraph-ignore-fill-prefix t)
   (setq-local outline-regexp ";;;\\(;* [^ \t\n]\\)\\|(")
@@ -730,7 +750,7 @@ highlighted region)."
   (setq font-lock-defaults
         '(clojure-font-lock-keywords    ; keywords
           nil nil
-          (("+-*/.<>=!?$%_&~^:@" . "w")) ; syntax alist
+          (("+-*/.<>=!?$%_&:" . "w")) ; syntax alist
           nil
           (font-lock-mark-block-function . mark-defun)
           (font-lock-syntactic-face-function
@@ -1068,6 +1088,9 @@ Implementation function for `clojure--find-indent-spec'."
         (when (numberp method)
           (setq method (list method)))
         (pcase method
+          ((pred functionp)
+           (when (= pos 0)
+             method))
           ((pred sequencep)
            (pcase (length method)
              (`0 nil)
@@ -1080,9 +1103,6 @@ Implementation function for `clojure--find-indent-spec'."
           ((or `defun `:defn)
            (when (= pos 0)
              :defn))
-          ((pred functionp)
-           (when (= pos 0)
-             method))
           (_
            (message "Invalid indent spec for `%s': %s" function method)
            nil))))))
@@ -1257,10 +1277,11 @@ Requires the macro's NAME and a VALUE."
   "List of additional symbols with defun-style indentation in Clojure.
 
 You can use this to let Emacs indent your own macros the same way
-that it indents built-in macros like with-open.  To manually set
-it from Lisp code, use (put-clojure-indent 'some-symbol :defn)."
+that it indents built-in macros like with-open.  This variable
+only works when set via the customize interface (`setq' won't
+work).  To set it from Lisp code, use
+     (put-clojure-indent \\='some-symbol :defn)."
   :type '(repeat symbol)
-  :safe #'listp
   :set 'add-custom-clojure-indents)
 
 (define-clojure-indent
@@ -1290,9 +1311,10 @@ it from Lisp code, use (put-clojure-indent 'some-symbol :defn)."
   (as-> 2)
 
   (reify '(:defn (1)))
-  (deftype '(2 nil nil (1)))
-  (defrecord '(2 nil nil (1)))
+  (deftype '(2 nil nil (:defn)))
+  (defrecord '(2 nil nil (:defn)))
   (defprotocol '(1 (:defn)))
+  (definterface '(1 (:defn)))
   (extend 1)
   (extend-protocol '(1 :defn))
   (extend-type '(1 :defn))
@@ -1629,6 +1651,8 @@ This will skip over sexps that don't represent objects, so that ^hints and
 ;; Refactoring support
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Threading macros related
 (defcustom clojure-thread-all-but-last nil
   "Non-nil means do not thread the last expression.
 This means that `clojure-thread-first-all' and
@@ -1823,6 +1847,106 @@ When BUT-LAST is passed the last expression is not threaded."
 When BUT-LAST is passed the last expression is not threaded."
   (interactive "P")
   (clojure--thread-all "->> " but-last))
+
+;;; Cycling stuff
+
+(defcustom clojure-use-metadata-for-privacy nil
+  "If nil, `clojure-cycle-privacy' will use (defn- f []).
+If t, it will use (defn ^:private f [])."
+  :package-version '(clojure-mode . "5.5.0")
+  :safe #'booleanp
+  :type 'boolean)
+
+;;;###autoload
+(defun clojure-cycle-privacy ()
+  "Make public the current private def, or vice-versa.
+See: https://github.com/clojure-emacs/clj-refactor.el/wiki/cljr-cycle-privacy"
+  (interactive)
+  (save-excursion
+    (ignore-errors (forward-char 7))
+    (search-backward-regexp "(defn?\\(-\\| ^:private\\)?\\_>")
+    (if (match-string 1)
+        (replace-match "" nil nil nil 1)
+      (goto-char (match-end 0))
+      (insert (if (or clojure-use-metadata-for-privacy
+                      (equal (match-string 0) "(def"))
+                  " ^:private"
+                "-")))))
+
+(defun clojure--convert-collection (coll-open coll-close)
+  "Convert the collection at (point) by unwrapping it an wrapping it between COLL-OPEN and COLL-CLOSE."
+  (save-excursion
+    (while (and
+            (not (bobp))
+            (not (looking-at "(\\|{\\|\\[")))
+      (backward-char))
+    (when (or (eq ?\# (char-before))
+              (eq ?\' (char-before)))
+      (delete-char -1))
+    (when (and (bobp)
+               (not (memq (char-after) '(?\{ ?\( ?\[))))
+      (user-error "Beginning of file reached, collection is not found"))
+    (insert coll-open (substring (clojure-delete-and-extract-sexp) 1 -1) coll-close)))
+
+;;;###autoload
+(defun clojure-convert-collection-to-list ()
+  "Convert collection at (point) to list."
+  (interactive)
+  (clojure--convert-collection "(" ")"))
+
+;;;###autoload
+(defun clojure-convert-collection-to-quoted-list ()
+  "Convert collection at (point) to quoted list."
+  (interactive)
+  (clojure--convert-collection "'(" ")"))
+
+;;;###autoload
+(defun clojure-convert-collection-to-map ()
+  "Convert collection at (point) to map."
+  (interactive)
+  (clojure--convert-collection "{" "}"))
+
+;;;###autoload
+(defun clojure-convert-collection-to-vector ()
+  "Convert collection at (point) to vector."
+  (interactive)
+  (clojure--convert-collection "[" "]"))
+
+;;;###autoload
+(defun clojure-convert-collection-to-set ()
+  "Convert collection at (point) to set."
+  (interactive)
+  (clojure--convert-collection "#{" "}"))
+
+(defun clojure--goto-if ()
+  (when (in-string-p)
+    (while (or (not (looking-at "("))
+               (in-string-p))
+      (backward-char)))
+  (while (not (looking-at "\\((if \\)\\|\\((if-not \\)"))
+    (condition-case nil
+        (backward-up-list)
+      (scan-error (user-error "No if or if-not found")))))
+
+;;;###autoload
+(defun clojure-cycle-if ()
+  "Change a surrounding if to if-not, or vice-versa.
+
+See: https://github.com/clojure-emacs/clj-refactor.el/wiki/cljr-cycle-if"
+  (interactive)
+  (save-excursion
+    (clojure--goto-if)
+    (cond
+     ((looking-at "(if-not")
+      (forward-char 3)
+      (delete-char 4)
+      (forward-sexp 2)
+      (transpose-sexps 1))
+     ((looking-at "(if")
+      (forward-char 3)
+      (insert "-not")
+      (forward-sexp 2)
+      (transpose-sexps 1)))))
 
 
 ;;; ClojureScript

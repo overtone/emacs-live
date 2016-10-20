@@ -28,30 +28,15 @@
 (require 'clojure-mode)
 (require 'ert)
 
-(defmacro def-threading-test (name before after &rest body)
-  (declare (indent 3))
-  (let ((sym (intern (format "test-thread-%s" name))))
-    `(progn
-       (put ',sym 'definition-name ',name)
-       (ert-deftest ,sym ()
-         (let ((clojure-thread-all-but-last nil))
-           (with-temp-buffer
-             (insert ,before)
-             (clojure-mode)
-             ,@body
-             (should (equal ,(concat "\n" after)
-                            (concat "\n" (buffer-substring-no-properties
-                                          (point-min) (point-max)))))))))))
-
 ;; thread first
 
-(def-threading-test first-one-step
+(def-refactor-test test-thread-first-one-step
     "(-> (dissoc (assoc {} :key \"value\") :lock))"
     "(-> (assoc {} :key \"value\")
     (dissoc :lock))"
   (clojure-thread))
 
-(def-threading-test first-two-steps
+(def-refactor-test test-thread-first-two-steps
     "(-> (dissoc (assoc {} :key \"value\") :lock))"
     "(-> {}
     (assoc :key \"value\")
@@ -59,7 +44,7 @@
   (clojure-thread)
   (clojure-thread))
 
-(def-threading-test first-dont-thread-maps
+(def-refactor-test test-thread-first-dont-thread-maps
     "(-> (dissoc (assoc {} :key \"value\") :lock))"
     "(-> {}
     (assoc :key \"value\")
@@ -68,7 +53,7 @@
   (clojure-thread)
   (clojure-thread))
 
-(def-threading-test first-dont-thread-last-one
+(def-refactor-test test-thread-first-dont-thread-last-one
     "(-> (dissoc (assoc (get-a-map) :key \"value\") :lock))"
     "(-> (get-a-map)
     (assoc :key \"value\")
@@ -77,7 +62,7 @@
   (clojure-thread)
   (clojure-thread))
 
-(def-threading-test first-easy-on-whitespace
+(def-refactor-test test-thread-first-easy-on-whitespace
     "(->
  (dissoc (assoc {} :key \"value\") :lock))"
     "(->
@@ -85,7 +70,7 @@
  (dissoc :lock))"
   (clojure-thread))
 
-(def-threading-test first-remove-superfluous-parens
+(def-refactor-test test-thread-first-remove-superfluous-parens
     "(-> (square (sum [1 2 3 4 5])))"
     "(-> [1 2 3 4 5]
     sum
@@ -93,7 +78,7 @@
   (clojure-thread)
   (clojure-thread))
 
-(def-threading-test first-cursor-before-threading
+(def-refactor-test test-thread-first-cursor-before-threading
     "(-> (not (s-acc/mobile? session)))"
     "(-> (s-acc/mobile? session)
     not)"
@@ -101,7 +86,7 @@
   (clojure-thread))
 
 ;; unwind thread first
-(def-threading-test first-one-step
+(def-refactor-test test-thread-unwind-first-one-step
     "(-> {}
     (assoc :key \"value\")
     (dissoc :lock))"
@@ -109,7 +94,7 @@
     (dissoc :lock))"
   (clojure-unwind))
 
-(def-threading-test first-two-steps
+(def-refactor-test test-thread-unwind-first-two-steps
     "(-> {}
     (assoc :key \"value\")
     (dissoc :lock))"
@@ -117,7 +102,7 @@
   (clojure-unwind)
   (clojure-unwind))
 
-(def-threading-test first-jump-out-of-threading
+(def-refactor-test test-thread-first-jump-out-of-threading
     "(-> {}
     (assoc :key \"value\")
     (dissoc :lock))"
@@ -127,13 +112,13 @@
   (clojure-unwind))
 
 ;; thread last
-(def-threading-test last-one-step
+(def-refactor-test test-thread-last-one-step
     "(->> (map square (filter even? [1 2 3 4 5])))"
     "(->> (filter even? [1 2 3 4 5])
      (map square))"
   (clojure-thread))
 
-(def-threading-test last-two-steps
+(def-refactor-test test-thread-last-two-steps
     "(->> (map square (filter even? [1 2 3 4 5])))"
     "(->> [1 2 3 4 5]
      (filter even?)
@@ -141,7 +126,7 @@
   (clojure-thread)
   (clojure-thread))
 
-(def-threading-test last-dont-thread-vectors
+(def-refactor-test test-thread-last-dont-thread-vectors
     "(->> (map square (filter even? [1 2 3 4 5])))"
     "(->> [1 2 3 4 5]
      (filter even?)
@@ -150,7 +135,7 @@
   (clojure-thread)
   (clojure-thread))
 
-(def-threading-test last-dont-thread-last-one
+(def-refactor-test test-thread-last-dont-thread-last-one
     "(->> (map square (filter even? (get-a-list))))"
     "(->> (get-a-list)
      (filter even?)
@@ -160,7 +145,7 @@
   (clojure-thread))
 
 ;; unwind thread last
-(def-threading-test last-one-step
+(def-refactor-test test-thread-last-one-step
     "(->> [1 2 3 4 5]
      (filter even?)
      (map square))"
@@ -168,7 +153,7 @@
      (map square))"
   (clojure-unwind))
 
-(def-threading-test last-two-steps
+(def-refactor-test test-thread-last-two-steps
     "(->> [1 2 3 4 5]
      (filter even?)
      (map square))"
@@ -176,7 +161,7 @@
   (clojure-unwind)
   (clojure-unwind))
 
-(def-threading-test last-jump-out-of-threading
+(def-refactor-test test-thread-last-jump-out-of-threading
     "(->> [1 2 3 4 5]
      (filter even?)
      (map square))"
@@ -185,7 +170,7 @@
   (clojure-unwind)
   (clojure-unwind))
 
-(def-threading-test function-name
+(def-refactor-test test-thread-function-name
     "(->> [1 2 3 4 5]
      sum
      square)"
@@ -193,7 +178,7 @@
      square)"
   (clojure-unwind))
 
-(def-threading-test function-name-twice
+(def-refactor-test test-thread-function-name-twice
     "(-> [1 2 3 4 5]
      sum
      square)"
@@ -201,21 +186,21 @@
   (clojure-unwind)
   (clojure-unwind))
 
-(def-threading-test issue-6-1
+(def-refactor-test test-thread-issue-6-1
     "(defn plus [a b]
   (-> a (+ b)))"
     "(defn plus [a b]
   (-> (+ a b)))"
   (clojure-unwind))
 
-(def-threading-test issue-6-2
+(def-refactor-test test-thread-issue-6-2
     "(defn plus [a b]
   (->> a (+ b)))"
     "(defn plus [a b]
   (->> (+ b a)))"
   (clojure-unwind))
 
-(def-threading-test first-some
+(def-refactor-test test-thread-first-some
     "(some-> (+ (val (find {:a 1} :b)) 5))"
     "(some-> {:a 1}
         (find :b)
@@ -225,7 +210,7 @@
   (clojure-thread)
   (clojure-thread))
 
-(def-threading-test last-some
+(def-refactor-test test-thread-last-some
     "(some->> (+ 5 (val (find {:a 1} :b))))"
     "(some->> :b
          (find {:a 1})
@@ -235,7 +220,7 @@
   (clojure-thread)
   (clojure-thread))
 
-(def-threading-test last-first-some
+(def-refactor-test test-thread-last-first-some
     "(some-> {:a 1}
         (find :b)
         val
@@ -245,7 +230,7 @@
   (clojure-unwind)
   (clojure-unwind))
 
-(def-threading-test thread-last-some
+(def-refactor-test test-thread-thread-last-some
     "(some->> :b
          (find {:a 1})
          val
@@ -255,7 +240,7 @@
   (clojure-unwind)
   (clojure-unwind))
 
-(def-threading-test first-all
+(def-refactor-test test-thread-first-all
     "(->map (assoc {} :key \"value\") :lock)"
     "(-> {}
     (assoc :key \"value\")
@@ -263,14 +248,14 @@
   (beginning-of-buffer)
   (clojure-thread-first-all nil))
 
-(def-threading-test first-all-but-last
+(def-refactor-test test-thread-first-all-but-last
     "(->map (assoc {} :key \"value\") :lock)"
     "(-> (assoc {} :key \"value\")
     (->map :lock))"
   (beginning-of-buffer)
   (clojure-thread-first-all t))
 
-(def-threading-test last-all
+(def-refactor-test test-thread-last-all
     "(map square (filter even? (make-things)))"
     "(->> (make-things)
      (filter even?)
@@ -278,14 +263,14 @@
   (beginning-of-buffer)
   (clojure-thread-last-all nil))
 
-(def-threading-test last-all-but-last
+(def-refactor-test test-thread-last-all-but-last
     "(map square (filter even? (make-things)))"
     "(->> (filter even? (make-things))
      (map square))"
   (beginning-of-buffer)
   (clojure-thread-last-all t))
 
-(def-threading-test all-thread-first
+(def-refactor-test test-thread-all-thread-first
     "(-> {}
     (assoc :key \"value\")
     (dissoc :lock))"
@@ -293,7 +278,7 @@
   (beginning-of-buffer)
   (clojure-unwind-all))
 
-(def-threading-test all-thread-last
+(def-refactor-test test-thread-all-thread-last
     "(->> (make-things)
      (filter even?)
      (map square))"
@@ -301,7 +286,7 @@
   (beginning-of-buffer)
   (clojure-unwind-all))
 
-(def-threading-test last-dangling-parens
+(def-refactor-test test-thread-last-dangling-parens
     "(map inc
      (range))"
     "(->> (range)
@@ -309,7 +294,7 @@
   (beginning-of-buffer)
   (clojure-thread-last-all nil))
 
-(def-threading-test last-dangling-parens-2
+(def-refactor-test test-thread-last-dangling-parens-2
     "(deftask dev []
   (comp (serve)
         (cljs)))"
@@ -320,7 +305,7 @@
   (clojure-thread-last-all nil))
 
 ;; fix for clojure-emacs/clj-refactor.el#259
-(def-threading-test last-leaves-multiline-sexp-alone
+(def-refactor-test test-thread-last-leaves-multiline-sexp-alone
     "(->> [a b]
      (some (fn [x]
              (when x
@@ -331,7 +316,7 @@
       [a b])"
   (clojure-unwind-all))
 
-(def-threading-test last-maybe-unjoin-lines
+(def-refactor-test test-thread-last-maybe-unjoin-lines
     "(deftask dev []
   (comp (serve)
         (cljs (lala)
@@ -344,7 +329,7 @@
   (clojure-thread-last-all nil)
   (clojure-unwind-all))
 
-(def-threading-test empty-first-line
+(def-refactor-test test-thread-empty-first-line
     "(map
  inc
  [1 2])"
@@ -354,7 +339,7 @@
   (goto-char (point-min))
   (clojure-thread-first-all nil))
 
-(def-threading-test first-maybe-unjoin-lines
+(def-refactor-test test-thread-first-maybe-unjoin-lines
     "(map
  inc
  [1 2])"

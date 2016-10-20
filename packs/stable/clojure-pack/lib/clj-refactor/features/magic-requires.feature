@@ -46,6 +46,29 @@ Feature: Magic requires
     (util/get-last-sexp)
     """
 
+  Scenario: Require is inserted automagically for namespaced keyword
+    When I insert:
+    """
+    (ns cljr.core)
+
+    (::util)
+    """
+    And the cache of namespace aliases is populated
+    And I place the cursor after "util"
+    And I start an action chain
+    And I type "/"
+    And I type "refactor-nrepl.util"
+    And I press "RET"
+    And I type "some-keyword"
+    And I execute the action chain
+    Then I should see:
+    """
+    (ns cljr.core
+      (:require [refactor-nrepl.util :as util]))
+
+    (::util/some-keyword)
+    """
+
 
   Scenario: If alias exists nothing happens
     When I insert:

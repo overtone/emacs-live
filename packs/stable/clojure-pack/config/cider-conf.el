@@ -3,6 +3,8 @@
 (require 'cider)
 (require 'cider-apropos)
 (require 'cider-macroexpansion)
+(require 'cider-browse-ns)
+(require 'cider-classpath)
 
 (defun live-windows-hide-eol ()
  "Do not show ^M in files containing mixed UNIX and DOS line endings."
@@ -24,6 +26,7 @@
 (setq cider-popup-stacktraces t)
 (setq cider-popup-stacktraces-in-repl t)
 (add-to-list 'same-window-buffer-names "*cider*")
+(setq cider-overlays-use-font-lock t)
 
 ;;Auto Complete
 (live-add-pack-lib "ac-cider")
@@ -41,12 +44,13 @@
 ;; (defun live-nrepl-set-print-length ()
 ;;   (nrepl-send-string-sync "(set! *print-length* 100)" "clojure.core"))
 
-(add-hook 'nrepl-connected-hook 'live-nrepl-set-print-length)
+;; (add-hook 'nrepl-connected-hook 'live-nrepl-set-print-length)
 
 (setq nrepl-port "4555")
 
 
 ;; Pull in the awesome clj-refactor lib by magnars
+(live-add-pack-lib "jump-el")
 (live-add-pack-lib "clj-refactor")
 (require 'clj-refactor)
 (add-hook 'clojure-mode-hook (lambda ()

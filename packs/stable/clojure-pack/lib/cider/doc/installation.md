@@ -63,14 +63,19 @@ Stable by adding this to your Emacs initialization:
 ## CIDER's nREPL middleware
 
 Much of CIDER's functionality depends on the presence of CIDER's own
-[nREPL middleware][cider-nrepl]. Starting with version 0.11, When `cider-jack-in` (<kbd>C-c M-j</kbd>) is
+[nREPL middleware](https://github.com/clojure-emacs/cider-nrepl). Starting with version 0.11, When `cider-jack-in` (<kbd>C-c M-j</kbd>) is
 used, CIDER takes care of injecting it and its other dependencies.
 
-**`profiles.clj` or `profile.boot` don't need to be modified anymore for the above usecase!**
+**`profiles.clj` or `profile.boot` don't need to be modified anymore for the above use case!**
 
 If you don't want `cider-jack-in` to inject dependencies automatically, set
 `cider-inject-dependencies-at-jack-in` to `nil`. Note that you'll have to setup
 the dependencies yourself (see the section below), just as in CIDER 0.10 and older.
+
+CIDER can also inject a Clojure dependency into your project, which is useful,
+for example, if your project defaults to an older version of Clojure than that
+supported by the CIDER middleware. Set `cider-jack-in-auto-inject-clojure`
+appropriately to enable this.
 
 If a standalone REPL is preferred, you need to invoke `cider-connect` (instead
 of `cider-jack-in`) and you'll need to manually add the dependencies to your
@@ -90,7 +95,7 @@ Use the convenient plugin for defaults, either in your project's
 A minimal `profiles.clj` for CIDER would be:
 
 ```clojure
-{:repl {:plugins [[cider/cider-nrepl "0.12.0"]]}}
+{:repl {:plugins [[cider/cider-nrepl "0.14.0"]]}}
 ```
 
 **Be careful not to place this in the `:user` profile, as this way CIDER's
@@ -106,7 +111,7 @@ all of their projects using a `~/.boot/profile.boot` file like so:
 (require 'boot.repl)
 
 (swap! boot.repl/*default-dependencies*
-       concat '[[cider/cider-nrepl "0.12.0"]])
+       concat '[[cider/cider-nrepl "0.14.0"]])
 
 (swap! boot.repl/*default-middleware*
        conj 'cider.nrepl/cider-middleware)
@@ -133,6 +138,6 @@ It goes without saying that your project should depend on `cider-nrepl`.
 
 ***
 
-`x.y.z` should match the version of CIDER you're currently using (say `0.12.0`).
+`x.y.z` should match the version of CIDER you're currently using (say `0.14.0`).
 For snapshot releases of CIDER you should use the snapshot of the plugin as well
-(say `0.12.0-SNAPSHOT`).
+(say `0.14.0-SNAPSHOT`).

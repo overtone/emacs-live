@@ -1,0 +1,12 @@
+jump.el
+
+elisp utility for defining functions which contextually jump between
+files in a project (created to facilitate development of rinari and
+similar projects see http://github.com/eschulte/rinari/tree/master)
+
+inspired by
+ find-file-in-project | http://www.emacswiki.org/cgi-bin/wiki/FindFileInProject
+ toggle.el            | http://www.emacswiki.org/cgi-bin/emacs/toggle.el
+
+uses
+ findr.el | http://www.emacswiki.org/cgi-bin/wiki/FindrPackage

@@ -1,18 +1,11 @@
 # cider-eval-sexp-fu
 
-<!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc/generate-toc again -->
-**Table of Contents**
+[eval-sexp-fu][] extensions for [CIDER][].
 
-- [cider-eval-sexp-fu](#cider-eval-sexp-fu)
-    - [Install](#install)
-    - [Usage](#usage)
-    - [Customization](#customization)
+`eval-sexp-fu` provides tiny improvements to expression evaluation - e.g.
+the expression you've just evaluated would briefly flash and so on.
 
-<!-- markdown-toc end -->
-
-eval-sexp-fu.el extensions for [CIDER][].
-This package briefly highlights evaluated sexps in a clojure buffer
-connected to an nREPL via [CIDER][].
+You can see the package in action [here][eval-sexp-fu-demo].
 
 ## Install
 
@@ -39,4 +32,5 @@ Customization is done via [eval-sexp-fu][].
 
 [MELPA]: http://melpa.org/
 [eval-sexp-fu]: https://github.com/hchbaw/eval-sexp-fu.el
+[eval-sexp-fu-demo]: https://github.com/hchbaw/eval-sexp-fu.el/wiki/LongVersionOfTheDemo
 [CIDER]: https://github.com/clojure-emacs/cider

@@ -2,6 +2,29 @@
 
 ## master (unreleased)
 
+## 5.5.2 (2016-08-03)
+
+### Bugs fixed
+
+* [#399](https://github.com/clojure-emacs/clojure-mode/issues/399): Fix fontification of prefix characters inside keywords.
+
+## 5.5.1 (2016-07-25)
+
+### Bugs fixed
+
+* [#394](https://github.com/clojure-emacs/clojure-mode/issues/394): `?` character is now treated as prefix when outside symbols.
+* [#394](https://github.com/clojure-emacs/clojure-mode/issues/394): `#` character now has prefix syntax class.
+* Fixed indentation of `definterface` to match that of `defprotocol`.
+* [#389](https://github.com/clojure-emacs/clojure-mode/issues/389): Fixed the indentation of `defrecord` and `deftype` multiple airity protocol forms.
+* [#393](https://github.com/clojure-emacs/clojure-mode/issues/393): `imenu-generic-expression` is no longer hard-coded and its global value is respected.
+
+## 5.5.0 (2016-06-25)
+
+### New features
+
+* Port cycle privacy, cycle collection type and cycle if/if-not from clj-refactor.el.
+* Rework cycle collection type into convert collection to list, quoted list, map, vector, set.
+
 ## 5.4.0 (2016-05-21)
 
 ### New features

@@ -35,6 +35,7 @@
 (require 'cl-lib)
 (require 'clojure-mode)
 (require 'cider-compat)
+(require 'nrepl-dict)
 
 (defalias 'cider-pop-back 'pop-tag-mark)
 
@@ -207,14 +208,18 @@ PROP is the name of a text property."
 (defalias 'cider--font-lock-ensure
   (if (fboundp 'font-lock-ensure)
       #'font-lock-ensure
-    #'font-lock-fontify-buffer))
+    (with-no-warnings
+      (lambda (&optional _beg _end)
+        (when font-lock-mode
+          (font-lock-fontify-buffer))))))
 
 (defalias 'cider--font-lock-flush
   (if (fboundp 'font-lock-flush)
       #'font-lock-flush
     (with-no-warnings
       (lambda (&optional _beg _end)
-        (font-lock-fontify-buffer)))))
+        (when font-lock-mode
+          (font-lock-fontify-buffer))))))
 
 (defvar cider--mode-buffers nil
   "A list of buffers for different major modes.")
@@ -424,6 +429,93 @@ Any other value is just returned."
       (mapcar #'cider--deep-vector-to-list x)
     x))
 
+
+;;; Help mode
+
+;; Same as https://github.com/emacs-mirror/emacs/blob/86d083438dba60dc00e9e96414bf7e832720c05a/lisp/help-mode.el#L355
+;; the original function uses some buffer local variables, but the buffer used
+;; is not configurable. It defaults to (help-buffer)
+
+(defun cider--help-setup-xref (item interactive-p buffer)
+  "Invoked from commands using the \"*Help*\" buffer to install some xref info.
+
+ITEM is a (FUNCTION . ARGS) pair appropriate for recreating the help
+buffer after following a reference.  INTERACTIVE-P is non-nil if the
+calling command was invoked interactively.  In this case the stack of
+items for help buffer \"back\" buttons is cleared.  Use BUFFER for the
+buffer local variables.
+
+This should be called very early, before the output buffer is cleared,
+because we want to record the \"previous\" position of point so we can
+restore it properly when going back."
+  (with-current-buffer buffer
+    (when help-xref-stack-item
+      (push (cons (point) help-xref-stack-item) help-xref-stack)
+      (setq help-xref-forward-stack nil))
+    (when interactive-p
+      (let ((tail (nthcdr 10 help-xref-stack)))
+        ;; Truncate the stack.
+        (if tail (setcdr tail nil))))
+    (setq help-xref-stack-item item)))
+
+(defcustom cider-doc-xref-regexp "`\\(.*?\\)`"
+  "The regexp used to search Clojure vars in doc buffers."
+  :type 'regexp
+  :safe #'stringp
+  :group 'cider
+  :package-version '(cider . "0.13.0"))
+
+(defun cider--find-symbol-xref ()
+  "Parse and return the first clojure symbol in current-buffer.
+Use `cider-doc-xref-regexp' for the search.  Set match data and return a
+string of the Clojure symbol.  Return nil if there are no more matches in
+the buffer."
+  (when (re-search-forward cider-doc-xref-regexp nil t)
+    (match-string 1)))
+
+(declare-function cider-doc-lookup "cider-doc")
+(declare-function cider--eldoc-remove-dot "cider-eldoc")
+
+;; Similar to https://github.com/emacs-mirror/emacs/blob/65c8c7cb96c14f9c6accd03cc8851b5a3459049e/lisp/help-mode.el#L404
+(defun cider--doc-make-xrefs ()
+  "Parse and hyperlink documentation cross-references in current-buffer.
+Find cross-reference information in a buffer and activate such cross
+references for selection with `help-xref'.  Cross-references are parsed
+using `cider--find-symbol-xref'.
+
+Special references `back' and `forward' are made to go back and forth
+through a stack of help buffers.  Variables `help-back-label' and
+`help-forward-label' specify the text for that."
+  (interactive "b")
+
+  ;; parse the docstring and create xrefs for symbols
+  (save-excursion
+    (goto-char (point-min))
+    (let ((symbol))
+      (while (setq symbol (cider--find-symbol-xref))
+        (replace-match "")
+        (insert-text-button symbol
+                            'type 'help-xref
+                            'help-function (apply-partially #'cider-doc-lookup
+                                                            (cider--eldoc-remove-dot symbol))))))
+
+  ;; create back and forward buttons if appropiate
+  (insert "\n")
+  (when (or help-xref-stack help-xref-forward-stack)
+    (insert "\n"))
+  ;; Make a back-reference in this buffer if appropriate.
+  (when help-xref-stack
+    (help-insert-xref-button help-back-label 'help-back
+                             (current-buffer)))
+  ;; Make a forward-reference in this buffer if appropriate.
+  (when help-xref-forward-stack
+    (when help-xref-stack
+      (insert "\t"))
+    (help-insert-xref-button help-forward-label 'help-forward
+                             (current-buffer)))
+  (when (or help-xref-stack help-xref-forward-stack)
+    (insert "\n")))
+
 
 ;;; Words of inspiration
 (defun cider-user-first-name ()
@@ -466,6 +558,8 @@ Any other value is just returned."
     "Learn the rules like a pro, so you can break them like an artist. -Pablo Picasso"
     "The only way of discovering the limits of the possible is to venture a little way past them into the impossible. -Arthur C. Clarke"
     "Don't wish it were easier. Wish you were better. -Jim Rohn"
+    "One chord is fine. Two chords is pushing it. Three chords and you're into jazz. -Lou Reed"
+    "We are all apprentices in a craft where no one ever becomes a master. -Ernest Hemingway"
     "Clojure isn't a language, it's a building material."
     "Think big!"
     "Think bold!"
@@ -499,6 +593,7 @@ Any other value is just returned."
     "Write you some Clojure for Great Good!"
     "Oh, what a day... what a lovely day!"
     "What a day! What cannot be accomplished on such a splendid day!"
+    "Home is where your REPL is."
     ,(format "%s, I've a feeling we're not in Kansas anymore."
              (cider-user-first-name))
     ,(format "%s, this could be the start of a beautiful program."
@@ -549,7 +644,9 @@ Any other value is just returned."
     "Enable `cider-enlighten-mode' to display the locals of a function when it's executed."
     "Use <\\[cider-close-ancillary-buffers]> to close all ancillary buffers created by CIDER (e.g. *cider-doc*)."
     "Exploring CIDER's menu-bar entries is a great way to discover features."
-    "Keep in mind that some commands don't have a keybinding by default. Explore CIDER!")
+    "Keep in mind that some commands don't have a keybinding by default. Explore CIDER!"
+    "Tweak `cider-repl-prompt-function' to customize your REPL prompt."
+    "Tweak `cider-eldoc-ns-function' to customize the way namespaces are displayed by eldoc.")
   "Some handy CIDER tips."
   )
 
@@ -565,13 +662,18 @@ Any other value is just returned."
 (defun cider-column-number-at-pos (pos)
   "Analog to `line-number-at-pos'.
 Return buffer column number at position POS."
-  (save-excursion (goto-char pos) (current-column)))
+  (save-excursion
+    (goto-char pos)
+    ;; we have to adjust the column number by 1 to account for the fact
+    ;; that Emacs starts counting columns from 0 and Clojure from 1
+    (1+ (current-column))))
 
 (defun cider-propertize (text kind)
   "Propertize TEXT as KIND.
-KIND can be the symbols `ns', `var', `emph', or a face name."
+KIND can be the symbols `ns', `var', `emph', `fn', or a face name."
   (propertize text 'face (pcase kind
-                           (`var 'font-lock-function-name-face)
+                           (`fn 'font-lock-function-name-face)
+                           (`var 'font-lock-variable-name-face)
                            (`ns 'font-lock-type-face)
                            (`emph 'font-lock-keyword-face)
                            (face face))))

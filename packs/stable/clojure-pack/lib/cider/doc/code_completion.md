@@ -50,14 +50,18 @@ you can add this to your config:
 `company-indent-or-complete-common` is available only in `company-mode` 0.9+ (at
 the time of this writing it's still in development).
 
-### Migrating from `auto-complete-mode`
+### Fuzzy candidate matching
 
-In case you have some `auto-complete-mode` configuration lying around and you
-want to switch to `company-mode` there are a few steps you have to take:
+By default `company-mode` will provide completion candidates with the assumption
+that whatever you've typed so far (e.g. `map-`) is a completion prefix (meaning
+you'd get only candidates that have `map-` in the beginnings of their names).
 
-* Disable `ac-cider-setup` or `ac-nrepl-setup` from running on CIDER hooks
+You can get enhanced fuzzy completion with `company-mode` if you install the
+additional package [company-flx](https://github.com/PythonNut/company-flx).
+This is powered internally by [flx](https://github.com/lewang/flx).
 
-* Remove `cider-mode` and `cider-repl-mode` from the `ac-modes` list
+Basically with `company-flx` enabled typing something like `mp` will show you
+`map-indexed` as one of the possible completion candidates.
 
 ### Completion annotations
 
@@ -72,3 +76,12 @@ Completion annotations can be disabled by setting
 `cider-annotate-completion-candidates` to `nil`.
 
 ![Completion Annotations](images/completion-annotations.png)
+
+### Migrating from `auto-complete-mode`
+
+In case you have some `auto-complete-mode` configuration lying around and you
+want to switch to `company-mode` there are a few steps you have to take:
+
+* Disable `ac-cider-setup` or `ac-nrepl-setup` from running on CIDER hooks
+
+* Remove `cider-mode` and `cider-repl-mode` from the `ac-modes` list

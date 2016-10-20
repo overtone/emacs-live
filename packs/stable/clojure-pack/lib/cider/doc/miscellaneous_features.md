@@ -7,8 +7,12 @@ something.
 
 You can evaluate Clojure code in the minibuffer from pretty much everywhere by
 using <kbd>M-x</kbd> `cider-read-and-eval` (bound in `cider-mode` buffers to
-<kbd>C-c C-:</kbd>).  <kbd>TAB</kbd> completion will work in the minibuffer,
+<kbd>C-c M-:</kbd>).  <kbd>TAB</kbd> completion will work in the minibuffer,
 just as in a REPL/source buffer.
+
+Pressing <kbd>C-c C-v .</kbd> in a Clojure buffer will insert the defun 
+at point into the minibuffer for evaluation. This way you can pass arguments 
+to the function and evaluate it and see the result in the minibuffer.
 
 You can also enable `eldoc-mode` in the minibuffer by adding the following to your
 config:
@@ -39,12 +43,12 @@ result in a new buffer, showing the macroexpansion of the form in
 question. You'll have access to additional keybindings in the macroexpansion
 buffer (which is internally using `cider-macroexpansion-mode`):
 
-Keyboard shortcut               | Description
---------------------------------|-------------------------------
-<kbd>C-c C-m</kbd>              | Invoke `macroexpand-1` on the form at point and replace the original form with its expansion.  If invoked with a prefix argument, `macroexpand` is used instead of `macroexpand-1`.
-<kbd>C-c M-m</kbd>              | Invoke `clojure.walk/macroexpand-all` on the form at point and replace the original form with its expansion.
-<kbd>g</kbd>                    | The prior macroexpansion is performed again and the current contents of the macroexpansion buffer are replaced with the new expansion.
-<kbd>C-/</kbd> <br/> <kbd>C-x u</kbd> | Undo the last inplace expansion performed in the macroexpansion buffer.
+Keyboard shortcut                 | Description
+----------------------------------|-------------------------------
+<kbd>m</kbd>                      | Invoke `macroexpand-1` on the form at point and replace the original form with its expansion.  If invoked with a prefix argument, `macroexpand` is used instead of `macroexpand-1`.
+<kbd>a</kbd>                      | Invoke `clojure.walk/macroexpand-all` on the form at point and replace the original form with its expansion.
+<kbd>g</kbd>                      | The prior macroexpansion is performed again and the current contents of the macroexpansion buffer are replaced with the new expansion.
+<kbd>C-/</kbd> <br/> <kbd>u</kbd> | Undo the last inplace expansion performed in the macroexpansion buffer.
 
 ## Value inspection
 
@@ -81,8 +85,8 @@ That's it! Once your code executes, the regular old buffer on the left will turn
 into the brilliant show of lights on the right.
 
 <p align="center">
-  <img src="images/enlighten_off.png" />
-  <img src="images/enlighten_on.png" />
+  <img src="../images/enlighten_disabled.png" width="300" />
+  <img src="../images/enlighten_enabled.png" width="300" />
 </p>
 
 To stop displaying the locals you'll have to disable `cider-enlighten-mode`
@@ -184,4 +188,33 @@ Keyboard shortcut               | Description
 <kbd>s</kbd>                    | Go to definition for item at point.
 <kbd>^</kbd>                    | Browse all namespaces.
 <kbd>n</kbd>                    | Go to next line.
-<kbd>p</kbd>                    | Go to previos line.
+<kbd>p</kbd>                    | Go to previous line.
+
+## Documentation buffers include "See Also" references
+
+You can add references to other vars by including their names in `` ` `` in the docstring.
+If the var is in another namespace, then you'll have to include the full
+namespace qualified name in the docstring. If you want to use some other delimiter instead
+of the backticks, you'll have to update the value of `cider-doc-xref-regexp` to match that.
+The first group of the regexp should always match the var name.
+
+As an example, if you want to want to use the delimiter style used by
+[Codox](https://github.com/weavejester/codox) (`[[...]]`)  the regexp would be;
+
+```
+(setq cider-doc-xref-regexp "\\[\\[\\(.*?\\)\\]\\]")
+```
+
+![CIDER See Also](images/cider_see_also.gif)
+
+Example function with a docstring containing references:
+
+```
+(defn test-fn
+  "Test function.
+  Also see: `clojure.core/map`, `clojure.core/reduce`, `defn`.
+  You can reference variables like `thor`, `kubaru.data.zookeeper/yoda`.
+  Also works with references to java interop forms, `java.lang.String/.length`."
+  []
+  (+ 1 1))
+```
