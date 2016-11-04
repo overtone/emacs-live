@@ -15,6 +15,9 @@
 ;; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301
 ;; USA
 
-(provide 'sclang-document)
+;; (sclang-set-command-handler
+;;  '_updateMenu
+;;  (lambda (arg)
+;;    (message "menu: %s" arg)))
 
-;; EOF
+(provide 'sclang-menu)
