@@ -1,0 +1,104 @@
+#!/bin/bash
+#
+# Compiles the submodules that require it.
+#
+# At the moment this has been very quickly (manually) probed by considering and
+# checking all the submodules that have either Makefile or a CMakeLists.txt
+
+usage() { echo -e "Compile the submodules in the Emacs Live packs.\n\nUsage: $0 [--clean]\n" 1>&2; exit 1; }
+pause() { read -n1 -r -p "Press any key to continue..." key; }
+
+if [[ "$1" == "-h" || "$1" == "--help" || $# -gt 1 ]] ; then
+    usage;
+fi
+
+MAKE=$(which make)
+CMAKE=$(which cmake)
+
+PACKS_DIR="$HOME/.emacs.d/packs"
+
+MAKEABLE_DIRS=(
+    "$PACKS_DIR/dev/git-pack/vendor/submodules/with-editor"
+    "$PACKS_DIR/dev/git-pack/vendor/submodules/git-modes"
+    "$PACKS_DIR/dev/git-pack/vendor/submodules/magit"
+    "$PACKS_DIR/dev/org-pack/vendor/submodules/org-mode"
+    "$PACKS_DIR/dev/lang-pack/vendor/submodules/js2"
+    "$PACKS_DIR/dev/lang-pack/vendor/submodules/yaml-mode"
+    "$PACKS_DIR/dev/lang-pack/vendor/submodules/haskell"
+    "$PACKS_DIR/dev/clojure-pack/vendor/submodules/hydra"
+    "$PACKS_DIR/dev/clojure-pack/vendor/submodules/clojure-mode"
+    "$PACKS_DIR/dev/clojure-pack/vendor/submodules/auto-complete"
+    "$PACKS_DIR/dev/clojure-pack/vendor/submodules/cider"
+    "$PACKS_DIR/dev/power-pack/vendor/submodules/marshal"
+    "$PACKS_DIR/dev/foundation-pack/vendor/submodules/hydra"
+    "$PACKS_DIR/dev/foundation-pack/vendor/submodules/epl"
+    "$PACKS_DIR/dev/foundation-pack/vendor/submodules/pkg-info"
+    "$PACKS_DIR/dev/foundation-pack/vendor/submodules/auto-compile"
+    "$PACKS_DIR/dev/foundation-pack/vendor/submodules/popwin"
+    "$PACKS_DIR/dev/foundation-pack/vendor/submodules/flx"
+)
+
+CMAKEABLE_DIRS=(
+    "$PACKS_DIR/dev/lang-pack/vendor/checkouts/scel-git-0425a8d"
+)
+
+# $PACKS_DIR/dev/clojure-pack/vendor/submodules/popup-el # only tests and elpa
+# $PACKS_DIR/dev/clojure-pack/vendor/submodules/edn # only tests and elpa
+# $PACKS_DIR/dev/colour-pack/vendor/checkouts/color-theme-6.6.0 # themes/color-theme-library.el:31:13:Error: Cannot open load file: no such file or directory, color-theme
+# $PACKS_DIR/dev/power-pack/vendor/submodules/emacs-git-gutter # only tests and elpa
+# $PACKS_DIR/dev/power-pack/vendor/submodules/gh # the config.mk trick does not work, maybe PR to the project?
+# $PACKS_DIR/dev/power-pack/vendor/submodules/ht # only tests and elpa
+# $PACKS_DIR/dev/power-pack/vendor/submodules/scratch # only tests and elpa
+
+function compile {
+    # Magit needs these, see here:
+    # https://magit.vc/manual/magit/Installing-from-the-Git-repository.html#Installing-from-the-Git-repository
+    echo -e "LOAD_PATH = -L $PACKS_DIR/dev/git-pack/vendor/submodules/magit/lisp\nLOAD_PATH += -L $PACKS_DIR/dev/foundation-pack/vendor/submodules/dash\nLOAD_PATH += -L $PACKS_DIR/dev/git-pack/vendor/submodules/with-editor" > "$PACKS_DIR/dev/git-pack/vendor/submodules/magit/config.mk"
+    # We extend this to git-modes
+    echo -e "LOAD_PATH = -L $PACKS_DIR/dev/foundation-pack/vendor/submodules/dash" > "$PACKS_DIR/dev/git-pack/vendor/submodules/git-modes/config.mk"
+
+    # For auto-compile
+    LOADPATH="-L $PACKS_DIR/dev/foundation-pack/vendor/submodules/dash"
+    LOADPATH+="-L $PACKS_DIR/dev/foundation-pack/vendor/submodules/packed"
+
+    for dir in ${MAKEABLE_DIRS[@]}; do
+        $MAKE -C $dir
+    done
+
+    for dir in ${CMAKEABLE_DIRS[@]}; do
+        pwd=$(pwd)
+        cd $dir
+        $CMAKE .
+        $MAKE
+        cd $pwd
+    done
+    unset LOADPATH
+}
+
+function clean {
+    rm -fv	$PACKS_DIR/dev/git-pack/vendor/submodules/magit/config.mk
+    rm -fv $PACKS_DIR/dev/git-pack/vendor/submodules/git-modes/config.mk
+    for dir in ${MAKEABLE_DIRS[@]}; do
+        $MAKE -C $dir clean
+    done
+
+    # Better clean for cmake?
+    for dir in ${CMAKEABLE_DIRS[@]}; do
+        pwd=$(pwd)
+        cd $dir
+        rm -vf Makefile cmake_install.cmake CMakeCache.txt
+        rm -Rvf CMakeFiles
+        rm -vf *.elc
+        cd $pwd
+    done
+}
+
+if [[ $# -eq 0 ]] ; then
+    compile
+else
+    if [[ "$1" == "--clean" ]] ; then
+        clean
+    else
+        usage
+    fi
+fi
