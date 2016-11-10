@@ -16,21 +16,22 @@
       (while (ignore-errors (paredit-backward-up) t))
     (paredit-backward)))
 
-(defun live-paredit-forward ()
+(defun live-paredit-forward (&optional arg)
   "Feels more natural to move to the beginning of the next item
    in the sexp, not the end of the current one."
-  (interactive)
-  (if (and (not (paredit-in-string-p))
-           (save-excursion
-             (ignore-errors
-               (forward-sexp)
-               (forward-sexp)
-               t)))
-      (progn
-        (forward-sexp)
-        (forward-sexp)
-        (backward-sexp))
-    (paredit-forward)))
+  (interactive "P")
+  (let ((n (or arg 1)))
+    (if (and (not (paredit-in-string-p))
+             (save-excursion
+               (ignore-errors
+                 (forward-sexp)
+                 (forward-sexp)
+                 t)))
+        (dotimes (i n) (progn (forward-sexp)
+                              (forward-sexp)
+                              (backward-sexp)))
+
+      (paredit-forward arg))))
 
 (defun live-paredit-forward-slurp-sexp-neatly (&optional arg)
   (interactive "P")
@@ -93,7 +94,7 @@
       (backward-char)
       (live-paredit-delete-horizontal-space))))
 
-(defun live-paredit-reindent-defun (&optional argument)
+(defun live-paredit-reindent-defun (&optional arg)
   "Reindent the definition that the point is on. If the point is
   in a string or a comment, fill the paragraph instead, and with
   a prefix argument, justify as well. Doesn't mess about with
@@ -101,12 +102,12 @@
 
   Also tidies up trailing parens when in a lisp form"
   (interactive "P")
-  (cond ((paredit-in-comment-p) (fill-paragraph argument))
+  (cond ((paredit-in-comment-p) (fill-paragraph arg))
         ((paredit-in-string-p) (progn
                                  (save-excursion
                                    (paredit-forward-up)
                                    (insert "\n"))
-                                 (fill-paragraph argument)
+                                 (fill-paragraph arg)
                                  (save-excursion
                                    (paredit-forward-up)
                                    (delete-char 1))))
@@ -118,14 +119,14 @@
                     (live-paredit-tidy-trailing-parens))))))
 
 
-(defun live-paredit-forward-down ()
+(defun live-paredit-forward-down (&optional arg)
   "Doesn't freeze Emacs if attempted to be called at end of
    buffer. Otherwise similar to paredit-forward-down."
-  (interactive)
+  (interactive "P")
   (if (save-excursion
-          (forward-comment (buffer-size))
-          (not (live-end-of-buffer-p)))
-      (paredit-forward-down)
+        (forward-comment (buffer-size))
+        (not (live-end-of-buffer-p)))
+      (paredit-forward-down arg)
     (error "unexpected end of buffer")))
 
 (defun live-paredit-top-level-p ()
