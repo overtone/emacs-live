@@ -51,9 +51,6 @@
 
 ;; (add-hook 'nrepl-connected-hook 'live-nrepl-set-print-length)
 
-(setq nrepl-port "4555")
-
-
 ;; Pull in the awesome clj-refactor lib by magnars
 (live-add-pack-lib "jump-el")
 (live-add-pack-lib "hydra")
