@@ -42,8 +42,8 @@ rm -rf $tmp_dir
 mkdir $tmp_dir
 
 # Download intro and outro text
-$HTTP_CLIENT $tmp_dir/intro.txt https://raw.github.com/overtone/emacs-live/master/installer/intro.txt
-$HTTP_CLIENT $tmp_dir/outro.txt https://raw.github.com/overtone/emacs-live/master/installer/outro.txt
+$HTTP_CLIENT $tmp_dir/intro.txt https://raw.github.com/arichiardi/emacs-live/master/installer/intro.txt
+$HTTP_CLIENT $tmp_dir/outro.txt https://raw.github.com/arichiardi/emacs-live/master/installer/outro.txt
 
 # Print outro and ask for user confirmation to continue
 echo ""
@@ -59,7 +59,7 @@ function download_tarball {
      echo ""
      echo $(tput setaf 2)"--> Downloading Emacs Live..."$(tput sgr0)
      echo ""
-     $HTTP_CLIENT $tmp_dir/live.zip https://github.com/overtone/emacs-live/zipball/master
+     $HTTP_CLIENT $tmp_dir/live.zip https://github.com/arichiardi/emacs-live/zipball/master
 
      # Unzip zipball
      unzip $tmp_dir/live.zip -d $tmp_dir/
@@ -69,7 +69,7 @@ function git_clone {
      echo ""
      echo $(tput setaf 2)"--> Cloning Emacs Live..."$(tput sgr0)
      echo ""
-    git clone https://github.com/overtone/emacs-live.git $tmp_dir/overtone-emacs-live
+    git clone https://github.com/arichiardi/emacs-live.git $tmp_dir/emacs-live
 }
 
 if [[ $REPLY =~ ^[Yy]$ ]]; then
@@ -154,7 +154,7 @@ To revert back to your old Emacs configs simply:
     fi
 
     mkdir ~/.emacs.d
-    cp -R $tmp_dir/overtone-emacs-live/. ~/.emacs.d
+    cp -R $tmp_dir/emacs-live/. ~/.emacs.d
     echo $(tput setaf 4)"Personal Pack"
     echo "-------------"$(tput sgr0)
     echo ""
