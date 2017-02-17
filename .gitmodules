@@ -187,3 +187,9 @@
 [submodule "packs/dev/git-pack/vendor/submodules/with-editor"]
 	path = packs/dev/git-pack/vendor/submodules/with-editor
 	url = git@github.com:magit/with-editor.git
+[submodule "packs/dev/colour-pack/vendor/zenburn-pack"]
+	path = packs/dev/colour-pack/vendor/zenburn-pack
+	url = git@github.com:siancu/zenburn-pack.git
+[submodule "packs/dev/colour-pack/vendor/submodules/zenburn-emacs"]
+	path = packs/dev/colour-pack/vendor/submodules/zenburn-emacs
+	url = git@github.com:bbatsov/zenburn-emacs.git

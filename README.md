@@ -154,10 +154,10 @@ functions and switching buffers.
 
 #### Colour
 
-Colour highlighting in two flavours - cyberpunk and gandalf. Use
-`color-theme-cyberpunk` and `color-theme-gandalf` to switch between the
-two themes. Currently cyberpunk has seen more love - patch requests
-accepted for appropriate improvements to Gandalf.
+Colour highlighting includes cyberpunkd and gandalf Sam Aaron approved themes
+plus zenburn-emacs. Use `color-theme-YOURCHOICE` to switch between
+them. Currently cyberpunk has seen more love - patch requests accepted for
+appropriate improvements to Gandalf.
 
 #### Clojure
 
