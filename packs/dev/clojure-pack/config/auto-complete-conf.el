@@ -15,7 +15,6 @@
 (add-to-list 'ac-dictionary-directories (concat (live-pack-lib-dir) "auto-complete/dict"))
 (setq ac-comphist-file (concat live-tmp-dir "ac-comphist.dat"))
 
-(global-auto-complete-mode t)
 (setq ac-auto-show-menu t)
 (setq ac-dwim t)
 (setq ac-use-menu-map t)
@@ -32,13 +31,6 @@
                ac-source-words-in-same-mode-buffers
                ac-source-semantic
                ac-source-yasnippet))
-
-(dolist (mode '(magit-log-edit-mode log-edit-mode org-mode text-mode haml-mode
-                sass-mode yaml-mode csv-mode espresso-mode haskell-mode
-                html-mode nxml-mode sh-mode smarty-mode clojure-mode
-                lisp-mode textile-mode markdown-mode tuareg-mode))
-  (add-to-list 'ac-modes mode))
-
 
 ;;;;Key triggers
 (define-key ac-completing-map (kbd "C-M-n") 'ac-next)
