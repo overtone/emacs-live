@@ -22,6 +22,9 @@ session*
 tramp
 \#*
 tmp/*
-.smex-items
+smex-items
 swank/*
 stable/
+ido.last
+.cask/*
+etc/*
