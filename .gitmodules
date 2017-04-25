@@ -81,9 +81,6 @@
 [submodule "packs/dev/power-pack/vendor/submodules/ace-jump-mode"]
         path = packs/dev/power-pack/vendor/submodules/ace-jump-mode
         url = git://github.com/winterTTr/ace-jump-mode.git
-[submodule "packs/dev/foundation-pack/vendor/submodules/auto-compile"]
-        path = packs/dev/foundation-pack/vendor/submodules/auto-compile
-        url = git://github.com/tarsius/auto-compile.git
 [submodule "packs/dev/foundation-pack/vendor/submodules/packed"]
         path = packs/dev/foundation-pack/vendor/submodules/packed
         url = git://github.com/tarsius/packed.git
@@ -129,9 +126,6 @@
 [submodule "packs/dev/clojure-pack/vendor/submodules/eval-sexp-fu"]
 	path = packs/dev/clojure-pack/vendor/submodules/eval-sexp-fu
 	url = git://github.com/hchbaw/eval-sexp-fu.el.git
-[submodule "packs/dev/clojure-pack/vendor/submodules/auto-complete"]
-	path = packs/dev/clojure-pack/vendor/submodules/auto-complete
-	url = git://github.com/auto-complete/auto-complete.git
 [submodule "packs/dev/clojure-pack/vendor/submodules/clj-refactor"]
 	path = packs/dev/clojure-pack/vendor/submodules/clj-refactor
 	url = git://github.com/magnars/clj-refactor.el.git
@@ -141,9 +135,6 @@
 [submodule "packs/dev/foundation-pack/vendor/submodules/find-file-in-project"]
 	path = packs/dev/foundation-pack/vendor/submodules/find-file-in-project
 	url = https://github.com/technomancy/find-file-in-project
-[submodule "packs/dev/clojure-pack/vendor/submodules/ac-cider"]
-	path = packs/dev/clojure-pack/vendor/submodules/ac-cider
-	url = git://github.com/clojure-emacs/ac-cider.git
 [submodule "packs/dev/clojure-pack/vendor/submodules/edn"]
 	path = packs/dev/clojure-pack/vendor/submodules/edn
 	url = git://github.com/expez/edn.el.git
@@ -189,3 +180,24 @@
 [submodule "packs/dev/colour-pack/vendor/submodules/zenburn-emacs"]
 	path = packs/dev/colour-pack/vendor/submodules/zenburn-emacs
 	url = git@github.com:bbatsov/zenburn-emacs.git
+[submodule "packs/dev/power-pack/vendor/submodules/json-reformat"]
+	path = packs/dev/power-pack/vendor/submodules/json-reformat
+	url = https://github.com/gongo/json-reformat
+[submodule "packs/dev/power-pack/vendor/submodules/json-mode"]
+	path = packs/dev/power-pack/vendor/submodules/json-mode
+	url = https://github.com/joshwnj/json-mode
+[submodule "json-snatcher"]
+	path = json-snatcher
+	url = https://github.com/Sterlingg/json-snatcher
+[submodule "packs/dev/power-pack/vendor/submodules/json-snatcher"]
+	path = packs/dev/power-pack/vendor/submodules/json-snatcher
+	url = https://github.com/Sterlingg/json-snatcher
+[submodule "packs/dev/foundation-pack/vendor/submodules/company-mode"]
+	path = packs/dev/foundation-pack/vendor/submodules/company-mode
+	url = https://github.com/company-mode/company-mode.git
+[submodule "packs/dev/foundation-pack/vendor/submodules/company-quickhelp"]
+	path = packs/dev/foundation-pack/vendor/submodules/company-quickhelp
+	url = https://github.com/expez/company-quickhelp.git
+[submodule "packs/dev/foundation-pack/vendor/submodules/pos-tip"]
+	path = packs/dev/foundation-pack/vendor/submodules/pos-tip
+	url = https://github.com/pitkali/pos-tip.git

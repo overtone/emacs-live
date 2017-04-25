@@ -29,16 +29,6 @@
 (add-to-list 'same-window-buffer-names "*cider*")
 (setq cider-overlays-use-font-lock t)
 
-;;Auto Complete
-(live-add-pack-lib "ac-cider")
-(require 'ac-cider )
-
-(add-hook 'cider-mode-hook 'ac-cider-setup)
-(add-hook 'cider-repl-mode-hook 'ac-cider-setup)
-
-(eval-after-load "auto-complete"
-  '(add-to-list 'ac-modes 'cider-mode))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; AR - see https://github.com/overtone/emacs-live/issues/219 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

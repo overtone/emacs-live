@@ -38,6 +38,7 @@
 (live-load-config-file "win-switch-conf.el")
 (live-load-config-file "zone-conf.el")
 (live-load-config-file "monkey-patch.el")
+(live-load-config-file "completion-conf.el")
 (live-load-config-file "ediff-conf.el")
 (live-load-config-file "live.el")
 
