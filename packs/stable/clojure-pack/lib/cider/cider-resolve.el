@@ -1,6 +1,6 @@
 ;;; cider-resolve.el --- Resolve clojure symbols according to current nREPL connection
 
-;; Copyright © 2015-2016 Bozhidar Batsov, Artur Malabarba and CIDER contributors
+;; Copyright © 2015-2018 Bozhidar Batsov, Artur Malabarba and CIDER contributors
 
 ;; Author: Artur Malabarba <bruce.connor.am@gmail.com>
 
@@ -72,8 +72,8 @@
 
 (defun cider-resolve--get-in (&rest keys)
   "Return (nrepl-dict-get-in cider-repl-ns-cache KEYS)."
-  (when cider-connections
-    (with-current-buffer (cider-current-connection)
+  (when-let* ((conn (cider-current-repl)))
+    (with-current-buffer conn
       (nrepl-dict-get-in cider-repl-ns-cache keys))))
 
 (defun cider-resolve-alias (ns alias)
@@ -95,7 +95,7 @@ Return nil only if VAR cannot be resolved."
      (cider-resolve--get-in (or var-ns ns) "interns" name)
      (unless var-ns
        ;; If the var had no prefix, it might be referred.
-       (if-let ((referal (cider-resolve--get-in ns "refers" name)))
+       (if-let* ((referal (cider-resolve--get-in ns "refers" name)))
            (cider-resolve-var ns referal)
          ;; Or it might be from core.
          (unless (equal ns "clojure.core")
@@ -103,9 +103,10 @@ Return nil only if VAR cannot be resolved."
 
 (defun cider-resolve-core-ns ()
   "Return a dict of the core namespace for current connection.
-This will be clojure.core or cljs.core depending on `cider-repl-type'."
-  (when (cider-connected-p)
-    (with-current-buffer (cider-current-connection)
+This will be clojure.core or cljs.core depending on the return value of the
+function `cider-repl-type'."
+  (when-let* ((repl (cider-current-repl)))
+    (with-current-buffer repl
       (cider-resolve--get-in (if (equal cider-repl-type "cljs")
                                  "cljs.core"
                                "clojure.core")))))
@@ -114,9 +115,9 @@ This will be clojure.core or cljs.core depending on `cider-repl-type'."
   "Return a plist of all valid symbols in NS.
 Each entry's value is the metadata of the var that the symbol refers to.
 NS can be the namespace name, or a dict of the namespace itself."
-  (when-let ((dict (if (stringp ns)
-                       (cider-resolve--get-in ns)
-                     ns)))
+  (when-let* ((dict (if (stringp ns)
+                        (cider-resolve--get-in ns)
+                      ns)))
     (nrepl-dbind-response dict (interns refers aliases)
       (append (cdr interns)
               (nrepl-dict-flat-map (lambda (alias namespace)

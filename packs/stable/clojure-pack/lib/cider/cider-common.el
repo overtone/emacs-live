@@ -1,6 +1,6 @@
 ;;; cider-common.el --- Common use functions         -*- lexical-binding: t; -*-
 
-;; Copyright © 2015-2016  Artur Malabarba
+;; Copyright © 2015-2018  Artur Malabarba
 
 ;; Author: Artur Malabarba <bruce.connor.am@gmail.com>
 
@@ -24,9 +24,11 @@
 
 ;;; Code:
 
+(require 'subr-x)
 (require 'cider-compat)
 (require 'nrepl-dict)
 (require 'cider-util)
+(require 'etags) ; for find-tags-marker-ring
 (require 'tramp)
 
 (defcustom cider-prompt-for-symbol t
@@ -41,6 +43,13 @@ prompt if that throws an error."
                  (const :tag "dwim" nil))
   :group 'cider
   :package-version '(cider . "0.9.0"))
+
+(defcustom cider-special-mode-truncate-lines t
+  "If non-nil, contents of CIDER's special buffers will be line-truncated.
+Should be set before loading CIDER."
+  :type 'boolean
+  :group 'cider
+  :package-version '(cider . "0.15.0"))
 
 (defun cider--should-prompt-for-symbol (&optional invert)
   "Return the value of the variable `cider-prompt-for-symbol'.
@@ -62,7 +71,45 @@ INVERT is used to invert the semantics of the function `cider--should-prompt-for
   (when kw
     (replace-regexp-in-string "\\`:+" "" kw)))
 
-(declare-function cider-read-from-minibuffer "cider-interaction")
+;;; Minibuffer
+(defvar cider-minibuffer-history '()
+  "History list of expressions read from the minibuffer.")
+
+(defvar cider-minibuffer-map
+  (let ((map (make-sparse-keymap)))
+    (set-keymap-parent map minibuffer-local-map)
+    (define-key map (kbd "TAB") #'complete-symbol)
+    (define-key map (kbd "M-TAB") #'complete-symbol)
+    map)
+  "Minibuffer keymap used for reading Clojure expressions.")
+
+(declare-function cider-complete-at-point "cider-completion")
+(declare-function cider-eldoc "cider-eldoc")
+(defun cider-read-from-minibuffer (prompt &optional value)
+  "Read a string from the minibuffer, prompting with PROMPT.
+If VALUE is non-nil, it is inserted into the minibuffer as initial-input.
+PROMPT need not end with \": \". If it doesn't, VALUE is displayed on the
+prompt as a default value (used if the user doesn't type anything) and is
+not used as initial input (input is left empty)."
+  (minibuffer-with-setup-hook
+      (lambda ()
+        (set-syntax-table clojure-mode-syntax-table)
+        (add-hook 'completion-at-point-functions
+                  #'cider-complete-at-point nil t)
+        (setq-local eldoc-documentation-function #'cider-eldoc)
+        (run-hooks 'eval-expression-minibuffer-setup-hook))
+    (let* ((has-colon (string-match ": \\'" prompt))
+           (input (read-from-minibuffer (cond
+                                         (has-colon prompt)
+                                         (value (format "%s (default %s): " prompt value))
+                                         (t (format "%s: " prompt)))
+                                        (when has-colon value) ; initial-input
+                                        cider-minibuffer-map nil
+                                        'cider-minibuffer-history
+                                        (unless has-colon value)))) ; default-value
+      (if (and (equal input "") value (not has-colon))
+          value
+        input))))
 
 (defun cider-read-symbol-name (prompt callback)
   "Read a symbol name using PROMPT with a default of the one at point.
@@ -78,7 +125,53 @@ On failure, read a symbol name using PROMPT and call CALLBACK with that."
   (condition-case nil (funcall callback (cider--kw-to-symbol (cider-symbol-at-point 'look-back)))
     ('error (funcall callback (cider-read-from-minibuffer prompt)))))
 
-(declare-function cider-jump-to "cider-interaction")
+(declare-function cider-mode "cider-mode")
+
+(defun cider-jump-to (buffer &optional pos other-window)
+  "Push current point onto marker ring, and jump to BUFFER and POS.
+POS can be either a number, a cons, or a symbol.
+If a number, it is the character position (the point).
+If a cons, it specifies the position as (LINE . COLUMN).  COLUMN can be nil.
+If a symbol, `cider-jump-to' searches for something that looks like the
+symbol's definition in the file.
+If OTHER-WINDOW is non-nil don't reuse current window."
+  (with-no-warnings
+    (ring-insert find-tag-marker-ring (point-marker)))
+  (if other-window
+      (pop-to-buffer buffer)
+    ;; like switch-to-buffer, but reuse existing window if BUFFER is visible
+    (pop-to-buffer buffer '((display-buffer-reuse-window display-buffer-same-window))))
+  (with-current-buffer buffer
+    (widen)
+    (goto-char (point-min))
+    (cider-mode +1)
+    (cond
+     ;; Line-column specification.
+     ((consp pos)
+      (forward-line (1- (or (car pos) 1)))
+      (if (cdr pos)
+          (move-to-column (cdr pos))
+        (back-to-indentation)))
+     ;; Point specification.
+     ((numberp pos)
+      (goto-char pos))
+     ;; Symbol or string.
+     (pos
+      ;; Try to find (def full-name ...).
+      (if (or (save-excursion
+                (search-forward-regexp (format "(def.*\\s-\\(%s\\)" (regexp-quote pos))
+                                       nil 'noerror))
+              (let ((name (replace-regexp-in-string ".*/" "" pos)))
+                ;; Try to find (def name ...).
+                (or (save-excursion
+                      (search-forward-regexp (format "(def.*\\s-\\(%s\\)" (regexp-quote name))
+                                             nil 'noerror))
+                    ;; Last resort, just find the first occurrence of `name'.
+                    (save-excursion
+                      (search-forward name nil 'noerror)))))
+          (goto-char (match-beginning 0))
+        (message "Can't find %s in %s" pos (buffer-file-name))))
+     (t nil))))
 
 (defun cider--find-buffer-for-file (file)
   "Return a buffer visiting FILE.
@@ -115,20 +208,34 @@ create a valid path."
         (match-string 1 filename)
       filename)))
 
+(defun cider-make-tramp-prefix (method user host)
+  "Constructs a Tramp file prefix from METHOD, USER, HOST.
+It originated from Tramp's `tramp-make-tramp-file-name'.  The original be
+forced to make full file name with `with-parsed-tramp-file-name', not providing
+prefix only option."
+  (concat tramp-prefix-format
+          (unless (zerop (length method))
+            (concat method tramp-postfix-method-format))
+          (unless (zerop (length user))
+            (concat user tramp-postfix-user-format))
+          (when host
+            (if (string-match tramp-ipv6-regexp host)
+                (concat tramp-prefix-ipv6-format host tramp-postfix-ipv6-format)
+              host))
+          tramp-postfix-host-format))
+
 (defun cider-tramp-prefix (&optional buffer)
   "Use the filename for BUFFER to determine a tramp prefix.
-Defaults to the current buffer.
-Return the tramp prefix, or nil if BUFFER is local."
+Defaults to the current buffer.  Return the tramp prefix, or nil
+if BUFFER is local."
   (let* ((buffer (or buffer (current-buffer)))
          (name (or (buffer-file-name buffer)
                    (with-current-buffer buffer
                      default-directory))))
     (when (tramp-tramp-file-p name)
-      (let ((vec (tramp-dissect-file-name name)))
-        (tramp-make-tramp-file-name (tramp-file-name-method vec)
-                                    (tramp-file-name-user vec)
-                                    (tramp-file-name-host vec)
-                                    nil)))))
+      (with-parsed-tramp-file-name name v
+        (with-no-warnings
+          (cider-make-tramp-prefix v-method v-user v-host))))))
 
 (defun cider--client-tramp-filename (name &optional buffer)
   "Return the tramp filename for path NAME relative to BUFFER.
@@ -136,6 +243,7 @@ If BUFFER has a tramp prefix, it will be added as a prefix to NAME.
 If the resulting path is an existing tramp file, it returns the path,
 otherwise, nil."
   (let* ((buffer (or buffer (current-buffer)))
+         (name (replace-regexp-in-string "^file:" "" name))
          (name (concat (cider-tramp-prefix buffer) name)))
     (if (tramp-handle-file-exists-p name)
         name)))
@@ -184,18 +292,26 @@ relative, it is expanded within each of the open Clojure buffers till an
 existing file ending with URL has been found."
   (require 'arc-mode)
   (cond ((string-match "^file:\\(.+\\)" url)
-         (when-let ((file (cider--url-to-file (match-string 1 url)))
-                    (path (cider--file-path file)))
+         (when-let* ((file (cider--url-to-file (match-string 1 url)))
+                     (path (cider--file-path file)))
            (find-file-noselect path)))
         ((string-match "^\\(jar\\|zip\\):\\(file:.+\\)!/\\(.+\\)" url)
-         (when-let ((entry (match-string 3 url))
-                    (file  (cider--url-to-file (match-string 2 url)))
-                    (path  (cider--file-path file))
-                    (name  (format "%s:%s" path entry)))
+         (when-let* ((entry (match-string 3 url))
+                     (file  (cider--url-to-file (match-string 2 url)))
+                     (path  (cider--file-path file))
+                     ;; It is used for targeting useless intermediate buffer.
+                     ;; That buffer is made by (find-file path) below.
+                     ;; It has the name which is the last part of the path.
+                     (trash (replace-regexp-in-string "^/.+/" "" path))
+                     (name  (format "%s:%s" path entry)))
            (or (find-buffer-visiting name)
                (if (tramp-tramp-file-p path)
                    (progn
-                     ;; Use emacs built in archiving
+                     ;; Use emacs built in archiving.
+                     ;; This makes a list of files in archived Zip or Jar.
+                     ;; That list buffer is useless after jumping to the
+                     ;; buffer which has the real definition.
+                     ;; It'll be removed by (kill-buffer trash) below.
                      (find-file path)
                      (goto-char (point-min))
                      ;; Make sure the file path is followed by a newline to
@@ -204,6 +320,8 @@ existing file ending with URL has been found."
                      ;; moves up to matching line
                      (forward-line -1)
                      (archive-extract)
+                     ;; Remove useless buffer made by (find-file path) above.
+                     (kill-buffer trash)
                      (current-buffer))
                  ;; Use external zip program to just extract the single file
                  (with-current-buffer (generate-new-buffer
@@ -215,7 +333,7 @@ existing file ending with URL has been found."
                    (set-buffer-modified-p nil)
                    (set-auto-mode)
                    (current-buffer))))))
-        (t (if-let ((path (cider--file-path url)))
+        (t (if-let* ((path (cider--file-path url)))
                (find-file-noselect path)
              (unless (file-name-absolute-p url)
                (let ((cider-buffers (cider-util--clojure-buffers))

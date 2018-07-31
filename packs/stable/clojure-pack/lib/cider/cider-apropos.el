@@ -1,6 +1,6 @@
 ;;; cider-apropos.el --- Apropos functionality for Clojure -*- lexical-binding: t -*-
 
-;; Copyright © 2014-2016 Jeff Valk, Bozhidar Batsov and CIDER contributors
+;; Copyright © 2014-2018 Jeff Valk, Bozhidar Batsov and CIDER contributors
 ;;
 ;; Author: Jeff Valk <jv@jeffvalk.com>
 
@@ -27,6 +27,7 @@
 
 (require 'cider-doc)
 (require 'cider-util)
+(require 'subr-x)
 (require 'cider-compat)
 
 (require 'cider-client)
@@ -39,8 +40,6 @@
 
 (defconst cider-apropos-buffer "*cider-apropos*")
 
-(push cider-apropos-buffer cider-ancillary-buffers)
-
 (defcustom cider-apropos-actions '(("display-doc" . cider-doc-lookup)
                                    ("find-def" . cider--find-var)
                                    ("lookup-on-grimoire" . cider-grimoire-lookup))
@@ -52,6 +51,15 @@ the symbol found by the apropos search as argument."
   :type '(alist :key-type string :value-type function)
   :group 'cider
   :package-version '(cider . "0.13.0"))
+
+(define-button-type 'apropos-special-form
+  'apropos-label "Special form"
+  'apropos-short-label "s"
+  'face 'font-lock-keyword-face
+  'help-echo "mouse-2, RET: Display more help on this special form"
+  'follow-link t
+  'action (lambda (button)
+            (describe-function (button-get button 'apropos-symbol))))
 
 (defun cider-apropos-doc (button)
   "Display documentation for the symbol represented at BUTTON."
@@ -107,9 +115,8 @@ and be case-sensitive (based on CASE-SENSITIVE-P)."
 
 (defun cider-show-apropos (summary results query docs-p)
   "Show SUMMARY and RESULTS for QUERY in a pop-up buffer, formatted for DOCS-P."
-  (with-current-buffer (cider-popup-buffer cider-apropos-buffer t)
+  (with-current-buffer (cider-popup-buffer cider-apropos-buffer 'select 'apropos-mode 'ancillary)
     (let ((inhibit-read-only t))
-      (apropos-mode)
       (if (boundp 'header-line-format)
           (setq-local header-line-format summary)
         (insert summary "\n\n"))
@@ -135,9 +142,9 @@ optionally search doc strings (based on DOCS-P), include private vars
                  (y-or-n-p "Case-sensitive? ")))))
   (cider-ensure-connected)
   (cider-ensure-op-supported "apropos")
-  (if-let ((summary (cider-apropos-summary
-                     query ns docs-p privates-p case-sensitive-p))
-           (results (cider-sync-request:apropos query ns docs-p privates-p case-sensitive-p)))
+  (if-let* ((summary (cider-apropos-summary
+                      query ns docs-p privates-p case-sensitive-p))
+            (results (cider-sync-request:apropos query ns docs-p privates-p case-sensitive-p)))
       (cider-show-apropos summary results query docs-p)
     (message "No apropos matches for %S" query)))
 
@@ -165,7 +172,6 @@ optionally search doc strings (based on DOCS-P), include private vars
 ;;;###autoload
 (defun cider-apropos-select (query &optional ns docs-p privates-p case-sensitive-p)
   "Similar to `cider-apropos', but presents the results in a completing read.
-
 Show all symbols whose names match QUERY, a regular expression.
 QUERY can also be a list of space-separated words (e.g. take while) which
 will be converted to a regular expression (like take.+while) automatically
@@ -182,10 +188,10 @@ optionally search doc strings (based on DOCS-P), include private vars
                  (y-or-n-p "Case-sensitive? ")))))
   (cider-ensure-connected)
   (cider-ensure-op-supported "apropos")
-  (if-let ((summary (cider-apropos-summary
-                     query ns docs-p privates-p case-sensitive-p))
-           (results (mapcar (lambda (r) (nrepl-dict-get r "name"))
-                            (cider-sync-request:apropos query ns docs-p privates-p case-sensitive-p))))
+  (if-let* ((summary (cider-apropos-summary
+                      query ns docs-p privates-p case-sensitive-p))
+            (results (mapcar (lambda (r) (nrepl-dict-get r "name"))
+                             (cider-sync-request:apropos query ns docs-p privates-p case-sensitive-p))))
       (cider-apropos-act-on-symbol (completing-read (concat summary ": ") results))
     (message "No apropos matches for %S" query)))
 

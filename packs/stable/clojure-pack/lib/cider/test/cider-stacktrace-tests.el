@@ -1,6 +1,6 @@
 ;;; cider-stacktrace-tests.el
 
-;; Copyright © 2012-2016 Tim King, Bozhidar Batsov
+;; Copyright © 2012-2018 Tim King, Bozhidar Batsov
 
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Bozhidar Batsov <bozhidar@batsov.com>
@@ -28,7 +28,6 @@
 ;;; Code:
 
 (require 'buttercup)
-(require 'cider)
 (require 'cider-stacktrace)
 
 ;;; cider-stacktrace tests
@@ -83,3 +82,47 @@
                                  (cider-stacktrace-promote-error "x")
                                  :test 'equal)
             :not :to-be-truthy)))
+
+(defun cider--testing-dict (names &optional stipulated)
+  (let ((numeric? (lambda (sym) (member sym '(line column)))))
+    (apply #'nrepl-dict
+           (append (apply #'append
+                          (mapcar (lambda (name) (list (symbol-name name)
+                                                (if (funcall numeric? name)
+                                                    4
+                                                  (symbol-name name))))
+                                  names))
+                   stipulated))))
+
+(defun cider--frame-of-type (flags)
+  (cider--testing-dict '(file class method name var ns fn line column path)
+                       (list "flags" (mapcar #'symbol-name flags))))
+
+(describe "cider-stacktrace-frame-p-tests"
+  (it "returns true on frames"
+    (with-temp-buffer
+      ;; a stackframe
+      (cider-stacktrace-render-frame (current-buffer)
+                                     (cider--frame-of-type '(clj)))
+      (goto-char (point-min))
+      (expect (cider-stacktrace-frame-p) :to-be-truthy)))
+
+  (it "returns false otherwise"
+    (with-temp-buffer
+      ;; not a stackframe but a compile error
+      (cider-stacktrace-render-compile-error (current-buffer)
+                                             (cider--testing-dict '(file path column line)))
+      (goto-char (point-min))
+      (expect (cider-stacktrace-frame-p) :to-be nil))))
+
+(describe "cider-stacktrace--should-hide-p-tests"
+  (it "should hide when members of the neg filters"
+    (let ((hidden1 (cider-stacktrace--should-hide-p '(a b c) '() '(a)))
+          (hidden2 (cider-stacktrace--should-hide-p '(a) '(b) '(a)))
+          (both (cider-stacktrace--should-hide-p '(a) '(a) '(a)))
+          (shown1 (cider-stacktrace--should-hide-p '(a) '(b) '(b)))
+          (shown2 (cider-stacktrace--should-hide-p '() '(a) '(a))))
+      (expect (and hidden1 hidden2)
+              :to-be-truthy)
+      (expect (or both shown1 shown2)
+              :to-be nil))))
