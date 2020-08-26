@@ -225,6 +225,8 @@
      (cider-error-highlight-face ((t (:background "color-52"))))
      (cider-repl-err-output-face ((t (:foreground "deeppink"))))
      (cider-stacktrace-filter-shown-face ((t (:foreground "#4c83ff"))))
+
+     (elixir-atom-face ((t (:foreground "#4c83ff"))))
      ))
   )
 
