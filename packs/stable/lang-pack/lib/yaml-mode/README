@@ -1,5 +1,14 @@
+RECRUITMENTS
+    I have not used emacs and this library for a long time,
+    so I recruit maintainers or collaborators for all yaml-mode users.
+    If you are interested in maintaining or collaborating with this library,
+    please contact me.
+
 NAME
     yaml-mode - Simple major mode to edit YAML file for emacs
+
+REQUIREMENTS
+    Emacs 24.1
 
 SYNOPSIS
     To install, just drop this file into a directory in your
@@ -7,7 +16,7 @@ SYNOPSIS
     handle files ending in '.yml', add something like:
 
     (require 'yaml-mode)
-    (add-to-list 'auto-mode-alist '("\\.yml$" . yaml-mode))
+    (add-to-list 'auto-mode-alist '("\\.yml\\'" . yaml-mode))
 
     to your .emacs file.
 

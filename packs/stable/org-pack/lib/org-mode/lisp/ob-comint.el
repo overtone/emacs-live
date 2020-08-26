@@ -1,10 +1,10 @@
-;;; ob-comint.el --- org-babel functions for interaction with comint buffers
+;;; ob-comint.el --- Babel Functions for Interaction with Comint Buffers -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2009-2016 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2020 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;; Keywords: literate programming, reproducible research, comint
-;; Homepage: http://orgmode.org
+;; Homepage: https://orgmode.org
 
 ;; This file is part of GNU Emacs.
 
@@ -19,7 +19,7 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 
@@ -33,13 +33,10 @@
 (require 'ob-core)
 (require 'org-compat)
 (require 'comint)
-(eval-when-compile (require 'cl))
-(declare-function with-parsed-tramp-file-name "tramp" (filename var &rest body))
-(declare-function tramp-flush-directory-property "tramp" (vec directory))
 
 (defun org-babel-comint-buffer-livep (buffer)
   "Check if BUFFER is a comint buffer with a live process."
-  (let ((buffer (if buffer (get-buffer buffer))))
+  (let ((buffer (when buffer (get-buffer buffer))))
     (and buffer (buffer-live-p buffer) (get-buffer-process buffer) buffer)))
 
 (defmacro org-babel-comint-in-buffer (buffer &rest body)
@@ -53,8 +50,9 @@ executed inside the protection of `save-excursion' and
        (error "Buffer %s does not exist or has no process" ,buffer))
      (save-match-data
        (with-current-buffer ,buffer
-	 (let ((comint-input-filter (lambda (input) nil)))
-	   ,@body)))))
+	 (save-excursion
+	   (let ((comint-input-filter (lambda (_input) nil)))
+	     ,@body))))))
 (def-edebug-spec org-babel-comint-in-buffer (form body))
 
 (defmacro org-babel-comint-with-output (meta &rest body)
@@ -79,7 +77,7 @@ or user `keyboard-quit' during execution of body."
 	      (comint-output-filter-functions
 	       (cons (lambda (text) (setq string-buffer (concat string-buffer text)))
 		     comint-output-filter-functions))
-	      dangling-text raw)
+	      dangling-text)
 	 ;; got located, and save dangling text
 	 (goto-char (process-mark (get-buffer-process (current-buffer))))
 	 (let ((start (point))
@@ -107,12 +105,12 @@ or user `keyboard-quit' during execution of body."
 	 (insert dangling-text)
 
 	 ;; remove echo'd FULL-BODY from input
-	 (if (and ,remove-echo ,full-body
-		  (string-match
-		   (replace-regexp-in-string
-		    "\n" "[\r\n]+" (regexp-quote (or ,full-body "")))
-		   string-buffer))
-	     (setq raw (substring string-buffer (match-end 0))))
+	 (when (and ,remove-echo ,full-body
+		    (string-match
+		     (replace-regexp-in-string
+		      "\n" "[\r\n]+" (regexp-quote (or ,full-body "")))
+		     string-buffer))
+	   (setq string-buffer (substring string-buffer (match-end 0))))
 	 (split-string string-buffer comint-prompt-regexp)))))
 (def-edebug-spec org-babel-comint-with-output (sexp body))
 
@@ -145,15 +143,10 @@ Don't return until FILE exists.  Code in STRING must ensure that
 FILE exists at end of evaluation."
   (unless (org-babel-comint-buffer-livep buffer)
     (error "Buffer %s does not exist or has no process" buffer))
-  (if (file-exists-p file) (delete-file file))
+  (when (file-exists-p file) (delete-file file))
   (process-send-string
    (get-buffer-process buffer)
    (if (= (aref string (1- (length string))) ?\n) string (concat string "\n")))
-  ;; From Tramp 2.1.19 the following cache flush is not necessary
-  (if (file-remote-p default-directory)
-      (let (v)
-	(with-parsed-tramp-file-name default-directory nil
-				     (tramp-flush-directory-property v ""))))
   (while (not (file-exists-p file)) (sit-for (or period 0.25))))
 
 (provide 'ob-comint)

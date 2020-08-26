@@ -89,5 +89,5 @@ clean cleanall cleanelc::
 
 clean-install:
 	if [ -d $(DESTDIR)$(lispdir) ] ; then \
-	  $(RM) $(DESTDIR)$(lispdir)/org*.el* $(DESTDIR)$(lispdir)/ob*.el* $(DESTDIR)$(lispdir)/ox*.el* ; \
+	  $(RM) $(DESTDIR)$(lispdir)/org*.el* $(DESTDIR)$(lispdir)/ob*.el* $(DESTDIR)$(lispdir)/ol*.el* $(DESTDIR)$(lispdir)/ox*.el* ; \
 	fi ;

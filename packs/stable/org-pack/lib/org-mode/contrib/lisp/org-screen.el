@@ -64,7 +64,7 @@
   (interactive "MScreen name: ")
   (save-excursion
     (org-screen-helper name "-S"))
-  (insert-string (concat "[[screen:" name "]]")))
+  (insert (concat "[[screen:" name "]]")))
 
 (defun org-screen-buffer-name (name)
   "Returns the buffer name corresponding to the screen name given."

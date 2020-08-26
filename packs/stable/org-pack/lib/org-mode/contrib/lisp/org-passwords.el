@@ -23,7 +23,7 @@
 ;;; Commentary:
 
 ;; This file contains the code for managing your passwords with
-;; Org-mode. It is part of org/contrib (see http://orgmode.org/). If
+;; Org-mode. It is part of org/contrib (see https://orgmode.org/). If
 ;; you want to contribute with development, or have a problem, do it
 ;; here: https://bitbucket.org/alfaromurillo/org-passwords.el
 
@@ -348,7 +348,7 @@ separated SEPARATOR."
        separator)))
 
 (defun org-passwords-substitute (string-to-change list-of-substitutions)
-  "Substitutes each appearence in STRING-TO-CHANGE of the `car' of
+  "Substitutes each appearance in STRING-TO-CHANGE of the `car' of
 each element of LIST-OF-SUBSTITUTIONS by the `cdr' of that
 element. For example:
  (org-passwords-substitute \"ab\" \'((\"a\" . \"b\") (\"b\" . \"c\")))

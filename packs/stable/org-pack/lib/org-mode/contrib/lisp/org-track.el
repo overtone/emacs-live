@@ -1,13 +1,13 @@
 ;;; org-track.el --- Track the most recent Org-mode version available.
 ;;
-;; Copyright (C) 2009-2016 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2020 Free Software Foundation, Inc.
 ;;
 ;; Author: Bastien Guerry <bzg@gnu.org>
 ;;         Eric S Fraga   <e.fraga at ucl.ac dot uk>
 ;;         Sebastian Rose <sebastian_rose at gmx dot de>
-;;         The Worg people http://orgmode.org/worg/
+;;         The Worg people https://orgmode.org/worg/
 ;; Keywords: outlines, hypermedia, calendar, wp
-;; Homepage: http://orgmode.org
+;; Homepage: https://orgmode.org
 ;; Version: 6.29a
 ;;
 ;; Released under the GNU General Public License version 3
@@ -83,7 +83,7 @@ Note, that emacs preferes compiled elisp files over
 non-compiled ones."
   :type 'boolean)
 
-(defcustom org-track-org-url "http://orgmode.org/"
+(defcustom org-track-org-url "https://orgmode.org/"
   "The URL where the package to download can be found.
 Please append a slash."
   :type 'string)

@@ -1,6 +1,6 @@
 ;;; multiple-cursors.el --- Multiple cursors for emacs.
 
-;; Copyright (C) 2012-2013 Magnar Sveen
+;; Copyright (C) 2012-2016 Magnar Sveen
 
 ;; Author: Magnar Sveen <magnars@gmail.com>
 ;; Version: 1.4.0
@@ -22,7 +22,7 @@
 ;;; Commentary:
 
 ;; Multiple cursors for Emacs. This is some pretty crazy functionality, so yes,
-;; there are kinks. Don't be afraid tho, I've been using it since 2011 with
+;; there are kinks. Don't be afraid though, I've been using it since 2011 with
 ;; great success and much merriment.
 
 ;; ## Basic usage
@@ -68,7 +68,7 @@
 ;;  - `mc/mark-previous-like-this`: Adds a cursor and region at the next part of the buffer backwards that matches the current region.
 ;;  - `mc/mark-previous-word-like-this`: Like `mc/mark-previous-like-this` but only for whole words.
 ;;  - `mc/mark-previous-symbol-like-this`: Like `mc/mark-previous-like-this` but only for whole symbols.
-;;  - `mc/mark-more-like-this-extended`: Use arrow keys to quickly mark/skip next/previous occurances.
+;;  - `mc/mark-more-like-this-extended`: Use arrow keys to quickly mark/skip next/previous occurrences.
 ;;  - `mc/add-cursor-on-click`: Bind to a mouse event to add cursors by clicking. See tips-section.
 
 ;; ### Mark many occurrences
@@ -105,7 +105,7 @@
 ;;
 ;; - Try pressing `mc/mark-next-like-this-word` or
 ;;   `mc/mark-next-like-this-symbol` with no region selected. It will
-;;   mark the symbol and add a cursor at the next occurance
+;;   mark the symbol and add a cursor at the next occurrence
 ;;
 ;; - Try pressing `mc/mark-all-like-this-dwim` on a tagname in html-mode.
 ;;
@@ -185,6 +185,10 @@
 ;; Thanks!
 
 ;;; Code:
+
+(defgroup multiple-cursors nil
+  "Multiple cursors for emacs."
+  :group 'editing)
 
 (require 'mc-edit-lines)
 (require 'mc-cycle-cursors)

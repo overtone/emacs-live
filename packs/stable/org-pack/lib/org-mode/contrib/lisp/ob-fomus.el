@@ -4,7 +4,7 @@
 
 ;; Author: Torsten Anders
 ;; Keywords: literate programming, reproducible research
-;; Homepage: http://orgmode.org
+;; Homepage: https://orgmode.org
 
 ;; This file is not part of GNU Emacs.
 
@@ -48,7 +48,7 @@
 
 (defun org-babel-expand-body:fomus (body params)
   "Expand BODY according to PARAMS, return the expanded body."
-  (let ((vars (mapcar #'cdr (org-babel-get-header params :var))))
+  (let ((vars (org-babel--get-vars params)))
     (mapc
      (lambda (pair)
        (let ((name (symbol-name (car pair)))
@@ -64,10 +64,10 @@
 (defun org-babel-execute:fomus (body params)
   "Execute a block of Fomus code with org-babel.
 This function is called by `org-babel-execute-src-block'."
-  (let* ((result-params (cdr (assoc :result-params params)))
-	 (out-file (cdr (assoc :file params)))
-	 (cmdline (cdr (assoc :cmdline params)))
-	 (cmd (or (cdr (assoc :cmd params)) "fomus"))
+  (let* ((result-params (cdr (assq :result-params params)))
+	 (out-file (cdr (assq :file params)))
+	 (cmdline (cdr (assq :cmdline params)))
+	 (cmd (or (cdr (assq :cmd params)) "fomus"))
 	 (in-file (org-babel-temp-file "fomus-" ".fms")))
     (with-temp-file in-file
       (insert (org-babel-expand-body:fomus body params)))

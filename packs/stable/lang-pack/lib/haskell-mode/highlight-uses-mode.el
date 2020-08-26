@@ -29,8 +29,7 @@
     map)
   "Keymap for using `highlight-uses-mode'.")
 
-(defvar highlight-uses-mode-point nil)
-(make-variable-buffer-local 'highlight-uses-mode-point)
+(defvar-local highlight-uses-mode-point nil)
 
 ;;;###autoload
 (define-minor-mode highlight-uses-mode

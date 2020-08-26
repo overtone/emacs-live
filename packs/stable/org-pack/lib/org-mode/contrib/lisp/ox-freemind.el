@@ -1,6 +1,6 @@
 ;;; ox-freemind.el --- Freemind Mindmap Back-End for Org Export Engine
 
-;; Copyright (C) 2013-2016  Free Software Foundation, Inc.
+;; Copyright (C) 2013-2020  Free Software Foundation, Inc.
 
 ;; Author: Jambunathan K <kjambunathan at gmail dot com>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -43,7 +43,6 @@
 ;;; Define Back-End
 
 (org-export-define-derived-backend 'freemind 'html
-  :export-block "FREEMIND"
   :menu-entry
   '(?f "Export to Freemind Mindmap"
        ((?f "As Freemind Mindmap file" org-freemind-export-to-freemind)

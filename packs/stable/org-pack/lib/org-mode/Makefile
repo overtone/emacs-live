@@ -91,7 +91,7 @@ help helpall::
 	$(info )
 	$(info Full documentation on Worg)
 	$(info ==========================)
-	$(info http://orgmode.org/worg/dev/org-build-system.html)
+	$(info https://orgmode.org/worg/dev/org-build-system.html)
 	@echo ""
 
  include mk/targets.mk	# toplevel make machinery

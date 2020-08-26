@@ -15,4 +15,5 @@ File: dir,	Node: Top	This is the top of the INFO tree
 * Menu:
 
 Emacs
-* Org Mode: (org).      Outline-based notes management and organizer
+* Org Mode: (org).        Outline-based notes management and organizer.
+* Org Guide: (orgguide).  Abbreviated Org mode manual.

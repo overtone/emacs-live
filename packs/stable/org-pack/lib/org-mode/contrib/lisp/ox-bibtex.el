@@ -92,7 +92,7 @@
 
 ;; Initialization
 
-(eval-when-compile (require 'cl))
+(require 'cl-lib)
 
 ;;; Internal Functions
 
@@ -124,7 +124,7 @@ contains a list of strings to be passed as options to
     (and value
          (string-match "\\(\\S-+\\)[ \t]+\\(\\S-+\\)\\(.*\\)" value)
          (let (options limit)
-           (dolist (arg (org-split-string (match-string 3 value))
+           (dolist (arg (split-string (match-string 3 value))
                         ;; Return value.
                         (list :options (nreverse options) :limit limit))
              (let* ((s (split-string arg ":"))
@@ -136,7 +136,7 @@ contains a list of strings to be passed as options to
 
 (defun org-bibtex-citation-p (object)
   "Non-nil when OBJECT is a citation."
-  (case (org-element-type object)
+  (cl-case (org-element-type object)
     (link (equal (org-element-property :type object) "cite"))
     (latex-fragment
      (string-match "\\`\\\\cite{" (org-element-property :value object)))))
@@ -159,9 +159,7 @@ to `org-bibtex-citation-p' predicate."
 (defun org-bibtex-goto-citation (&optional citation)
   "Visit a citation given its ID."
   (interactive)
-  (let ((citation (or citation
-		      (org-icompleting-read "Citation: "
-					    (obe-citations)))))
+  (let ((citation (or citation (completing-read "Citation: " (obe-citations)))))
     (find-file (or org-bibtex-file
 		   (error "`org-bibtex-file' has not been configured")))
     (goto-char (point-min))
@@ -169,7 +167,7 @@ to `org-bibtex-citation-p' predicate."
       (outline-previous-visible-heading 1)
       t)))
 
-(let ((jump-fn (car (org-remove-if-not #'fboundp '(ebib org-bibtex-goto-citation)))))
+(let ((jump-fn (car (cl-remove-if-not #'fboundp '(ebib org-bibtex-goto-citation)))))
   (org-add-link-type "cite" jump-fn))
 
 
@@ -237,7 +235,7 @@ Return new parse tree."
 	      ;; Update `org-bibtex-html-entries-alist'.
 	      (goto-char (point-min))
 	      (while (re-search-forward
-		      "a name=\"\\([-_a-zA-Z0-9:]+\\)\">\\(\\w+\\)" nil t)
+		      "a name=\"\\([-_a-zA-Z0-9:]+\\)\">\\([^<]+\\)" nil t)
 		(push (cons (match-string 1) (match-string 2))
 		      org-bibtex-html-entries-alist)))
 	    ;; Open produced HTML file, wrap references within a block and
@@ -305,7 +303,7 @@ the HTML and ASCII backends."
 		  next)
 	      (while (and (setq next (org-export-get-next-element object info))
 			  (or (and (stringp next)
-				   (not (org-string-match-p "\\S-" next)))
+				   (not (string-match-p "\\S-" next)))
 			      (org-bibtex-citation-p next)))
 		(unless (stringp next)
 		  (push (org-bibtex-get-citation-key next) keys))

@@ -1,9 +1,9 @@
 ;;; org-depend.el --- TODO dependencies for Org-mode
-;; Copyright (C) 2008-2016 Free Software Foundation, Inc.
+;; Copyright (C) 2008-2020 Free Software Foundation, Inc.
 ;;
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;; Keywords: outlines, hypermedia, calendar, wp
-;; Homepage: http://orgmode.org
+;; Homepage: https://orgmode.org
 ;; Version: 0.08
 ;;
 ;; This file is not part of GNU Emacs.
@@ -207,11 +207,11 @@ This does two different kinds of triggers:
   (org-refresh-properties org-effort-property 'org-effort)
   ;; Get information from the plist
   (let* ((type (plist-get change-plist :type))
-	       (pos (plist-get change-plist :position))
+	 (pos (plist-get change-plist :position))
 	 (from (plist-get change-plist :from))
 	 (to (plist-get change-plist :to))
 	 (org-log-done nil) ; IMPROTANT!: no logging during automatic trigger!
-	 trigger triggers tr p1 kwd id)
+	 trigger triggers tr p1 p2 kwd id)
     (catch 'return
       (unless (eq type 'todo-state-change)
 	;; We are only handling todo-state-change....
@@ -225,7 +225,7 @@ This does two different kinds of triggers:
       ;; Lets see if this entry has a TRIGGER property.
       ;; If yes, split it up on whitespace.
       (setq trigger (org-entry-get pos "TRIGGER")
-	    triggers (and trigger (org-split-string trigger "[ \t]+")))
+	    triggers (and trigger (split-string trigger)))
 
       ;; Go through all the triggers
       (while (setq tr (pop triggers))
@@ -270,7 +270,7 @@ This does two different kinds of triggers:
 			    (effort (when (or effort-up effort-down)
 				      (let ((effort (get-text-property (point) 'org-effort)))
 					(when effort
-					  (org-duration-string-to-minutes effort))))))
+					  (org-duration-to-minutes effort))))))
 			(push (list (point) todo-kwd priority tags effort)
 			      items))
 		      (unless (org-goto-sibling)
@@ -336,11 +336,17 @@ This does two different kinds of triggers:
 	  (setq id (match-string 1 tr)
 		kwd (match-string 2 tr)
 		p1 (org-find-entry-with-id id))
-	  (when p1
-	    ;; there is an entry with this ID, mark it TODO
-	    (save-excursion
-	      (goto-char p1)
-	      (org-todo kwd))))
+	  ;; First check current buffer, then all files.
+	  (if p1
+	      ;; There is an entry with this ID, mark it TODO.
+	      (save-excursion
+		(goto-char p1)
+		(org-todo kwd))
+	    (when (setq p2 (org-id-find id))
+	      (save-excursion
+		(with-current-buffer (find-file-noselect (car p2))
+		  (goto-char (cdr p2))
+		  (org-todo kwd))))))
          ((string-match "\\`chain-siblings-scheduled\\'" tr)
           (let ((time (org-get-scheduled-time pos)))
             (when time
@@ -358,11 +364,11 @@ Any other words are treated as entry id's. If an entry exists with the
 this ID property, that entry is also checked."
   ;; Get information from the plist
   (let* ((type (plist-get change-plist :type))
-	       (pos (plist-get change-plist :position))
+	 (pos (plist-get change-plist :position))
 	 (from (plist-get change-plist :from))
 	 (to (plist-get change-plist :to))
 	 (org-log-done nil) ; IMPROTANT!: no logging during automatic trigger
-	 blocker blockers bl p1
+	 blocker blockers bl p1 p2
 	 (proceed-p
 	  (catch 'return
             ;; If this is not a todo state change, or if this entry is
@@ -377,7 +383,7 @@ this ID property, that entry is also checked."
 	    ;; Lets see if we will allow it.  Find the BLOCKER property
 	    ;; and split it on whitespace.
 	    (setq blocker (org-entry-get pos "BLOCKER")
-		  blockers (and blocker (org-split-string blocker "[ \t]+")))
+		  blockers (and blocker (split-string blocker)))
 
 	    ;; go through all the blockers
 	    (while (setq bl (pop blockers))
@@ -388,15 +394,13 @@ this ID property, that entry is also checked."
 		  (save-excursion
 		    (goto-char pos)
 		    ;; find the older sibling, exit if no more siblings
-		    (condition-case nil
-			(outline-backward-same-level 1)
-		      (error (throw 'ignore t)))
+		    (unless (org-get-last-sibling)
+		      (throw 'ignore t))
 		    ;; Check if this entry is not yet done and block
 		    (unless (org-entry-is-done-p)
 		      ;; return nil, to indicate that we block the change!
 		      (org-mark-ring-push)
 		      (throw 'return nil)))))
-
 	       ((setq p1 (org-find-entry-with-id bl))
 		;; there is an entry with this ID, check it out
 		(save-excursion
@@ -404,9 +408,16 @@ this ID property, that entry is also checked."
 		  (unless (org-entry-is-done-p)
 		    ;; return nil, to indicate that we block the change!
 		    (org-mark-ring-push)
-		    (throw 'return nil))))))
-	    t ; return t to indicate that we are not blocking
-	    )))
+		    (throw 'return nil))))
+	       ((setq p2 (org-id-find bl))
+		(save-excursion
+		  (with-current-buffer (find-file-noselect (car p2))
+		    (goto-char (cdr p2))
+		    (unless (org-entry-is-done-p)
+		      (org-mark-ring-push)
+		      (throw 'return nil)))))))
+	    ;; Return t to indicate that we are not blocking.
+	    t)))
     (when org-depend-tag-blocked
       (org-toggle-tag "blocked" (if proceed-p 'off 'on)))
 

@@ -1,10 +1,10 @@
-;;; ob-shell.el --- org-babel functions for shell evaluation
+;;; ob-shell.el --- Babel Functions for Shell Evaluation -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2009-2016 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2020 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;; Keywords: literate programming, reproducible research
-;; Homepage: http://orgmode.org
+;; Homepage: https://orgmode.org
 
 ;; This file is part of GNU Emacs.
 
@@ -19,7 +19,7 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 
@@ -27,50 +27,67 @@
 
 ;;; Code:
 (require 'ob)
+(require 'org-macs)
 (require 'shell)
-(eval-when-compile (require 'cl))
+(require 'cl-lib)
 
-(declare-function org-babel-comint-in-buffer "ob-comint" (buffer &rest body))
+(declare-function org-babel-comint-in-buffer "ob-comint" (buffer &rest body)
+		  t)
 (declare-function org-babel-comint-wait-for-output "ob-comint" (buffer))
 (declare-function org-babel-comint-buffer-livep "ob-comint" (buffer))
-(declare-function org-babel-comint-with-output "ob-comint" (meta &rest body))
+(declare-function org-babel-comint-with-output "ob-comint" (meta &rest body)
+		  t)
 (declare-function orgtbl-to-generic "org-table" (table params))
 
 (defvar org-babel-default-header-args:shell '())
+(defvar org-babel-shell-names)
+
+(defun org-babel-shell-initialize ()
+  "Define execution functions associated to shell names.
+This function has to be called whenever `org-babel-shell-names'
+is modified outside the Customize interface."
+  (interactive)
+  (dolist (name org-babel-shell-names)
+    (eval `(defun ,(intern (concat "org-babel-execute:" name))
+	       (body params)
+	     ,(format "Execute a block of %s commands with Babel." name)
+	     (let ((shell-file-name ,name))
+	       (org-babel-execute:shell body params))))
+    (eval `(defalias ',(intern (concat "org-babel-variable-assignments:" name))
+	     'org-babel-variable-assignments:shell
+	     ,(format "Return list of %s statements assigning to the block's \
+variables."
+		      name)))
+    (eval `(defvar ,(intern (concat "org-babel-default-header-args:" name)) '()))))
 
 (defcustom org-babel-shell-names
-  '("sh" "bash" "csh" "ash" "dash" "ksh" "mksh" "posh")
-  "List of names of shell supported by babel shell code blocks."
+  '("sh" "bash" "zsh" "fish" "csh" "ash" "dash" "ksh" "mksh" "posh")
+  "List of names of shell supported by babel shell code blocks.
+Call `org-babel-shell-initialize' when modifying this variable
+outside the Customize interface."
   :group 'org-babel
-  :type 'string
-  :initialize
-  (lambda (symbol value)
-    (set-default symbol (second value))
-    (mapc
-     (lambda (name)
-       (eval `(defun ,(intern (concat "org-babel-execute:" name)) (body params)
-		,(format "Execute a block of %s commands with Babel." name)
-		(let ((shell-file-name ,name))
-		  (org-babel-execute:shell body params)))))
-     (second value))))
+  :type '(repeat (string :tag "Shell name: "))
+  :set (lambda (symbol value)
+	 (set-default symbol value)
+	 (org-babel-shell-initialize)))
 
 (defun org-babel-execute:shell (body params)
   "Execute a block of Shell commands with Babel.
 This function is called by `org-babel-execute-src-block'."
   (let* ((session (org-babel-sh-initiate-session
-		   (cdr (assoc :session params))))
-	 (stdin (let ((stdin (cdr (assoc :stdin params))))
+		   (cdr (assq :session params))))
+	 (stdin (let ((stdin (cdr (assq :stdin params))))
                   (when stdin (org-babel-sh-var-to-string
                                (org-babel-ref-resolve stdin)))))
-	 (cmdline (cdr (assoc :cmdline params)))
+	 (cmdline (cdr (assq :cmdline params)))
          (full-body (org-babel-expand-body:generic
 		     body params (org-babel-variable-assignments:shell params))))
     (org-babel-reassemble-table
      (org-babel-sh-evaluate session full-body params stdin cmdline)
      (org-babel-pick-name
-      (cdr (assoc :colname-names params)) (cdr (assoc :colnames params)))
+      (cdr (assq :colname-names params)) (cdr (assq :colnames params)))
      (org-babel-pick-name
-      (cdr (assoc :rowname-names params)) (cdr (assoc :rownames params))))))
+      (cdr (assq :rowname-names params)) (cdr (assq :rownames params))))))
 
 (defun org-babel-prep-session:shell (session params)
   "Prepare SESSION according to the header arguments specified in PARAMS."
@@ -91,15 +108,16 @@ This function is called by `org-babel-execute-src-block'."
         (insert (org-babel-chomp body)))
       buffer)))
 
-;; helper functions
-(defun org-babel-variable-assignments:sh-generic
+
+;;; Helper functions
+(defun org-babel--variable-assignments:sh-generic
     (varname values &optional sep hline)
-  "Returns a list of statements declaring the values as a generic variable."
+  "Return a list of statements declaring the values as a generic variable."
   (format "%s=%s" varname (org-babel-sh-var-to-sh values sep hline)))
 
-(defun org-babel-variable-assignments:bash_array
+(defun org-babel--variable-assignments:bash_array
     (varname values &optional sep hline)
-  "Returns a list of statements declaring the values as a bash array."
+  "Return a list of statements declaring the values as a bash array."
   (format "unset %s\ndeclare -a %s=( %s )"
 	  varname varname
 	  (mapconcat
@@ -107,9 +125,9 @@ This function is called by `org-babel-execute-src-block'."
 	   values
 	   " ")))
 
-(defun org-babel-variable-assignments:bash_assoc
+(defun org-babel--variable-assignments:bash_assoc
     (varname values &optional sep hline)
-  "Returns a list of statements declaring the values as bash associative array."
+  "Return a list of statements declaring the values as bash associative array."
   (format "unset %s\ndeclare -A %s\n%s"
     varname varname
     (mapconcat
@@ -121,28 +139,30 @@ This function is called by `org-babel-execute-src-block'."
      values
      "\n")))
 
-(defun org-babel-variable-assignments:bash (varname values &optional sep hline)
-  "Represents the parameters as useful Bash shell variables."
-  (if (listp values)
-      (if (and (listp (car values)) (= 1 (length (car values))))
-	  (org-babel-variable-assignments:bash_array varname values sep hline)
-	(org-babel-variable-assignments:bash_assoc varname values sep hline))
-    (org-babel-variable-assignments:sh-generic varname values sep hline)))
+(defun org-babel--variable-assignments:bash (varname values &optional sep hline)
+  "Represent the parameters as useful Bash shell variables."
+  (pcase values
+    (`((,_ ,_ . ,_) . ,_)		;two-dimensional array
+     (org-babel--variable-assignments:bash_assoc varname values sep hline))
+    (`(,_ . ,_)				;simple list
+     (org-babel--variable-assignments:bash_array varname values sep hline))
+    (_					;scalar value
+     (org-babel--variable-assignments:sh-generic varname values sep hline))))
 
 (defun org-babel-variable-assignments:shell (params)
   "Return list of shell statements assigning the block's variables."
-  (let ((sep (cdr (assoc :separator params)))
-	(hline (when (string= "yes" (cdr (assoc :hlines params)))
-		 (or (cdr (assoc :hline-string params))
+  (let ((sep (cdr (assq :separator params)))
+	(hline (when (string= "yes" (cdr (assq :hlines params)))
+		 (or (cdr (assq :hline-string params))
 		     "hline"))))
     (mapcar
      (lambda (pair)
-       (if (string-match "bash$" shell-file-name)
-	   (org-babel-variable-assignments:bash
+       (if (string-suffix-p "bash" shell-file-name)
+	   (org-babel--variable-assignments:bash
             (car pair) (cdr pair) sep hline)
-         (org-babel-variable-assignments:sh-generic
+         (org-babel--variable-assignments:sh-generic
 	  (car pair) (cdr pair) sep hline)))
-     (mapcar #'cdr (org-babel-get-header params :var)))))
+     (org-babel--get-vars params))))
 
 (defun org-babel-sh-var-to-sh (var &optional sep hline)
   "Convert an elisp value to a shell variable.
@@ -157,14 +177,14 @@ var of the same value."
   "Convert an elisp value to a string."
   (let ((echo-var (lambda (v) (if (stringp v) v (format "%S" v)))))
     (cond
-     ((and (listp var) (or (listp (car var)) (equal (car var) 'hline)))
+     ((and (listp var) (or (listp (car var)) (eq (car var) 'hline)))
       (orgtbl-to-generic var  (list :sep (or sep "\t") :fmt echo-var
 				    :hline hline)))
      ((listp var)
       (mapconcat echo-var var "\n"))
      (t (funcall echo-var var)))))
 
-(defun org-babel-sh-initiate-session (&optional session params)
+(defun org-babel-sh-initiate-session (&optional session _params)
   "Initiate a session named SESSION according to PARAMS."
   (when (and session (not (string= session "none")))
     (save-window-excursion
@@ -187,64 +207,62 @@ var of the same value."
 If RESULT-TYPE equals `output' then return a list of the outputs
 of the statements in BODY, if RESULT-TYPE equals `value' then
 return the value of the last statement in BODY."
-  (let ((results
-         (cond
-          ((or stdin cmdline)	       ; external shell script w/STDIN
-           (let ((script-file (org-babel-temp-file "sh-script-"))
-                 (stdin-file (org-babel-temp-file "sh-stdin-"))
-                 (shebang (cdr (assoc :shebang params)))
-                 (padline (not (string= "no" (cdr (assoc :padline params))))))
-             (with-temp-file script-file
-               (when shebang (insert (concat shebang "\n")))
-               (when padline (insert "\n"))
-               (insert body))
-             (set-file-modes script-file #o755)
-             (with-temp-file stdin-file (insert (or stdin "")))
-             (with-temp-buffer
-               (call-process-shell-command
-                (concat (if shebang script-file
-			  (format "%s %s" shell-file-name script-file))
-			(and cmdline (concat " " cmdline)))
-                stdin-file
-		(current-buffer))
-               (buffer-string))))
-          (session                      ; session evaluation
-           (mapconcat
-            #'org-babel-sh-strip-weird-long-prompt
-            (mapcar
-             #'org-babel-trim
-             (butlast
-              (org-babel-comint-with-output
-                  (session org-babel-sh-eoe-output t body)
-                (mapc
-                 (lambda (line)
-                   (insert line)
-                   (comint-send-input nil t)
-                   (while (save-excursion
-                            (goto-char comint-last-input-end)
-                            (not (re-search-forward
-                                  comint-prompt-regexp nil t)))
-                     (accept-process-output
-                      (get-buffer-process (current-buffer)))))
-                 (append
-                  (split-string (org-babel-trim body) "\n")
-                  (list org-babel-sh-eoe-indicator))))
-              2)) "\n"))
-          ('otherwise                   ; external shell script
-           (if (and (cdr (assoc :shebang params))
-                    (> (length (cdr (assoc :shebang params))) 0))
-               (let ((script-file (org-babel-temp-file "sh-script-"))
-                     (shebang (cdr (assoc :shebang params)))
-                     (padline (not (equal "no" (cdr (assoc :padline params))))))
-                 (with-temp-file script-file
-                   (when shebang (insert (concat shebang "\n")))
-                   (when padline (insert "\n"))
-                   (insert body))
-                 (set-file-modes script-file #o755)
-                 (org-babel-eval script-file ""))
-             (org-babel-eval shell-file-name (org-babel-trim body)))))))
+  (let* ((shebang (cdr (assq :shebang params)))
+	 (results
+	  (cond
+	   ((or stdin cmdline)	       ; external shell script w/STDIN
+	    (let ((script-file (org-babel-temp-file "sh-script-"))
+		  (stdin-file (org-babel-temp-file "sh-stdin-"))
+		  (padline (not (string= "no" (cdr (assq :padline params))))))
+	      (with-temp-file script-file
+		(when shebang (insert shebang "\n"))
+		(when padline (insert "\n"))
+		(insert body))
+	      (set-file-modes script-file #o755)
+	      (with-temp-file stdin-file (insert (or stdin "")))
+	      (with-temp-buffer
+		(call-process-shell-command
+		 (concat (if shebang script-file
+			   (format "%s %s" shell-file-name script-file))
+			 (and cmdline (concat " " cmdline)))
+		 stdin-file
+		 (current-buffer))
+		(buffer-string))))
+	   (session			; session evaluation
+	    (mapconcat
+	     #'org-babel-sh-strip-weird-long-prompt
+	     (mapcar
+	      #'org-trim
+	      (butlast
+	       (org-babel-comint-with-output
+		   (session org-babel-sh-eoe-output t body)
+		 (dolist (line (append (split-string (org-trim body) "\n")
+				       (list org-babel-sh-eoe-indicator)))
+		   (insert line)
+		   (comint-send-input nil t)
+		   (while (save-excursion
+			    (goto-char comint-last-input-end)
+			    (not (re-search-forward
+				  comint-prompt-regexp nil t)))
+		     (accept-process-output
+		      (get-buffer-process (current-buffer))))))
+	       2))
+	     "\n"))
+	   ;; External shell script, with or without a predefined
+	   ;; shebang.
+	   ((org-string-nw-p shebang)
+	    (let ((script-file (org-babel-temp-file "sh-script-"))
+		  (padline (not (equal "no" (cdr (assq :padline params))))))
+	      (with-temp-file script-file
+		(insert shebang "\n")
+		(when padline (insert "\n"))
+		(insert body))
+	      (set-file-modes script-file #o755)
+	      (org-babel-eval script-file "")))
+	   (t
+	    (org-babel-eval shell-file-name (org-trim body))))))
     (when results
-      (let ((result-params (cdr (assoc :result-params params))))
+      (let ((result-params (cdr (assq :result-params params))))
         (org-babel-result-cond result-params
           results
           (let ((tmp-file (org-babel-temp-file "sh-")))

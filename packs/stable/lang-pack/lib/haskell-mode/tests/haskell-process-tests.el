@@ -1,10 +1,9 @@
-;;; haskell-process-tests.el
+;;; haskell-process-tests.el  -*- lexical-binding: t -*-
 
 ;;; Code:
 
 (require 'ert)
-(require 'el-mock)
-
+(require 'cl-lib)
 (require 'haskell-process)
 
 (ert-deftest haskell-process-wrapper-command-function-identity ()
@@ -28,7 +27,7 @@
                  (let ((haskell-process-path-ghci "ghci")
                        (haskell-process-args-ghci '("-ferror-spans")))
                    (custom-set-variables '(haskell-process-wrapper-function #'identity))
-                   (mocklet (((haskell-session-name "dummy-session") => "dumses1"))
+                   (cl-letf (((symbol-function 'haskell-session-name) (lambda (session) "dumses1")))
                      (haskell-process-compute-process-log-and-command "dummy-session" 'ghci))))))
 
 (ert-deftest test-haskell-process--with-wrapper-compute-process-log-and-command-ghci ()
@@ -38,7 +37,7 @@
                    (custom-set-variables '(haskell-process-wrapper-function
                                            (lambda (argv) (append (list "nix-shell" "default.nix" "--command" )
                                                              (list (shell-quote-argument (mapconcat 'identity argv " ")))))))
-                   (mocklet (((haskell-session-name "dummy-session") => "dumses1"))
+                   (cl-letf (((symbol-function 'haskell-session-name) (lambda (session) "dumses1")))
                      (haskell-process-compute-process-log-and-command "dummy-session" 'ghci))))))
 
 (ert-deftest test-haskell-process--compute-process-log-and-command-cabal-repl ()
@@ -46,8 +45,8 @@
                  (let ((haskell-process-path-cabal      "cabal")
                        (haskell-process-args-cabal-repl '("--ghc-option=-ferror-spans")))
                    (custom-set-variables '(haskell-process-wrapper-function #'identity))
-                   (mocklet (((haskell-session-name "dummy-session2") => "dumses2")
-                             ((haskell-session-target "dummy-session2") => "dumdum-session"))
+                   (cl-letf (((symbol-function 'haskell-session-name) (lambda (session) "dumses2"))
+                             ((symbol-function 'haskell-session-target) (lambda (session) "dumdum-session")))
                      (haskell-process-compute-process-log-and-command "dummy-session2" 'cabal-repl))))))
 
 (ert-deftest test-haskell-process--with-wrapper-compute-process-log-and-command-cabal-repl ()
@@ -57,8 +56,8 @@
                    (custom-set-variables '(haskell-process-wrapper-function
                                            (lambda (argv) (append (list "nix-shell" "default.nix" "--command" )
                                                              (list (shell-quote-argument (mapconcat 'identity argv " ")))))))
-                   (mocklet (((haskell-session-name "dummy-session2") => "dumses2")
-                             ((haskell-session-target "dummy-session2") => "dumdum-session"))
+                   (cl-letf (((symbol-function 'haskell-session-name) (lambda (session) "dumses2"))
+                             ((symbol-function 'haskell-session-target) (lambda (session) "dumdum-session")))
                      (haskell-process-compute-process-log-and-command "dummy-session2" 'cabal-repl))))))
 
 

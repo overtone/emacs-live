@@ -1,12 +1,2081 @@
-ORG NEWS -- history of user-visible changes.           -*- org -*-
+ORG NEWS -- history of user-visible changes.   -*- mode: org; coding: utf-8 -*-
 
-#+LINK: doc http://orgmode.org/worg/doc.html#%s
-#+LINK: git http://orgmode.org/cgit.cgi/org-mode.git/commit/?id=%s
+#+STARTUP: overview
 
-Copyright (C) 2012-2016 Free Software Foundation, Inc.
+#+LINK: doc https://orgmode.org/worg/doc.html#%s
+#+LINK: git https://code.orgmode.org/bzg/org-mode/commit/%s
+
+Copyright (C) 2012-2020 Free Software Foundation, Inc.
 See the end of the file for license conditions.
 
-Please send Org bug reports to emacs-orgmode@gnu.org.
+Please send Org bug reports to mailto:emacs-orgmode@gnu.org.
+
+* Version 9.3
+
+** Incompatible changes
+*** Change bracket link escaping syntax
+
+Org used to percent-encode sensitive characters in the URI part of the
+bracket links.
+
+Now, escaping mechanism uses the usual backslash character, according
+to the following rules:
+
+1. All =[= and =]= characters in the URI must be escaped;
+2. Every =\= character preceding either =[= or =]= must be escaped;
+3. Every =\= character at the end of the URI must be escaped.
+
+When in doubt, use the function ~org-link-escape~ in order to turn
+a link string into its properly escaped form.
+
+The following function will help switching your links to the new
+syntax:
+
+#+begin_src emacs-lisp
+(defun org-update-link-syntax (&optional no-query)
+  "Update syntax for links in current buffer.
+Query before replacing a link, unless optional argument NO-QUERY
+is non-nil."
+  (interactive "P")
+  (org-with-point-at 1
+    (let ((case-fold-search t))
+      (while (re-search-forward "\\[\\[[^]]*?%\\(?:2[05]\\|5[BD]\\)" nil t)
+        (let ((object (save-match-data (org-element-context))))
+          (when (and (eq 'link (org-element-type object))
+                     (= (match-beginning 0)
+                        (org-element-property :begin object)))
+            (goto-char (org-element-property :end object))
+            (let* ((uri-start (+ 2 (match-beginning 0)))
+                   (uri-end (save-excursion
+                              (goto-char uri-start)
+                              (re-search-forward "\\][][]" nil t)
+                              (match-beginning 0)))
+                   (uri (buffer-substring-no-properties uri-start uri-end)))
+              (when (or no-query
+                        (y-or-n-p
+                         (format "Possibly obsolete URI syntax: %S.  Fix? "
+                                 uri)))
+                (setf (buffer-substring uri-start uri-end)
+                      (org-link-escape (org-link-decode uri)))))))))))
+#+end_src
+
+The old ~org-link-escape~ and ~org-link-unescape~ functions have been
+renamed into ~org-link-encode~ and ~org-link-decode~.
+
+*** Change match group number in ~org-link-bracket-re~
+
+Link description, if any, is located in match group 2 instead of match
+group 3.
+
+*** ob-clojure does not auto prepend ~(ns ..)~ statement anymore
+
+When tangling, user usually just wants to tangle literally code instead
+of prepend inserting a ~(ns ..)~ statement before source block
+code.  Now, when you have no ~:ns~ header argument specified, this
+behavior will not happen automatically.
+
+*** Change in behavior on exit from an Org edit buffer
+
+Org will no longer attempt to restore the window configuration in the
+frame to which the user returns after editing a source block with
+~org-edit-src-code~.  Instead, the window configuration will remain as
+it is.
+
+*** Change default value for ~org-email-link-description-format~
+
+When linking from a mail buffer, Org used to truncate the subject of
+the message to 30 characters in order to build the description of the
+link.  This behavior was considered as too surprising.  As
+a consequence, Org no longer truncates subjects.
+
+You can get the old behavior back with the following:
+
+: (setq org-email-link-description-format "Email %c: %.30s")
+
+*** ~:file~ header argument no longer assume "file" ~:results~
+
+The "file" ~:results~ value is now mandatory for a code block
+returning a link to a file.  The ~:file~ or ~:file-ext~ header
+arguments no longer imply a "file" result is expected.
+
+*** Plain numbers are hours in Column View mode
+
+See [[git:3367ac9457]] for details.
+
+*** All LaTeX preview backends use now xcolor
+
+The dvipng backend was previously relying on fg and bg parameters to
+be passed to the CLI. This didn't work when xcolor was directly or
+indirectly used in the document (e.g. tkiz is a user of xcolor). Since
+every other backend was already using xcolor to set fg and bg, the CLI
+alternative was removed and there is no more a :use-xcolor options
+since now it's implicitly always true.
+
+*** Org-Attach Git commit
+
+[[*Org-Attach has been refactored and extended][Refactoring of Org-Attach]] affected the Git commit functionality.  Not
+much, but the following changes are required if you still need to
+auto-commit attachments to git:
+
+- Customization of ~org-attach-annex-auto-get~ needs to be renamed to
+  ~org-attach-git-annex-auto-get~.
+
+- Customization of ~org-attach-commit~ is no longer needed.  Instead
+  one need to require the =org-attach-git= module in the startup.
+
+** New features
+*** New option to wrap source code lines in HTML export
+
+When new option ~html-wrap-src-lines~ (with variable
+~org-html-wrap-src-lines~) is non-nil, HTML export wraps source code
+lines in HTML ~code~ elements.
+
+*** New option to handle schedules and deadlines in iCalendar export
+
+Export ignore done tasks with a deadline when
+~org-icalendar-use-deadline~ contains ~event-if-todo-not-done~.
+Likewise, scheduled done tasks are also ignored when
+~org-icalendar-use-scheduled~ contains the same symbol.
+
+*** Add split-window-right option for src block edit window placement
+
+Given the increasing popularity of wide screen monitors, splitting
+horizontally may make more sense than splitting vertically.  An
+option, ~split-window-right~, to request horizontal splitting has been
+added to ~org-src-window-setup~.
+
+*** Org-Attach has been refactored and extended
+
+Org attach has been refactored and the functionality extended.  It
+should now be easier to understand how it works.  A few improvements
+and extra options have been added as well.
+
+From the initial comment in org-attach source-code:
+
+- Attachments are managed either by using a custom property DIR or by
+  using property ID from org-id.  When DIR is defined, a location in
+  the filesystem is directly attached to the outline node.  When
+  org-id is used, attachments are stored in a folder named after the
+  ID, in a location defined by ~org-attach-id-dir~.  DIR has
+  precedence over ID when both parameters are defined for the current
+  outline node (also when inherited parameters are taken into
+  account).
+
+From now on inheritance requires no extra property and will adhere to
+~org-attach-use-inheritance~ by default.  Inheritance can be
+customized to always be activated or never be activated in
+~org-attach-use-inheritance~.
+
+The ATTACH_DIR property is deprecated in favor of the shorter
+property DIR.  Links to folders inside the DIR property can now be
+declared as relative links.  This is not enabled by default, but can
+be set in ~org-attach-dir-relative~.
+
+When adding new attachment to the outline node the preferred way of
+doing so can be customized.  Take a look at
+~org-attach-preferred-new-method~.  It defaults to using ID since that
+was the behavior before this change.
+
+If both DIR and ID properties are set on the same node, DIR has
+precedence and will be used.
+
+One can now also choose to build attachment-directory-paths in a
+customized way.  This is an advanced topic, but in some case it makes
+sense to parse an ID in a different way than the default one.  Create
+your own function and add it to the beginning of
+~org-attach-id-to-path-function~list~ if you want to customize the ID
+based folder structure.
+
+If you've used ATTACH_DIR properties to manage attachments, use the
+following code to rename that property to DIR which supports the same
+functionality.  ATTACH_DIR_INHERIT is no longer supported and is
+removed.
+
+#+begin_src emacs-lisp
+  (defun org-update-attach-properties ()
+      "Change properties for Org-Attach."
+      (interactive)
+      (org-with-point-at 1
+	(while (outline-next-heading)
+	  (let ((DIR (org--property-local-values "ATTACH_DIR" nil)))
+	    (when DIR
+	      (org-set-property "DIR" (car DIR))
+	      (org-delete-property "ATTACH_DIR"))))
+	(org-delete-property-globally "ATTACH_DIR_INHERIT")))
+#+end_src
+
+For those who hate breaking changes, even though the changes are made
+to clean things up; fear not.  ATTACH_DIR will still continue to work.
+It's just not documented any longer.  When you get the chance, run the
+code above to clean things up anyways!
+
+**** New hooks
+Two hooks are added to org-attach:
+- org-attach-after-change-hook
+- org-attach-open-hook
+
+They are added mostly for internal restructuring purposes, but can
+ofc. be used for other things as well.
+
+*** New link-type: Attachment
+
+Attachment-links are now first-class citizens.  They mimic file-links
+in everything they do but use the existing attachment-folder as a base
+when expanding the links. Both =DIR= and =ID= properties are used to
+try to resolve the links, in exactly the same way as Org-Attach uses
+those properties.
+
+*** Handle overlay specification for notes in Beamer export
+
+This aligns Beamer notes with slide overlays.
+
+*** Add support for lettered lists in Texinfo
+
+Using =:enum A= or =:enum a= Texinfo attribute switches an otherwise
+numbered list to a lettered list.
+
+*** Add a dispatcher command to insert dynamic blocks
+
+You can add new dynamic blocks with function
+~org-dynamic-block-define~.  All such dynamic blocks can be used by
+~org-dynamic-block-insert-dblock~ command.
+
+*** Babel
+
+**** ob-emacs-lisp sets ~lexical-binding~ in Org edit buffers
+
+When editing an Elisp src block, the editing buffer's
+~lexical-binding~ is set according to the src block's =:lexical=
+parameter.
+
+**** Add LaTeX output support in PlantUML
+
+*** New minor mode to display headline numbering
+
+Use =<M-x org-num-mode>= to get a visual indication of the numbering
+in the outline.  The numbering is also automatically updated upon
+changes in the buffer.
+
+*** New property =HTML_HEADLINE_CLASS= in HTML export
+
+The new property =HTML_HEADLINE_CLASS= assigns a class attribute to
+a headline.
+
+*** Allow LaTeX attributes and captions for "table.el" tables
+
+Supported LaTeX attributes are ~:float~, ~:center~, ~:font~ and
+~:caption~.
+
+*** Attach buffer contents to headline
+
+With =<b>= key from attachment dispatcher (=<C-c C-a>=), it is now
+possible to write the contents of a buffer to a file in the headline
+attachment directory.
+
+*** iCalendar export respects a =CLASS= property
+
+Set the =CLASS= property on an entry to specify a visibility class for
+that entry only during iCalendar export. The property can be set to
+anything the calendar server supports. The iCalendar standard defines
+the values =PUBLIC=, =CONFIDENTIAL=, =PRIVATE=, which can be
+interpreted as publicly visible, accessible to a specific group, and
+private respectively.
+
+This property can be inherited during iCalendar export, depending on
+the value of ~org-use-property-inheritance~.
+
+*** New parameter for =INCLUDE= keyword
+
+Add =:coding CODING-SYSTEM= to include files using a different coding
+system than the main Org document.  For example:
+
+#+begin_example
+,#+INCLUDE: "myfile.cmd" src cmd :coding cp850-dos
+#+end_example
+
+*** New values in clock tables' step: =month= and =year=
+*** ODT export handles numbers cookies in lists
+*** New cell movement functions in tables
+
+~S-<UP>~, ~S-<DOWN>~, ~S-<RIGHT>~, and ~S-<LEFT>~ now move cells in
+the corresponding direction by swapping with the adjacent cell.
+
+*** New option to natively fontify LaTeX snippets and environments
+
+A 'native option was added to org-highlight-latex-and-related. It
+matches the same structures than 'latex but it calls
+org-src-font-lock-fontify-block instead, thus bringing about full
+LaTeX font locking.
+
+*** ~org-clone-subtree-with-time-shift~ learned to shift backward in time
+
+=<C-c C-x c>= (~org-clone-subtree-with-time-shift~) now takes a
+negative value as a valid repeater to shift time stamps in backward
+in cloned subtrees.  You can give, for example, ‘-3d’ to shift three
+days in the past.
+
+*** Toggle display of all vs. undone scheduled habits conveniently
+
+=<C-u K>= (~org-habit-toggle-display-in-agenda~) in an agenda toggles
+the display of all habits to those which are undone and scheduled.
+This is a function for convenience.
+
+*** New parameter for SQL Babel blocks: ~:dbconnection~
+
+The new parameter ~:dbconnection~ allows to specify a connection name
+in a SQL block header: this name is used to look up connection
+parameters in ~sql-connection-alist~.
+
+*** New =:scale= attribute supported by LaTeX exporters
+
+The builtin "latex" exporters now accept and use a =:scale= attribute,
+which scales an image by a given factor.
+
+This attribute is wrapped around the =scale= parameter of LaTeX's
+=\includegraphics= (bitmap images) or a TiKZ's =\scalebox=.
+Therefore, its value should be some string palatable to LaTeX as
+a positive float Its default value is an empty string (i.e. disabled).
+
+This attribute overrides the =:width= and =:height= attributes.
+
+#+begin_example
+,#+name: Beastie
+,#+caption: I think I saw this curious horse already, but where ?
+,#+LATEX_ATTR: :scale 2
+[[https://orgmode.org/img/org-mode-unicorn-logo.png]]
+#+end_example
+
+*** Allow specifying the target for a table of contents
+
+The =+TOC= keyword now accepts a =:target:= attribute that specifies
+the headline to use for making the table of contents.
+
+#+begin_example
+,* Target
+  :PROPERTIES:
+  :CUSTOM_ID: TargetSection
+  :END:
+,** Heading A
+,** Heading B
+,* Another section
+,#+TOC: headlines 1 :target "#TargetSection"
+#+end_example
+
+** New functions
+*** ~org-dynamic-block-insert-dblock~
+
+Use default keybinding =<C-c C-x x>= to run command
+~org-dynamic-block-insert-dblock~.  It will prompt user to select
+dynamic block in ~org-dynamic-block-alist~.
+
+*** ~org-table-cell-up~
+*** ~org-table-cell-down~
+*** ~org-table-cell-left~
+*** ~org-table-cell-right~
+*** ~org-habit-toggle-display-in-agenda~
+** Removed functions and variables
+*** Removed Org Drill
+
+You can install it back from MELPA.
+
+*** ~org-babel-set-current-result-hash~
+*** ~org-capture-insert-template-here~
+*** ~org-attach-directory~
+
+It has been deprecated in favor of ~org-attach-id-dir~ which is less
+ambiguous given the restructured org-attach.
+
+*** ~org-enable-fixed-width-editor~
+
+This variable was not used through the code base.
+
+** Miscellaneous
+*** Change signature for ~org-list-to-subtree~
+
+The function now accepts the level of the subtree as an optional
+argument.  It no longer deduces it from the current level.
+
+*** LaTeX preview is simplified
+
+Function ~org-latex-preview~, formerly known as
+~org-toggle-latex-fragment~, has a hopefully simpler and more
+predictable behavior.  See its docstring for details.
+
+*** ~org-table-copy-down~ supports patterns
+
+When ~org-table-copy-increment~ is non-nil, it is now possible to
+increment fields like =A1=, or =0A=, i.e., any string prefixed or
+suffixed with a whole number.
+
+*** No more special indentation for description items
+
+Descriptions items are indented like regular ones, i.e., text starts
+after the bullet.  Special indentation used to introduce bugs when
+inserting sub-items in a description list.
+
+*** New hook: ~org-todo-repeat-hook~
+
+This hook was actually introduced in Org 9.2.1, but wasn't advertised.
+
+*** Org Table reads numbers starting with 0 as strings
+*** Disable fast tag selection interface via prefix arg
+
+A call of ~org-set-tags-command~ with prefix argument C-u C-u avoids
+the fast tag selection interface and instead offers the plain
+interface.
+
+*** ~:mkdirp~ now supports create directory for ~:dir~ path
+
+The ~:mkdirp~ header argument used to only work for ~:tangle~ tangle
+files. Now ~:mkdirp~ works for ~:dir~ too. This is more convenient for
+specify default directory and with ~:file~ header argument.
+
+*** New variable: ~org-agenda-breadcrumbs-separator~
+
+If breadcrumbs are showed in org-agenda with the help of "%b" format
+in ~org-agenda-prefix-format~, user can customize breadcrumbs's
+separator using ~org-agenda-breadcrumbs-separator~.
+
+*** New variable ~org-attach-commands~
+
+This variable makes it possible to customize the list of commands for
+the attachment dispatcher.
+
+*** New ID method based on timestamp
+
+If one chooses, it is now possible to create ID's based on timestamp
+(ISO8601) instead of UUID by changing org-id-method to ts.
+
+For an improved folder structure when using timestamp as ID, make sure
+to promote ~org-attach-id-ts-folder-format~ to the first element of
+~org-attach-id-to-path-function-list~ in your configuration at the
+same time.
+
+*** New customization: ~org-id-locations-relative~
+
+New customization to make the persisting of org-id-locations between
+sessions to store links to files as relative instead of absolute.  The
+links will be stored as relative to the path of org-id-locations-file.
+
+*** ~org-ctrl-c-tab~ is functional before the first headline
+
+I.e. treat the whole file as if it was a subtree.
+
+Also fold everything below the chosen level.  Former behavior was to
+leave unfolded subtrees unfolded.
+
+*** ~org-kill-note-or-show-branches~ is functional before the first headline
+
+I.e. treat the whole file as if it was a subtree.
+
+*** Respect narrowing when agenda command is restricted to buffer
+
+*** ~org-table-insert-column~ inserts the column at point position
+
+Before, the new column was inserted to the right of the column at
+point position.
+
+*** Table column deletion now consistent with row deletion
+
+Point stays in the column at deletion, except when deleting the
+rightmost column.
+
+* Version 9.2
+** Incompatible changes
+*** Removal of OrgStruct mode mode and radio lists
+
+OrgStruct minor mode and radio lists mechanism (~org-list-send-list~
+and ~org-list-radio-lists-templates~) are removed from the code base.
+
+Note that only radio /lists/ have been removed, not radio tables.
+
+If you want to manipulate lists like in Org in other modes, we suggest
+to use orgalist.el, which you can install from GNU ELPA.
+
+If you want to use Org folding outside of Org buffers, you can have a
+look at the outshine package in the MELPA repository.
+
+*** Change in the structure template expansion
+
+Org 9.2 comes with a new template expansion mechanism, combining
+~org-insert-structure-template~ bound to ~C-c C-,~.
+
+If you customized the ~org-structure-template-alist~ option manually,
+you probably need to update it, see the docstring for accepted values.
+
+If you prefer using previous patterns, e.g. =<s=, you can activate
+them again by requiring Org Tempo library:
+
+: (require 'org-tempo)
+
+or add it to ~org-modules~.
+
+If you need complex templates, look at the ~tempo-define-template~
+function or at solutions like Yasnippet.
+
+*** Change to Noweb expansion
+
+Expansion check =:noweb-ref= only if no matching named block is found
+in the buffer.  As a consequence, any =:noweb-ref= value matching the
+name of a source block in the buffer is ignored. A simple fix is to
+give every concerned source-block, including the named one, a new,
+unique, Noweb reference.
+
+#+BEGIN_SRC org
+  ,#+NAME: foo
+  ,#+BEGIN_SRC emacs-lisp
+    1
+  ,#+END_SRC
+
+  ,#+BEGIN_SRC emacs-lisp :noweb-ref foo
+    2
+  ,#+END_SRC
+
+  ,#+BEGIN_SRC emacs-lisp :noweb yes
+    <<foo>>
+  ,#+END_SRC
+#+END_SRC
+
+should become
+
+#+BEGIN_SRC org
+  ,#+NAME: foo
+  ,#+BEGIN_SRC emacs-lisp :noweb-ref bar
+    1
+  ,#+END_SRC
+
+  ,#+BEGIN_SRC emacs-lisp :noweb-ref bar
+    2
+  ,#+END_SRC
+
+  ,#+BEGIN_SRC emacs-lisp :noweb yes
+    <<bar>>
+  ,#+END_SRC
+#+END_SRC
+
+*** Default/accepted values of ~org-calendar-to-agenda-key~
+
+The default value and accepted value of  ~org-calendar-to-agenda-key~
+changed.  This is an excerpt of the new docstring:
+
+: When set to ‘default’, bind the function to ‘c’, but only if it is
+: available in the Calendar keymap.  This is the default choice because
+: ‘c’ can then be used to switch back and forth between agenda and calendar.
+:
+: When nil, ‘org-calendar-goto-agenda’ is not bound to any key.
+
+Check the full docstring for more.
+
+*** Change the signature of the ~org-set-effort~ function
+
+Here is the new docstring:
+
+: (org-set-effort &optional INCREMENT VALUE)
+:
+: Set the effort property of the current entry.
+: If INCREMENT is non-nil, set the property to the next allowed
+: value.  Otherwise, if optional argument VALUE is provided, use
+: it.  Eventually, prompt for the new value if none of the previous
+: variables is set.
+
+*** Placeholders in =(eval ...)= macros are always strings
+
+Within =(eval ...)= macros, =$1=-like placeholders are always replaced
+with a string.  As a consequence, they must not be enclosed within
+quotes. As an illustration, consider the following, now valid,
+examples:
+
+#+begin_example
+  ,#+macro: join (eval (concat $1 $2))
+  ,#+macro: sum (eval (+ (string-to-number $1) (string-to-number $2)))
+
+  {{{join(a,b)}}} => ab
+  {{{sum(1,2)}}}  => 3
+#+end_example
+
+However, there is no change in non-eval macros:
+
+#+begin_example
+  ,#+macro: disp argument: $1
+
+  {{{disp(text)}}} => argument: text
+#+end_example
+
+*** =align= STARTUP value no longer narrow table columns
+
+Columns narrowing (or shrinking) is now dynamic. See [[*Dynamically
+narrow table columns]] for details. In particular, it is decoupled from
+aligning.
+
+If you need to automatically shrink columns upon opening an Org
+document, use =shrink= value instead, or in addition to align:
+
+#+BEGIN_EXAMPLE
+,#+STARTUP: align shrink
+#+END_EXAMPLE
+
+*** ~org-get-tags~ meaning change
+
+Function ~org-get-tags~ used to return local tags to the current
+headline.  It now returns all the inherited tags in addition to the
+local tags.  In order to get the old behavior back, you can use:
+
+: (org-get-tags nil t)
+
+*** Alphabetic sorting in tables and lists
+
+When sorting alphabetically, ~org-table-sort-lines~ and ~org-sort-list~
+now sort according to the locale’s collation rules instead of by
+code-point.
+
+*** Change the name of the :tags clocktable option to :match
+
+The =:match= (renamed from =:tags=) option allows to limit clock entries
+to those matching a todo-tags matcher.
+
+The old =:tags= option can be set to =t= to display a headline's tags in a
+dedicated column.
+
+This is consistent with the naming of =org-dblock-write:columnview=
+options, where =:match= is also used as a headlines filter.
+
+** New features
+*** Add ~:session~ support of ob-clojure for CIDER
+You can initialize source block session with Babel default keybinding
+=[C-c C-v C-z]= to use =sesman= session manager to link current
+project, directory or buffer with specific Clojure session, or
+=cider-jack-in= a new CIDER REPL if no CIDER REPLs available. In older
+CIDER version which has not =sesman= integrated, only has
+=cider-jack-in= without Clojure project is supported.
+#+begin_src clojure :session
+(dissoc Clojure 'JVM)
+(conj clojurists "stardiviner")
+#+end_src
+*** Add ~:results link~ support for Babel
+
+With this output format, create a link to the file specified in
+~:file~ header argument, without actually writing any result to it:
+
+#+begin_example
+,#+begin_src shell :dir "data/tmp" :results link :file "crackzor_1.0.c.gz"
+wget -c "http://ben.akrin.com/crackzor/crackzor_1.0.c.gz"
+,#+end_src
+
+,#+results:
+[[file:data/tmp/crackzor_1.0.c.gz]]
+#+end_example
+
+*** Add ~:session~ support of ob-js for js-comint
+#+begin_src js :session "*Javascript REPL*"
+console.log("stardiviner")
+#+end_src
+*** Add ~:session~ support of ob-js for Indium
+#+begin_src js :session "*JS REPL*"
+console.log("stardiviner")
+#+end_src
+*** Add ~:session~ support of ob-js for skewer-mode
+#+begin_src js :session "*skewer-repl*"
+console.log("stardiviner")
+#+end_src
+*** Add support for links to LaTeX equations in HTML export
+Use MathJax links when enabled (by ~org-html-with-latex~), otherwise
+add a label to the rendered equation.
+*** Org Tempo may used for snippet expansion of structure template.
+See manual and the commentary section in ~org-tempo.el~ for details.
+*** Exclude unnumbered headlines from table of contents
+Set their =UNNUMBERED= property to the special =notoc= value.  See
+manual for details.
+*** ~org-archive~ functions update status cookies
+
+Archiving headers through ~org-archive-subtree~ and
+~org-archive-to-archive-sibling~ such as the ones listed below:
+
+#+BEGIN_SRC org
+  ,* Top [1/2]
+  ,** DONE Completed
+  ,** TODO Working
+#+END_SRC
+
+Will update the status cookie in the top level header.
+
+*** Disable =org-agenda-overriding-header= by setting to empty string
+
+The ~org-agenda-overriding-header~ inserted into agenda views can now
+be disabled by setting it to an empty string.
+
+*** Dynamically narrow table columns
+
+With ~C-c TAB~, it is now possible to narrow a column to the width
+specified by a width cookie in the column, or to 1 character if there
+is no such cookie.  The same keybinding expands a narrowed column to
+its previous state.
+
+Editing the column automatically expands the whole column to its full
+size.
+
+*** =org-columns-summary-types= entries can take an optional COLLECT function
+
+You can use this to make collection of a property from an entry
+conditional on another entry. E.g. given this configuration:
+
+#+BEGIN_SRC emacs-lisp
+  (defun custom/org-collect-confirmed (property)
+    "Return `PROPERTY' for `CONFIRMED' entries"
+    (let ((prop (org-entry-get nil property))
+	  (confirmed (org-entry-get nil "CONFIRMED")))
+      (if (and prop (string= "[X]" confirmed))
+	  prop
+	"0")))
+
+  (setq org-columns-summary-types
+	'(("X+" org-columns--summary-sum
+	   custom/org-collect-confirmed)))
+#+END_SRC
+
+You can have a file =bananas.org= containing:
+
+#+BEGIN_SRC org
+  ,#+columns: %ITEM %CONFIRMED %Bananas{+} %Bananas(Confirmed Bananas){X+}
+
+  ,* All shipments
+  ,** Shipment 1
+     :PROPERTIES:
+     :CONFIRMED: [X]
+     :Bananas:  4
+     :END:
+
+  ,** Shipment 2
+     :PROPERTIES:
+     :CONFIRMED: [ ]
+     :BANANAS:  7
+     :END:
+#+END_SRC
+
+... and when going to the top of that file and entering column view
+you should expect to see something like:
+
+| ITEM          | CONFIRMED | Bananas | Confirmed Bananas |
+|---------------+-----------+---------+-------------------|
+| All shipments |           |      11 |                 4 |
+| Shipment 1    | [X]       |       4 |                 4 |
+| Shipment 2    | [ ]       |       7 |                 7 |
+
+#+BEGIN_EXAMPLE
+  ,#+STARTUP: shrink
+#+END_EXAMPLE
+*** Allow to filter by tags/property when capturing colview
+
+You can now use =:match= to filter entries using a todo/tags/properties
+matcher.
+
+*** Add support for Oracle's database alias in Babel blocks
+=ob-sql= library already support running SQL blocks against an Oracle
+database using ~sqlplus~.  Now it's possible to use alias names
+defined in =TNSNAMES= file instead of specifying full connection
+parameters.  See example below.
+
+#+BEGIN_SRC org
+  you can use the previous full connection parameters
+  ,#+BEGIN_SRC sql :engine oracle :dbuser me :dbpassword my_insecure_password :database my_db_name :dbhost my_db_host :dbport 1521
+  select sysdate from dual;
+  ,#+END_SRC
+
+  or the alias defined in your TNSNAMES file
+  ,#+BEGIN_SRC sql :engine oracle :dbuser me :dbpassword my_insecure_password :database my_tns_alias
+  select sysdate from dual;
+  ,#+END_SRC
+#+END_SRC
+
+*** ~org-agenda-set-restriction-lock~ toggle agenda restriction at point
+
+You can set an agenda restriction lock with =C-x C-x <= or with =<= at the
+beginning of a headline when using Org speed commands.  Now, if there
+is already a restriction at point, hitting =<= again (or =C-x C-x <=) will
+remove it.
+
+*** Headlines can now link to themselves in HTML export
+
+When enabling ~org-html-self-link-headlines~ the headlines exported to
+HTML contain a hyperlink to themselves.
+
+** New commands and functions
+
+*** ~org-insert-structure-template~
+
+This function can be used to wrap existing text of Org elements in
+a #+BEGIN_FOO/#+END_FOO block.  Bound to C-c C-x w by default.
+
+*** ~org-export-excluded-from-toc-p~
+
+See docstring for details.
+
+*** ~org-timestamp-to-time~
+*** ~org-timestamp-from-string~
+*** ~org-timestamp-from-time~
+*** ~org-attach-dired-to-subtree~
+
+See docstring for details.
+
+*** ~org-toggle-narrow-to-subtree~
+
+Toggle the narrowing state of the buffer: when in a narrowed state,
+widen, otherwise call ~org-narrow-to-subtree~ to narrow.
+
+This is attached to the "s" speed command, so that hitting "s" twice
+will go back to the widen state.
+
+*** ~org-browse-news~
+
+Browse https://orgmode.org/Changes.html to let users read information
+about the last major release.
+
+There is a new menu entry for this in the "Documentation" menu item.
+
+*** ~org-info-find-node~
+
+From an Org file or an agenda switch to a suitable info page depending
+on the context.
+
+The function is bound to =C-c C-x I=.
+
+** Removed commands and functions
+*** ~org-outline-overlay-data~
+Use ~org-save-outline-visibility~ instead.
+*** ~org-set-outline-overlay-data~
+Use ~org-save-outline-visibility~ instead.
+*** ~org-get-string-indentation~
+It was not used throughout the code base.
+*** ~org-fix-indentation~
+It was not used throughout code base.
+*** ~org-context-p~
+Use ~org-element-at-point~ instead.
+*** ~org-preserve-lc~
+It is no longer used in the code base.
+*** ~org-try-structure-completion~
+Org Tempo may be used as a replacement.  See details above.
+** Removed options
+
+*** org-babel-use-quick-and-dirty-noweb-expansion
+
+See [[*Change to Noweb expansion][Change to Noweb expansion]] for explanations.
+
+** Miscellaneous
+
+*** New default value for ~org-texinfo-table-scientific-notation~
+
+It is now nil, which means numbers in scientific notation are not
+handled specially by default.
+
+*** New default value for ~org-latex-table-scientific-notation~
+
+It is now nil, which means numbers in scientific notation are not
+handled specially by default.
+
+*** New face: ~org-upcoming-distant-deadline~
+
+It is meant to be used as the face for distant deadlines, see
+~org-agenda-deadline-faces~
+
+*** ~org-paste-subtree~ no longer breaks sections
+
+Unless point is at the beginning of a headline, ~org-paste-subtree~
+now pastes the tree before the next visible headline.  If you need to
+break the section, use ~org-yank~ instead.
+
+*** ~org-table-insert-column~ inserts a column to the right
+
+It used to insert it on the left.  With this change,
+~org-table-insert-column~ and ~org-table-delete-column~ are
+reciprocal.
+
+*** ~org-publish-resolve-external-link~ accepts a new optional argument.
+*** ~org-irc.el~ now supports exporting =irc:= links properly
+
+Previously, irc links were exported by ~ox-md~ and ~ox-html~ as normal
+file links, which lead to them being broken in web browsers. Now both
+of these exporters will properly export to =irc:= links, which will
+open properly in irc clients from web browsers.
+
+*** ~org-comment-dwim~ (bound to =M-;=) now comments headings, if point is on a heading
+*** Add support for open source block in window below
+
+Set option ~org-src-window-setup~ to ~split-window-below~.
+
+*** Alphabetic sorting in headings and tags now uses the locale’s sorting rules
+
+When sorting alphabetically, ~org-sort-entries~ and
+~org-tags-sort-function~ now sort according to the locale’s collation
+rules instead of by code-point.
+*** New speed command "k" to kill (cut) the subtree at point
+* Version 9.1
+
+** Incompatible changes
+
+*** Variables relative to clocksum duration are obsolete
+
+~org-time-clocksum-format~, ~org-time-clocksum-use-fractional~ and
+~org-time-clocksum-fractional-format~ are obsolete.  If you changed
+them, consider modifying ~org-duration-format~ instead.
+
+Variable ~org-time-clocksum-use-effort-durations~ is also obsolete.
+Consider setting ~org-duration-units~ instead.
+
+*** ~org-at-timestamp-p~ optional argument accepts different values
+
+See docstrings for the allowed values.  For backward compatibility,
+~(org-at-timestamp-p t)~ is still supported, but should be updated
+accordingly.
+
+*** ~org-capture-templates~ no longer accepts S-expressions as file names
+
+Since functions are allowed there, a straightforward way to migrate
+is to turn, e.g.,
+
+: (file (sexp))
+
+into
+
+: (file (lambda () (sexp)))
+
+*** Deleted contributed packages
+
+=org-ebib.el, =org-bullets.el= and =org-mime.el= have been deleted
+from the contrib/ directory.
+
+You can now find them here :
+
+- https://github.com/joostkremers/ebib
+- https://github.com/sabof/org-bullets
+- https://github.com/org-mime/org-mime
+
+*** Change ~org-texinfo-classes~ value
+The value cannot support functions to create sectioning commands
+anymore.  Also, the sectioning commands should include commands for
+appendices.  See the docstring for more information.
+*** Removal of ~:sitemap-sans-extension~
+
+The publishing property is no longer recognized, as a consequence of
+changes to site-map generation.
+
+You can get the same functionality by setting ~:sitemap-format-entry~
+to the following
+
+#+BEGIN_SRC elisp
+(lambda (entry style project)
+  (cond ((not (directory-name-p entry))
+	 (format "[[file:%s][%s]]"
+		 (file-name-sans-extension entry)
+		 (org-publish-find-title entry project)))
+	((eq style 'tree) (file-name-nondirectory (directory-file-name entry)))
+	(t entry)))
+#+END_SRC
+
+*** Change signature for ~:sitemap-function~
+
+~:sitemap-function~ now expects to be called with two arguments.  See
+~org-publish-project-alist~ for details.
+
+*** Change signature for some properties in ~org-list-to-generic~
+
+~:istart~, ~:icount~, ~:iend~ and ~:isep~ now expect the type of the
+list as their first argument.
+
+*** Change signature for ~org-get-repeater~
+The optional argument is now a string to extract the repeater from.
+See docstring for details.
+
+*** Change signature for ~org-time-string-to-time~
+See docstring for changes.
+
+*** Change order of items in ~org-agenda-time-grid~
+~org-agenda-time-grid~ gained an extra item to allow users to customize
+the string displayed after times in the agenda. See docstring for
+details.
+
+*** ~tags-todo~ custom searches now include DONE keywords
+
+Use "/!" markup when filtering TODO keywords to get only not-done TODO
+keywords.
+
+*** ~org-split-string~ returns ~("")~ when called on an empty string
+It used to return nil.
+*** Removal of =ob-scala.el=
+
+See [[https://github.com/ensime/emacs-scala-mode/issues/114][this github issue]].
+
+You can use =ob-scala.el= as packaged in scala-mode, available from the
+MELPA repository.
+
+** New features
+*** iCalendar export uses inheritance for TIMEZONE and LOCATION properties
+Both these properties can be inherited during iCalendar export,
+depending on the value of ~org-use-property-inheritance~.
+*** iCalendar export respects a TIMEZONE property
+Set the TIMEZONE property on an entry to specify a time zone for that
+entry only during iCalendar export.  The property value should be
+specified as in "Europe/London".
+*** ~org-attach~ can move directory contents
+When setting a new directory for an entry, org-attach offers to move
+files over from the old directory.  Using a prefix arg will reset the
+directory to old, ID based one.
+*** New Org duration library
+This new library implements tools to read and print time durations in
+various formats (e.g., "H:MM", or "1d 2h 3min"...).
+
+See ~org-duration-to-minutes~ and ~org-duration-from-minutes~
+docstrings.
+
+*** Agenda
+**** New variable : ~org-agenda-show-future-repeats~
+**** New variable : ~org-agenda-prefer-last-repeat~
+**** New variable : ~org-deadline-past-days~
+See docstring for details.
+**** Binding C-c C-x < for ~org-agenda-set-restriction-lock-from-agenda~
+**** New auto-align default setting for =org-agenda-tags-column=
+
+=org-agenda-tags-column= can now be set to =auto=, which will
+automatically align tags to the right edge of the window.  This is now
+the default setting.
+*** New value for ~org-publish-sitemap-sort-folders~
+
+The new ~ignore~ value effectively allows toggling inclusion of
+directories in published site-maps.
+
+*** Babel
+
+**** Scheme: support for tables
+**** Scheme: new variable: ~org-babel-scheme-null-to~
+
+This new custom option allows you to use an empty list or null symbol to
+format the table output, initially assigned to ~hlines~.
+
+**** Scheme: new header ~:prologue~
+
+A new block code header has been created for Org Babel that enables
+developers to prepend code to the scheme block being processed.
+
+Multiple ~:prologue~ headers can be added each of them using a string
+with the content to be added.
+
+The scheme blocks are prepared by surrounding the code in the block
+with a let form. The content of the ~:prologue~ headers are prepended
+before this let form.
+
+**** Support for hledger accounting reports added
+**** Clojure: new setting ~org-babel-clojure-sync-nrepl-timeout~
+
+Creation of a new setting to specify the Cider timeout.  By setting
+the =org-babel-clojure-sync-nrepl-timeout= setting option.  The value
+is in seconds and if set to =nil= then no timeout will occur.
+**** Clojure: new header ~:show-process~
+
+A new block code header has been created for Org Babel that enables
+developers to output the process of an ongoing process into a new
+window/buffer.
+
+You can tell Org Babel to output the process of a running code block.
+
+To show that output you only have to specify the =:show-process=
+option in the code block's header like this:
+
+#+begin_example
+,#+BEGIN_SRC clojure :results output :show-process t
+  (dotimes [n 10]
+    (println n ".")
+    (Thread/sleep 500))
+,#+END_SRC
+#+end_example
+
+If =:show-process= is specified that way, then when you will run the
+code using =C-c C-c= a new window will open in Emacs.  Everything that
+is output by the REPL will immediately be added to that new window.
+
+When the processing of the code is finished, then the window and its
+buffer will be closed and the results will be reported in the
+=#+RESULTS= section.
+
+Note that the =:results= parameter's behavior is *not* changed.  If
+=silent= is specified, then no result will be displayed.  If =output=
+is specified then all the output from the window will appears in the
+results section.  If =value= is specified, then only the last returned
+value of the code will be displayed in the results section.
+
+**** Maxima: new headers ~:prologue~ and ~:epilogue~
+Babel options ~:prologue~ and ~:epilogue~ have been implemented for
+Maxima source blocks which prepend and append, respectively, the given
+code strings.  This can be useful for specifying formatting settings
+which would add clutter to exported code.  For instance, you can use
+this ~:prologue "fpprintprec: 2; linel: 50;"~ for presenting Maxima
+results in a beamer presentation.
+**** PlantUML: add support for header arguments
+
+[[http://plantuml.com/][Plantuml]] source blocks now support the [[https://orgmode.org/manual/prologue.html#prologue][~:prologue~]], [[https://orgmode.org/manual/epilogue.html#epilogue][~:epilogue~]] and
+[[https://orgmode.org/manual/var.html#var][~:var~]] header arguments.
+
+**** SQL: new engine added ~sqsh~
+
+A new engine was added to support ~sqsh~ command line utility for use
+against Microsoft SQL Server or Sybase SQL server.
+
+More information on ~sqsh~ can be found here: [[https://sourceforge.net/projects/sqsh/][sourceforge/sqsh]]
+
+To use ~sqsh~ in an *sql* =SRC_BLK= set the =:engine= like this:
+
+#+begin_example
+,#+BEGIN_SRC sql :engine sqsh :dbhost my_host :dbuser master :dbpassword pass :database support
+Select * From Users
+Where clue > 0
+,#+END_SRC
+#+end_example
+
+**** SQL: new engine added =vertica=
+
+A new engine was added to support vsql command line utility for use
+against HP Vertica.
+
+More information on =vsql= can be found here: [[https://my.vertica.com/docs/7.2.x/HTML/index.htm#Authoring/ConnectingToHPVertica/vsql/UsingVsql.htm][my.vertica.com]]
+
+To use =vertica= in an sql =SRC_BLK= set the =:engine= like this:
+
+#+BEGIN_EXAMPLE
+  ,#+BEGIN_SRC sql :engine vertica :dbhost my_host :dbuser dbadmin :dbpassword pw :database vmart
+  SELECT * FROM nodes;
+  ,#+END_SRC
+#+END_EXAMPLE
+**** C++: New header ~:namespaces~
+
+The new ~:namespaces~ export option can be used to specify namespaces
+to be used within a C++ org source block.  Its usage is similar to
+~:includes~, in that it can accept multiple, space-separated
+namespaces to use.  This header is equivalent to adding ~using
+namespace <name>;~ in the source block. Here is a "Hello World" in C++
+using ~:namespaces~:
+
+#+begin_example
+  ,#+BEGIN_SRC C++ :results output :namespaces std :includes <iostream>
+    cout << "Hello World" << endl;
+  ,#+END_SRC
+#+end_example
+
+**** Support for Vala language
+
+[[https://wiki.gnome.org/Projects/Vala][Vala]] language blocks support two special header arguments:
+
+- ~:flags~ passes arguments to the compiler
+- ~:cmdline~ passes commandline arguments to the generated executable
+
+Support for [[https://orgmode.org/manual/var.html#var][~:var~]] does not exist yet, also there is no [[https://orgmode.org/manual/session.html#session][~:session~]]
+support because Vala is a compiled language.
+
+The Vala compiler binary can be changed via the ~defcustom~
+~org-babel-vala-compiler~.
+
+*** New ~function~ scope argument for the Clock Table
+Added a nullary function that returns a list of files as a possible
+argument for the scope of the clock table.
+*** Export
+**** Implement vernacular table of contents in Markdown exporter
+Global table of contents are generated using vanilla Markdown syntax
+instead of HTML.  Also #+TOC keyword, including local table of
+contents, are now supported.
+**** Add Slovenian translations
+**** Implement ~org-export-insert-image-links~
+This new function is meant to be used in back-ends supporting images
+as descriptions of links, a.k.a. image links.  See its docstring for
+details.
+**** New macro : ~{{{n}}}~
+This macro creates and increment multiple counters in a document.  See
+manual for details.
+**** Add global macros through ~org-export-global-macros~
+With this variable, one can define macros available for all documents.
+**** New keyword ~#+EXPORT_FILE_NAME~
+Similarly to ~:EXPORT_FILE_NAME:~ property, this keyword allows the
+user to specify the name of the output file upon exporting the
+document.  This also has an effect on publishing.
+**** Horizontal rules are no longer ignored in LaTeX table math mode
+**** Use ~compilation-mode~ for compilation output
+**** Plain lists accept a new ~:separator~ attribute in Texinfo
+
+The new ~:separator~ attribute splits a tag from a description list
+item into multiple parts.  This allows to have two-column tables with
+multiple entries in the first column.  See manual for more details.
+
+**** ~latex-environment~ elements support ~caption~ keywords for LaTeX export
+*** ~org-edit-special~ can edit LaTeX environments
+
+Using ~C-c '~ on a LaTeX environment opens a sub-editing buffer.  By
+default, major mode in that buffer is ~latex-mode~, but it can be
+changed by configuring ~org-src-lang-modes~.
+
+*** ~org-list-to-generic~ includes a new property: ~:ifmt~
+
+~:ifmt~ is a function to be called on the body of each item.  See
+~org-list-to-generic~ documentation for details.
+
+*** New variable : ~org-bibtex-headline-format-function~
+This allow to use a different title than entry title.
+
+*** ~org-attach~ supports attaching files from URLs
+
+Using ~C-c C-a u~ prompts for a URL pointing to a file to be attached
+to the document.
+
+*** New option for ~org-refile-use-outline-path~
+~org-refile-use-outline-path~ now supports the setting ~buffer-name~,
+which causes refile targets to be prefixed with the buffer’s
+name. This is particularly useful when used in conjunction with
+~uniquify.el~.
+
+*** ~org-file-contents~ now allows the FILE argument to be a URL.
+This allows ~#+SETUPFILE:~ to accept a URL instead of a local file
+path.  The URL contents are auto-downloaded and saved to a temporary
+cache ~org--file-cache~.  A new optional argument ~NOCACHE~ is added
+to ~org-file-contents~.
+
+*** ~org-mode-restart~ now resets the newly added ~org--file-cache~.
+Using ~C-c C-c~ on any keyword (like ~#+SETUPFILE~) will reset the
+that file cache.
+
+*** New option : ~org-table-duration-hour-zero-padding~
+This variable allow computed durations in tables to be zero-padded.
+
+*** New mode switch for table formulas : =U=
+This mode omits seconds in durations.
+
+** Removed functions
+
+*** Org Timeline
+
+This feature has been removed.  Use a custom agenda view, possibly
+narrowed to current buffer to achieve a similar functionality.
+
+*** ~org-agenda-skip-entry-when-regexp-matches~ is obsolete
+
+Use ~org-agenda-skip-if~ instead.
+
+*** ~org-agenda-skip-subtree-when-regexp-matches~ is obsolete
+
+Use ~org-agenda-skip-if~ instead.
+
+*** ~org-agenda-skip-entry-when-regexp-matches-in-subtree~ is obsolete
+
+Use ~org-agenda-skip-if~ instead.
+
+*** ~org-minutes-to-clocksum-string~ is obsolete
+
+Use ~org-duration-from-minutes~ instead.
+
+*** ~org-hh:mm-string-to-minutes~ is obsolete
+
+Use ~org-duration-to-minutes~ instead.
+
+*** ~org-duration-string-to-minutes~ is obsolete
+
+Use ~org-duration-to-minutes~ instead.
+
+*** ~org-gnus-nnimap-cached-article-number~ is removed.
+
+This function relied on ~nnimap-group-overview-filename~, which was
+removed from Gnus circa September 2010.
+
+** Removed options
+
+*** ~org-agenda-repeating-timestamp-show-all~ is removed.
+
+For an equivalent to a ~nil~ value, set
+~org-agenda-show-future-repeats~ to nil and
+~org-agenda-prefer-last-repeat~ to ~t~.
+
+*** ~org-gnus-nnimap-query-article-no-from-file~ is removed.
+
+This variable has no effect, as it was relying on a function that was
+removed from Gnus circa September 2010.
+
+*** ~org-usenet-links-prefer-google~ is obsolete.
+
+Use ~org-gnus-prefer-web-links~ instead.
+
+*** ~org-publish-sitemap-file-entry-format~ is deprecated
+
+One can provide new ~:sitemap-format-entry~ property for a function
+equivalent to the removed format string.
+
+*** ~org-enable-table-editor~ is removed.
+
+Setting it to a ~nil~ value broke some other features (e.g., speed
+keys).
+
+*** ~org-export-use-babel~ cannot be set to ~inline-only~
+
+The variable is now a boolean.
+
+*** ~org-texinfo-def-table-markup~ is obsolete
+
+Use ~org-texinfo-table-default-markup~ instead.
+
+** New functions
+
+*** ~org-publish-find-property~
+
+This function can be used as a tool to format entries in a site-map,
+in addition to ~org-publish-find-title~ and ~org-publish-find-date~.
+
+*** ~org-list-to-org~
+
+It is the reciprocal of ~org-list-to-lisp~, which see.
+
+*** ~org-agenda-set-restriction-lock-from-agenda~
+
+Call ~org-agenda-set-restriction-lock~ from the agenda.
+
+** Miscellaneous
+
+*** The Library of Babel now on Worg
+
+The library-of-babel.org used to be accessible from the =doc/=
+directory, distributed with Org’s core.  It is now accessible
+from the Worg community-driven documentation [[https://orgmode.org/worg/library-of-babel.html][here]].
+
+If you want to contribute to it, please see [[https://orgmode.org/worg/org-contribute.html][how to contribute]].
+
+*** Allow multiple columns view
+
+Columns view is not limited to a single buffer anymore.
+*** Org Attach obeys ~dired-dwim-target~
+
+When a Dired buffer is opened next to the Org document being edited,
+the prompt for file to attach can start in the Dired buffer's
+directory if `dired-dwim-target' in non-nil.
+
+*** ~org-fill-paragraph~ can now fill a whole region
+*** More specific anniversary descriptions
+
+Anniversary descriptions (used in the agenda view, for instance)
+include the point in time, when the anniversary appears.  This is,
+in its most general form, just the date of the anniversary.  Or
+more specific terms, like "today", "tomorrow" or "in n days" are
+used to describe the time span.
+
+This feature allows to automatically change the description of an
+anniversary, depending on if it occurs in the next few days or
+far away in the future.
+
+*** Computed dates in tables appear as inactive time stamps
+
+*** Save point before opening a file with an unknown search option
+
+When following a file link with a search option (e.g., =::#custom-id=)
+that doesn't exist in the target file, save position before raising an
+error.  As a consequence, it is possible to jump back to the original
+document with ~org-mark-ring-goto~ (default binding =C-c &=).
+
+*** ~org-get-heading~ accepts two more optional arguments
+
+See docstring for details.
+
+*** New option ~org-babel-uppercase-example-markers~
+
+This variable is a ~defcustom~ and replaces the variable
+~org-babel-capitalize-example-region-markers~, which is a ~defvar~ and
+is now obsolete.
+*** =INCLUDE= keywords in commented trees are now ignored.
+*** Default value for ~org-texinfo-text-markup-alist~ changed.
+
+Now ~=...=~ markup uses ~@samp{}~ instead of ~@verb{}~.  You can use
+~@verb{}~ again by customizing the variable.
+*** Texinfo exports example blocks as ~@example~
+*** Texinfo exports inline source blocks as ~@code{}~
+*** Texinfo default table markup is ~@asis~
+It used to be ~@samp~ but ~@asis~ is neutral and, therefore, more
+suitable as a default value.
+*** Texinfo default process includes ~--no-split~ option
+*** New entities : ~\dollar~ and ~\USD~
+*** Support for date style URLs in =org-protocol://open-source=
+    URLs like =https://cool-blog.com/2017/05/20/cool-post/= are
+    covered by rewrite rules.
+
+*** Add (C) =COMMENT= support to ~org-structure-template-alist~
+
+* Version 9.0
+
+** Incompatible changes
+
+*** Emacs 23 support has been dropped
+
+From now on, Org expects at least Emacs 24.3, although Emacs 24.4 or
+above is suggested.
+
+*** XEmacs support has been dropped
+
+Incomplete compatibility layer with XEmacs has been removed.  If you
+want to take over maintenance of this compatibility, please contact
+our mailing list.
+
+*** New syntax for export blocks
+
+Export blocks are explicitly marked as such at the syntax level to
+disambiguate their parsing from special blocks.  The new syntax is
+
+#+BEGIN_SRC org
+,#+BEGIN_EXPORT backend
+...
+,#+END_EXPORT
+#+END_SRC
+
+instead of
+
+#+BEGIN_SRC org
+,#+BEGIN_backend
+...
+,#+END_backend
+#+END_SRC
+
+As a consequence, =INCLUDE= keywords syntax is modified, e.g.,
+
+#+BEGIN_SRC org
+,#+INCLUDE: "file.org" HTML
+#+END_SRC
+
+becomes
+
+#+BEGIN_SRC org
+,#+INCLUDE: "file.org" export html
+#+END_SRC
+
+The following function repairs export blocks and =INCLUDE= keywords
+using previous syntax:
+
+#+BEGIN_SRC emacs-lisp
+(defun org-repair-export-blocks ()
+  "Repair export blocks and INCLUDE keywords in current buffer."
+  (interactive)
+  (when (eq major-mode 'org-mode)
+    (let ((case-fold-search t)
+          (back-end-re (regexp-opt
+                        '("HTML" "ASCII" "LATEX" "ODT" "MARKDOWN" "MD" "ORG"
+                          "MAN" "BEAMER" "TEXINFO" "GROFF" "KOMA-LETTER")
+                        t)))
+      (org-with-wide-buffer
+       (goto-char (point-min))
+       (let ((block-re (concat "^[ \t]*#\\+BEGIN_" back-end-re)))
+         (save-excursion
+           (while (re-search-forward block-re nil t)
+             (let ((element (save-match-data (org-element-at-point))))
+               (when (eq (org-element-type element) 'special-block)
+                 (save-excursion
+                   (goto-char (org-element-property :end element))
+                   (save-match-data (search-backward "_"))
+                   (forward-char)
+                   (insert "EXPORT")
+                   (delete-region (point) (line-end-position)))
+                 (replace-match "EXPORT \\1" nil nil nil 1))))))
+       (let ((include-re
+              (format "^[ \t]*#\\+INCLUDE: .*?%s[ \t]*$" back-end-re)))
+         (while (re-search-forward include-re nil t)
+           (let ((element (save-match-data (org-element-at-point))))
+             (when (and (eq (org-element-type element) 'keyword)
+                        (string= (org-element-property :key element) "INCLUDE"))
+               (replace-match "EXPORT \\1" nil nil nil 1)))))))))
+#+END_SRC
+
+Moreover, ~:export-block~ keyword used in ~org-export-define-backend~ and
+~org-export-define-derived-backend~ is no longer used and needs to be
+removed.
+
+*** Footnotes changes
+
+**** [1]-like constructs are not valid footnotes
+
+Using =[1]= as a footnote was already discouraged in the manual, since
+it introduced too many false-positives in many Org documents.  These
+constructs are now unsupported.
+
+If you used =[N]= in some of your documents, consider turning them into
+=[fn:N]=.
+
+**** /Org Footnote/ library doesn't handle non-Org buffers
+
+Commands for footnotes in an Org document no longer try to do
+something in non-Org ones.  If you need to have footnotes there,
+consider using the =footnote.el= library, shipped with Emacs.
+
+In particular, ~org-footnote-tag-for-non-org-mode-files~ no longer
+exists.
+
+*** ~org-file-apps~ no longer accepts S-expressions as commands
+
+The variable now accepts functions of two arguments instead of plain
+S-expressions.  Replacing an S-expression with an appropriate function
+is straightforward.  For example
+
+: ("pdf" . (foo))
+
+becomes
+
+: ("pdf" . (lambda (file link) (foo)))
+
+*** The ~{{{modification-time}}}~ macro can get time via =vc=
+
+The modification time will be determined via =vc.el= if the second
+argument is non-nil.  See the manual for details.
+
+*** Preparation and completion functions in publishing projects change signature
+
+Preparation and completion functions are now called with an argument,
+which is the project property list.  It used to be dynamically scoped
+through the ~project-plist~ variable.
+
+*** Old Babel header properties are no longer supported
+
+Using header arguments as property names is no longer possible.  As
+such, the following
+
+#+BEGIN_EXAMPLE
+,* Headline
+:PROPERTIES:
+:exports: code
+:var: a=1 b=2
+:var+: c=3
+:END:
+#+END_EXAMPLE
+
+should be written instead
+
+#+BEGIN_EXAMPLE
+,* Headline
+:PROPERTIES:
+:header-args: :exports code
+:header-args+: :var a=1 b=2
+:header-args+: :var c=3
+:END:
+#+END_EXAMPLE
+
+Please note that, however, old properties were defined at the source
+block definition.  Current ones are defined where the block is called.
+
+** New features
+
+*** ~org-eww~ has been moved into core
+*** New org-protocol key=value syntax
+
+Org-protocol can now handle query-style parameters such as:
+
+#+begin_example
+org-protocol://store-link?url=http:%2F%2Flocalhost%2Findex.html&title=The%20title
+org-protocol://capture?template=x&title=Hello&body=World&url=http:%2F%2Fexample.com
+#+end_example
+
+Old-style links such as
+: org-protocol://store-link:/http:%2F%2Flocalhost%2Findex.html/The%20title
+continue to be supported.
+
+If you have defined your own handler functions for
+~org-protocol-protocol-alist~, change them to accept either a property
+list (for new-style links) or a string (for old-style links).  Use
+~org-protocol-parse-parameters~ to convert old-style links into property
+lists.
+
+*** New Org linter library
+
+~org-lint~ can check syntax and report common issues in Org documents.
+
+*** New option ~date-tree-last~ for ~org-agenda-insert-diary-strategy~
+
+When ~org-agenda-insert-diary-strategy~ is set to ~date-tree-last~, diary
+entries are added to last in the date tree.
+
+*** New ~vbar~ entity
+
+~\vbar~ or ~\vbar{}~ will be exported unconditionally as a =|=,
+unlike to existing ~\vert~, which is expanded as ~&vert;~ when using
+a HTML derived export back-end.
+
+*** Export
+
+**** New =#+latex_compiler= keyword to set LaTeX compiler.
+
+PDFLaTeX, XeLaTeX, and LuaLaTeX are supported.  See the manual for
+details.
+
+**** New option ~org-export-with-broken-links~
+
+This option tells the export process how to behave when encountering
+a broken internal link.  See its docstring for more information.
+
+**** Attributes support in custom language environments for LaTeX export
+
+Custom language environments for LaTeX export can now define the
+string to be inserted during export, using attributes to indicate the
+position of the elements. See variable ~org-latex-custom-lang-environments~
+for more details.
+
+**** New Texinfo ~options~ attribute on special blocks
+
+Using ~:options~ as a Texinfo attribute, it is possible to add
+information to custom environments.  See manual for details.
+
+**** New HTML ~id~ attributes on special, example and quote blocks
+
+If the block has a =#+NAME:= attribute assigned, then the HTML element
+will have an ~id~ attribute with that name in the HTML export. This
+enables one to create links to these elements in other places, e.g.,
+~<a href="#name">text</a>~.
+
+**** Listings with captions are now numbered in HTML export
+
+The class associated to the numbering is "listing-number".  If you
+don't want these blocks to be numbered, as it was the case until now,
+You may want to add ~.listing-number { display: none; }~ to the CSS
+used.
+
+**** Line Numbering in SRC/EXAMPLE blocks support arbitrary start number
+
+The ~-n~ option to ~SRC~ and ~EXAMPLE~ blocks can now take a numeric
+argument to specify the staring line number for the source or example
+block.  The ~+n~ option can now take a numeric argument that will be
+added to the last line number from the previous block as the starting
+point for the SRC/EXAMPLE block.
+
+#+BEGIN_SRC org
+,#+BEGIN_SRC emacs-lisp -n 20
+;; this will export with line number 20
+(message "This is line 21")
+,#+END_SRC
+,#+BEGIN_SRC emacs-lisp +n 10
+;; This will be listed as line 31
+(message "This is line 32")
+,#+END_SRC
+#+END_SRC
+
+**** Allow toggling center for images in LaTeX export
+
+With the global variable ~org-latex-images-centered~ or the local
+attribute ~:center~ it is now possible to center an image in LaTeX
+export.
+
+**** Default CSS class ~org-svg~ for SVG images in HTML export
+
+SVG images exported in HTML are now by default assigned a CSS class
+~org-svg~ if no CSS class is specified with the ~:class~ attribute. By
+default, the CSS styling of class ~org-svg~ specifies an image width of
+90\thinsp{}% of the container the image.
+
+**** Markdown footnote export customization
+
+Variables ~org-md-footnotes-section~ and ~org-md-footnote-format~
+introduced for =ox-md.el=.  Both new variables define template strings
+which can be used to customize the format of the exported footnotes
+section and individual footnotes, respectively.
+
+*** Babel
+
+**** Blocks with coderefs labels can now be evaluated
+
+The labels are removed prior to evaluating the block.
+
+**** Support for Lua language
+**** Support for SLY in Lisp blocks
+
+See ~org-babel-lisp-eval-fn~ to activate it.
+
+**** Support for Stan language
+
+New ob-stan.el library.
+
+Evaluating a Stan block can produce two different results.
+
+1. Dump the source code contents to a file.
+
+   This file can then be used as a variable in other blocks, which
+   allows interfaces like RStan to use the model.
+
+2. Compile the contents to a model file.
+
+   This provides access to the CmdStan interface.  To use this, set
+   ~org-babel-stan-cmdstan-directory~ and provide a ~:file~ argument
+   that does not end in ".stan".
+
+For more information and usage examples, visit
+https://orgmode.org/worg/org-contrib/babel/languages/ob-doc-stan.html
+
+**** Support for Oracle databases via ~sqlplus~
+
+=ob-sql= library supports running SQL blocks against an Oracle
+database using ~sqlplus~.  Use with properties like this (all
+mandatory):
+
+#+BEGIN_EXAMPLE
+:engine oracle
+:dbhost <host.com>
+:dbport <1521>
+:dbuser <username>
+:database <database>
+:dbpassword <secret>
+#+END_EXAMPLE
+
+**** Improved support to Microsoft SQL Server via ~sqlcmd~
+
+=ob-sql= library removes support to the ~msosql~ engine which uses the
+deprecated ~osql~ command line tool, and replaces it with ~mssql~
+engine which uses the ~sqlcmd~ command line tool.  Use with properties
+like this:
+
+#+BEGIN_EXAMPLE
+:engine mssql
+:dbhost <host.com>
+:dbuser <username>
+:dbpassword <secret>
+:database <database>
+#+END_EXAMPLE
+
+If you want to use the *trusted connection* feature, omit *both* the
+=dbuser= and =dbpassword= properties and add =cmdline -E= to the properties.
+
+If your Emacs is running in a Cygwin environment, the =ob-sql= library
+can pass the converted path to the =sqlcmd= tool.
+
+**** Improved support of header arguments for postgresql
+
+The postgresql engine in a sql code block supports now ~:dbport~ nd
+~:dbpassword~ as header arguments.
+
+**** Support for additional plantuml output formats
+
+The support for output formats of [[http://plantuml.com/][plantuml]] has been extended to now
+include:
+
+All Diagrams:
+- png ::
+- svg ::
+- eps ::
+- pdf ::
+- vdx ::
+- txt :: ASCII art
+- utxt :: ASCII art using unicode characters
+
+Class Diagrams:
+- xmi ::
+- html ::
+
+State Diagrams:
+- scxml ::
+
+The output formats are determined by the file extension specified
+using the :file property, e.g.:
+
+#+begin_src plantuml :file diagram.png
+@startuml
+Alice -> Bob: Authentication Request
+Bob --> Alice: Authentication Response
+
+Alice -> Bob: Another authentication Request
+Alice <-- Bob: another authentication Response
+@enduml
+#+end_src
+
+Please note that *pdf* *does not work out of the box* and needs additional
+setup in addition to plantuml.  See [[http://plantuml.com/pdf.html]] for
+details and setup information.
+
+*** Rewrite of radio lists
+
+Radio lists, i.e, Org plain lists in foreign buffers, have been
+rewritten to be on par with Radio tables.  You can use a large set of
+parameters to control how a given list should be rendered.  See manual
+for details.
+
+*** org-bbdb-anniversaries-future
+
+Used like ~org-bbdb-anniversaries~, it provides a few days warning for
+upcoming anniversaries (default: 7 days).
+
+*** Clear non-repeated SCHEDULED upon repeating a task
+
+If the task is repeated, and therefore done at least one, scheduling
+information is no longer relevant.  It is therefore removed.
+
+See [[git:481719fbd5751aaa9c672b762cb43aea8ee986b0][commit message]] for more information.
+
+*** Support for ISO week trees
+
+ISO week trees are an alternative date tree format that orders entries
+by ISO week and not by month.
+
+For example:
+
+: * 2015
+: ** 2015-W35
+: ** 2015-W36
+: *** 2015-08-31 Monday
+
+They are supported in org-capture via ~file+weektree~ and
+~file+weektree+prompt~ target specifications.
+
+*** Accept ~:indent~ parameter when capturing column view
+
+When defining a "columnview" dynamic block, it is now possible to add
+an :indent parameter, much like the one in the clock table.
+
+On the other hand, stars no longer appear in an ITEM field.
+
+*** Columns view
+
+**** ~org-columns~ accepts a prefix argument
+
+When called with a prefix argument, ~org-columns~ apply to the whole
+buffer unconditionally.
+
+**** New variable : ~org-agenda-view-columns-initially~
+
+The variable used to be a ~defvar~, it is now a ~defcustom~.
+
+**** Allow custom summaries
+
+It is now possible to add new summary types, or override those
+provided by Org by customizing ~org-columns-summary-types~, which see.
+
+**** Allow multiple summaries for any property
+
+Columns can now summarize the same property using different summary
+types.
+
+*** Preview LaTeX snippets in buffers not visiting files
+*** New option ~org-attach-commit~
+
+When non-nil, commit attachments with git, assuming the document is in
+a git repository.
+
+*** Allow conditional case-fold searches in ~org-occur~
+
+When set to ~smart~, the new variable ~org-occur-case-fold-search~ allows
+to mimic =isearch.el=: if the regexp searched contains any upper case
+character (or character class), the search is case sensitive.
+Otherwise, it is case insensitive.
+
+*** More robust repeated =ox-latex= footnote handling
+
+Repeated footnotes are now numbered by referring to a label in the
+first footnote.
+
+*** The ~org-block~ face is inherited by ~src-blocks~
+
+This works also when =org-src-fontify-natively= is non-nil.  It is also
+possible to specify per-languages faces.  See =org-src-block-faces= and
+the manual for details.
+
+*** Links are now customizable
+
+Links can now have custom colors, tooltips, keymaps, display behavior,
+etc.  Links are now centralized in ~org-link-parameters~.
+
+** New functions
+
+*** ~org-next-line-empty-p~
+
+It replaces the deprecated ~next~ argument to ~org-previous-line-empty-p~.
+
+*** ~org-show-children~
+
+It is a faster implementation of ~outline-show-children~.
+
+** Removed functions
+
+*** ~org-agenda-filter-by-tag-refine~ has been removed.
+
+Use ~org-agenda-filter-by-tag~ instead.
+
+*** ~org-agenda-todayp~ is deprecated.
+
+Use ~org-agenda-today-p~ instead.
+
+*** ~org-babel-get-header~ is removed.
+
+Use ~org-babel--get-vars~ or ~assq~ instead, as applicable.
+
+*** ~org-babel-trim~ is deprecated.
+
+Use ~org-trim~ instead.
+
+*** ~org-element-remove-indentation~ is deprecated.
+
+Use ~org-remove-indentation~ instead.
+
+*** ~org-image-file-name-regexp~ is deprecated
+
+Use ~image-file-name-regexp~ instead.
+The never-used-in-core ~extensions~ argument has been dropped.
+
+*** ~org-list-parse-list~ is deprecated
+
+Use ~org-list-to-lisp~ instead.
+
+*** ~org-on-heading-p~ is deprecated
+
+A comment to this effect was in the source code since 7.8.03, but
+now a byte-compiler warning will be generated as well.
+
+*** ~org-table-p~ is deprecated
+
+Use ~org-at-table-p~ instead.
+
+*** ~org-table-recognize-table.el~ is deprecated
+
+It was not called by any org code since 2010.
+
+*** Various reimplementations of cl-lib functions are deprecated
+
+The affected functions are:
+- ~org-count~
+- ~org-remove-if~
+- ~org-remove-if-not~
+- ~org-reduce~
+- ~org-every~
+- ~org-some~
+
+Additionally, ~org-sublist~ is deprecated in favor of ~cl-subseq~.  Note
+the differences in indexing conventions: ~org-sublist~ is 1-based and
+end-inclusive; ~cl-subseq~ is 0-based and end-exclusive.
+
+** Removed options
+
+*** Remove all options related to ~ido~ or ~iswitchb~
+
+This includes ~org-completion-use-iswitchb~ and ~org-completion-use-ido~.
+Instead Org uses regular functions, e.g., ~completion-read~ so as to
+let those libraries operate.
+
+*** Remove ~org-list-empty-line-terminates-plain-lists~
+
+Two consecutive blank lines always terminate all levels of current
+plain list.
+
+*** ~fixltx2e~ is removed from ~org-latex-default-packages-alist~
+
+fixltx2e is obsolete, see LaTeX News 22.
+
+** Miscellaneous
+*** Add Icelandic smart quotes
+*** Allow multiple receiver locations in radio tables and lists
+*** Allow angular links within link descriptions
+
+It is now allowed to write, e.g.,
+~[[http:orgmode.org][<file:unicorn.png>]]~ as an equivalent to
+~[[http:orgmode.org][file:unicorn.png]]~.  The advantage of the former
+is that spaces are allowed within the path.
+
+*** Beamer export back-ends uses ~org-latex-prefer-user-labels~
+*** ~:preparation-function~ called earlier during publishing
+
+Functions in this list are called before any file is associated to the
+current project.  Thus, they can be used to generate to be published
+Org files.
+
+*** Function ~org-remove-indentation~ changes.
+
+The new algorithm doesn't remove TAB characters not used for
+indentation.
+
+*** Secure placeholders in capture templates
+
+Placeholders in capture templates are no longer expanded recursively.
+However, ~%(...)~ constructs are expanded very late, so you can fill
+the contents of the S-exp with the replacement text of non-interactive
+placeholders.  As before, interactive ones are still expanded as the
+very last step, so the previous statement doesn't apply to them.
+
+Note that only ~%(...)~ placeholders initially present in the
+template, or introduced using a file placeholder, i.e., ~%[...]~ are
+expanded.  This prevents evaluating potentially malicious code when
+another placeholder, e.g., ~%i~ expands to a S-exp.
+
+*** Links stored by ~org-gnus-store-link~ in nnir groups
+
+Since gnus nnir groups are temporary, ~org-gnus-store-link~ now refers
+to the article's original group.
+
+*** ~org-babel-check-confirm-evaluate~ is now a function instead of a macro
+
+The calling convention has changed.
+
+*** HTML export table row customization changes
+
+Variable ~org-html-table-row-tags~ has been split into
+~org-html-table-row-open-tag~ and ~org-html-table-row-close-tag~.
+Both new variables can be either a string or a function which will be
+called with 6 parameters.
+
+*** =ITEM= special property returns headline without stars
+*** Rename ~org-insert-columns-dblock~ into ~org-columns-insert-dblock~
+
+The previous name is, for the time being, kept as an obsolete alias.
+
+*** ~org-trim~ can preserve leading indentation.
+
+When setting a new optional argument to a non-nil value, ~org-trim~
+preserves leading indentation while removing blank lines at the
+beginning of the string.  The behavior is identical for white space at
+the end of the string.
+
+*** Function ~org-info-export~ changes.
+
+HTML links created from certain info links now point to =gnu.org= URL's rather
+than just to local files. For example info links such as =info:emacs#List
+Buffers= used to be converted to HTML links like this:
+
+: <a href="emacs.html#List-Buffers">emacs#List Buffers</a>
+
+where local file =emacs.html= is referenced.
+For most folks this file does not exist.
+Thus the new behavior is to generate this HTML link instead:
+
+: <a href="https://www.gnu.org/software/emacs/manual/html_mono/emacs.html#List-Buffers">emacs#List Buffers</a>
+
+All emacs related info links are similarly translated plus few other
+=gnu.org= manuals.
+
+*** Repeaters with a ~++~ interval and a time can be shifted to later today
+
+Previously, if a recurring task had a timestamp of
+~<2016-01-01 Fri 20:00 ++1d>~ and was completed on =2016-01-02= at
+=08:00=, the task would skip =2016-01-02= and would be rescheduled for
+=2016-01-03=.  Timestamps with ~++~ cookies and a specific time will
+now shift to the first possible future occurrence, even if the
+occurrence is later the same day the task is completed.  (Timestamps
+already in the future are still shifted one time further into the
+future.)
+
+*** ~org-mobile-action-alist~ is now a defconst
+
+It used to be a defcustom, with a warning that it shouldn't be
+modified anyway.
+
+*** ~file+emacs~ and ~file+sys~ link types are deprecated
+
+They are still supported in Org 9.0 but will eventually be removed in
+a later release.  Use ~file~ link type along with universal arguments
+to force opening it in either Emacs or with system application.
+
+*** New defcustom ~org-babel-J-command~ stores the j command
+*** New defalias ~org-babel-execute:j~
+
+Allows J source blocks be indicated by letter j.  Previously the
+indication letter was solely J.
+
+*** ~org-open-line~ ignores tables at the very beginning of the buffer
+
+When ~org-special-ctrl-o~ is non-nil, it is impractical to create
+a blank line above a table at the beginning of the document. Now, as
+a special case, ~org-open-line~ behaves normally in this situation.
+
+*** ~org-babel-hash-show-time~ is now customizable
+
+The experimental variable used to be more or less confidential, as
+a ~defvar~.
+
+*** New ~:format~ property to parsed links
+
+It defines the format of the original link.  Possible values are:
+~plain~, ~bracket~ and ~angle~.
 
 * Version 8.3
 
@@ -102,10 +2171,10 @@ buffer name, as the title.  Instead, simply ignore the title.
 *** Default bindings of =C-c C-n= and =C-c C-p= changed
 
 The key sequences =C-c C-n= and =C-c C-p= are now bound to
-~org-next-visible-heading~ and ~org-next-visible-heading~ respectively,
-rather than the =outline-mode= versions of these functions.  The Org
-version of these functions skips over inline tasks (and even-level
-headlines when ~org-odd-levels-only~ is set).
+~org-next-visible-heading~ and ~org-previous-visible-heading~
+respectively, rather than the =outline-mode= versions of these
+functions.  The Org version of these functions skips over inline tasks
+(and even-level headlines when ~org-odd-levels-only~ is set).
 
 *** ~org-element-context~ no longer return objects in keywords
 
@@ -129,7 +2198,22 @@ docstring for more information.
 - ~org-latex-format-headline-function~
 - ~org-latex-format-inlinetask-function~
 - ~org-link-search~
+
 ** New features
+
+*** Default lexical evaluation of emacs-lisp source blocks
+
+Emacs-lisp source blocks in Babel are now evaluated using lexical
+scoping.  There is a new header to control this behavior.
+
+The default results in an eval with lexical scoping.
+:lexical yes
+
+This turns lexical scoping off in the eval (the former behavior).
+:lexical no
+
+This uses the lexical environment with x=42 in the eval.
+:lexical '((x . 42))
 
 *** Behavior of ~org-return~ changed
 
@@ -137,11 +2221,13 @@ If point is before or after the headline title, insert a new line
 without changing the headline.
 
 *** Hierarchies of tags
+
 The functionality of nesting tags in hierarchies is added to org-mode.
 This is the generalization of what was previously called "Tag groups"
 in the manual.  That term is now changed to "Tag hierarchy".
 
 The following in-buffer definition:
+
 #+BEGIN_SRC org
   ,#+TAGS: [ Group : SubOne SubTwo ]
   ,#+TAGS: [ SubOne : SubOne1 SubOne2 ]
@@ -149,6 +2235,7 @@ The following in-buffer definition:
 #+END_SRC
 
 Should be seen as the following tree of tags:
+
 - Group
   - SubOne
     - SubOne1
@@ -163,25 +2250,27 @@ on SubOne filters also it's sub-tags.  Etc.
 There is no limit on the depth for the tag hierarchy.
 
 *** Additional syntax for non-unique grouptags
+
 Additional syntax is defined for grouptags if the tags in the group
 don't have to be distinct on a heading.
 
 Grouptags had to previously be defined with { }.  This syntax is
 already used for exclusive tags and Grouptags need their own,
-non-exclusive syntax.  This behaviour is achieved with [ ].  Note: {
-} can still be used also for Grouptags but then only one of the
-given tags can be used on the headline at the same time.  Example:
+non-exclusive syntax.  This behavior is achieved with [ ].  Note: { }
+can still be used also for Grouptags but then only one of the given
+tags can be used on the headline at the same time.  Example:
 
 [ group : sub1 sub2 ]
 
 #+BEGIN_SRC org
-  ,* Test                                                            :sub1:sub2:
+,* Test                                                            :sub1:sub2:
 #+END_SRC
 
 This is a more general case than the already existing syntax for
 grouptags; { }.
 
 *** Define regular expression patterns as tags
+
 Tags can be defined as grouptags with regular expressions as
 "sub-tags".
 
@@ -191,13 +2280,13 @@ Example use:
 : #+TAGS: [ Project : {P@.+} ]
 
 Searching for the tag Project will now list all tags also including
-regular expression matches for P@.+.  Good for example if tags for a
-certain project is tagged with a common project-identifier,
-i.e. P@2014_OrgTags.
+regular expression matches for P@.+.  This is good for example for
+projects tagged with a common identifier, i.e. P@2014_OrgTags.
 
 *** Filtering in the agenda on grouptags (Tag hierarchies)
-Filtering in the agenda on grouptags filter all of the related tags.
-Exception if filter is applied with a (double) prefix-argument.
+
+Filtering in the agenda on grouptags filters all of the related tags.
+Except if a filter is applied with a (double) prefix-argument.
 
 Filtering in the agenda on subcategories does not filter the "above"
 levels anymore.
@@ -206,9 +2295,10 @@ If a grouptag contains a regular expression the regular expression
 is also used as a filter.
 
 *** Minor refactoring of ~org-agenda-filter-by-tag~
-Now uses the argument arg and optional argument exclude instead of
+
+Now uses the argument ARG and optional argument exclude instead of
 strip and narrow.  ARG because the argument has multiple purposes and
-makes more sense than strip now.  The term narrowing is changed to
+makes more sense than strip now.  The term "narrowing" is changed to
 exclude.
 
 The main purpose is for the function to make more logical sense when
@@ -226,16 +2316,17 @@ This library implements necessary functions for implementing editing
 of Processing code blocks, viewing the resulting sketches in an
 external viewer, and HTML export of the sketches.
 
-Check the documentation for more.
+Check the documentation for more details.
 
 Thanks to Jarmo Hurri for this feature.
 
-*** New behaviour for `org-toggle-latex-fragment'
-The new behaviour is the following:
+*** New behavior for ~org-toggle-latex-fragment~
 
-- With a double prefix argument or with a single prefix argument
-  when point is before the first headline, toggle overlays in the
-  whole buffer;
+The new behavior is the following:
+
+- With a double prefix argument or with a single prefix argument when
+  point is before the first headline, toggle overlays in the whole
+  buffer;
 
 - With a single prefix argument, toggle overlays in the current
   subtree;
@@ -277,18 +2368,18 @@ default is =hline=.
 
 *** Markdown export supports switches in source blocks
 
-For example, it is now possible to number lines using the =-n= switch
-in a source block.
+For example, it is now possible to number lines using the =-n= switch in
+a source block.
 
 *** New option in ASCII export
 
-Plain lists can have an extra margin by setting
-~org-ascii-list-margin~ variable to an appopriate integer.
+Plain lists can have an extra margin by setting ~org-ascii-list-margin~
+variable to an appropriate integer.
 
 *** New blocks in ASCII export
 
-ASCII export now supports =#+BEGIN_JUSTIFYRIGHT= and
-=#+BEGIN_JUSTIFYLEFT= blocks.  See documentation for details.
+ASCII export now supports =#+BEGIN_JUSTIFYRIGHT= and =#+BEGIN_JUSTIFYLEFT=
+blocks.  See documentation for details.
 
 *** More back-end specific publishing options
 
@@ -319,7 +2410,7 @@ more features.  See docstring for details.
 *** New filter: ~org-export-filter-body-functions~
 
 Functions in this filter are applied on the body of the exported
-document, befor wrapping it within the template.
+document, before wrapping it within the template.
 
 *** New :environment parameter when exporting example blocks to LaTeX
 
@@ -334,23 +2425,23 @@ will be exported using =@samp(myverbatim)= instead of =@samp(verbatim)=.
 
 Radio tables feature now relies on Org's export framework ("ox.el").
 ~:no-escape~ parameter no longer exists, but additional global
-parameters are now supported: ~:raw~, ~:backend~.  Moreover, there are
-new parameters specific to some pre-defined translators, e.g.,
+parameters are now supported: ~:raw~, ~:backend~.  Moreover, there are new
+parameters specific to some pre-defined translators, e.g.,
 ~:environment~ and ~:booktabs~ for ~orgtbl-to-latex~.  See translators
 docstrings (including ~orgtbl-to-generic~) for details.
 
 *** Non-floating minted listings in Latex export
 
-It is not possible to specify =#+attr_latex: :float nil= in conjunction with
-source blocks exported by the minted package.
+It is not possible to specify =#+attr_latex: :float nil= in conjunction
+with source blocks exported by the minted package.
 
 *** Field formulas can now create columns as needed
 
 Previously, evaluating formulas that referenced out-of-bounds columns
-would throw an error. A new variable
-~org-table-formula-create-columns~ was added to adjust this
-behavior. It is now possible to silently add new columns, to do so
-with a warning or to explicitly ask the user each time.
+would throw an error. A new variable ~org-table-formula-create-columns~
+was added to adjust this behavior. It is now possible to silently add
+new columns, to do so with a warning or to explicitly ask the user
+each time.
 
 *** ASCII plot
 
@@ -368,13 +2459,13 @@ When non-nil, attachments from archived subtrees are removed.
 
 *** New option: ~org-latex-caption-above~
 
-This variable generalizes ~org-latex-table-caption-above~, which is
-now deprecated.  In addition to tables, it applies to source blocks,
+This variable generalizes ~org-latex-table-caption-above~, which is now
+deprecated.  In addition to tables, it applies to source blocks,
 special blocks and images.  See docstring for more information.
 
 *** New option: ~org-latex-prefer-user-labels~
 
-See docstring for more information.
+See the docstring for more information.
 
 *** Export unnumbered headlines
 
@@ -384,14 +2475,14 @@ property is inherited by children.
 
 *** Tables can be sorted with an arbitrary function
 
-It is now possible to specify a function, both programatically,
-through a new optional argument, and interactively with ~f~ or ~F~
-keys, to sort a table.
+It is now possible to specify a function, both programmatically,
+through a new optional argument, and interactively with ~f~ or ~F~ keys,
+to sort a table.
 
 *** Table of contents can be local to a section
 
-The ~TOC~ keywords now accepts an optional ~local~ parameter.  See
-manual for details.
+The ~TOC~ keywords now accepts an optional ~local~ parameter.  See manual
+for details.
 
 *** Countdown timers can now be paused
 
@@ -430,10 +2521,10 @@ leading spaces within table cells.
 Org uses the MathJax CDN by default.  See the manual and the docstring
 of ~org-html-mathjax-options~ for details.
 
-*** New behaviour in `org-export-options-alist'
+*** New behavior in `org-export-options-alist'
 
 When defining a back-end, it is now possible to specify to give
-`parse' behaviour on a keyword.  It is equivalent to call
+`parse' behavior on a keyword.  It is equivalent to call
 `org-element-parse-secondary-string' on the value.
 
 However, parsed =KEYWORD= is automatically associated to an
@@ -454,8 +2545,8 @@ for details.
 *** Remotely edit a footnote definition
 
 Calling ~org-edit-footnote-reference~ (C-c ') on a footnote reference
-allows to edit its definition, as long as it is not anonymous, in
-a dedicated buffer.  It works even if buffer is currently narrowed.
+allows to edit its definition, as long as it is not anonymous, in a
+dedicated buffer.  It works even if buffer is currently narrowed.
 
 *** New function ~org-delete-indentation~ bound to ~M-^~
 
@@ -464,7 +2555,7 @@ added to headline text.
 
 *** Support for images in Texinfo export
 
-~Texinfo~ back-end now handles images.  See manual for details.
+~Texinfo~ back-end now handles images.  See the manual for details.
 
 *** Support for captions in Texinfo export
 
@@ -479,9 +2570,9 @@ set using the hh:mm:ss format.
 
 *** Extend ~org-clone-subtree-with-time-shift~
 
-~org-clone-subtree-with-time-shift~ now accepts 0 as an argument for
-the number of clones, which removes the repeater from the original
-subtree and creates one shifted, repeating clone.
+~org-clone-subtree-with-time-shift~ now accepts 0 as an argument for the
+number of clones, which removes the repeater from the original subtree
+and creates one shifted, repeating clone.
 
 *** New time block for clock tables: ~untilnow~
 
@@ -527,6 +2618,7 @@ optional argument.
 
 These functions were left-over from pre 8.0 era.  They are not correct
 anymore.  Since they are not needed, they have no replacement.
+
 ** Removed options
 
 *** ~org-list-empty-line-terminates-plain-lists~ is deprecated
@@ -550,11 +2642,11 @@ everywhere in the buffer, possibly corrupting URLs.
 
 *** Removed option =org-babel-sh-command=
 
-This undocumented option defaulted to the value of =shell-file-name=
-at the time of loading =ob-shell=.  The new behaviour is to use the
-value of =shell-file-name= directly when the shell langage is =shell=.
-To chose a different shell, either customize =shell-file-name= or bind
-this variable locally.
+This undocumented option defaulted to the value of =shell-file-name= at
+the time of loading =ob-shell=.  The new behavior is to use the value
+of =shell-file-name= directly when the shell language is =shell=.  To chose
+a different shell, either customize =shell-file-name= or bind this
+variable locally.
 
 *** Removed option =org-babel-sh-var-quote-fmt=
 
@@ -594,6 +2686,7 @@ end-users browser.  You may force initial usage of MathML via
 ~org-export-filter-comment-functions~ and
 ~org-export-filter-comment-block-functions~ variables do not exist
 anymore.
+
 ** Miscellaneous
 
 *** Strip all meta data from ITEM special property
@@ -630,9 +2723,9 @@ particular test failure was introduced.
 *** Exact heading search for external links ignore spaces and cookies
 
 Exact heading search for links now ignore spaces and cookies. This is
-the case for links of the form ~file:projects.org::*task title~, as
-well as links of the form ~file:projects.org::some words~
-when ~org-link-search-must-match-exact-headline~ is not nil.
+the case for links of the form ~file:projects.org::*task title~, as well
+as links of the form ~file:projects.org::some words~ when
+~org-link-search-must-match-exact-headline~ is not nil.
 
 *** ~org-latex-hyperref-template~, ~org-latex-title-command~ formatting
 
@@ -642,12 +2735,12 @@ Note, ~org-latex-hyperref-template~ has a new default value.
 *** ~float, wasysym, marvosym~ are removed from ~org-latex-default-packages-alist~
 
 If you require any of these package add them to your preamble via
-~org-latex-packages-alist~. Org also uses default LaTeX ~\tolerance~
-now.
+~org-latex-packages-alist~. Org also uses default LaTeX ~\tolerance~ now.
 
 *** When exporting, throw an error on unresolved id/fuzzy links and code refs
 
 This helps spotting wrong links.
+
 * Version 8.2
 
 ** Incompatible changes
@@ -771,7 +2864,7 @@ This allows to specify the names of automatic bookmarks.
 *** New option [[doc:org-agenda-ignore-drawer-properties][org-agenda-ignore-drawer-properties]]
 
 This allows more flexibility when optimizing the agenda generation.
-See http://orgmode.org/worg/agenda-optimization.html for details.
+See https://orgmode.org/worg/agenda-optimization.html for details.
 *** New option: [[doc:org-html-link-use-abs-url][org-html-link-use-abs-url]] to force using absolute URLs
 
 This is an export/publishing option, and should be used either within
@@ -794,7 +2887,7 @@ This enables SVG generation from latex code blocks.
 
 *** New option: [[doc:org-habit-show-done-always-green][org-habit-show-done-always-green]]
 
-See [[http://lists.gnu.org/archive/html/emacs-orgmode/2013-05/msg00214.html][this message]] from Max Mikhanosha.
+See [[https://lists.gnu.org/r/emacs-orgmode/2013-05/msg00214.html][this message]] from Max Mikhanosha.
 
 *** New option: [[doc:org-babel-inline-result-wrap][org-babel-inline-result-wrap]]
 
@@ -855,7 +2948,7 @@ instructions:
 When in doubt, run =M-x org-version RET= and see if you have a mixed-up
 installation.
 
-See http://orgmode.org/org.html#Installation for details.
+See https://orgmode.org/org.html#Installation for details.
 
 ** Incompatible changes
 
@@ -868,7 +2961,7 @@ you will have to update them.
 
 Below is a list of changes for which you need to take action.
 
-See http://orgmode.org/worg/org-8.0.html for the most recent version of
+See https://orgmode.org/worg/org-8.0.html for the most recent version of
 this list and for detailed instructions on how to migrate.
 
 **** New export engine
@@ -890,7 +2983,7 @@ corresponding files start with the =ox-= prefix.
 If you customized an export back-end (like HTML or LaTeX), you will need to
 rename some options so that your customization is not lost.  Typically, an
 option starting with =org-export-html-= is now named =org-html-=.  See the
-manual for details and check [[http://orgmode.org/worg/org-8.0.html][this Worg page]] for directions.
+manual for details and check [[https://orgmode.org/worg/org-8.0.html][this Worg page]] for directions.
 
 **** New syntax for #+ATTR_HTML/LaTeX/... options
 
@@ -951,7 +3044,7 @@ manual for details and check [[http://orgmode.org/worg/org-8.0.html][this Worg p
      ~ox-taskjuggler.el~ by Nicolas Goaziou and others.
 
      Also, the Taskjuggler exporter now uses TJ3 by default.  John Hendy
-     wrote [[http://orgmode.org/worg/org-tutorials/org-taskjuggler3.html][a tutorial on Worg]] for the TJ3 export.
+     wrote [[https://orgmode.org/worg/org-tutorials/org-taskjuggler3.html][a tutorial on Worg]] for the TJ3 export.
 
 ** New packages in core
 
@@ -970,7 +3063,7 @@ manual for details and check [[http://orgmode.org/worg/org-8.0.html][this Worg p
 
 *** ~ox-texinfo.el~ by Jonathan Leech-Pepin
 
-    =ox-texinfo.el= allows you to export Org files to [[http://www.gnu.org/software/texinfo/][Texinfo]] files.
+    =ox-texinfo.el= allows you to export Org files to [[https://www.gnu.org/software/texinfo/][Texinfo]] files.
 
 ** New packages in contrib
 
@@ -997,7 +3090,7 @@ manual for details and check [[http://orgmode.org/worg/org-8.0.html][this Worg p
 
     Display bullets instead of stars for headlines.
 
-    Also see [[http://orgmode.org/worg/org-faq.html#sec-8-12][this updated FAQ]] on how to display another character than "*"
+    Also see [[https://orgmode.org/worg/org-faq.html#sec-8-12][this updated FAQ]] on how to display another character than "*"
     for starting headlines.
 
 *** ~org-favtable.el~ by Marc-Oliver Ihm
@@ -1005,7 +3098,7 @@ manual for details and check [[http://orgmode.org/worg/org-8.0.html][this Worg p
     ~org-favtable.el~ helps you to create and update a table of favorite
     locations in org, keeping the most frequently visited lines right at
     the top.  This table is called "favtable".  See the documentation on
-    [[http://orgmode.org/worg/org-contrib/org-favtable.html][Worg]].
+    [[https://orgmode.org/worg/org-contrib/org-favtable.html][Worg]].
 
 *** ~ox-confluence.el~ by Sébastien Delafond
 
@@ -1023,7 +3116,7 @@ manual for details and check [[http://orgmode.org/worg/org-8.0.html][this Worg p
 
 *** ~ox-groff.el~ by Luis Anaya and Nicolas Goaziou
 
-    The [[http://www.gnu.org/software/groff/][groff]] (GNU troff) software is a typesetting package which reads
+    The [[https://www.gnu.org/software/groff/][groff]] (GNU troff) software is a typesetting package which reads
     plain text mixed with formatting commands and produces formatted
     output.
 
@@ -1046,7 +3139,7 @@ manual for details and check [[http://orgmode.org/worg/org-8.0.html][this Worg p
 
 **** New export generic options
 
-If you use Org exporter, we advise you to re-read [[http://orgmode.org/org.html#Exporting][the manual section about
+If you use Org exporter, we advise you to re-read [[https://orgmode.org/org.html#Exporting][the manual section about
 it]].  It has been updated and includes new options.
 
 Among the new/updated export options, three are of particular importance:
@@ -1421,7 +3514,7 @@ of those tags.)
 You can use group tags for sparse tree in an Org buffer, for creating
 agenda views, and for filtering.
 
-See http://orgmode.org/org.html#Tag-groups for details.
+See https://orgmode.org/org.html#Tag-groups for details.
 
 *** Links
 
@@ -1429,7 +3522,7 @@ See http://orgmode.org/org.html#Tag-groups for details.
 
 Org knows how to store links from Org buffers, from info files and from
 other Emacs buffers.  Org can be taught how to store links from any buffer
-through new link protocols (see [[http://orgmode.org/org.html#Adding-hyperlink-types]["Adding hyperlink types"]] in the manual.)
+through new link protocols (see [[https://orgmode.org/org.html#Adding-hyperlink-types]["Adding hyperlink types"]] in the manual.)
 
 Sometimes you want Org to ignore added link protocols and store the link
 as if the protocol was not known.
@@ -1453,7 +3546,7 @@ with-description and without-description links when inserting them.
 
 When storing a link to a headline like
 
-: * See [[http://orgmode.org][Org website]]
+: * See [[https://orgmode.org][Org website]]
 
 [[doc:org-store-link][org-store-link]] used to convert the square brackets into curly brackets.
 It does not anymore, taking the link description or the link path, when
@@ -1469,7 +3562,7 @@ those other formulas.
 **** You now use "nan" for empty fields in Calc formulas
 
 If empty fields are of interest, it is recommended to reread the section
-[[http://orgmode.org/org.html#Formula-syntax-for-Calc][3.5.2 Formula syntax for Calc]] of the manual because the description for the
+[[https://orgmode.org/org.html#Formula-syntax-for-Calc][3.5.2 Formula syntax for Calc]] of the manual because the description for the
 mode strings has been clarified and new examples have been added towards
 the end.
 
@@ -1488,7 +3581,7 @@ There are now three lookup functions:
 - [[doc:org-loopup-last][org-loopup-last]]
 - [[doc:org-loopup-all][org-loopup-all]]
 
-See [[http://orgmode.org/org.html#Lookup-functions][the manual]] for details.
+See [[https://orgmode.org/org.html#Lookup-functions][the manual]] for details.
 *** Startup keywords
 
 These new startup keywords are now available:
@@ -1610,7 +3703,7 @@ instead of requiring each Babel library one by one.
 - New option [[doc:org-gnus-no-server][org-gnus-no-server]] to start Gnus with =gnus-no-server=
 - Org is now distributed with =htmlize.el= version 1.43
 - ~org-drill.el~ has been updated to version 2.3.7
-- ~org-mac-iCal.el~ now supports MacOSX version up to 10.8
+- ~org-mac-iCal.el~ now supports OS X versions up to 10.8
 - Various improvements to ~org-contacts.el~ and =orgpan.el=
 
 ** Outside Org
@@ -1619,7 +3712,7 @@ instead of requiring each Babel library one by one.
 
 David (and others) translated the Org compact guide in spanish:
 
-You can read the [[http://orgmode.org/worg/orgguide/orgguide.es.pdf][PDF guide]].
+You can read the [[https://orgmode.org/worg/orgguide/orgguide.es.pdf][PDF guide]].
 
 *** ~poporg.el~ and ~outorg.el~
 
@@ -1630,7 +3723,7 @@ Org-mode available.  ~outorg.el~ comes together with ~outshine.el~ and
 ~navi-mode.el~, two more libraries by Thorsten Jolitz with the goal to give
 source-code buffers the /look & feel/ of Org-mode buffers while greatly
 improving navigation and structure editing.  A detailed description can be
-found here: http://orgmode.org/worg/org-tutorials/org-outside-org.html
+found here: https://orgmode.org/worg/org-tutorials/org-outside-org.html
 
 Here are two screencasts demonstrating Thorsten's tools:
 
@@ -1699,15 +3792,15 @@ in most environments.
 You can now add the Org ELPA repository like this:
 
 #+BEGIN_SRC emacs-lisp
-(add-to-list 'package-archives '("org" . "http://orgmode.org/elpa/") t)
+(add-to-list 'package-archives '("org" . "https://orgmode.org/elpa/") t)
 #+END_SRC
 
 It contains both the =org-*.tar= package (the core Org distribution, also
-available through http://elpa.gnu.org) and the =org-plus*.tar= package (the
+available through https://elpa.gnu.org) and the =org-plus*.tar= package (the
 extended Org distribution, with non-GNU packages from the =contrib/=
 directory.)
 
-See http://orgmode.org/elpa/
+See https://orgmode.org/elpa/
 
 ** Overview of the new keybindings
 
@@ -1723,7 +3816,7 @@ See http://orgmode.org/elpa/
    | =C-c C-x E=     | =E=    | [[doc::org-inc-effort][org-inc-effort]]              |
    |                 | =#=    | [[doc::org-toggle-comment][org-toggle-comment]]          |
    |                 | =:=    | [[doc::org-columns][org-columns]]                 |
-   |                 | =W=    | Set =APPT_WARNTIME=          |
+   |                 | =W=    | Set =APPT_WARNTIME=         |
    | =k=             |        | [[doc::org-agenda-capture][org-agenda-capture]]          |
    | C-c ,           | ,      | [[doc::org-priority][org-priority]]                |
 
@@ -1731,7 +3824,7 @@ See http://orgmode.org/elpa/
 
 *** =org-eshell.el= by Konrad Hinsen is now in Org
 
-    =org-eshell.el= allows you to create links from [[http://www.gnu.org/software/emacs/manual/html_node/eshell/index.html][Eshell]].
+    =org-eshell.el= allows you to create links from [[https://www.gnu.org/software/emacs/manual/html_node/eshell/index.html][Eshell]].
 
 *** Support for execution of Scala code blocks (see ob-scala.el)
 *** Support for execution of IO code blocks (see ob-io.el)
@@ -1890,7 +3983,7 @@ See http://orgmode.org/elpa/
 
 **** New =todo-unblocked= and =nottodo-unblocked= skip conditions
 
-     See the [[http://orgmode.org/cgit.cgi/org-mode.git/commit/?id=f426da][git commit]] for more explanations.
+     See the [[https://orgmode.org/cgit.cgi/org-mode.git/commit/?id=f426da][git commit]] for more explanations.
 
 **** Allow category filtering in the agenda
 
@@ -2207,7 +4300,7 @@ See http://orgmode.org/elpa/
      Thanks to Carsten for implementing this.
 
 **** ODT: Add support for ODT export in org-bbdb.el
-**** ODT: Add support for indented tables (see [[http://orgmode.org/cgit.cgi/org-mode.git/commit/?id=e9fd33][this commit]] for details)
+**** ODT: Add support for indented tables (see [[https://orgmode.org/cgit.cgi/org-mode.git/commit/?id=e9fd33][this commit]] for details)
 **** ODT: Improve the conversion from ODT to other formats
 **** ASCII: Swap the level-1/level-2 characters to underline the headlines
 **** Support for Chinese, simplified Chinese, Russian, Ukrainian and Japanese
@@ -2331,7 +4424,7 @@ that Calc formulas can operate on them.
     =org-export-html-scripts= is now a variable, so that you can adapt
     the code and the license to your needs.
 
-    See http://www.gnu.org/philosophy/javascript-trap.html for
+    See https://www.gnu.org/philosophy/javascript-trap.html for
     explanations on why these changes were necessary.
 
 * Version 7.8.11
@@ -2340,7 +4433,7 @@ that Calc formulas can operate on them.
 
 *** Emacs 21 support has been dropped
 
-    Do not use Org mode 7.xx with Emacs 21, use [[http://orgmode.org/org-6.36c.zip][version 6.36c]] instead.
+    Do not use Org mode 7.xx with Emacs 21, use [[https://orgmode.org/org-6.36c.zip][version 6.36c]] instead.
 
 *** XEmacs support requires the XEmacs development version
 
@@ -2490,7 +4583,7 @@ that Calc formulas can operate on them.
     This replaces the earlier system org-remember.  The manual only
     describes org-capture, but for people who prefer to continue to
     use org-remember, we keep a static copy of the former manual
-    section [[http://orgmode.org/org-remember.pdf][chapter about remember]].
+    section [[https://orgmode.org/org-remember.pdf][chapter about remember]].
 
     The new system has a technically cleaner implementation and more
     possibilities for capturing different types of data.  See
@@ -2554,7 +4647,7 @@ that Calc formulas can operate on them.
 **** org-taskjuggler.el (Christian Egli)
 
      Christian Egli's /org-taskjuggler.el/ module is now part of Org.
-     He also wrote a [[http://orgmode.org/worg/org-tutorials/org-taskjuggler.php][tutorial]] for it.
+     He also wrote a [[https://orgmode.org/worg/org-tutorials/org-taskjuggler.php][tutorial]] for it.
 
 **** org-ctags.el (Paul Sexton)
 
@@ -2629,7 +4722,7 @@ that Calc formulas can operate on them.
 
      : Percent escaping is used in Org mode to escape certain characters
      : in links that would either break the parser (e.g. square brackets
-     : in link target oder description) or are not allowed to appear in
+     : in link target or description) or are not allowed to appear in
      : a particular link type (e.g. non-ascii characters in a http:
      : link).
      :
@@ -2774,7 +4867,7 @@ that Calc formulas can operate on them.
      Org-mode documents or subtrees can now be converted directly in
      to BEAMER presentation.  Turning a tree into a simple
      presentations is straight forward, and there is also quite some
-     support to make richer presentations as well.  See the [[http://orgmode.org/manual/Beamer-class-export.html#Beamer-class-export][BEAMER
+     support to make richer presentations as well.  See the [[https://orgmode.org/manual/Beamer-class-export.html#Beamer-class-export][BEAMER
      section]] in the manual for more details.
 
      Thanks to everyone who has contributed to the discussion about
@@ -3116,4 +5209,4 @@ that Calc formulas can operate on them.
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+  along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.

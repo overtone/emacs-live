@@ -22,8 +22,8 @@
 
 ;;; Commentary:
 
-;; This library implements a RSS 2.0 back-end for Org exporter, based on
-;; the `html' back-end.
+;; This library implements an RSS 2.0 back-end for Org exporter, based
+;; on the `html' back-end.
 ;;
 ;; It requires Emacs 24.1 at least.
 ;;
@@ -31,10 +31,11 @@
 ;; `org-rss-export-as-rss' (temporary buffer) and `org-rss-export-to-rss'
 ;; (as a ".xml" file).
 ;;
-;; This backend understands two new option keywords:
+;; This backend understands three new option keywords:
 ;;
 ;; #+RSS_EXTENSION: xml
 ;; #+RSS_IMAGE_URL: http://myblog.org/mypicture.jpg
+;; #+RSS_FEED_URL: http://myblog.org/feeds/blog.xml
 ;;
 ;; It uses #+HTML_LINK_HOME: to set the base url of the feed.
 ;;
@@ -83,8 +84,8 @@
   :version "24.4"
   :package-version '(Org . "8.0"))
 
-(defcustom org-rss-image-url "http://orgmode.org/img/org-mode-unicorn-logo.png"
-  "The URL of the an image for the RSS feed."
+(defcustom org-rss-image-url "https://orgmode.org/img/org-mode-unicorn-logo.png"
+  "The URL of the image for the RSS feed."
   :group 'org-export-rss
   :type 'string)
 
@@ -127,6 +128,7 @@ When nil, Org will create ids using `org-icalendar-create-uid'."
     (:with-toc nil nil nil) ;; Never include HTML's toc
     (:rss-extension "RSS_EXTENSION" nil org-rss-extension)
     (:rss-image-url "RSS_IMAGE_URL" nil org-rss-image-url)
+    (:rss-feed-url "RSS_FEED_URL" nil nil t)
     (:rss-categories nil nil org-rss-categories))
   :filters-alist '((:filter-final-output . org-rss-final-function))
   :translate-alist '((headline . org-rss-headline)
@@ -141,7 +143,7 @@ When nil, Org will create ids using `org-icalendar-create-uid'."
 
 ;;;###autoload
 (defun org-rss-export-as-rss (&optional async subtreep visible-only)
-  "Export current buffer to a RSS buffer.
+  "Export current buffer to an RSS buffer.
 
 If narrowing is active in the current buffer, only export its
 narrowed part.
@@ -171,7 +173,7 @@ non-nil."
 
 ;;;###autoload
 (defun org-rss-export-to-rss (&optional async subtreep visible-only)
-  "Export current buffer to a RSS file.
+  "Export current buffer to an RSS file.
 
 If narrowing is active in the current buffer, only export its
 narrowed part.
@@ -226,59 +228,61 @@ Return output file name."
   "Transcode HEADLINE element into RSS format.
 CONTENTS is the headline contents.  INFO is a plist used as a
 communication channel."
-  (unless (or (org-element-property :footnote-section-p headline)
-	      ;; Only consider first-level headlines
-	      (> (org-export-get-relative-level headline info) 1))
-    (let* ((author (and (plist-get info :with-author)
-			(let ((auth (plist-get info :author)))
-			  (and auth (org-export-data auth info)))))
-	   (htmlext (plist-get info :html-extension))
-	   (hl-number (org-export-get-headline-number headline info))
-	   (hl-home (file-name-as-directory (plist-get info :html-link-home)))
-	   (hl-pdir (plist-get info :publishing-directory))
-	   (hl-perm (org-element-property :RSS_PERMALINK headline))
-	   (anchor (org-export-get-reference headline info))
-	   (category (org-rss-plain-text
-		      (or (org-element-property :CATEGORY headline) "") info))
-	   (pubdate0 (org-element-property :PUBDATE headline))
-	   (pubdate (let ((system-time-locale "C"))
-		      (if pubdate0
-			  (format-time-string
-			   "%a, %d %b %Y %H:%M:%S %z"
-			   (org-time-string-to-time pubdate0)))))
-	   (title (or (org-element-property :RSS_TITLE headline)
-		      (replace-regexp-in-string
-		       org-bracket-link-regexp
-		       (lambda (m) (or (match-string 3 m)
-				  (match-string 1 m)))
-		       (org-element-property :raw-value headline))))
-	   (publink
-	    (or (and hl-perm (concat (or hl-home hl-pdir) hl-perm))
-		(concat
-		 (or hl-home hl-pdir)
-		 (file-name-nondirectory
-		  (file-name-sans-extension
-		   (plist-get info :input-file))) "." htmlext "#" anchor)))
-	   (guid (if org-rss-use-entry-url-as-guid
-		     publink
-		   (org-rss-plain-text
-		    (or (org-element-property :ID headline)
-			(org-element-property :CUSTOM_ID headline)
-			publink)
-		    info))))
-      (if (not pubdate0) "" ;; Skip entries with no PUBDATE prop
-	(format
-	 (concat
-	  "<item>\n"
-	  "<title>%s</title>\n"
-	  "<link>%s</link>\n"
-	  "<author>%s</author>\n"
-	  "<guid isPermaLink=\"false\">%s</guid>\n"
-	  "<pubDate>%s</pubDate>\n"
-	  (org-rss-build-categories headline info) "\n"
-	  "<description><![CDATA[%s]]></description>\n"
-	  "</item>\n")
-	 title publink author guid pubdate contents)))))
+  (if (> (org-export-get-relative-level headline info) 1)
+      (org-export-data-with-backend headline 'html info)
+    (unless (org-element-property :footnote-section-p headline)
+      (let* ((email (org-export-data (plist-get info :email) info))
+	     (author (and (plist-get info :with-author)
+			  (let ((auth (plist-get info :author)))
+			    (and auth (org-export-data auth info)))))
+	     (htmlext (plist-get info :html-extension))
+	     (hl-number (org-export-get-headline-number headline info))
+	     (hl-home (file-name-as-directory (plist-get info :html-link-home)))
+	     (hl-pdir (plist-get info :publishing-directory))
+	     (hl-perm (org-element-property :RSS_PERMALINK headline))
+	     (anchor (org-export-get-reference headline info))
+	     (category (org-rss-plain-text
+			(or (org-element-property :CATEGORY headline) "") info))
+	     (pubdate0 (org-element-property :PUBDATE headline))
+	     (pubdate (let ((system-time-locale "C"))
+			(if pubdate0
+			    (format-time-string
+			     "%a, %d %b %Y %H:%M:%S %z"
+			     (org-time-string-to-time pubdate0)))))
+	     (title (org-rss-plain-text
+		     (or (org-element-property :RSS_TITLE headline)
+			 (replace-regexp-in-string
+			  org-bracket-link-regexp
+			  (lambda (m) (or (match-string 3 m)
+					  (match-string 1 m)))
+			  (org-element-property :raw-value headline))) info))
+	     (publink
+	      (or (and hl-perm (concat (or hl-home hl-pdir) hl-perm))
+		  (concat
+		   (or hl-home hl-pdir)
+		   (file-name-nondirectory
+		    (file-name-sans-extension
+		     (plist-get info :input-file))) "." htmlext "#" anchor)))
+	     (guid (if org-rss-use-entry-url-as-guid
+		       publink
+		     (org-rss-plain-text
+		      (or (org-element-property :ID headline)
+			  (org-element-property :CUSTOM_ID headline)
+			  publink)
+		      info))))
+	(if (not pubdate0) "" ;; Skip entries with no PUBDATE prop
+	  (format
+	   (concat
+	    "<item>\n"
+	    "<title>%s</title>\n"
+	    "<link>%s</link>\n"
+	    "<author>%s (%s)</author>\n"
+	    "<guid isPermaLink=\"false\">%s</guid>\n"
+	    "<pubDate>%s</pubDate>\n"
+	    (org-rss-build-categories headline info) "\n"
+	    "<description><![CDATA[%s]]></description>\n"
+	    "</item>\n")
+	   title publink email author guid pubdate contents))))))
 
 (defun org-rss-build-categories (headline info)
   "Build categories for the RSS item."
@@ -316,7 +320,7 @@ as a communication channel."
 (defun org-rss-build-channel-info (info)
   "Build the RSS channel information."
   (let* ((system-time-locale "C")
-	 (title (plist-get info :title))
+	 (title (org-export-data (plist-get info :title) info))
 	 (email (org-export-data (plist-get info :email) info))
 	 (author (and (plist-get info :with-author)
 		      (let ((auth (plist-get info :author)))
@@ -331,10 +335,11 @@ as a communication channel."
 	 (image (url-encode-url (plist-get info :rss-image-url)))
 	 (ifile (plist-get info :input-file))
 	 (publink
-	  (concat (file-name-as-directory blogurl)
-		  (file-name-nondirectory
-		   (file-name-sans-extension ifile))
-		  "." rssext)))
+	  (or (plist-get info :rss-feed-url)
+	      (concat (file-name-as-directory blogurl)
+		      (file-name-nondirectory
+		       (file-name-sans-extension ifile))
+		      "." rssext))))
     (format
      "\n<title>%s</title>
 <atom:link href=\"%s\" rel=\"self\" type=\"application/rss+xml\" />

@@ -2,8 +2,14 @@
 @c %**start of header
 @setfilename haskell-mode.info
 @documentencoding UTF-8
-@settitle Haskell Mode 13.20
+@settitle Haskell Mode 17.2-git
 @c %**end of header
+
+@c Macro used to mark references of defcustom variables
+@macro defcustom{var}
+@vrindex \var\
+@code{\var\}
+@end macro
 
 @dircategory Emacs
 @direntry
@@ -11,9 +17,9 @@
 @end direntry
 
 @copying
-This manual is for Haskell mode, version 13.20.
+This manual is for Haskell mode, version 17.2-git
 
-Copyright @copyright{} 2013-2016 Haskell Mode contributors.
+Copyright @copyright{} 2013-2017 Haskell Mode contributors.
 
 @quotation
 Permission is granted to copy, distribute and/or modify this document
@@ -42,7 +48,7 @@ Front-Cover Texts and no Back-Cover Texts.
 @top Haskell Mode
 
 Haskell Mode is an Haskell development Environment for GNU Emacs version
-24 or later.  It provides syntax-based indentation, font locking,
+25.1 or later.  It provides syntax-based indentation, font locking,
 editing cabal files, and supports running an inferior Haskell
 interpreter (e.g. GHCi).
 
@@ -52,22 +58,23 @@ interpreter (e.g. GHCi).
 * Introduction::                         An introduction to Haskell Mode
 * Installation::                         How to get started
 * Editing Haskell Code::                 How to edit code
-* Font Lock Support::                    Haskell Mode has colors
+* Syntax highlighting::                  Haskell Mode has colors
 * Completion support::                   Autocomplete
 * Unicode support::                      How to use Unicode
 * Indentation::                          Notes about indentation
 * External indentation::                 Other ways to indent code
-* Autoformating::                        Using external formatters
+* Autoformatting::                       Using external formatters
 * Module templates::                     Module templates
 * Declaration scanning::                 How to navigate in a source file
 * Compilation::                          How to compile
-* Inferior Haskell interpreter::         How to interact with GHCi (1)
-* Interactive Haskell::                  How to interact with GHCi (2)
+* Interactive Haskell::                  How to interact with GHCi
 * Editing Cabal files::                  Cabal support
 * Browsing Haddocks::                    Using @code{w3m} to browse documentation
 * Spell checking strings and comments::  Using @code{flyspell-prog-mode}
 * Aligning code::                        Aligning code using @code{align-regexp}
 * Rectangular commands::                 Manage indentation manually
+* REPL::                                 GHCi REPL
+* Collapsing Haskell code::              View more code on screen
 * Getting Help and Reporting Bugs::      How to improve Haskell Mode
 * Concept index::                        Index of Haskell Mode concepts
 * Function index::                       Index of commands
@@ -91,22 +98,22 @@ Some of its major features are:
 @item
 Syntax highlighting (font lock),
 @item
-automatic indentation,
+automatic semi-intelligent indentation,
 @item
 on-the-fly documentation,
 @item
-interaction with inferior GHCi/Hugs instance, and
+interaction with inferior GHCi/Hugs instance,
+@item
+project building with cabal and stack
 @item
 scanning declarations and placing them in a menu.
 @end itemize
 
-@section Naming
-
-The name haskell-mode refers to the whole collection of modules in this
-package. There is specifically a file `haskell-mode.el` which defines a
-major mode called `haskell-mode`. Generally, in this documentation they
-will be distinguished by normal font (haskell-mode) and code font
-(`haskell-mode`).
+The name Haskell Mode refers to the whole collection of modules in this
+package. There is specifically a file @file{haskell-mode.el} which
+defines a major mode called @code{haskell-mode}. Generally, in this
+documentation they will be distinguished by normal font and title case
+(Haskell Mode) and code font (@code{haskell-mode}).
 
 @section History
 
@@ -134,16 +141,26 @@ archive do the following:
 
 @enumerate
 @item
-Customize @code{package-archives} using @kbd{M-x} @code{customize-option} @kbd{RET} @code{package-archives} @kbd{RET}.
+Customize @code{package-archives} using
+@example
+M-x customize-option RET package-archives
+@end example
 @item
-Use @kbd{INS} to add new archive, use @code{Archive name: melpa-stable}
-and @code{URL or directory name: http://stable.melpa.org/packages/}.
+Use @kbd{INS} to add new archive, use:
+@example
+Archive name:          melpa-stable
+URL or directory name: http://stable.melpa.org/packages/
+@end example
 @item
-Fetch new packages using @kbd{M-x} @code{package-refresh-contents}.
+Fetch new packages using:
+@example
+M-x package-refresh-contents
+@end example
 @item
-Install @code{haskell-mode} using @kbd{M-x} @code{package-install}
-@kbd{RET} @code{haskell-mode} @kbd{RET}.
-
+Install Haskell Mode using:
+@example
+M-x package-install RET haskell-mode RET
+@end example
 @end enumerate
 
 Voila! @code{haskell-mode} is installed! You should be able to edit Haskell
@@ -164,30 +181,20 @@ The above steps should result in the following snippet in your @file{.emacs}:
      ("melpa-stable" . "http://stable.melpa.org/packages/")))))
 @end lisp
 
-
-@section Installation - more information
-
-@code{haskell-mode} supports GNU Emacs versions 24 and upcoming 25
-(snapshot).
-
-@code{haskell-mode} is available from
+Haskell Mode is available from
 @uref{http://stable.melpa.org,melpa-stable (releases)} and
 @uref{http://melpa.org, melpa (git snapshots)}.
 
 Other means of obtaining @code{haskell-mode} include
 @uref{https://github.com/dimitri/el-get, el-get},
-@uref{https://github.com/bbatsov/prelude, Emacs Prelude} and @uref{https://packages.debian.org/search?keywords=haskell-mode, Debian package}.
-
-Last version of @code{haskell-mode} that supported Emacs 23 is
-@code{haskell-mode} 13.18 available at
-@uref{https://github.com/haskell/haskell-mode/releases/tag/v13.18}.
+@uref{https://github.com/bbatsov/prelude, Emacs Prelude} and
+@uref{https://packages.debian.org/search?keywords=haskell-mode, Debian package}.
 
 @section Customizing
 
 @cindex customizing
-Most of @code{haskell-mode}'s settings are configurable via customizable
+Most of Haskell Mode's settings are configurable via customizable
 variables (@pxref{Easy Customization,,,emacs}, for details). You can use
-
 @kbd{M-x customize-group @key{RET} haskell} to browse the @code{haskell}
 customization sub-tree.
 
@@ -195,12 +202,14 @@ customization sub-tree.
 One of the important setting you should customize is the
 @code{haskell-mode-hook} variable (@pxref{Hooks,,,emacs}) which gets run
 right after the @code{haskell-mode} major mode is initialized for a
-buffer. You can customize @code{haskell-mode-hook} by @kbd{M-x
-customize-variable @key{RET} haskell-mode-hook}.
+buffer. You can customize @code{haskell-mode-hook} by
 
-@c TODO:
-@c provide basic instructions to get up and running with haskell-mode
-@c tell about the most important commands
+@example
+M-x customize-variable RET haskell-mode-hook
+@end example
+
+There you can enable or disable a couple of predefined options or add
+any function to the list.
 
 @node Editing Haskell Code
 @chapter Editing Haskell Code
@@ -208,49 +217,34 @@ customize-variable @key{RET} haskell-mode-hook}.
 @findex haskell-mode
 @cindex @code{haskell-mode}
 
-@dfn{Haskell Mode} is actually a collection of so-called major
-modes@footnote{for more information about the concept of @dfn{major
-modes} @pxref{Major Modes,,,emacs}} one of which is called
-@code{haskell-mode}.  To avoid confusion, when referring to this
-package the name ``Haskell mode'' is written in a normal font, whereas
-when referring the major mode of the same name @code{haskell-mode}
-written with a dash in-between in a typewriter font is used.
+Haskell Mode as one of its components provides a major mode for editing
+Haskell source code called @code{haskell-mode}, which gave the name to
+the whole project. There is a derived mode provided called
+@code{haskell-literate-mode} that support Literate Haskell source code
+both in Bird and in Latex forms.
 
-As one might guess, @code{haskell-mode} is the (programming
-language@footnote{@code{haskell-mode} is derived from
-@code{prog-mode}}) major mode for editing (non-literate) Haskell
-source code. @code{haskell-mode} is associated with the file
-extensions listed below by default@footnote{for more information about
-file associations, @pxref{Choosing Modes,,,emacs}}.
+Haskell Mode supports files with the following extensions:
 
 @table @file
 @item .hs
-official file extension for (non-literate) Haskell 98/2010 files
+official file extension for Haskell files. Haskell Mode out of the box
+supports most of GHC extensions.
+@item .lhs
+official file extension for Literate Haskell files. Both Bird and Latex
+styles are supported.
 @item .hsc
-``almost-Haskell'' input file for the
-@uref{http://www.haskell.org/ghc/docs/latest/html/users_guide/hsc2hs.html,hsc2hs}
-pre-processor
+Haskell interfaces to C code used by @uref{http://www.haskell.org/ghc/docs/latest/html/users_guide/hsc2hs.html,hsc2hs}
+pre-processor.
 @item .cpphs
-input file for the @uref{http://projects.haskell.org/cpphs/,cpphs}
-pre-processor
+Haskell source with CPP pragmas used with @uref{http://projects.haskell.org/cpphs,cpphs}
+pre-processor.
+@item .c2hs
+Haskell FFI bindings to C libraries used with @uref{https://github.com/haskell/c2hs,c2hs}
+pre-processor.
 @end table
 
-@cindex literate programming
-@findex literate-haskell-mode
-
-@noindent
-The major mode @code{literate-haskell-mode} (which is derived from
-@code{haskell-mode} and thus transitively from @code{prog-mode})
-provides support for
-@uref{http://www.haskell.org/haskellwiki/Literate_programming,literate
-Haskell programs} and is associated with the @file{.lhs} file extension
-by default.
-
-@code{literate-haskell-mode} supports Bird-style as well as @TeX{}-style
-literate Haskell files. The currently detected literate Haskell variant
-is shown in the mode line (@pxref{Mode Line,,,emacs}) as either
-@samp{LitHaskell/bird} or @samp{LitHaskell/tex}.
-
+Haskell Mode offers many productivity tools described in following
+chapters in this manual.
 
 @section Managing imports
 
@@ -277,7 +271,7 @@ To generally format (sort, align) your imports, you can run
 
     @kbd{M-x} @code{haskell-mode-format-imports}
 
-Or @kbd{C-c C-.}.
+Or @kbd{C-c C-,}.
 
 @subsection Sort imports
 
@@ -325,8 +319,8 @@ program behavior.  @code{haskell-mode} provides the function
 It will remove an SCC annotation at point if one is present, or add
 one if point is over whitespace.  By default it is bound to @kbd{C-c C-s}.
 
-@node Font Lock Support
-@chapter Font Lock Support
+@node Syntax highlighting
+@chapter Syntax highlighting
 
 @code{haskell-mode} supports @dfn{syntax highlighting} via Emacs' Font
 Lock minor mode which should be enabled by default in current
@@ -352,12 +346,52 @@ types in different colors.
 @end ifhtml
 
 There is also support to use mode-specific syntax highlighing for
-quasiquotes. Customize @code{haskell-font-lock-quasi-quote-modes} to
-make sure your quoters are supported.
+quasiquotes.
 
 @ifhtml
 @image{anim/font-lock-quasi-quotes}
 @end ifhtml
+
+At this point quasi quotes for HTML, XML, shell scripts, Hamlet
+templates and SQL are supported out of the box. Customize
+@code{haskell-font-lock-quasi-quote-modes} to make sure your quoters are
+supported.
+
+The following customization variables are responsible for faces applied:
+
+@itemize @code
+@item @defcustom{haskell-keyword-face}: for keywords
+@item @defcustom{haskell-type-face}: for type names and type class names
+@item @defcustom{haskell-constructor-face}: for constructors
+@item @defcustom{haskell-definition-face}: function and operator name at the definition place
+@item @defcustom{haskell-operator-face}: operators
+@item @defcustom{haskell-pragma-face}: GHC pragmas
+@item @defcustom{haskell-literate-comment-face}: literate comments
+@item @defcustom{haskell-quasi-quote-face}: quasi quotes unless using mode specific highlighting
+@item @defcustom{haskell-c2hs-hook-pair-face}: c2hs hooks
+@item @defcustom{haskell-c2hs-hook-name-face}: c2hs hook names
+@end itemize
+
+All the above are available for customization.
+
+GHC quasi quote syntax is ambiguous with list comprehension therefore
+syntax highlighting might get confused with situations like these:
+
+@example
+result = [html| html <- htmlList]
+result = [html| <html><body>...</body></html> |]
+@end example
+
+Please use spaces around a list comprehension variable to make this
+unambiguous. Any of the following will work:
+
+@example
+result = [ html| html <- htmlList]
+result = [html | html <- htmlList]
+@end example
+
+GHC's ambiguity is an accident of the past but it is unlikely to be
+fixed due to backward compatibility baggage.
 
 @node Completion support
 @chapter Completion support
@@ -383,7 +417,7 @@ candidate list also includes symbols from imported modules.
 @image{anim/company-mode-import-statement}
 @end ifhtml
 
-Unfortunatelly, it is not possible to provide candidates for
+Unfortunately, it is not possible to provide candidates for
 identifiers defined locally in @code{let} and @code{where} blocks even
 in interactive mode.  But if you're using
 @url{http://company-mode.github.io/, company-mode} you can override
@@ -392,7 +426,7 @@ completion candidates from completion-at-point function
 (@code{company-capf} backend) and dynamic abbrevs.
 @code{company-mode} provides special backend for dabbrev code
 completions, namely @code{company-dabbrev-code}.  To combine
-completions from diffrent backends you can create grouped backends, it
+completions from different backends you can create grouped backends, it
 is very easy — a grouped backend is just a list of backends, for
 example:
 
@@ -403,6 +437,11 @@ example:
                  (append '((company-capf company-dabbrev-code))
                          company-backends))))
 @end lisp
+
+If you use a GHCi version prior to 8.0.1 you might want to set
+@code{haskell-completions-complete-operators} to @code{nil}, if you
+experience major slowdown while trying to complete after an Haskell
+operator (See @url{https://ghc.haskell.org/trac/ghc/ticket/10576, GHC-Bug 10576}).
 
 @node Unicode support
 @chapter Unicode support
@@ -440,6 +479,316 @@ either @samp{⇐} or @samp{≤}. Typing it presents you with a choice. Type
 @kbd{1} or @kbd{2} to select an option or keep typing to use the default
 option.
 
+Currently defined sequences are listed in the following table:
+
+@multitable @columnfractions .08 .15 .08 .15 .08 .15 .08 .15
+@headitem Sequence @tab Unicode @tab Sequence @tab Unicode @tab Sequence @tab Unicode @tab Sequence @tab Unicode
+@item alpha
+@tab α
+@tab Alpha
+@tab Α
+@tab beta
+@tab β
+@tab Beta
+@tab Β
+@item gamma
+@tab γ
+@tab Gamma
+@tab Γ
+@tab delta
+@tab δ
+@tab Delta
+@tab Δ
+@item epsilon
+@tab ε
+@tab Epsilon
+@tab Ε
+@tab zeta
+@tab ζ
+@tab Zeta
+@tab Ζ
+@item eta
+@tab η
+@tab Eta
+@tab Η
+@tab theta
+@tab θ
+@tab Theta
+@tab Θ
+@item iota
+@tab ι
+@tab Iota
+@tab Ι
+@tab kappa
+@tab κ
+@tab Kappa
+@tab Κ
+@item lambda
+@tab λ
+@tab Lambda
+@tab Λ
+@tab lamda
+@tab λ
+@tab Lamda
+@tab Λ
+@item mu
+@tab μ
+@tab Mu
+@tab Μ
+@tab nu
+@tab ν
+@tab Nu
+@tab Ν
+@item xi
+@tab ξ
+@tab Xi
+@tab Ξ
+@tab omicron
+@tab ο
+@tab Omicron
+@tab Ο
+@item pi
+@tab π
+@tab Pi
+@tab Π
+@tab rho
+@tab ρ
+@tab Rho
+@tab Ρ
+@item sigma
+@tab σ
+@tab Sigma
+@tab Σ
+@tab tau
+@tab τ
+@tab Tau
+@tab Τ
+@item upsilon
+@tab υ
+@tab Upsilon
+@tab Υ
+@tab phi
+@tab φ
+@tab Phi
+@tab Φ
+@item chi
+@tab χ
+@tab Chi
+@tab Χ
+@tab psi
+@tab ψ
+@tab Psi
+@tab Ψ
+@item omega
+@tab ω
+@tab Omega
+@tab Ω
+@tab digamma
+@tab ϝ
+@tab Digamma
+@tab Ϝ
+@item san
+@tab ϻ
+@tab San
+@tab Ϻ
+@tab qoppa
+@tab ϙ
+@tab Qoppa
+@tab Ϙ
+@item sampi
+@tab ϡ
+@tab Sampi
+@tab Ϡ
+@tab stigma
+@tab ϛ
+@tab Stigma
+@tab Ϛ
+@item heta
+@tab ͱ
+@tab Heta
+@tab Ͱ
+@tab sho
+@tab ϸ
+@tab Sho
+@tab Ϸ
+@item |A|
+@tab 𝔸
+@tab |B|
+@tab 𝔹
+@tab |C|
+@tab ℂ
+@tab |D|
+@tab 𝔻
+@item |E|
+@tab 𝔼
+@tab |F|
+@tab 𝔽
+@tab |G|
+@tab 𝔾
+@tab |H|
+@tab ℍ
+@item |I|
+@tab 𝕀
+@tab |J|
+@tab 𝕁
+@tab |K|
+@tab 𝕂
+@tab |L|
+@tab 𝕃
+@item |M|
+@tab 𝕄
+@tab |N|
+@tab ℕ
+@tab |O|
+@tab 𝕆
+@tab |P|
+@tab ℙ
+@item |Q|
+@tab ℚ
+@tab |R|
+@tab ℝ
+@tab |S|
+@tab 𝕊
+@tab |T|
+@tab 𝕋
+@item |U|
+@tab 𝕌
+@tab |V|
+@tab 𝕍
+@tab |W|
+@tab 𝕎
+@tab |X|
+@tab 𝕏
+@item |Y|
+@tab 𝕐
+@tab |Z|
+@tab ℤ
+@tab |gamma|
+@tab ℽ
+@tab |Gamma|
+@tab ℾ
+@item |pi|
+@tab ℼ
+@tab |Pi|
+@tab ℿ
+@tab ::
+@tab ∷
+@tab forall
+@tab ∀
+@item exists
+@tab ∃
+@tab ->
+@tab →
+@tab <-
+@tab ←
+@tab =>
+@tab ⇒
+@item ~>
+@tab ⇝
+@tab <~
+@tab ⇜
+@tab &&
+@tab ∧
+@tab ||
+@tab ∨
+@item ==
+@tab ≡
+@tab /=
+@tab ≢, ≠
+@tab <=
+@tab ≤
+@tab >=
+@tab ≥
+@item /<
+@tab ≮
+@tab />
+@tab ≯
+@tab  *
+@tab  ⋅
+@tab elem
+@tab ∈
+@item notElem
+@tab ∉
+@tab member
+@tab ∈
+@tab notMember
+@tab ∉
+@tab union
+@tab ∪
+@item intersection
+@tab ∩
+@tab isSubsetOf
+@tab ⊆
+@tab isProperSubsetOf
+@tab ⊂
+@tab <<<
+@tab ⋘
+@item >>>
+@tab ⋙
+@tab <|
+@tab ⊲
+@tab |>
+@tab ⊳
+@tab ><
+@tab ⋈
+@item mappend
+@tab ⊕
+@tab  .
+@tab  ∘
+@tab undefined
+@tab ⊥
+@tab :=
+@tab ≔
+@item =:
+@tab ≕
+@tab =def
+@tab ≝
+@tab =?
+@tab ≟
+@tab ...
+@tab …
+@item _0
+@tab ₀
+@tab _1
+@tab ₁
+@tab _2
+@tab ₂
+@tab _3
+@tab ₃
+@item _4
+@tab ₄
+@tab _5
+@tab ₅
+@tab _6
+@tab ₆
+@tab _7
+@tab ₇
+@item _8
+@tab ₈
+@tab _9
+@tab ₉
+@tab ^0
+@tab ⁰
+@tab ^1
+@tab ¹
+@item ^2
+@tab ²
+@tab ^3
+@tab ³
+@tab ^4
+@tab ⁴
+@tab ^5
+@tab ⁵
+@item ^6
+@tab ⁶
+@tab ^7
+@tab ⁷
+@tab ^8
+@tab ⁸
+@tab ^9
+@tab ⁹
+@end multitable
+
 If you don't like the highlighting of partially matching tokens you can
 turn it off by setting @code{input-method-highlight-flag} to @code{nil}
 via @kbd{M-x customize-variable}.
@@ -467,6 +816,13 @@ descent Haskell parser. @kbd{TAB} selects the next potential indentation
 position, @kbd{S-TAB} selects the previous one. If a block is selected
 you can use @kbd{TAB} to indent the block more and @kbd{S-TAB} to indent
 the block less.
+
+When @code{electric-indent-mode} is enabled or the variable
+@code{haskell-indentation-electric-flag} is non-nil, the insertion of
+some characters (by default @kbd{,} @kbd{;} @kbd{)} @kbd{@}} @kbd{]})
+may trigger auto reindentation under appropriate conditions. See the
+documentation of @code{haskell-indentation-common-electric-command} for
+more details.
 
 @item @code{haskell-indent-mode} (optional).
 
@@ -546,7 +902,7 @@ Another alternative is to install
 which indents code by parsing the code with a full Haskell parser and
 deciding where to indent based on that.
 
-@node Autoformating
+@node Autoformatting
 @chapter Using external formatters
 
 You can enable @uref{https://github.com/jaspervdj/stylish-haskell,stylish-haskell} by
@@ -784,56 +1140,97 @@ temporarily by invoking @code{haskell-compile} with a prefix argument
 same customized compile command, invoke @code{recompile} (bound to
 @kbd{g}) inside the @samp{*haskell-compilation*} buffer.
 
-@node Inferior Haskell interpreter
-@chapter Inferior Haskell interpreter
+@section Keybindings
 
-@findex inferior-haskell-find-definition
-@findex inferior-haskell-find-haddock
-@findex inferior-haskell-info
-@findex inferior-haskell-load-and-run
-@findex inferior-haskell-load-file
-@findex inferior-haskell-mode
-@findex inferior-haskell-reload-file
-@findex inferior-haskell-start-process
-@findex inferior-haskell-type
-@vindex haskell-program-name
-@vindex inferior-haskell-mode-hook
+@multitable 0.3 0.7
+@headitem Key binding @tab Function
+@item TAB
+@tab compilation-next-error
 
-The major mode @code{inferior-haskell-mode} provides support for
-interacting with an inferior Haskell process based on
-@code{comint-mode}.
+@item RET
+@tab compile-goto-error
 
-By default the @code{haskell-mode-map} keymap is setup to use this mode:
+@item C-o
+@tab compilation-display-error
 
-@table @kbd
-@item C-c C-z
-is bound to @code{switch-to-haskell}
-@item C-c C-b
-is bound to @code{switch-to-haskell}
-@item C-c C-l
-is bound to @code{inferior-haskell-load-file}
-@item C-c C-t
-is bound to @code{inferior-haskell-type}
-@item C-c C-i
-is bound to @code{inferior-haskell-info}
-@end table
+@item SPC
+@tab scroll-up-command
 
-The Haskell interpreter used by the inferior Haskell mode is
-auto-detected by default, but is customizable via the
-@code{haskell-program-name} variable.
+@item -
+@tab negative-argument
 
-Currently, GHCi and Hugs are support as Haskell interpreter.
+@item 0 .. 9
+@tab digit-argument
 
-TODO/WRITEME
-@c write about supported features
+@item <
+@tab beginning-of-buffer
+
+@item >
+@tab end-of-buffer
+
+@item ?
+@tab describe-mode
+
+@item g
+@tab recompile
+
+@item h
+@tab describe-mode
+
+@item q
+@tab quit-window
+
+@item DEL
+@tab scroll-down-command
+
+@item S-SPC
+@tab scroll-down-command
+
+@item <backtab>
+@tab compilation-previous-error
+
+@item <follow-link>
+@tab mouse-face
+
+@item <mouse-2>
+@tab compile-goto-error
+
+@item <remap>
+@tab Prefix Command
+
+@item M-n
+@tab compilation-next-error
+
+@item M-p
+@tab compilation-previous-error
+
+@item M-@{
+@tab compilation-previous-file
+
+@item M-@}
+@tab compilation-next-file
+
+@item C-c C-c
+@tab compile-goto-error
+
+@item C-c C-f
+@tab next-error-follow-minor-mode
+
+@item C-c C-k
+@tab kill-compilation
+
+@end multitable
 
 @node Interactive Haskell
 @chapter Interactive Haskell
 
-An alternative mode providing a @acronym{REPL,read–eval–print loop} via
-GHCi sessions is called @code{haskell-interactive-mode}, which
-effectively replaces @code{inferior-haskell-mode}, but comes with a
-different set of features:
+@acronym{REPL, read–eval–print loop} is provided both via Comint
+(@code{inferior-haskell-mode}) and an adhoc way called
+@code{haskell-interactive-mode}. The Comint based
+@code{inferior-haskell-mode} is just the REPL, it comes with the standard
+key bindings(like @code{ielm} or @code{eshell}).
+
+@code{haskell-interactive-mode} comes with a different set of features:
 
 @itemize
 @item
@@ -841,29 +1238,11 @@ Separate sessions per Cabal project @file{haskell-session.el}.
 @item
 A new inferior Haskell process handling code @file{haskell-process.el}.
 @item
-New REPL implementation similiar to SLIME/IELM
+New REPL implementation similar to SLIME/IELM
 @item
 Navigatable error overlays
 @file{haskell-interactive-mode.el}.
 @end itemize
-
-In order to use @code{haskell-interactive-mode} instead of the default
-@code{inferior-haskell-mode}, you need to replace some of the default
-keybindings in the @code{haskell-mode-map} keymap with the respective
-@code{haskell-interactive-mode} counterparts:
-
-@lisp
-(eval-after-load "haskell-mode"
-  '(progn
-    (define-key haskell-mode-map (kbd "C-x C-d") nil)
-    (define-key haskell-mode-map (kbd "C-c C-z") 'haskell-interactive-switch)
-    (define-key haskell-mode-map (kbd "C-c C-l") 'haskell-process-load-file)
-    (define-key haskell-mode-map (kbd "C-c C-b") 'haskell-interactive-switch)
-    (define-key haskell-mode-map (kbd "C-c C-t") 'haskell-process-do-type)
-    (define-key haskell-mode-map (kbd "C-c C-i") 'haskell-process-do-info)
-    (define-key haskell-mode-map (kbd "C-c M-.") nil)
-    (define-key haskell-mode-map (kbd "C-c C-d") nil)))
-@end lisp
 
 With @code{haskell-interactive-mode}, each Haskell source buffer is
 associated with at most one GHCi session, so when you call
@@ -876,20 +1255,13 @@ associate with.
 In a Haskell source buffer associated with a GHCi session, errors that
 prevent the file from loading are highlighted with
 @code{haskell-error-face}.  You can move between these error lines with
+with the commands @code{haskell-goto-next-error}, @code{haskell-goto-prev-error}
+and @code{haskell-goto-first-error}, which you might like to bind to
+convenient keys in @code{interactive-haskell-mode-map}.
 
-@table @kbd
-@item M-n
-is bound to @code{haskell-goto-next-error}
-@item M-p
-is bound to @code{haskell-goto-prev-error}
-@item C-c M-p
-is bound to @code{haskell-goto-first-error}
-@end table
+@section Using GHCi 8+ or GHCi-ng
 
-@section Using GHCi-ng
-
-Put @code{:set +c} in your @code{.ghci} or run it in the REPL. Then use
-these keybindings:
+If you use either of the above, then you can use these functions:
 
 @lisp
 (define-key interactive-haskell-mode-map (kbd "M-.") 'haskell-mode-goto-loc)
@@ -903,21 +1275,24 @@ for the current GHCi session.
 
 @cindex customizing
 What kind of Haskell REPL @code{haskell-interactive-mode} will start up
-depends on the value of @code{haskell-process-type}.  This can be one of
-the symbols @code{auto}, @code{ghci}, @code{cabal-repl}, or
-@code{stack-ghci}.  If it's @code{auto}, the directory contents and
-available programs will be used to make a best guess at the
-process type.  The actual process type will then determine which
-variables @code{haskell-interactive-mode} will access to determine the
-program to start and its arguments:
+depends on the value of @code{haskell-process-type}. This can be one of the
+symbols @code{auto}, @code{ghci}, @code{cabal-repl}, @code{cabal-new-repl}, or
+@code{stack-ghci}. If it's @code{auto}, the directory contents and available
+programs will be used to make a best guess at the process type. The actual
+process type will then determine which variables
+@code{haskell-interactive-mode} will access to determine the program to start
+and its arguments:
 
 @itemize
 @item
 If it's @code{ghci}, @code{haskell-process-path-ghci} and
 @code{haskell-process-args-ghci} will be used.
 @item
-If it's @code{cabal-repl}, @code{haskell-process-path-ghci} and
-@code{haskell-process-args-ghci}.
+If it's @code{cabal-repl}, @code{haskell-process-path-cabal} and
+@code{haskell-process-args-cabal-repl}.
+@item
+If it's @code{cabal-new-repl}, @code{haskell-process-path-cabal} and
+@code{haskell-process-args-cabal-new-repl}.
 @item
 If it's @code{stack-ghci}, @code{haskell-process-path-stack} and
 @code{haskell-process-args-stack-ghci} will be used.
@@ -935,6 +1310,7 @@ strings specifying (further) command-line arguments.
 @vindex haskell-process-path-stack
 @vindex haskell-process-args-ghci
 @vindex haskell-process-args-cabal-repl
+@vindex haskell-process-args-cabal-new-repl
 @vindex haskell-process-args-stack-ghci
 
 @section Haskell Interactive Mode Setup
@@ -1021,6 +1397,7 @@ Here is a list of available process types:
 @itemize
 @item ghci
 @item cabal-repl
+@item cabal-new-repl
 @item cabal-dev
 @item cabal-ghci
 @item stack-ghci
@@ -1076,7 +1453,7 @@ And make sure @file{hasktags} is in your @code{$PATH} which Emacs can see.
 @subsection Generating tags
 
 Now, every time you run @code{save-buffer} (@kbd{C-x C-s}), there is a
-hook that will run and generate Emacs @xref{Tags,,,emacs} for the whole
+hook that will run and generate Emacs @xref{Tags,,,emacs}, for the whole
 project directory. The resulting file will be called @file{TAGS}.
 
 WARNING: You should be careful that your project root isn't your
@@ -1156,9 +1533,6 @@ To kill a session you can run
     M-x haskell-session-kill
 @end example
 
-Which will prompt to kill all associated buffers, too. Hit `n` to
-retain them.
-
 Alternatively, you can switch to the REPL and just kill the buffer
 normally with @kbd{C-x k RET}. It will prompt
 
@@ -1169,6 +1543,9 @@ normally with @kbd{C-x k RET}. It will prompt
 You can choose @kbd{y} to kill the session itself, or @kbd{n} to just
 kill the REPL buffer. You can bring it back with @kbd{M-x}
 @code{haskell-interactive-bring}.
+
+If you would like to be prompted to kill the associated buffers, you can
+add @code{projectile-kill-buffers} to @code{haskell-kill-session-hook}.
 
 @subsection Menu
 
@@ -1414,6 +1791,42 @@ To evaluate expressions, simply type one out and hit `RET`.
     123
 @end example
 
+@subsection Evaluating multiline expressions
+
+GHCi features two ways to evaluate multiline expressions. You can use
+@code{:set +m} to
+enable @uref{https://www.haskell.org/ghc/docs/latest/html/users_guide/ghci.html#multiline-input,
+multiline input} for all expressions, or you can wrap your expression in
+@code{:@{} and @code{:@}} (they have to be on their own lines).
+
+The prompt will change to indicate that you're inputting a multiline
+expression:
+
+@example
+λ> :@{
+λ| let a = 10
+λ|     b = 20
+λ|     c = 30
+λ| :@}
+@end example
+
+You can also simulate multiline mode by having your input contain
+newline characters. You can input a literal newline character with
+@kbd{C-q C-j}, or you can use:
+
+@example
+    M-x haskell-interactive-mode-newline-indent
+@end example
+
+which is bound to @kbd{C-j}. This command indents after the newline. You
+can simulate the above example like so:
+
+@example
+λ> let a = 10
+       b = 20
+       c = 30
+@end example
+
 @subsection Type of expressions
 
 You can use normal @code{:type} which is part of GHCi to get the type of
@@ -1468,6 +1881,7 @@ You can disable this behaviour by disabling the customization option:
   '(haskell-interactive-types-for-show-ambiguous nil))
 @end lisp
 
+@anchor{printing mode}
 @subsection Printing mode
 
 You can choose between printing modes used for the results of
@@ -1511,6 +1925,47 @@ Or @kbd{C-c C-v}:
 
 There you can choose `haskell-mode`, for example, to pretty print the
 output as Haskell.
+
+@subsection @acronym{SVG} images rendering
+
+@cindex Rendering SVG images
+@cindex SVG images, rendering
+@cindex Images, rendering SVG images
+
+If you are working on @acronym{SVG} images, you can instruct Emacs to
+render the image as the output of an image producing command at the
+@acronym{REPL}@.
+
+The following example uses the @code{diamgrams} library with the default
+@acronym{SVG} backend to produce a circle:
+
+@example
+    @{-# LANGUAGE OverloadedStrings #-@}
+
+    import Diagrams.Prelude
+    import Diagrams.Backend.SVG
+
+    myCircle :: Diagram B
+    myCircle = circle 1 # lc purple # fc yellow
+
+    circle = renderDia SVG (SVGOptions (mkWidth 250) Nothing "" [] True) myCircle
+@end example
+
+@findex haskell-svg-toggle-render-images
+
+After enabling @acronym{SVG} rendering with @kbd{M-x
+haskell-svg-toggle-render-images}, if you load the above code and type
+@code{circle} at the @acronym{REPL}, you will see the rendered circle
+instead of the @acronym{XML} representation of the image.
+
+@vindex haskell-svg-render-images
+
+For this feature to work, it is required that the variable
+@code{haskell-interactive-mode-eval-mode} be set to a value different
+from @code{nil}, @pxref{printing mode}.
+
+This feature can be enabled by default by setting the customization
+variable @code{haskell-svg-render-images} to a non-nil value.
 
 @subsection Presentations
 
@@ -1611,7 +2066,7 @@ The output can be copied from the @code{*Messages*} buffer.
 
 There a few ways GHCi lets you query information about your code.
 
-@subsection Get identifer type
+@subsection Get identifier type
 
 To print the type of the top-level identifier at point in the REPL and
 in the message buffer, run the following command:
@@ -1708,7 +2163,7 @@ The most common Cabal action is building, so that has a specific command:
     M-x haskell-process-cabal-build
 @end example
 
-Or @kbd{C-c C-c}. When building, it will hide unneccessary output.
+Or @kbd{C-c C-c}. When building, it will hide unnecessary output.
 
 For example, to build the `ace` package, the output is simply:
 
@@ -2148,19 +2603,19 @@ about Haskell. Once you evaluate this, you can just use @kbd{M-x}
 (add-to-list 'align-rules-list
              '(haskell-types
                (regexp . "\\(\\s-+\\)\\(::\\|∷\\)\\s-+")
-               (modes quote (haskell-mode literate-haskell-mode))))
+               (modes quote (haskell-mode haskell-literate-mode))))
 (add-to-list 'align-rules-list
              '(haskell-assignment
                (regexp . "\\(\\s-+\\)=\\s-+")
-               (modes quote (haskell-mode literate-haskell-mode))))
+               (modes quote (haskell-mode haskell-literate-mode))))
 (add-to-list 'align-rules-list
              '(haskell-arrows
                (regexp . "\\(\\s-+\\)\\(->\\|→\\)\\s-+")
-               (modes quote (haskell-mode literate-haskell-mode))))
+               (modes quote (haskell-mode haskell-literate-mode))))
 (add-to-list 'align-rules-list
              '(haskell-left-arrows
                (regexp . "\\(\\s-+\\)\\(<-\\|←\\)\\s-+")
-               (modes quote (haskell-mode literate-haskell-mode))))
+               (modes quote (haskell-mode haskell-literate-mode))))
 @end lisp
 
 @node Rectangular commands
@@ -2207,39 +2662,271 @@ This will insert the contents of the last killed rectangle.
 As with all Emacs modifier combos, you can type @kbd{C-x r C-h} to find
 out what keys are bound beginning with the @kbd{C-x r} prefix.
 
+@node REPL
+@chapter Using GHCi REPL within Emacs
+
+To start the REPL you can run the following:
+
+@itemize
+@item @kbd{M-x run-haskell}
+@end itemize
+
+This repl works with @uref{https://www.emacswiki.org/emacs/ComintMode, Comint}.
+So you will feel at home if you are already using @kbd{M-x Shell} or @kbd{M-x ielm}.
+
+@code{Inf-Haskell} is a Major mode for running GHCi, with comint.
+
+Important key bindings in @code{Inf-haskell}:
+
+@table @kbd
+@item RET
+invokes @kbd{comint-send-input}. Sends the input to the GHCi process, evaluates
+the line and returns the output.
+
+@item C-d or <delete>
+deletes the forward character
+
+@item <C-up> or M-p
+invokes @kbd{comint-previous-input}. Cycle backwards through input history,
+saving input.
+
+@item <C-down> or M-n
+invokes @kbd{comint-next-input}. Cycle forwards through input history.
+
+@item C-c C-c
+invokes @kbd{comint-interrupt-subjob}. Sends KeyboardInterrupt signal.
+
+@item C-c C-\
+invokes @kbd{comint-quit-subjob}. Sends KeyboardInterrupt signal.
+
+@item C-c C-z
+invokes @kbd{comint-stop-subjob}. Kills the GHCi process.
+
+@item C-c M-r
+invokes @kbd{comint-previous-matching-input-from-input}. If you are familiar
+with @kbd{C-r} in bash. This is the same as that. Searches backwards through
+input history for match for current input.
+
+@item C-c M-s
+invokes @kbd{comint-next-matching-input-from-input}. Searches forwards through
+input history for match for current input.
+
+@item C-c C-l
+invokes @kbd{comint-dynamic-list-input-ring}. Displays a list of recent inputs
+entered into the current buffer.
+
+@item C-c M-o
+invokes @kbd{comint-clear-buffer}. Clears the buffer (Only with Emacs 25.X and above)
+
+@item C-c C-n
+invokes @kbd{comint-next-prompt}. Goes to the start of the previous REPL prompt.
+
+@item C-c C-p
+invokes @kbd{comint-previous-prompt}. Goes to the start of the next REPL prompt.
+
+@item C-c C-o
+invokes @kbd{comint-delete-output}. Clears the output of the most recently evaluated
+expression.
+
+@item C-c C-e
+invokes @kbd{comint-show-maximum-output}. Moves the point to the end of the buffer.
+
+@item C-c C-u
+invokes @kbd{comint-kill-input}. Kills backward, the line at point. (Use this when you have typed in an expression into the prompt
+but you dont want to evaluate it.)
+
+@item C-c C-w
+invokes @kbd{backward-kill-word}. Kills backward, the word at point
+
+@item C-c C-s
+invokes @kbd{comint-write-output}. Write output from interpreter since last
+input to FILENAME. Any prompt at the end of the output is not written.
+@end table
+
+@section Relevant defcustoms:
+
+@multitable @columnfractions .40 .20 .40
+@headitem Interpreter (defcustom) @tab Default Value @tab Possible Values
+@item @code{haskell-process-type} @tab @code{'auto} @tab @code{'stack-ghci, 'cabal-repl, 'ghci, 'auto}
+@item @code{inferior-haskell-hook} @tab @code{nil} @tab -
+@item @code{haskell-process-path-ghci} @tab @code{ghci} @tab -
+@item @code{haskell-process-args-ghci} @tab @code{-ferror-spans} @tab -
+@item @code{haskell-process-path-cabal} @tab @code{cabal} @tab -
+@item @code{haskell-process-args-cabal-repl} @tab @code{--ghc-option=-ferror-spans} @tab -
+@item @code{haskell-process-path-stack} @tab @code{stack} @tab -
+@item @code{haskell-process-args-stack-ghci} @tab @code{--ghci-options=-ferror-spans --no-build --no-load} @tab -
+@end multitable
+
+@section More on @code{haskell-process-type}
+
+The Haskell interpreter used by @code{Inf-Haskell} is auto-detected by default,
+but is customizable with defcustom @code{haskell-process-type}. The values
+recognized by it are (default is 'auto):
+
+@itemize
+@item @code{'stack-ghci}
+@item @code{'cabal-repl}
+@item @code{'ghci}
+@item @code{'auto}
+@end itemize
+
+if the @code{haskell-process-type} is @code{'auto}, the directories are searched for
+@code{cabal.sandbox.config} or @code{stack.yaml} or  @code{*.cabal} file.
+If the file is present, then appropriate process is started.
+
+When @code{cabal.sandbox.config} is found @code{haskell-process-type} is @code{'cabal-repl}.
+Similarly, when @code{stack.yaml} is found @code{haskell-process-type} is @code{'stack-ghci}.
+Similarly, when @code{xyz.cabal} is found @code{haskell-process-type} is @code{'cabal-repl}.
+When nothing is found @code{haskell-process-type} is @code{'ghci}. When more than one
+file such as @code{cabal.sandbox.config} and @code{stack.yaml} are found the following
+preference is followed.
+
+@code{cabal.sandbox.config} > @code{stack.yaml} >  @code{*.cabal}
+
+@node Collapsing Haskell code
+@chapter Collapsing Haskell code
+
+This is @code{hs-minor-mode} for @code{haskell-mode}. This module uses
+hideshow module.
+
+To activate this minor mode (haskell-collapse-mode)
+@itemize
+@item @kbd{M-x haskell-collapse-mode} is "To start haskell-collapse-mode".
+@end itemize
+This minor mode works with indentation.
+
+In a quick glance:
+
+@table @kbd
+@item C-c @ C-c
+is bound to @code{haskell-hide-toggle}
+@item C-c @ C-M-c
+@item C-c @ C-M-h
+@item C-c @ C-M-s
+are all bound to @code{haskell-hide-toggle-all}
+@end table
+
+How to use @code{M-x haskell-hide-toggle}?
+
+Place your point on the code block that you want to collapse and hit the
+keybinding. Now the code collapses and you can see the first line of the
+block and elipsis.
+
+Take this example code (example usage of @code{M-x haskell-hide-toggle}):
+when you place the cursor here, like this (notice the thick block in the
+first line):
+
+@code{
+f█x
+  | rem i 3 == 0 = if i == 0 && (k /= 0) then (c k) else (h j)
+  | otherwise = 0
+  where i = sum x
+        j = g x (div i 3) 0 0 []
+        k = zeroes x 0
+}
+
+or
+
+@code{
+f x
+  | rem i 3 == 0 = if i == 0 && (k /= 0) then (c k) else (h j)
+█ | otherwise = 0
+  where i = sum x
+        j = g x (div i 3) 0 0 []
+        k = zeroes x 0
+}
+
+then when you collapse it becomes something like this:
+
+@code{
+f█x@dots{}
+}
+
+It works in terms of (indentation) blocks.
+
+One more example:
+
+@code{
+f x
+  | rem i 3 == 0 = if i == 0 && (k /= 0) then (c k) else (h j)
+  | otherwise = 0
+  w█ere i = sum x
+        j = g x (div i 3) 0 0 []
+        k = zeroes x 0
+}
+
+or
+
+@code{
+f x
+  | rem i 3 == 0 = if i == 0 && (k /= 0) then (c k) else (h j)
+  | otherwise = 0
+  where i = sum x
+        j = g x (div i 3) 0 0 []
+     █  k = zeroes x 0
+}
+
+this, will result in something like:
+
+@code{
+f x
+  | rem i 3 == 0 = if i == 0 && (k /= 0) then (c k) else (h j)
+  | otherwise = 0
+  where i = sum █@dots{}
+}
+
+The other functionality @code{M-x haskell-hide-toggle-all} also
+works only for indentation and it collapses all toplevel functions.
+
+So a file that looks like this:
+
+@example
+main = interact $ show.f. map read .words
+f (x:xs) = dp x xs
+
+dp money a | money < 0 || null a = [1..1000]
+dp 0 a = []
+dp money a @atchar{} (coin:coins)
+  | (length i) <= length j = i
+  | otherwise = j
+  where i = (coin:(dp (money-coin) a))
+        j = (dp money coins)
+@end example
+
+will turn into this:
+
+@example
+main = interact $ show.f. map read .words
+f (x:xs) = dp x xs
+
+dp money a | money < 0 || null a = [1..1000]
+dp 0 a = []
+dp money a @atchar{} (coin:coins)@dots{}
+@end example
+
 @node Getting Help and Reporting Bugs
 @chapter Getting Help and Reporting Bugs
 
-This Info manual is work in progress and incomplete. However, you can
-find more information at these locations in the meantime:
+Work on Haskell Mode is organized with Github @code{haskell-mode}
+project.  To understand how the project is run please read the
+information in the
+@uref{https://github.com/haskell/haskell-mode/wiki,project wiki pages}.
 
-@itemize
-@item
-@uref{https://github.com/haskell/haskell-mode,Haskell Mode's GitHub Home}
-@item
-@uref{http://www.haskell.org/haskellwiki/Haskell_mode_for_Emacs,Haskell Wiki Emacs Page}
-@end itemize
+To report any issues please use the Github's issue mechanism available from
+@uref{https://github.com/haskell/haskell-mode,Haskell Mode's GitHub Home}.
 
-If you have any questions or like to discuss something regarding Haskell
-Mode, please consider sending an email to the
+For a quick question visit @code{#haskell-emacs} channel on IRC
+@code{irc.freenode.net}.
+
+There is also a (now defunct)
 @uref{http://projects.haskell.org/cgi-bin/mailman/listinfo/haskellmode-emacs,
-Haskellmode-emacs mailing list}. The mailing list is also available on
+Haskellmode-emacs mailing list}, also available on
 @uref{http://gmane.org/, Gmane} via the
 @uref{http://dir.gmane.org/gmane.comp.lang.haskell.emacs,
 gmane.comp.lang.haskell.emacs} newsgroup.
 
-If you have discovered a bug or wish to request a new feature, you can
-@uref{https://github.com/haskell/haskell-mode/issues/new, file a new
-issue} with Haskell Mode's issue tracker. When filing a bug, please
-state your currently used software version (@kbd{M-x}
-@code{haskell-version}, @kbd{M-x} @code{version}) and what steps to
-perform in order to reproduce the bug you're experiencing. Finally, if
-you happen to be proficient in @ref{Top,Emacs Lisp,,elisp} you are
-welcome to submit patches via
-@uref{https://help.github.com/articles/using-pull-requests, GitHub
-Pull Requests}.
-
-
+We welcome code and non-code contributions so that we can all enjoy
+coding Haskell even more.
 
 @node Concept index
 @unnumbered Concept index

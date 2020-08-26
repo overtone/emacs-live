@@ -1,6 +1,6 @@
 This is the Emacs Org project, an Emacs library for organizing your life.
 
-The homepage of Org is at http://orgmode.org
+The homepage of Org is at https://orgmode.org
 
 This distribution contains:
 
@@ -26,7 +26,7 @@ COPYING
 Makefile
     The makefile to compile and install Org.  For installation
     instructions, see the manual or the more detailed procedure
-    on Worg: http://orgmode.org/worg/dev/org-build-system.html
+    on Worg: https://orgmode.org/worg/dev/org-build-system.html
 
 mk/
     Files needed for building Org.

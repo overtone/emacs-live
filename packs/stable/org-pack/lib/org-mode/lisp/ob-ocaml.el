@@ -1,10 +1,10 @@
-;;; ob-ocaml.el --- org-babel functions for ocaml evaluation
+;;; ob-ocaml.el --- Babel Functions for Ocaml        -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2009-2016 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2020 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;; Keywords: literate programming, reproducible research
-;; Homepage: http://orgmode.org
+;; Homepage: https://orgmode.org
 
 ;; This file is part of GNU Emacs.
 
@@ -19,7 +19,7 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 
@@ -37,7 +37,7 @@
 ;;; Code:
 (require 'ob)
 (require 'comint)
-(eval-when-compile (require 'cl))
+(require 'org-macs)
 
 (declare-function tuareg-run-caml "ext:tuareg" ())
 (declare-function tuareg-run-ocaml "ext:tuareg" ())
@@ -60,14 +60,13 @@
 
 (defun org-babel-execute:ocaml (body params)
   "Execute a block of Ocaml code with Babel."
-  (let* ((vars (mapcar #'cdr (org-babel-get-header params :var)))
-         (full-body (org-babel-expand-body:generic
+  (let* ((full-body (org-babel-expand-body:generic
 		     body params
 		     (org-babel-variable-assignments:ocaml params)))
          (session (org-babel-prep-session:ocaml
-		   (cdr (assoc :session params)) params))
+		   (cdr (assq :session params)) params))
          (raw (org-babel-comint-with-output
-		  (session org-babel-ocaml-eoe-output t full-body)
+		  (session org-babel-ocaml-eoe-output nil full-body)
 		(insert
 		 (concat
 		  (org-babel-chomp full-body) ";;\n"
@@ -80,32 +79,31 @@
 					 (progn (setq out nil) line)
 				       (when (string-match re line)
 					 (progn (setq out t) nil))))
-				   (mapcar #'org-babel-trim (reverse raw)))))))
-	 (raw (org-babel-trim clean))
-	 (result-params (cdr (assoc :result-params params)))
-	 (parsed
-	  (string-match
-	   "\\(\\(.*\n\\)*\\)[^:\n]+ : \\([^=\n]+\\) =\\(\n\\| \\)\\(.+\\)$"
+				   (mapcar #'org-trim (reverse raw)))))))
+	 (raw (org-trim clean))
+	 (result-params (cdr (assq :result-params params))))
+    (string-match
+     "\\(\\(.*\n\\)*\\)[^:\n]+ : \\([^=\n]+\\) =[[:space:]]+\\(\\(.\\|\n\\)+\\)$"
+     raw)
+    (let ((output (match-string 1 raw))
+	  (type (match-string 3 raw))
+	  (value (match-string 4 raw)))
+      (org-babel-reassemble-table
+       (org-babel-result-cond result-params
+	 (cond
+	  ((member "verbatim" result-params) raw)
+	  ((member "output" result-params) output)
+	  (t raw))
+	 (if (and value type)
+	     (org-babel-ocaml-parse-output value type)
 	   raw))
-	 (output (match-string 1 raw))
-	 (type (match-string 3 raw))
-	 (value (match-string 5 raw)))
-    (org-babel-reassemble-table
-     (org-babel-result-cond result-params
-       (cond
-	((member "verbatim" result-params) raw)
-	((member "output" result-params) output)
-	(t raw))
-       (if (and value type)
-	   (org-babel-ocaml-parse-output value type)
-	 raw))
-     (org-babel-pick-name
-      (cdr (assoc :colname-names params)) (cdr (assoc :colnames params)))
-     (org-babel-pick-name
-      (cdr (assoc :rowname-names params)) (cdr (assoc :rownames params))))))
+       (org-babel-pick-name
+	(cdr (assq :colname-names params)) (cdr (assq :colnames params)))
+       (org-babel-pick-name
+	(cdr (assq :rowname-names params)) (cdr (assq :rownames params)))))))
 
 (defvar tuareg-interactive-buffer-name)
-(defun org-babel-prep-session:ocaml (session params)
+(defun org-babel-prep-session:ocaml (session _params)
   "Prepare SESSION according to the header arguments in PARAMS."
   (require 'tuareg)
   (let ((tuareg-interactive-buffer-name (if (and (not (string= session "none"))
@@ -123,7 +121,7 @@
   (mapcar
    (lambda (pair) (format "let %s = %s;;" (car pair)
 			  (org-babel-ocaml-elisp-to-ocaml (cdr pair))))
-   (mapcar #'cdr (org-babel-get-header params :var))))
+   (org-babel--get-vars params)))
 
 (defun org-babel-ocaml-elisp-to-ocaml (val)
   "Return a string of ocaml code which evaluates to VAL."

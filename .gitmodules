@@ -176,3 +176,6 @@
 [submodule "packs/dev/clojure-pack/vendor/submodules/jump.el"]
 	path = packs/dev/clojure-pack/vendor/submodules/jump.el
 	url = git://github.com/eschulte/jump.el.git
+[submodule "packs/dev/lang-pack/vendor/submodules/elixir"]
+	path = packs/dev/lang-pack/vendor/submodules/elixir
+	url = git://github.com/elixir-editors/emacs-elixir.git

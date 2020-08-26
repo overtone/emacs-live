@@ -1,11 +1,11 @@
-;;; org-entities.el --- Support for special entities in Org-mode
+;;; org-entities.el --- Support for Special Entities -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2010-2016 Free Software Foundation, Inc.
+;; Copyright (C) 2010-2020 Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <carsten at orgmode dot org>,
 ;;         Ulf Stegemann <ulf at zeitform dot de>
 ;; Keywords: outlines, calendar, wp
-;; Homepage: http://orgmode.org
+;; Homepage: https://orgmode.org
 ;;
 ;; This file is part of GNU Emacs.
 ;;
@@ -20,7 +20,7 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;; Commentary:
@@ -30,29 +30,24 @@
 (declare-function org-toggle-pretty-entities "org"       ())
 (declare-function org-table-align            "org-table" ())
 
-(eval-when-compile
-  (require 'cl))
-
 (defgroup org-entities nil
-  "Options concerning entities in Org-mode."
+  "Options concerning entities in Org mode."
   :tag "Org Entities"
   :group 'org)
 
 (defun org-entities--user-safe-p (v)
   "Non-nil if V is a safe value for `org-entities-user'."
-  (or (null v)
-      (and (listp v)
-	   (= (length v) 7)
-	   (stringp (nth 0 v))
-	   (stringp (nth 1 v))
-	   (booleanp (nth 2 v))
-	   (stringp (nth 3 v))
-	   (stringp (nth 4 v))
-	   (stringp (nth 5 v))
-	   (stringp (nth 6 v)))))
+  (pcase v
+    (`nil t)
+    (`(,(and (pred stringp)
+	     (pred (string-match-p "\\`[a-zA-Z][a-zA-Z0-9]*\\'")))
+       ,(pred stringp) ,(pred booleanp) ,(pred stringp)
+       ,(pred stringp) ,(pred stringp) ,(pred stringp))
+     t)
+    (_ nil)))
 
 (defcustom org-entities-user nil
-  "User-defined entities used in Org-mode to produce special characters.
+  "User-defined entities used in Org to produce special characters.
 Each entry in this list is a list of strings.  It associates the name
 of the entity that can be inserted into an Org file as \\name with the
 appropriate replacements for the different export backends.  The order
@@ -93,6 +88,8 @@ packages to be loaded, add these packages to `org-latex-packages-alist'."
      ("aacute" "\\'{a}" nil "&aacute;" "a" "á" "á")
      ("Acirc" "\\^{A}" nil "&Acirc;" "A" "Â" "Â")
      ("acirc" "\\^{a}" nil "&acirc;" "a" "â" "â")
+     ("Amacr" "\\bar{A}" nil "&Amacr;" "A" "Ã" "Ã")
+     ("amacr" "\\bar{a}" nil "&amacr;" "a" "ã" "ã")
      ("Atilde" "\\~{A}" nil "&Atilde;" "A" "Ã" "Ã")
      ("atilde" "\\~{a}" nil "&atilde;" "a" "ã" "ã")
      ("Auml" "\\\"{A}" nil "&Auml;" "Ae" "Ä" "Ä")
@@ -168,7 +165,7 @@ packages to be loaded, add these packages to `org-latex-packages-alist'."
      ("beta" "\\beta" t "&beta;" "beta" "beta" "β")
      ("Gamma" "\\Gamma" t "&Gamma;" "Gamma" "Gamma" "Γ")
      ("gamma" "\\gamma" t "&gamma;" "gamma" "gamma" "γ")
-     ("Delta" "\\Delta" t "&Delta;" "Delta" "Gamma" "Δ")
+     ("Delta" "\\Delta" t "&Delta;" "Delta" "Delta" "Δ")
      ("delta" "\\delta" t "&delta;" "delta" "delta" "δ")
      ("Epsilon" "E" nil "&Epsilon;" "Epsilon" "Epsilon" "Ε")
      ("epsilon" "\\epsilon" t "&epsilon;" "epsilon" "epsilon" "ε")
@@ -208,8 +205,8 @@ packages to be loaded, add these packages to `org-latex-packages-alist'."
      ("upsih" "\\Upsilon" t "&upsih;" "upsilon" "upsilon" "ϒ")
      ("upsilon" "\\upsilon" t "&upsilon;" "upsilon" "upsilon" "υ")
      ("Phi" "\\Phi" t "&Phi;" "Phi" "Phi" "Φ")
-     ("phi" "\\phi" t "&phi;" "phi" "phi" "φ")
-     ("varphi" "\\varphi" t "&varphi;" "varphi" "varphi" "ɸ")
+     ("phi" "\\phi" t "&phi;" "phi" "phi" "ɸ")
+     ("varphi" "\\varphi" t "&varphi;" "varphi" "varphi" "φ")
      ("Chi" "X" nil "&Chi;" "Chi" "Chi" "Χ")
      ("chi" "\\chi" t "&chi;" "chi" "chi" "χ")
      ("acutex" "\\acute x" t "&acute;x" "'x" "'x" "𝑥́")
@@ -265,8 +262,9 @@ packages to be loaded, add these packages to `org-latex-packages-alist'."
 
      "* Other"
      "** Misc. (often used)"
-     ("circ" "\\^{}" nil "&circ;" "^" "^" "ˆ")
+     ("circ" "\\^{}" nil "&circ;" "^" "^" "∘")
      ("vert" "\\vert{}" t "&vert;" "|" "|" "|")
+     ("vbar" "|" nil "|" "|" "|" "|")
      ("brvbar" "\\textbrokenbar{}" nil "&brvbar;" "|" "¦" "¦")
      ("S" "\\S" nil "&sect;" "paragraph" "§" "§")
      ("sect" "\\S" nil "&sect;" "paragraph" "§" "§")
@@ -285,7 +283,7 @@ packages to be loaded, add these packages to `org-latex-packages-alist'."
      ("ddag" "\\ddag{}" nil "&Dagger;" "[doubledagger]" "[doubledagger]" "‡")
 
      "** Whitespace"
-     ("nbsp" "~" nil "&nbsp;" " " " " " ")
+     ("nbsp" "~" nil "&nbsp;" " " "\x00A0" "\x00A0")
      ("ensp" "\\hspace*{.5em}" nil "&ensp;" " " " " " ")
      ("emsp" "\\hspace*{1em}" nil "&emsp;" " " " " " ")
      ("thinsp" "\\hspace*{.2em}" nil "&thinsp;" " " " " " ")
@@ -297,6 +295,8 @@ packages to be loaded, add these packages to `org-latex-packages-alist'."
      ("yen" "\\textyen{}" nil "&yen;" "yen" "¥" "¥")
      ("euro" "\\texteuro{}" nil "&euro;" "EUR" "EUR" "€")
      ("EUR" "\\texteuro{}" nil "&euro;" "EUR" "EUR" "€")
+     ("dollar" "\\$" nil "$" "$" "$" "$")
+     ("USD" "\\$" nil "$" "$" "$" "$")
 
      "** Property Marks"
      ("copy" "\\textcopyright{}" nil "&copy;" "(c)" "©" "©")
@@ -514,9 +514,8 @@ packages to be loaded, add these packages to `org-latex-packages-alist'."
      ("loz" "\\lozenge" t "&loz;" "[lozenge]" "[lozenge]" "⧫"))
    ;; Add "\_ "-entity family for spaces.
    (let (space-entities html-spaces (entity "_"))
-     (dotimes (n 20 (nreverse space-entities))
-       (let ((n (+ 1 n))
-	     (spaces (make-string n ?\s)))
+     (dolist (n (number-sequence 1 20) (nreverse space-entities))
+       (let ((spaces (make-string n ?\s)))
 	 (push (list (setq entity (concat entity " "))
 		     (format "\\hspace*{%sem}" (* n .5))
 		     nil
@@ -539,29 +538,22 @@ This first checks the user list, then the built-in list."
 (defun org-entities-create-table ()
   "Create an Org mode table with all entities."
   (interactive)
-  (let ((pos (point)) e latex mathp html latin utf8 name ascii)
+  (let ((pos (point)))
     (insert "|Name|LaTeX code|LaTeX|HTML code |HTML|ASCII|Latin1|UTF-8\n|-\n")
-    (mapc (lambda (e) (when (listp e)
-			(setq name (car e)
-			      latex (nth 1 e)
-			      mathp (nth 2 e)
-			      html (nth 3 e)
-			      ascii (nth 4 e)
-			      latin (nth 5 e)
-			      utf8 (nth 6 e))
-			(if (equal ascii "|") (setq ascii "\\vert"))
-			(if (equal latin "|") (setq latin "\\vert"))
-			(if (equal utf8  "|") (setq utf8  "\\vert"))
-			(if (equal ascii "=>") (setq ascii "= >"))
-			(if (equal latin "=>") (setq latin "= >"))
-			(insert "|" name
-				"|" (format "=%s=" latex)
-				"|" (format (if mathp "$%s$" "$\\mbox{%s}$")
-					    latex)
-				"|" (format "=%s=" html) "|" html
-				"|" ascii "|" latin "|" utf8
-				"|\n")))
-	  org-entities)
+    (dolist (e org-entities)
+      (pcase e
+	(`(,name ,latex ,mathp ,html ,ascii ,latin ,utf8)
+	 (when (equal ascii "|") (setq ascii "\\vert"))
+	 (when (equal latin "|") (setq latin "\\vert"))
+	 (when (equal utf8  "|") (setq utf8  "\\vert"))
+	 (when (equal ascii "=>") (setq ascii "= >"))
+	 (when (equal latin "=>") (setq latin "= >"))
+	 (insert "|" name
+		 "|" (format "=%s=" latex)
+		 "|" (format (if mathp "$%s$" "$\\mbox{%s}$") latex)
+		 "|" (format "=%s=" html) "|" html
+		 "|" ascii "|" latin "|" utf8
+		 "|\n"))))
     (goto-char pos)
     (org-table-align)))
 
@@ -570,31 +562,27 @@ This first checks the user list, then the built-in list."
   "Create a Help buffer with all available entities."
   (interactive)
   (with-output-to-temp-buffer "*Org Entity Help*"
-    (princ "Org-mode entities\n=================\n\n")
+    (princ "Org mode entities\n=================\n\n")
     (let ((ll (append '("* User-defined additions (variable org-entities-user)")
 		      org-entities-user
 		      org-entities))
-	  e latex mathp html latin utf8 name ascii
 	  (lastwasstring t)
 	  (head (concat
 		 "\n"
 		 "   Symbol   Org entity        LaTeX code             HTML code\n"
 		 "   -----------------------------------------------------------\n")))
-      (while ll
-	(setq e (pop ll))
-	(if (stringp e)
-	    (progn
-	      (princ e)
-	      (princ "\n")
-	      (setq lastwasstring t))
-	  (if lastwasstring (princ head))
-	  (setq lastwasstring nil)
-	  (setq name (car e)
-		latex (nth 1 e)
-		html (nth 3 e)
-		utf8 (nth 6 e))
-	  (princ (format "   %-8s \\%-16s %-22s %-13s\n"
-			 utf8 name latex html))))))
+      (dolist (e ll)
+	(pcase e
+	  (`(,name ,latex ,_ ,html ,_ ,_ ,utf8)
+	   (when lastwasstring
+	     (princ head)
+	     (setq lastwasstring nil))
+	   (princ (format "   %-8s \\%-16s %-22s %-13s\n"
+			  utf8 name latex html)))
+	  ((pred stringp)
+	   (princ e)
+	   (princ "\n")
+	   (setq lastwasstring t))))))
   (with-current-buffer "*Org Entity Help*"
     (org-mode)
     (when org-pretty-entities

@@ -1,10 +1,10 @@
-;;; ob-eval.el --- org-babel functions for external code evaluation
+;;; ob-eval.el --- Babel Functions for External Code Evaluation -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2009-2016 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2020 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;; Keywords: literate programming, reproducible research, comint
-;; Homepage: http://orgmode.org
+;; Homepage: https://orgmode.org
 
 ;; This file is part of GNU Emacs.
 
@@ -19,7 +19,7 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 
@@ -28,7 +28,6 @@
 
 ;;; Code:
 (require 'org-macs)
-(eval-when-compile (require 'cl))
 
 (defvar org-babel-error-buffer-name "*Org-Babel Error Output*")
 (declare-function org-babel-temp-file "ob-core" (prefix &optional suffix))
@@ -121,18 +120,18 @@ function in various versions of Emacs.
       (delete-file input-file))
 
     (when (and error-file (file-exists-p error-file))
-      (if (< 0 (nth 7 (file-attributes error-file)))
-	  (with-current-buffer (get-buffer-create error-buffer)
-	    (let ((pos-from-end (- (point-max) (point))))
-	      (or (bobp)
-		  (insert "\f\n"))
-	      ;; Do no formatting while reading error file,
-	      ;; because that can run a shell command, and we
-	      ;; don't want that to cause an infinite recursion.
-	      (format-insert-file error-file nil)
-	      ;; Put point after the inserted errors.
-	      (goto-char (- (point-max) pos-from-end)))
-	    (current-buffer)))
+      (when (< 0 (file-attribute-size (file-attributes error-file)))
+	(with-current-buffer (get-buffer-create error-buffer)
+	  (let ((pos-from-end (- (point-max) (point))))
+	    (or (bobp)
+		(insert "\f\n"))
+	    ;; Do no formatting while reading error file,
+	    ;; because that can run a shell command, and we
+	    ;; don't want that to cause an infinite recursion.
+	    (format-insert-file error-file nil)
+	    ;; Put point after the inserted errors.
+	    (goto-char (- (point-max) pos-from-end)))
+	  (current-buffer)))
       (delete-file error-file))
     exit-status))
 

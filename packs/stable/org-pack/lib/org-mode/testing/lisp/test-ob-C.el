@@ -1,6 +1,6 @@
 ;;; test-ob-C.el --- tests for ob-C.el
 
-;; Copyright (c) 2010-2014 Sergey Litvinov, Thierry Banel
+;; Copyright (c) 2010-2014, 2019 Sergey Litvinov, Thierry Banel
 ;; Authors: Sergey Litvinov, Thierry Banel
 
 ;; This file is not part of GNU Emacs.

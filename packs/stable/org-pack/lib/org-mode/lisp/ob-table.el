@@ -1,10 +1,10 @@
-;;; ob-table.el --- support for calling org-babel functions from tables
+;;; ob-table.el --- Support for Calling Babel Functions from Tables -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2009-2016 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2020 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;; Keywords: literate programming, reproducible research
-;; Homepage: http://orgmode.org
+;; Homepage: https://orgmode.org
 
 ;; This file is part of GNU Emacs.
 
@@ -19,12 +19,12 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 
-;; Should allow calling functions from org-mode tables using the
-;; function `org-sbe' as so...
+;; Should allow calling functions from Org tables using the function
+;; `org-sbe' as so...
 
 ;; #+begin_src emacs-lisp :results silent
 ;;   (defun fibbd (n) (if (< n 2) 1 (+ (fibbd (- n 1)) (fibbd (- n 2)))))
@@ -54,6 +54,7 @@
 
 ;;; Code:
 (require 'ob-core)
+(require 'org-macs)
 
 (defun org-babel-table-truncate-at-newline (string)
   "Replace newline character with ellipses.
@@ -61,7 +62,7 @@ If STRING ends in a newline character, then remove the newline
 character and replace it with ellipses."
   (if (and (stringp string) (string-match "[\n\r]\\(.\\)?" string))
       (concat (substring string 0 (match-beginning 0))
-	      (if (match-string 1 string) "...")) string))
+	      (when (match-string 1 string) "...")) string))
 
 (defmacro org-sbe (source-block &rest variables)
   "Return the results of calling SOURCE-BLOCK with VARIABLES.
@@ -142,7 +143,7 @@ as shown in the example below.
                     nil (list "emacs-lisp" "results" params)
                     '((:results . "silent"))))
                "")))
-        (org-babel-trim (if (stringp result) result (format "%S" result)))))))
+        (org-trim (if (stringp result) result (format "%S" result)))))))
 
 (provide 'ob-table)
 

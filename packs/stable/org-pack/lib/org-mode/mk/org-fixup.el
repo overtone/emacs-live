@@ -2,7 +2,7 @@
 ;;
 ;; Author: Achim Gratz
 ;; Keywords: orgmode
-;; Homepage: http://orgmode.org
+;; Homepage: https://orgmode.org
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -27,11 +27,18 @@
 (require 'autoload)
 (require 'org-compat "org-compat.el")
 
-(defun org-make-org-version (org-release org-git-version odt-dir)
+(defun org-make-manuals ()
+  "Generate the Texinfo files out of Org manuals."
+  (require 'ox-texinfo)
+  (dolist (manual '("../doc/org-manual.org" "../doc/org-guide.org"))
+    (find-file manual)
+    (org-texinfo-export-to-texinfo)))
+
+(defun org-make-org-version (org-release org-git-version)
   "Make the file org-version.el in the current directory.
 This function is internally used by the build system and should
 be used by foreign build systems or installers to produce this
-file in the installation directory of org-mode.  Org will not
+file in the installation directory of Org mode.  Org will not
 work correctly if this file is not present (except directly from
 the Git work tree)."
   (with-temp-buffer
@@ -41,19 +48,16 @@ the Git work tree)."
 ;;; Code:
 ;;;\#\#\#autoload
 \(defun org-release ()
-  \"The release version of org-mode.
-  Inserted by installing org-mode or when a release is made.\"
+  \"The release version of Org.
+Inserted by installing Org mode or when a release is made.\"
    (let ((org-release \"" org-release "\"))
      org-release))
 ;;;\#\#\#autoload
 \(defun org-git-version ()
-  \"The Git version of org-mode.
-  Inserted by installing org-mode or when a release is made.\"
+  \"The Git version of Org mode.
+Inserted by installing Org or when a release is made.\"
    (let ((org-git-version \"" org-git-version "\"))
      org-git-version))
-;;;\#\#\#autoload
-\(defvar org-odt-data-dir \"" odt-dir "\"
-  \"The location of ODT styles.\")
 \f\n\(provide 'org-version\)
 \f\n;; Local Variables:\n;; version-control: never
 ;; no-byte-compile: t
@@ -65,7 +69,7 @@ the Git work tree)."
   "Make the file org-loaddefs.el in the current directory.
 This function is internally used by the build system and should
 be used by foreign build systems or installers to produce this
-file in the installation directory of org-mode.  Org will not
+file in the installation directory of Org mode.  Org will not
 work correctly if this file is not up-to-date."
   (with-temp-buffer
     (set-visited-file-name "org-loaddefs.el")
@@ -86,17 +90,13 @@ Finds the install directory by looking for library \"org\".
 Optionally byte-compile lisp files in the install directory or
 force re-compilation.  This function is provided for easier
 manual install when the build system can't be used."
-  (let* ((origin default-directory)
-	 (dirlisp (org-find-library-dir "org"))
-	 (dirorg (concat dirlisp "../" ))
-	 (dirodt (if (boundp 'org-odt-data-dir)
-		     org-odt-data-dir
-		   (concat dirorg "etc/"))))
+  (let ((origin default-directory)
+	(dirlisp (org-find-library-dir "org")))
     (unwind-protect
 	(progn
 	  (cd dirlisp)
 	  (org-fixup)
-	  (org-make-org-version (org-release) (org-git-version) dirodt)
+	  (org-make-org-version (org-release) (org-git-version))
 	  (org-make-org-loaddefs)
 	  (when compile (byte-recompile-directory dirlisp 0 force)))
       (cd origin))))

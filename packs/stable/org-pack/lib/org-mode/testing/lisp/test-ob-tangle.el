@@ -1,6 +1,6 @@
 ;;; test-ob-tangle.el --- tests for ob-tangle.el
 
-;; Copyright (c) 2010-2016 Eric Schulte
+;; Copyright (c) 2010-2016, 2019 Eric Schulte
 ;; Authors: Eric Schulte
 
 ;; This file is not part of GNU Emacs.
@@ -20,7 +20,7 @@
 
 ;;; Comments:
 
-;; Template test file for Org-mode tests
+;; Template test file for Org tests
 
 
 ;;; Code:
@@ -63,11 +63,12 @@
            "df|sed '1d'|awk '{print $5 \" \" $6}'|sort -n |tail -1|awk '{print $2}'"))
       (org-narrow-to-subtree)
       (org-babel-tangle)
-      (with-temp-buffer
-        (insert-file-contents "babel.sh")
-        (goto-char (point-min))
-        (should (re-search-forward (regexp-quote tangled) nil t)))
-      (delete-file "babel.sh"))))
+      (should (unwind-protect
+		  (with-temp-buffer
+		    (insert-file-contents "babel.sh")
+		    (goto-char (point-min))
+		    (re-search-forward (regexp-quote tangled) nil t))
+		(when (file-exists-p "babel.sh") (delete-file "babel.sh")))))))
 
 (ert-deftest ob-tangle/expand-headers-as-noweb-references ()
   "Test that references to headers are expanded during noweb expansion."
@@ -81,9 +82,9 @@
   "Test commenting of links at left margin."
   (should
    (string-match
-    (regexp-quote "# [[http://orgmode.org][Org mode]]")
+    (regexp-quote "# [[https://orgmode.org][Org mode]]")
     (org-test-with-temp-text-in-file
-        "[[http://orgmode.org][Org mode]]
+        "[[https://orgmode.org][Org mode]]
 #+header: :comments org :tangle \"test-ob-tangle.sh\"
 #+begin_src sh
 echo 1
@@ -195,6 +196,189 @@ another block
                     (file-name-nondirectory file))
           (org-babel-tangle-jump-to-org)
           (buffer-string)))))))
+
+(ert-deftest ob-tangle/nested-block ()
+  "Test tangling of org file with nested block."
+  (should
+   (string=
+    "#+begin_src org
+,#+begin_src emacs-lisp
+1
+,#+end_src
+#+end_src
+"
+    (org-test-with-temp-text-in-file
+        "#+header: :tangle \"test-ob-tangle.org\"
+#+begin_src org
+,#+begin_src org
+,,#+begin_src emacs-lisp
+1
+,,#+end_src
+,#+end_src
+#+end_src"
+      (unwind-protect
+          (progn (org-babel-tangle)
+                 (with-temp-buffer (insert-file-contents "test-ob-tangle.org")
+                                   (buffer-string)))
+        (delete-file "test-ob-tangle.org"))))))
+
+(ert-deftest ob-tangle/block-order ()
+  "Test order of tangled blocks."
+  ;; Order per language.
+  (should
+   (equal '("1" "2")
+	  (let ((file (make-temp-file "org-tangle-")))
+	    (unwind-protect
+		(progn
+		  (org-test-with-temp-text-in-file
+		      (format "#+property: header-args :tangle %S
+#+begin_src emacs-lisp
+1
+#+end_src
+
+#+begin_src emacs-lisp
+2
+#+end_src"
+			      file)
+		    (org-babel-tangle))
+		  (with-temp-buffer
+		    (insert-file-contents file)
+		    (org-split-string (buffer-string))))
+	      (delete-file file)))))
+  ;; Order per source block.
+  (should
+   (equal '("1" "2")
+	  (let ((file (make-temp-file "org-tangle-")))
+	    (unwind-protect
+		(progn
+		  (org-test-with-temp-text-in-file
+		      (format "#+property: header-args :tangle %S
+#+begin_src foo
+1
+#+end_src
+
+#+begin_src bar
+2
+#+end_src"
+			      file)
+		    (org-babel-tangle))
+		  (with-temp-buffer
+		    (insert-file-contents file)
+		    (org-split-string (buffer-string))))
+	      (delete-file file)))))
+  ;; Preserve order with mixed languages.
+  (should
+   (equal '("1" "3" "2" "4")
+	  (let ((file (make-temp-file "org-tangle-")))
+	    (unwind-protect
+		(progn
+		  (org-test-with-temp-text-in-file
+		      (format "#+property: header-args :tangle %S
+#+begin_src foo
+1
+#+end_src
+
+#+begin_src bar
+2
+#+end_src
+
+#+begin_src foo
+3
+#+end_src
+
+#+begin_src bar
+4
+#+end_src"
+			      file)
+		    (org-babel-tangle))
+		  (with-temp-buffer
+		    (insert-file-contents file)
+		    (org-split-string (buffer-string))))
+	      (delete-file file))))))
+
+(ert-deftest ob-tangle/commented-src-blocks ()
+  "Test omission of commented src blocks."
+  (should
+   (equal '("A")
+	  (let ((file (make-temp-file "org-tangle-")))
+	    (unwind-protect
+		(progn
+		  (org-test-with-temp-text-in-file
+		      (format "#+property: header-args :tangle %S
+* A
+
+  #+begin_src emacs-lisp
+  A
+  #+end_src
+
+* COMMENT B
+
+  #+begin_src emacs-lisp
+  B
+  #+end_src
+
+* C
+
+  # #+begin_src emacs-lisp
+  # C
+  # #+end_src
+
+* D
+
+  #+begin_comment
+  #+begin_src emacs-lisp
+  D
+  #+end_src
+  #+end_comment"
+			      file)
+		    (org-babel-tangle))
+		  (with-temp-buffer
+		    (insert-file-contents file)
+		    (org-split-string (buffer-string))))
+	      (delete-file file)))))
+  (should
+   (equal '("A")
+	  (let ((file (make-temp-file "org-tangle-")))
+	    (unwind-protect
+		(progn
+		  (org-test-with-temp-text-in-file
+		      (format "#+property: header-args :tangle %S
+* A
+
+  #+begin_src elisp :noweb yes
+  A
+  <<B>>
+  <<C>>
+  <<D>>
+  #+end_src
+
+* COMMENT B
+
+  #+begin_src elisp :noweb-ref B
+  B
+  #+end_src
+
+* C
+
+  # #+begin_src elisp :noweb-ref C
+  # C
+  # #+end_src
+
+* D
+
+  #+begin_comment
+  #+begin_src elisp :noweb-ref D
+  D
+  #+end_src
+  #+end_comment"
+			      file)
+		    (let (org-babel-noweb-error-all-langs
+			  org-babel-noweb-error-langs)
+		      (org-babel-tangle)))
+		  (with-temp-buffer
+		    (insert-file-contents file)
+		    (org-split-string (buffer-string))))
+	      (delete-file file))))))
 
 (provide 'test-ob-tangle)
 

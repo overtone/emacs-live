@@ -1,4 +1,4 @@
-;; unit tests for haskell-string.el
+;; unit tests for haskell-string.el  -*- lexical-binding: t -*-
 
 (require 'ert)
 

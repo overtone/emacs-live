@@ -1,10 +1,10 @@
 ;;; org-bibtex-extras --- extras for working with org-bibtex entries
 
-;; Copyright (C) 2008-2016 Free Software Foundation, Inc.
+;; Copyright (C) 2008-2020 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte <eric dot schulte at gmx dot com>
 ;; Keywords: outlines, hypermedia, bibtex, d3
-;; Homepage: http://orgmode.org
+;; Homepage: https://orgmode.org
 ;; Version: 0.01
 
 ;; This file is not yet part of GNU Emacs.
@@ -59,7 +59,9 @@
 ;;	 	      (obe-html-export-citations))))
 
 ;;; Code:
-(require 'org-bibtex)
+(require 'ol-bibtex)
+
+(declare-function org-trim "org" (s &optional keep-lead))
 
 (defcustom obe-bibtex-file nil "File holding bibtex entries.")
 
@@ -91,7 +93,7 @@ For example, to point to your `obe-bibtex-file' use the following.
       (replace-match
        (save-match-data
 	 (mapconcat (lambda (c) (format "[[%s#%s][%s]]" obe-html-link-base c c))
-		    (mapcar #'org-babel-trim
+		    (mapcar #'org-trim
 			    (split-string (match-string 1) ",")) ", "))))))
 
 (defun obe-meta-to-json (meta &optional fields)
@@ -111,12 +113,12 @@ For example, to point to your `obe-bibtex-file' use the following.
 	(add (remove-duplicates (col field) :test #'string=)))
       ;; build the links in the graph
       (dolist (citation meta)
-        (let ((dest (id (cdr (assoc :title citation)))))
-          (dolist (author (mapcar #'id (cdr (assoc :authors citation))))
+        (let ((dest (id (cdr (assq :title citation)))))
+          (dolist (author (mapcar #'id (cdr (assq :authors citation))))
             (when author (push (cons author dest) links)))
-          (let ((jid (id (cdr (assoc :journal citation)))))
+          (let ((jid (id (cdr (assq :journal citation)))))
             (when jid (push (cons jid dest) links)))
-          (let ((cid (id (cdr (assoc :category citation)))))
+          (let ((cid (id (cdr (assq :category citation)))))
             (when cid (push (cons cid dest) links)))))
       ;; build the json string
       (format "{\"nodes\":[%s],\"links\":[%s]}"

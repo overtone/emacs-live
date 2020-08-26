@@ -315,7 +315,7 @@
   :prefix "haskell-doc-")
 
 
-(defvar haskell-doc-mode nil
+(defvar-local haskell-doc-mode nil
   "*If non-nil, show the type of the function near point or a related comment.
 
 If the identifier near point is a Haskell keyword and the variable
@@ -343,17 +343,15 @@ in the alist `haskell-doc-user-defined-ids' and the variable
 `haskell-doc-show-user-defined' is non-nil show the type of the function.
 
 This variable is buffer-local.")
-(make-variable-buffer-local 'haskell-doc-mode)
 
 (defvar haskell-doc-mode-hook nil
   "Hook invoked when entering `haskell-doc-mode'.")
 
-(defvar haskell-doc-index nil
+(defvar-local haskell-doc-index nil
   "Variable holding an alist matching file names to fct-type alists.
 The function `haskell-doc-make-global-fct-index' rebuilds this variables
 \(similar to an `imenu' rescan\).
 This variable is buffer-local.")
-(make-variable-buffer-local 'haskell-doc-index)
 
 (defcustom haskell-doc-show-global-types nil
   "If non-nil, search for the types of global functions by loading the files.
@@ -1543,8 +1541,8 @@ If SYNC is non-nil, make the call synchronously instead."
           :go (lambda (_) (haskell-process-send-string process ghci-command))
           :complete
           (lambda (_ response)
-            (funcall callback (funcall process-response response))))))
-      'async)))
+            (funcall callback (funcall process-response response)))))
+        'async))))
 
 (defun haskell-doc-sym-doc (sym)
   "Show the type of given symbol SYM.
@@ -1849,6 +1847,14 @@ This function switches to and potentially loads many buffers."
             (setq doc `(,docstring . "Data"))) ; (setq doc `(,(match-string 0 docstring) . "Data")) )
         ;; return the result
         doc ))))
+
+(defun inferior-haskell-kind (sym)
+  "Find the kind of SYM with `:kind' ghci feature."
+  (inferior-haskell-get-result (format ":kind %s" sym)))
+
+(defun inferior-haskell-type (sym)
+  "Find the type of SYM with `:type' ghci feature."
+  (inferior-haskell-get-result (format ":type (%s)" sym)))
 
 (provide 'haskell-doc)
 

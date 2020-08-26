@@ -6,6 +6,176 @@ This file uses Org mode. Some useful (default) key-bindings:
  - Use "<backtab>" to cycle visibility of all nodes
  - Use "C-c C-o" to open links
 
+* Changes in 17.1
+
+- Require at least Emacs 25.1
+
+- Many fixes and minor improvements
+
+- Improved compatibility with newer GHC and Cabal versions
+
+* Changes in 16.1
+
+- Require at least Emacs 24.3
+
+- Implemented standalone deriving indentation
+
+- Removed haskell-indentation-ifte-offset
+
+- Implemented electric characters
+
+- Added LiquidHaskell annotation highlight
+
+- Introduced haskell-hasktags-path defcustom
+
+- Added font lock tests for pattern synonyms
+
+- Hardcoded haskell-ghc-supported-extensions/options
+
+- Added multi-line input in haskell-interactive
+
+- Added haskell-mode-stylish-haskell-path
+
+- Added Windows CI builds
+
+- Added syntax highlight to Yesod rules quasi quote
+
+- Added support for line continuation in #define's
+
+- Added support unterminated strings in indentation
+
+- Implemented /italic/ and *bold* for haddock
+
+- Added significant speedups in font-lock engine
+
+- Added support for full complexity of backtick syntax
+
+- Operators at the end or beginning of line force expression continuation in indentation
+
+- Map haskell-mode-format-imports to C-c C-, to avoid conflict with haskell-indent
+
+- Improve auto add dependencies in cabal
+
+- Fix inferior-haskell warning font lock for GHC 8.0
+
+* Changes in 13.20
+
+- Require at least Emacs 24.1
+
+- Honor equals on its own line in data decl
+
+- Honor equals on separate line after guards
+
+- Allow haskell-process-path-* to be lists
+
+- Fontify True/False in cabal mode
+
+- Align | with = in data declarations
+
+- Remove haskell-package.el
+
+- Run stylish-haskell before save
+
+- Improved lexeme parsing in haskell-lexeme
+
+- Add haskell-interactive-copy-to-prompt
+
+- Remove haskell-mode-contextual-space and related var
+
+- Make haskell-indent-region do nothing
+
+- Add c2hs mode
+
+- Improve hasktags handling
+
+- Move documentation from wiki to haskell-mode manual
+
+* Changes in 13.18
+
+- Removed haskell-bot
+
+- Implement shallow indentation
+
+- Removed haskell-simple-indent
+
+- Removed haskell-indentation show dynamic positions
+
+- Improved indentation inside multiline strings
+
+- Implemented font-lock for quasi quoted XML, HTML and JavaScript
+
+- Added '{type|data} family' to font-lock-keywords-create
+
+- Started using undercover.el for emacs lisp coverage
+
+- Added keybinding for `haskell-cabal-visit-file`
+
+- Added type role to font lock
+
+- Detect and respect the comma style of a section in cabal files
+
+* Changes in 13.16
+
+- Improved parsing of comma lists in haskell indentation
+
+- Declared turn-on-haskell-indentation as obsolete
+
+- Improved QuasiQuote font lock
+
+- Fixed indentation for Unicode symbols
+
+- Improved completion engine
+
+- Added support for interaction with stack ghci
+
+- Added haskell-forward-sexp
+
+- Added overlays to haskell load
+
+- Made use of lexical binding for all emacs lisp sources
+
+- Improved indentation of guards with commas
+
+- Made three indentation modes mutually turn each other off
+
+- Added an additional trigger for pragma suggestions
+
+- Improved and documented `toggle-scc-at-point` in manual
+
+* Changes in 13.14
+
+- Add official Haskell Mode logo
+
+- Add auto deploy for html manual
+
+- Improve presentation mode
+
+- Font Lock refactoring and improvements
+
+- Properly delimit operators in prettify mode
+
+- OPTIONS and LANGUAGE completion using ghci
+
+- Merge hi2 (haskell-indentation attempt 2) in place of haskell-indentation
+
+- Prompt to reconfigure when Cabal demands it
+
+- Fontify pragmas while fontifying comments
+
+- Operators are fontified
+
+- Remove all mentions of cabal-dev
+
+- Merge hsc-mode into haskell-mode
+
+- Get type information from ghci in interaction-mode
+
+- Prettify Haskell types in eldoc support
+
+- Added haskell-hoogle-url
+
+- Fix w3m-haddock in the case of no local files
+
 * Changes in 13.12
 
 - Added haskell-bot.el

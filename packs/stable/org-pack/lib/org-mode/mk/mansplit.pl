@@ -10,7 +10,7 @@
 
 $contents = <<EOF;
 <div id="table-of-contents">
-<p>This is the official manual for the latest <a href="http://orgmode.org">Org-mode</a> release.</p>
+<p>This is the official manual for the latest <a href="https://orgmode.org">Org-mode</a> release.</p>
 <h2>Table of Contents</h2>
 <div id="text-table-of-contents">
 <ul>
@@ -44,8 +44,8 @@ EOF
 
 
 $script = <<'EOF';
-<link rel="stylesheet" href="http://orgmode.org/org-manual.css" type="text/css" />
-<script type="text/javascript" src="http://orgmode.org/org-keys.js"></script>
+<link rel="stylesheet" href="https://orgmode.org/org-manual.css" type="text/css" />
+<script type="text/javascript" src="https://orgmode.org/org-keys.js"></script>
 <script type="text/javascript">
   <!--/*--><![CDATA[/*><!--*/
    OrgKeyReader.registerHref('h', 'index.html');

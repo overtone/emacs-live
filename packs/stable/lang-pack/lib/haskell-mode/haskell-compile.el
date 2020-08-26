@@ -28,6 +28,8 @@
 
 (require 'compile)
 (require 'haskell-cabal)
+(require 'ansi-color)
+(eval-when-compile (require 'subr-x))
 
 ;;;###autoload
 (defgroup haskell-compile nil
@@ -36,16 +38,30 @@
   :group 'haskell)
 
 (defcustom haskell-compile-cabal-build-command
-  "cd %s && cabal build --ghc-option=-ferror-spans"
+  "cabal build --ghc-option=-ferror-spans"
   "Default build command to use for `haskell-cabal-build' when a cabal file is detected.
-The `%s' placeholder is replaced by the cabal package top folder."
+For legacy compat, `%s' is replaced by the cabal package top folder."
   :group 'haskell-compile
   :type 'string)
 
 (defcustom haskell-compile-cabal-build-alt-command
-  "cd %s && cabal clean -s && cabal build --ghc-option=-ferror-spans"
+  "cabal clean -s && cabal build --ghc-option=-ferror-spans"
   "Alternative build command to use when `haskell-cabal-build' is called with a negative prefix argument.
-The `%s' placeholder is replaced by the cabal package top folder."
+For legacy compat, `%s' is replaced by the cabal package top folder."
+  :group 'haskell-compile
+  :type 'string)
+
+(defcustom haskell-compile-stack-build-command
+  "stack build --fast"
+  "Default build command to use for `haskell-stack-build' when a stack file is detected.
+For legacy compat, `%s' is replaced by the stack package top folder."
+  :group 'haskell-compile
+  :type 'string)
+
+(defcustom haskell-compile-stack-build-alt-command
+  "stack clean && stack build --fast"
+  "Alternative build command to use when `haskell-stack-build' is called with a negative prefix argument.
+For legacy compat, `%s' is replaced by the stack package top folder."
   :group 'haskell-compile
   :type 'string)
 
@@ -62,6 +78,13 @@ The `%s' placeholder is replaced by the current buffer's filename."
   :group 'haskell-compile
   :type 'boolean)
 
+(defcustom haskell-compile-ignore-cabal nil
+  "Ignore cabal build definitions files for this buffer when detecting the build tool."
+  :group 'haskell-compile
+  :type 'boolean)
+(make-variable-buffer-local 'haskell-compile-ignore-cabal)
+(put 'haskell-compile-ignore-cabal 'safe-local-variable #'booleanp)
+
 (defconst haskell-compilation-error-regexp-alist
   `((,(concat
        "^ *\\(?1:[^\t\r\n]+?\\):"
@@ -70,12 +93,16 @@ The `%s' placeholder is replaced by the current buffer's filename."
        "\\|"
        "(\\(?2:[0-9]+\\),\\(?4:[0-9]+\\))-(\\(?3:[0-9]+\\),\\(?5:[0-9]+\\))" ;; "(289,5)-(291,36)"
        "\\)"
-       ":\\(?6: Warning:\\)?")
+       ":\\(?6:\n?[ \t]+[Ww]arning:\\)?")
      1 (2 . 3) (4 . 5) (6 . nil)) ;; error/warning locus
 
     ;; multiple declarations
     ("^    \\(?:Declared at:\\|            \\) \\(?1:[^ \t\r\n]+\\):\\(?2:[0-9]+\\):\\(?4:[0-9]+\\)$"
      1 2 4 0) ;; info locus
+
+    ;; failed tasty tests
+    (".*error, called at \\(.*\\.hs\\):\\([0-9]+\\):\\([0-9]+\\) in .*" 1 2 3 2 1)
+    (" +\\(.*\\.hs\\):\\([0-9]+\\):$" 1 2 nil 2 1)
 
     ;; this is the weakest pattern as it's subject to line wrapping et al.
     (" at \\(?1:[^ \t\r\n]+\\):\\(?2:[0-9]+\\):\\(?4:[0-9]+\\)\\(?:-\\(?5:[0-9]+\\)\\)?[)]?$"
@@ -96,18 +123,19 @@ This is a child of `compilation-mode-map'.")
     (delete-matching-lines "^ *Loading package [^ \t\r\n]+ [.]+ linking [.]+ done\\.$"
                            (save-excursion (goto-char compilation-filter-start)
                                            (line-beginning-position))
-                           (point))))
+                           (point)))
+
+  (let ((inhibit-read-only t))
+    (ansi-color-apply-on-region compilation-filter-start (point-max))))
 
 (define-compilation-mode haskell-compilation-mode "HsCompilation"
   "Haskell/GHC specific `compilation-mode' derivative.
 This mode provides support for GHC 7.[46]'s compile
 messages. Specifically, also the `-ferror-spans` source location
 format is supported, as well as info-locations within compile
-messages pointing to additional source locations.
-
-See Info node `(haskell-mode)compilation' for more details."
-  (set (make-local-variable 'compilation-error-regexp-alist)
-       haskell-compilation-error-regexp-alist)
+messages pointing to additional source locations."
+  (setq-local compilation-error-regexp-alist
+              haskell-compilation-error-regexp-alist)
 
   (add-hook 'compilation-filter-hook
             'haskell-compilation-filter-hook nil t)
@@ -115,42 +143,79 @@ See Info node `(haskell-mode)compilation' for more details."
 
 ;;;###autoload
 (defun haskell-compile (&optional edit-command)
-  "Compile the Haskell program including the current buffer.
-Tries to locate the next cabal description in current or parent
-folders via `haskell-cabal-find-dir' and if found, invoke
-`haskell-compile-cabal-build-command' from the cabal package root
-folder. If no cabal package could be detected,
-`haskell-compile-command' is used instead.
+  "Run a compile command for the current Haskell buffer.
+
+Locates stack or cabal definitions and, if found, invokes the
+default build command for that build tool. Cabal is preferred
+but may be ignored with `haskell-compile-ignore-cabal'.
 
 If prefix argument EDIT-COMMAND is non-nil (and not a negative
-prefix `-'), `haskell-compile' prompts for custom compile
-command.
+prefix `-'), prompt for a custom compile command.
 
-If EDIT-COMMAND contains the negative prefix argument `-',
-`haskell-compile' calls the alternative command defined in
-`haskell-compile-cabal-build-alt-command' if a cabal package was
-detected.
+If EDIT-COMMAND contains the negative prefix argument `-', call
+the alternative command defined in
+`haskell-compile-stack-build-alt-command' /
+`haskell-compile-cabal-build-alt-command'.
 
-`haskell-compile' uses `haskell-compilation-mode' which is
-derived from `compilation-mode'. See Info
-node `(haskell-mode)compilation' for more details."
+If there is no prefix argument, the most recent custom compile
+command is used, falling back to
+`haskell-compile-stack-build-command' for stack builds
+`haskell-compile-cabal-build-command' for cabal builds, and
+`haskell-compile-command' otherwise.
+
+'% characters in the `-command' templates are replaced by the
+base directory for build tools, or the current buffer for
+`haskell-compile-command'."
   (interactive "P")
   (save-some-buffers (not compilation-ask-about-save)
-                         compilation-save-buffers-predicate)
-  (let* ((cabdir (haskell-cabal-find-dir))
-         (command1 (if (eq edit-command '-)
-                       haskell-compile-cabal-build-alt-command
-                     haskell-compile-cabal-build-command))
-         (srcname (buffer-file-name))
-         (command (if cabdir
-                      (format command1 cabdir)
-                    (if (and srcname (derived-mode-p 'haskell-mode))
-                        (format haskell-compile-command srcname)
-                      command1))))
-    (when (and edit-command (not (eq edit-command '-)))
-      (setq command (compilation-read-command command)))
+                     compilation-save-buffers-predicate)
+  (let ((cabaldir (and
+                   (not haskell-compile-ignore-cabal)
+                   (or (haskell-cabal-find-dir)
+                       (locate-dominating-file default-directory "cabal.project")
+                       (locate-dominating-file default-directory "cabal.project.local")))))
+    (if cabaldir
+        (haskell--compile cabaldir edit-command
+                          'haskell--compile-cabal-last
+                          haskell-compile-cabal-build-command
+                          haskell-compile-cabal-build-alt-command)
+      (let ((stackdir (and haskell-compile-ignore-cabal
+                           (locate-dominating-file default-directory "stack.yaml"))))
+        (if stackdir
+            (haskell--compile stackdir edit-command
+                              'haskell--compile-stack-last
+                              haskell-compile-stack-build-command
+                              haskell-compile-stack-build-alt-command)
+          (let ((srcfile (buffer-file-name)))
+            (haskell--compile srcfile edit-command
+                              'haskell--compile-ghc-last
+                              haskell-compile-command
+                              haskell-compile-command)))))))
 
-    (compilation-start command 'haskell-compilation-mode)))
+(defvar haskell--compile-stack-last nil)
+(defvar haskell--compile-cabal-last nil)
+(defvar haskell--compile-ghc-last nil)
+
+(defun haskell--compile (dir-or-file edit last-sym fallback alt)
+  (let* ((default (or (symbol-value last-sym) fallback))
+         (template (cond
+                    ((null edit) default)
+                    ((eq edit '-) alt)
+                    (t (compilation-read-command default))))
+         (command (format template dir-or-file))
+         (dir (if (directory-name-p dir-or-file)
+                  dir-or-file
+                default-directory))
+         (name (if (directory-name-p dir-or-file)
+                   (file-name-base (directory-file-name dir-or-file))
+                 (file-name-nondirectory dir-or-file))))
+    (unless (eq edit'-)
+      (set last-sym template))
+    (let ((default-directory dir))
+      (compilation-start
+       command
+       'haskell-compilation-mode
+       (lambda (mode) (format "*%s* <%s>" mode name))))))
 
 (provide 'haskell-compile)
 ;;; haskell-compile.el ends here

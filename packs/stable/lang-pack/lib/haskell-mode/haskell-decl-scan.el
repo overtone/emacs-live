@@ -2,6 +2,7 @@
 
 ;; Copyright (C) 2004, 2005, 2007, 2009  Free Software Foundation, Inc.
 ;; Copyright (C) 1997-1998  Graeme E Moss
+;; Copyright (C) 2016  Chris Gregory
 
 ;; Author: 1997-1998 Graeme E Moss <gem@cs.york.ac.uk>
 ;; Maintainer: Stefan Monnier <monnier@gnu.org>
@@ -216,6 +217,11 @@ only for `imenu' support.")
   (concat literate-haskell-ds-line-prefix haskell-ds-start-decl-re)
   "The regexp that starts a Bird-style literate Haskell declaration.")
 
+(defun haskell-ds-whitespace-p (char)
+  "Test if CHAR is a whitespace character."
+  ;; the nil is a bob/eob test
+  (member char '(nil ?\t ?\n ?\ )))
+
 (defun haskell-ds-move-to-decl (direction bird-literate fix)
   "General function for moving to the start of a declaration,
 either forwards or backwards from point, with normal or with Bird-style
@@ -350,11 +356,76 @@ there."
   (interactive)
   (haskell-ds-move-to-decl nil (haskell-ds-bird-p) nil))
 
+(defun haskell-ds-comment-p
+    (&optional
+     pt)
+  "Test if the cursor is on whitespace or a comment.
+
+`PT' defaults to `(point)'"
+  ;; ensure result is `t' or `nil' instead of just truthy
+  (if (or
+       ;; is cursor on whitespace
+       (haskell-ds-whitespace-p (following-char))
+       ;; http://emacs.stackexchange.com/questions/14269/how-to-detect-if-the-point-is-within-a-comment-area
+       ;; is cursor at begging, inside, or end of comment
+       (let ((fontfaces (get-text-property (or pt
+                                               (point)) 'face)))
+         (when (not (listp fontfaces))
+           (setf fontfaces (list fontfaces)))
+         (delq nil (mapcar
+                    #'(lambda (f)
+                        (member f '(font-lock-comment-face
+                                    font-lock-doc-face
+                                    font-lock-comment-delimiter-face)))
+                    fontfaces))))
+      t
+    nil))
+
+(defun haskell-ds-line-commented-p ()
+  "Tests if all characters from `point' to `end-of-line' pass
+`haskell-ds-comment-p'"
+  (let ((r t))
+    (while (and r (not (eolp)))
+      (if (not (haskell-ds-comment-p))
+          (setq r nil))
+      (forward-char))
+    r))
+
 (defun haskell-ds-forward-decl ()
   "Move forward to the first character that starts a top-level
 declaration.  As `haskell-ds-backward-decl' but forward."
   (interactive)
-  (haskell-ds-move-to-decl t (haskell-ds-bird-p) nil))
+  (let ((p (point)) b e empty was-at-bob)
+    ;; Go back to beginning of defun, then go to beginning of next
+    (haskell-ds-move-to-decl nil (haskell-ds-bird-p) nil)
+    (setq b (point))
+    (haskell-ds-move-to-decl t (haskell-ds-bird-p) nil)
+    (setq e (point))
+    ;; tests if line is empty
+    (setq empty (and (<= (point) p)
+                     (not (eolp))))
+    (setq was-at-bob (and (= (point-min) b)
+                          (= b p)
+                          (< p e)))
+    ;; this conditional allows for when empty lines at end, first
+    ;; `C-M-e' will go to end of defun, next will go to end of file.
+    (when (or was-at-bob
+              empty)
+      (if (or (and was-at-bob
+                   (= ?\n
+                      (save-excursion
+                        (goto-char (point-min))
+                        (following-char))))
+              empty)
+          (haskell-ds-move-to-decl t (haskell-ds-bird-p) nil))
+      ;; Then go back to end of current
+      (forward-line -1)
+      (while (and (haskell-ds-line-commented-p)
+                  ;; prevent infinite loop
+                  (not (bobp)))
+        (forward-line -1))
+      (forward-line 1)))
+  (point))
 
 (defun haskell-ds-generic-find-next-decl (bird-literate)
   "Find the name, position and type of the declaration at or after point.
@@ -587,7 +658,7 @@ declaration.  Therefore, using Haskell font locking with comments
 coloured in `font-lock-comment-face' improves declaration scanning.
 
 Literate Haskell scripts are supported: If the value of
-`haskell-literate' (set automatically by `literate-haskell-mode')
+`haskell-literate' (set automatically by `haskell-literate-mode')
 is `bird', a Bird-style literate script is assumed.  If it is nil
 or `tex', a non-literate or LaTeX-style literate script is
 assumed, respectively.
@@ -604,10 +675,8 @@ Invokes `haskell-decl-scan-mode-hook' on activation."
       (local-set-key [menu-bar index] nil)))
 
   (when haskell-decl-scan-mode
-    (set (make-local-variable 'beginning-of-defun-function)
-         'haskell-ds-backward-decl)
-    (set (make-local-variable 'end-of-defun-function)
-         'haskell-ds-forward-decl)
+    (setq-local beginning-of-defun-function 'haskell-ds-backward-decl)
+    (setq-local end-of-defun-function 'haskell-ds-forward-decl)
     (haskell-ds-imenu)))
 
 

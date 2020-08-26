@@ -1,6 +1,6 @@
-;;; tests/parser.el --- Some tests for js2-mode.
+;;; tests/parser.el --- Some tests for js2-mode.  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2009, 2011-2013  Free Software Foundation, Inc.
+;; Copyright (C) 2009, 2011-2017  Free Software Foundation, Inc.
 
 ;; This file is part of GNU Emacs.
 
@@ -16,6 +16,10 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+
+;;; Commentary:
+
+;; run tests with M-x ert-run-tests-interactively
 
 ;;; Code:
 
@@ -83,6 +87,21 @@ the test."
                               :warnings-count ,warnings-count
                               :reference ,reference))))
 
+(defun js2-find-node (node predicate)
+  "Find the first descendant of NODE meeting PREDICATE."
+  (let (target)
+    (js2-visit-ast node (lambda (n end-p)
+                          (unless end-p
+                            (if (funcall predicate n)
+                              (progn (setq target n) nil)
+                              t))))
+    target))
+
+(defun js2-node-text (node)
+  "Return the part of the buffer corresponding to NODE as a string."
+  (let ((beg (js2-node-abs-pos node)))
+   (buffer-substring-no-properties beg (+ beg (js2-node-len node)))))
+
 ;;; Basics
 
 (js2-deftest-parse variable-assignment
@@ -105,6 +124,10 @@ the test."
 
 (js2-deftest-parse function-statement
   "function foo() {\n}")
+
+(js2-deftest-parse trailing-comma-in-function-arguments
+   "f(a, b,);"
+   :reference "f(a, b);")
 
 (js2-deftest-parse function-statement-inside-block
   "if (true) {\n  function foo() {\n  }\n}")
@@ -143,20 +166,17 @@ the test."
   "A.foo = 3;")
 
 (js2-deftest-parse parse-property-access-when-keyword
-  "A.in = 3;"
-  :bind ((js2-allow-keywords-as-property-names t)))
+  "A.in = 3;")
 
 (js2-deftest-parse parse-property-access-when-keyword-no-xml
   "A.in = 3;"
-  :bind ((js2-allow-keywords-as-property-names t)
-         (js2-compiler-xml-available nil)))
+  :bind ((js2-compiler-xml-available nil)))
 
 (js2-deftest-parse parse-object-literal-when-not-keyword
   "a = {b: 1};")
 
 (js2-deftest-parse parse-object-literal-when-keyword
-  "a = {in: 1};"
-  :bind ((js2-allow-keywords-as-property-names t)))
+  "a = {in: 1};")
 
 ;;; 'of' contextual keyword
 
@@ -299,6 +319,10 @@ the test."
 
 (js2-deftest-parse function-with-rest-after-default-parameter
   "function foo(a = 1, ...rest) {\n}")
+
+(js2-deftest-parse function-with-trailing-comma-in-param-list
+  "function foo(a, b,) {\n}"
+  :reference "function foo(a, b) {\n}")
 
 ;;; Strict mode errors
 
@@ -456,6 +480,9 @@ the test."
 
 (js2-deftest-parse harmony-generator-yield-star "(function*(a) {  yield* a;\n});")
 
+(js2-deftest-parse harmony-generator-yield-assign-expr
+  "(function*() {  return {a: yield a, b: yield b, c: yield c};\n});")
+
 ;;; Comprehensions
 
 (js2-deftest-parse parse-legacy-array-comp-loop-with-filter
@@ -494,8 +521,14 @@ the test."
 (js2-deftest-parse async-arrow-function-expression
   "a = async (b) => {  b;\n};")
 
+(js2-deftest-parse async-arrow-function-without-parens
+  "a = async b => 3;" :reference "a = async (b) => {3};")
+
 (js2-deftest-parse async-method-in-object-literal
   "({async f() {}});")
+
+(js2-deftest-parse async-method-kwname-in-object-literal
+  "({async delete() {}});")
 
 (js2-deftest-parse async-method-in-class-body
   "class C {\n  async foo() {}\n}")
@@ -554,7 +587,8 @@ the test."
 
 (js2-deftest-parse decimal-starting-with-zero "081;" :reference "81;")
 
-(js2-deftest-parse huge-hex "0x0123456789abcdefABCDEF;" :reference "-1;")
+(js2-deftest-parse huge-hex "0x0123456789abcdefABCDEF;"
+  :reference (if (> emacs-major-version 26) "1375488932539311409843695;" "-1;"))
 
 (js2-deftest-parse octal-without-o "071;" :reference "57;")
 
@@ -579,7 +613,7 @@ the test."
   (js2-init-scanner)
   (should (js2-match-token js2-LC))
   (let ((imports (js2-parse-export-bindings)))
-    (should (not (equal nil imports)))
+    (should (not (null imports)))
     (should (= 2 (length imports)))
     (let ((first (nth 0 imports))
           (second (nth 1 imports)))
@@ -603,11 +637,11 @@ the test."
       (should name)
       (should (equal "default" (js2-name-node-name name))))))
 
-(js2-deftest parse-namepsace-import "* as lib;"
+(js2-deftest parse-namespace-import "* as lib;"
   (js2-init-scanner)
   (should (js2-match-token js2-MUL))
   (let ((namespace-import (js2-parse-namespace-import)))
-    (should (not (equal nil namespace-import)))
+    (should (not (null namespace-import)))
     (should (js2-namespace-import-node-p namespace-import))
     (should (= 1 (js2-node-pos namespace-import)))
     (should (equal 8 (js2-node-len namespace-import)))
@@ -615,10 +649,15 @@ the test."
       (should (equal "lib" (js2-name-node-name name-node)))
       (should (= 5 (js2-node-pos name-node))))))
 
+(js2-deftest-parse parse-namespace-import-error
+  "import * lib from 'lib';"
+  :syntax-error "import"
+  :errors-count 7)
+
 (js2-deftest parse-from-clause "from 'foo/bar';"
   (js2-init-scanner)
   (let ((from (js2-parse-from-clause)))
-    (should (not (equal nil from)))
+    (should (not (null from)))
     (should (= 1 (js2-node-pos from)))
     (should (= 14 (js2-node-len from)))
     (should (equal "foo/bar" (js2-from-clause-node-module-id from)))))
@@ -627,25 +666,25 @@ the test."
   (js2-init-scanner)
   (should (js2-match-token js2-IMPORT))
   (let ((import (js2-parse-import)))
-    (should (not (equal nil import)))
+    (should (not (null import)))
     (should (= 1 (js2-node-pos import)))
     (should (= 16 (js2-node-len import)))
-    (should (equal nil (js2-import-node-import import)))
-    (should (equal nil (js2-import-node-from import)))))
+    (should (null (js2-import-node-import import)))
+    (should (null (js2-import-node-from import)))))
 
 (js2-deftest parse-imported-default-binding "import theDefault from 'src/lib'"
   (js2-push-scope (make-js2-scope :pos 0))
   (js2-init-scanner)
   (should (js2-match-token js2-IMPORT))
   (let ((import-node (js2-parse-import)))
-    (should (not (equal nil import-node)))
+    (should (not (null import-node)))
     (should (equal "src/lib" (js2-import-node-module-id import-node)))
     (let ((import (js2-import-node-import import-node)))
-      (should (not (equal nil import)))
-      (should (equal nil (js2-import-clause-node-namespace-import import)))
-      (should (equal nil (js2-import-clause-node-named-imports import)))
+      (should (not (null import)))
+      (should (null (js2-import-clause-node-namespace-import import)))
+      (should (null (js2-import-clause-node-named-imports import)))
       (let ((default (js2-import-clause-node-default-binding import)))
-        (should (not (equal nil default)))
+        (should (not (null default)))
         (should (js2-export-binding-node-p default))
         (should (equal "theDefault" (js2-name-node-name (js2-export-binding-node-extern-name default)))))))
   (should (js2-scope-get-symbol js2-current-scope "theDefault")))
@@ -655,14 +694,14 @@ the test."
   (js2-init-scanner)
   (should (js2-match-token js2-IMPORT))
   (let ((import-node (js2-parse-import)))
-    (should (not (equal nil import-node)))
+    (should (not (null import-node)))
     (should (equal "src/lib" (js2-import-node-module-id import-node)))
     (let ((import (js2-import-node-import import-node)))
-      (should (not (equal nil import)))
-      (should (equal nil (js2-import-clause-node-default-binding import)))
-      (should (equal nil (js2-import-clause-node-named-imports import)))
+      (should (not (null import)))
+      (should (null (js2-import-clause-node-default-binding import)))
+      (should (null (js2-import-clause-node-named-imports import)))
       (let ((ns-import (js2-import-clause-node-namespace-import import)))
-        (should (not (equal nil ns-import)))
+        (should (not (null ns-import)))
         (should (js2-namespace-import-node-p ns-import))
         (should (equal "lib" (js2-name-node-name (js2-namespace-import-node-name ns-import)))))))
   (should (js2-scope-get-symbol js2-current-scope "lib")))
@@ -672,14 +711,14 @@ the test."
   (js2-init-scanner)
   (should (js2-match-token js2-IMPORT))
   (let ((import-node (js2-parse-import)))
-    (should (not (equal nil import-node)))
+    (should (not (null import-node)))
     (should (equal "src/lib" (js2-import-node-module-id import-node)))
     (let ((import (js2-import-node-import import-node)))
-      (should (not (equal nil import)))
-      (should (equal nil (js2-import-clause-node-default-binding import)))
-      (should (equal nil (js2-import-clause-node-namespace-import import)))
+      (should (not (null import)))
+      (should (null (js2-import-clause-node-default-binding import)))
+      (should (null (js2-import-clause-node-namespace-import import)))
       (let ((named-imports (js2-import-clause-node-named-imports import)))
-        (should (not (equal nil named-imports)))
+        (should (not (null named-imports)))
         (should (listp named-imports))
         (should (= 2 (length named-imports)))
         (let ((first (nth 0 named-imports))
@@ -694,16 +733,16 @@ the test."
   (js2-init-scanner)
   (should (js2-match-token js2-IMPORT))
   (let ((import-node (js2-parse-import)))
-    (should (not (equal nil import-node)))
+    (should (not (null import-node)))
     (should (equal "src/lib" (js2-import-node-module-id import-node)))
     (let ((import (js2-import-node-import import-node)))
-      (should (not (equal nil import)))
-      (should (equal nil (js2-import-clause-node-named-imports import)))
+      (should (not (null import)))
+      (should (null (js2-import-clause-node-named-imports import)))
       (let ((default (js2-import-clause-node-default-binding import))
             (ns-import (js2-import-clause-node-namespace-import import)))
-        (should (not (equal nil default)))
+        (should (not (null default)))
         (should (equal "stuff" (js2-name-node-name (js2-export-binding-node-local-name default))))
-        (should (not (equal nil ns-import)))
+        (should (not (null ns-import)))
         (should (js2-namespace-import-node-p ns-import))
         (should (equal "lib" (js2-name-node-name (js2-namespace-import-node-name ns-import)))))))
   (should (js2-scope-get-symbol js2-current-scope "stuff"))
@@ -715,16 +754,16 @@ the test."
   (js2-init-scanner)
   (should (js2-match-token js2-IMPORT))
   (let ((import-node (js2-parse-import)))
-    (should (not (equal nil import-node)))
+    (should (not (null import-node)))
     (should (equal "src/lib" (js2-import-node-module-id import-node)))
     (let ((import (js2-import-node-import import-node)))
-      (should (not (equal nil import)))
-      (should (not (equal nil (js2-import-clause-node-named-imports import))))
+      (should (not (null import)))
+      (should (not (null (js2-import-clause-node-named-imports import))))
       (let ((default (js2-import-clause-node-default-binding import))
             (named-imports (js2-import-clause-node-named-imports import)))
-        (should (not (equal nil default)))
+        (should (not (null default)))
         (should (equal "bob" (js2-name-node-name (js2-export-binding-node-local-name default))))
-        (should (not (equal nil named-imports)))
+        (should (not (null named-imports)))
         (should (= 2 (length named-imports))))))
   (should (js2-scope-get-symbol js2-current-scope "bob"))
   (should (js2-scope-get-symbol js2-current-scope "cookies"))
@@ -836,28 +875,29 @@ the test."
 
 (js2-deftest export-function-no-semicolon "export default function foo() {}"
   (js2-mode--and-parse)
-  (should (equal nil js2-parsed-warnings)))
+  (should (null js2-parsed-warnings)))
 (js2-deftest export-default-function-no-semicolon "export function foo() {}"
   (js2-mode--and-parse)
-  (should (equal nil js2-parsed-warnings)))
+  (should (null js2-parsed-warnings)))
 (js2-deftest export-anything-else-does-require-a-semicolon "export var obj = {}"
   (js2-mode--and-parse)
-  (should (not (equal nil js2-parsed-warnings))))
+  (should (not (null js2-parsed-warnings))))
 
 (js2-deftest export-default-async-function-no-semicolon "export default async function foo() {}"
   (js2-mode--and-parse)
-  (should (equal nil js2-parsed-warnings)))
+  (should (null js2-parsed-warnings)))
 (js2-deftest export-async-function-no-semicolon "export async function foo() {}"
   (js2-mode--and-parse)
-  (should (equal nil js2-parsed-warnings)))
+  (should (null js2-parsed-warnings)))
 
 (js2-deftest-parse parse-export-rexport "export * from 'other/lib';")
 (js2-deftest-parse parse-export-export-named-list "export {foo, bar as bang};")
 (js2-deftest-parse parse-re-export-named-list "export {foo, bar as bang} from 'other/lib';")
 (js2-deftest-parse parse-export-const-declaration "export const PI = Math.PI;")
 (js2-deftest-parse parse-export-let-declaration "export let foo = [1];")
-(js2-deftest-parse parse-export-function-declaration "export default function doStuff() {\n}")
-(js2-deftest-parse parse-export-generator-declaration "export default function* one() {\n}")
+(js2-deftest-parse parse-export-default-function "export default function() {}")
+(js2-deftest-parse parse-export-default-generator "export default function*() {}")
+(js2-deftest-parse parse-export-default-class "export default class {\n}")
 (js2-deftest-parse parse-export-assignment-expression "export default a = b;")
 
 (js2-deftest-parse parse-export-function-declaration-no-semi
@@ -934,6 +974,137 @@ the test."
 (js2-deftest-parse parse-harmony-class-allow-semicolon-element
   "class Foo {;}" :reference "class Foo {\n}")
 
+(js2-deftest-parse parse-class-public-field-with-init
+  "class C {\n  x = 42;\n  y = 24;\n  \"z\" = 1\n  456 = 789\n}"
+  :reference "class C {\n  x = 42\n  y = 24\n  \"z\" = 1\n  456 = 789\n}")
+
+(js2-deftest-parse parse-class-public-field-no-init
+  "class C {\n  x\n  y\n  \"z\"\n  456\n}")
+
+(js2-deftest-parse parse-class-public-field-computed
+  "class C {\n  [a + b] = c\n}")
+
+(js2-deftest-parse parse-class-static-fields-no-semi
+  "class C {\n  static a\n  static b = 42\n}")
+
+;;; Operators
+
+(js2-deftest-parse exponentiation
+  "a **= b ** c ** d * e ** f;")
+
+(js2-deftest-parse exponentiation-prohibits-unary-op
+  "var a = -b ** c" :syntax-error "-b")
+
+;; nullish coalescing, via https://github.com/tc39/proposal-nullish-coalescing
+(js2-deftest-parse nullish-coalescing-operator-null-variable
+  "var a = null;\na ?? 1;")
+
+(js2-deftest-parse nullish-coalescing-operator-inexisting-field
+  "var a = {};\na.nonexistant ?? 1;")
+
+(js2-deftest-parse nullish-coalescing-operator-null-value
+  "var b = 1;\nnull ?? b;")
+
+(js2-deftest-parse nullish-coalescing-operator-in-if
+  "if (null ?? true) {\n  a = 2;\n}")
+
+(js2-deftest-parse nullish-coalescing-operator-in-ternary
+  "var c = null ?? true ? 1 : 2;")
+
+
+(js2-deftest optional-chaining-operator-on-property-access
+  "var a = {}; a?.b;"
+  (js2-mode--and-parse)
+  (let ((node (js2-find-node js2-mode-ast 'js2-name-node-p)))
+    (should node)
+    (should (string= (js2-node-text node) "b"))))
+
+(js2-deftest optional-chaining-operator-on-get-element
+  "var a = []; a?.[99];"
+  (js2-mode--and-parse)
+  (let ((node (js2-find-node js2-mode-ast 'js2-number-node-p)))
+    (should node)
+    (should (string= (js2-node-text node) "99"))))
+
+(js2-deftest optional-chaining-operator-on-functioncall
+  "var a = function(b){}; a?.(99);"
+  (js2-mode--and-parse)
+  (let ((node (js2-find-node js2-mode-ast 'js2-number-node-p)))
+    (should node)
+    (should (string= (js2-node-text node) "99"))))
+
+(js2-deftest unary-void-node-start
+  "var c = void 0"
+  (js2-mode--and-parse)
+  (let ((node (js2-find-node js2-mode-ast 'js2-unary-node-p)))
+    (should node)
+    (should (string= (js2-node-text node) "void 0"))
+    (should (string= (js2-node-text (js2-unary-node-operand node)) "0"))))
+
+(js2-deftest unary-pos-node-start
+  "var a = +1;"
+  (js2-mode--and-parse)
+  (let ((node (js2-find-node js2-mode-ast 'js2-unary-node-p)))
+    (should node)
+    (should (string= (js2-node-text node) "+1"))
+    (should (string= (js2-node-text (js2-unary-node-operand node)) "1"))))
+
+(js2-deftest unary-minus-node-start
+  "var a = -1;"
+  (js2-mode--and-parse)
+  (let ((node (js2-find-node js2-mode-ast 'js2-unary-node-p)))
+    (should node)
+    (should (string= (js2-node-text node) "-1"))
+    (should (string= (js2-node-text (js2-unary-node-operand node)) "1"))))
+
+(js2-deftest unary-await-node-start
+  "var f = async () => await p;"
+  (js2-mode--and-parse)
+  (let ((node (js2-find-node js2-mode-ast 'js2-unary-node-p)))
+    (should node)
+    (should (string= (js2-node-text node) "await p"))
+    (should (string= (js2-node-text (js2-unary-node-operand node)) "p"))))
+
+(js2-deftest unary-inc-node-start
+  "var a = 1; a++;"
+  (js2-mode--and-parse)
+  (let ((node (js2-find-node js2-mode-ast 'js2-unary-node-p)))
+    (should node)
+    (should (string= (js2-node-text node) "a++"))
+    (should (string= (js2-node-text (js2-unary-node-operand node)) "a"))))
+
+(js2-deftest unary-delete-node-start
+  "var a = {b: 2}; delete a.b;"
+  (js2-mode--and-parse)
+  (let ((node (js2-find-node js2-mode-ast 'js2-unary-node-p)))
+    (should node)
+    (should (string= (js2-node-text node) "delete a.b"))
+    (should (string= (js2-node-text (js2-unary-node-operand node)) "a.b"))))
+
+(js2-deftest unary-triple-dot-arg-node-start
+  "var b = f(...args)"
+  (js2-mode--and-parse)
+  (let ((node (js2-find-node js2-mode-ast 'js2-unary-node-p)))
+    (should node)
+    (should (string= (js2-node-text node) "...args"))
+    (should (string= (js2-node-text (js2-unary-node-operand node)) "args"))))
+
+(js2-deftest unary-triple-dot-array-node-start
+  "var a = [1, 2, ...b]"
+  (js2-mode--and-parse)
+  (let ((node (js2-find-node js2-mode-ast 'js2-unary-node-p)))
+    (should node)
+    (should (string= (js2-node-text node) "...b"))
+    (should (string= (js2-node-text (js2-unary-node-operand node)) "b"))))
+
+(js2-deftest unary-triple-dot-object-node-start
+  "var a = {x: 1, y: 2, ...z}"
+  (js2-mode--and-parse)
+  (let ((node (js2-find-node js2-mode-ast 'js2-unary-node-p)))
+    (should node)
+    (should (string= (js2-node-text node) "...z"))
+    (should (string= (js2-node-text (js2-unary-node-operand node)) "z"))))
+
 ;;; Scopes
 
 (js2-deftest ast-symbol-table-includes-fn-node "function foo() {}"
@@ -959,7 +1130,7 @@ the test."
 
 (defun js2-test-scope-of-nth-variable-satisifies-predicate (variable nth predicate)
   (goto-char (point-min))
-  (dotimes (n (1+ nth)) (search-forward variable))
+  (dotimes (_ (1+ nth)) (search-forward variable))
   (forward-char -1)
   (let ((scope (js2-node-get-enclosing-scope (js2-node-at-point))))
     (should (funcall predicate (js2-get-defining-scope scope variable)))))
@@ -1148,7 +1319,7 @@ the test."
 
 (js2-deftest-classify-variables prop-get-function-assignment
   "(function(w) { w.f = function() { var a=42, m; return a; }; })(window);"
-  '("w@11:P" 11 16 "a@39:I" 55 "m@45:U"))
+  '("w@11:P" 16 "a@39:I" 55 "m@45:U"))
 
 (js2-deftest-classify-variables let-declaration
   "function foo () { let x,y=1; return x; }"
@@ -1175,8 +1346,8 @@ the test."
   '("foo@10:U" "e@47:I" 64))
 
 (js2-deftest-classify-variables prop-get-assignment
-  "function foo () { var x={y:{z:{}}}; x.y.z=42; }"
-  '("foo@10:U" "x@23:I" 37))
+  "function foo () { var y,x={y:{z:{}}}; x.y.z=42; }"
+  '("foo@10:U" "y@23:U" "x@25:I" 39))
 
 (js2-deftest-classify-variables unused-function-argument
   "function foo (a) { return 42; }"
@@ -1203,9 +1374,134 @@ the test."
   '("foo@10:U" "j@22:N" 30 "a@24:U" "i@38:I" 28))
 
 (js2-deftest-classify-variables return-named-function
-  "function foo() { var a=42; return function bar() { return a; } }"
-  '("foo@10:U" "a@22:I" 59 "bar@44:I" 44))
+  "function foo() { var a=42; return function bar() { return a; }; }"
+  '("foo@10:U" "a@22:I" 59 "bar@44:U"))
 
 (js2-deftest-classify-variables named-wrapper-function
   "function foo() { var a; (function bar() { a=42; })(); return a; }"
   '("foo@10:U" "a@22:I" 62 "bar@35:I" 35))
+
+(js2-deftest-classify-variables destructure-array
+  "function foo(x,y) { let [u,v] = [x,y]; }"
+  '("foo@10:U" "x@14:P" 34 "y@16:P" 36 "u@26:U" "v@28:U"))
+
+(js2-deftest-classify-variables destructure-object
+  "function foo(x,y) { var {p: [, w], q: z} = {p: [x, 2, 3], q: y}; }"
+  '("foo@10:U" "x@14:P" 49 "y@16:P" 62 "w@32:U" "z@39:U"))
+
+(js2-deftest-classify-variables destructure-object-shorthand
+  "function foo(x,y) { var {p, q} = {p: x, q: y}; }"
+  '("foo@10:U" "x@14:P" 38 "y@16:P" 44 "p@26:U" "q@29:U"))
+
+(js2-deftest-classify-variables destructure-object-mixed
+  "function foo() { let {a, b, c = 3} = {a: 1, b: 2}; }"
+  '("foo@10:U" "a@23:U" "b@26:U" "c@29:U"))
+
+(js2-deftest-classify-variables destructure-object-missing
+  "function foo() { let {foo: missing = 10} = {}; }"
+  '("foo@10:U" "missing@28:U"))
+
+(js2-deftest-classify-variables import-unused
+  "import foo from 'module';"
+  '("foo@8:U"))
+
+(js2-deftest-classify-variables named-import-unused
+  "import foo as bar from 'module';"
+  '("bar@15:U"))
+
+(js2-deftest-classify-variables import-unused-many
+  "import {a,b} from 'module';"
+  '("a@9:U" "b@11:U"))
+
+(js2-deftest-classify-variables named-import-unused-many
+  "import {a as b, c as d} from 'module';"
+  '("b@14:U" "d@22:U"))
+
+(js2-deftest-classify-variables import-export
+  "import foo from 'module'; export {foo}"
+  '("foo@8:I" 35))
+
+(js2-deftest-classify-variables import-namespace-unused
+  "import * as foo from 'module';"
+  '("foo@13:U"))
+
+(js2-deftest-classify-variables import-namespace-used
+  "import * as foo from 'module'; function bar() { return foo.x; }"
+  '("foo@13:I" 56 "bar@41:U"))
+
+(js2-deftest-classify-variables destructured-function-params-1
+  "\
+function foo({var1}, var0) {
+    const bar = {var1},
+          var2 = {bar},
+          var3 = {var2},
+          var4 = {bar, var1, var2, var3, var4};
+    return({var4});
+}"
+  '("foo@10:U" "var1@15:P" 47 126 "var0@22:P" "bar@40:I" 72 121 "var2@64:I" 96 132 "var3@88:I" 138 "var4@113:I" 144 163))
+
+(js2-deftest-classify-variables destructured-function-params-2
+  "\
+function foo([var0, {var1}]) {
+    return var0 * var1;
+}"
+  '("foo@10:U" "var0@15:P" 43 "var1@22:P" 50))
+
+(js2-deftest-classify-variables uninitialized-class
+  "\
+import React from 'react';
+import PropTypes from 'prop-types';
+
+class SomeComponent extends React.Component {
+    render() {
+        return <div></div>;
+    }
+}
+
+SomeComponent.propTypes = {
+};
+
+export default SomeComponent;"
+  '("React@8:I" 93 "PropTypes@35:U" "SomeComponent@71:I" 163 210))
+
+;; Side effects
+
+(js2-deftest no-side-effects-at-top-level
+  "var x; x.foo;"
+  (js2-mode--and-parse)
+  (should (null js2-parsed-warnings)))
+
+(js2-deftest getprop-has-no-side-effects
+  "function f() { this.x; }"
+  (js2-mode--and-parse)
+  (should (equal "msg.no.side.effects"
+                 (car (caar js2-parsed-warnings)))))
+
+(js2-deftest getprop-has-side-effects-option
+  "function f() { this.x; }"
+  (let ((js2-getprop-has-side-effects t))
+    (js2-mode--and-parse)
+    (should (null js2-parsed-warnings))))
+
+(js2-deftest arithmetic-has-no-side-effects
+  "function f() { 1 + 2; }"
+  (js2-mode--and-parse)
+  (should (equal "msg.no.side.effects"
+                 (car (caar js2-parsed-warnings)))))
+
+(js2-deftest instanceof-has-no-side-effects
+  "function f() { this instanceof f; }"
+  (js2-mode--and-parse)
+  (should (equal "msg.no.side.effects"
+                 (car (caar js2-parsed-warnings)))))
+
+(js2-deftest instanceof-has-side-effects-option
+  "function f() { this instanceof f; }"
+  (let ((js2-instanceof-has-side-effects t))
+    (js2-mode--and-parse)
+    (should (null js2-parsed-warnings))))
+
+(js2-deftest await-has-side-effects
+  "const p = new Promise();\nasync function f() { await p; return null; }"
+  (js2-mode--and-parse)
+  (should (null js2-parsed-warnings)))

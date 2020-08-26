@@ -1,4 +1,4 @@
-;;; js2-imenu-extras.el --- Imenu support for additional constructs
+;;; js2-imenu-extras.el --- Imenu support for additional constructs  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2012-2014  Free Software Foundation, Inc.
 
@@ -32,9 +32,7 @@
 ;; To customize how it works:
 ;;   M-x customize-group RET js2-imenu RET
 
-(eval-when-compile
-  (require 'cl))
-
+(require 'cl-lib)
 (require 'js2-mode)
 
 (defvar js2-imenu-extension-styles
@@ -126,18 +124,18 @@ Currently used for jQuery widgets, Dojo and Enyo declarations."
   (remove-hook 'js2-build-imenu-callbacks 'js2-imenu-walk-ast t))
 
 (defun js2-imenu-record-declarations ()
-  (let* ((styles (loop for style in js2-imenu-extension-styles
-                       when (memq (plist-get style :framework)
-                                  js2-imenu-enabled-frameworks)
-                       collect style))
+  (let* ((styles (cl-loop for style in js2-imenu-extension-styles
+                          when (memq (plist-get style :framework)
+                                     js2-imenu-enabled-frameworks)
+                          collect style))
          (re (mapconcat (lambda (style)
                           (concat "\\(" (plist-get style :call-re) "\\)"))
                         styles "\\|")))
     (goto-char (point-min))
     (while (js2-re-search-forward re nil t)
-      (loop for i from 0 to (1- (length styles))
-            when (match-beginning (1+ i))
-            return (funcall (plist-get (nth i styles) :recorder))))))
+      (cl-loop for i from 0 to (1- (length styles))
+               when (match-beginning (1+ i))
+               return (funcall (plist-get (nth i styles) :recorder))))))
 
 (defun js2-imenu-record-jquery-extend ()
   (let ((pred (lambda (subject)
@@ -159,17 +157,17 @@ Currently used for jQuery widgets, Dojo and Enyo declarations."
 (defun js2-imenu-record-extend-first-arg (point pred qname-fn)
   (let* ((node (js2-node-at-point point))
          (args (js2-call-node-args node))
-         (subject (first args)))
+         (subject (cl-first args)))
     (when (funcall pred subject)
-      (loop for arg in (cdr args)
-            when (js2-object-node-p arg)
-            do (js2-record-object-literal
-                arg (funcall qname-fn subject) (js2-node-abs-pos arg))))))
+      (cl-loop for arg in (cdr args)
+               when (js2-object-node-p arg)
+               do (js2-record-object-literal
+                   arg (funcall qname-fn subject) (js2-node-abs-pos arg))))))
 
 (defun js2-imenu-record-backbone-or-react ()
   (let* ((node (js2-node-at-point (1- (point))))
          (args (js2-call-node-args node))
-         (methods (first args))
+         (methods (cl-first args))
          (parent (js2-node-parent node)))
     (when (js2-object-node-p methods)
       (let ((subject (cond ((js2-var-init-node-p parent)
@@ -188,21 +186,21 @@ Currently used for jQuery widgets, Dojo and Enyo declarations."
 (defun js2-imenu-record-enyo-kind ()
   (let* ((node (js2-node-at-point (1- (point))))
          (args (js2-call-node-args node))
-         (options (first args)))
+         (options (cl-first args)))
     (when (js2-object-node-p options)
       (let ((name-value
-             (loop for elem in (js2-object-node-elems options)
-                   thereis
-                   (let ((key (js2-object-prop-node-left elem))
-                         (value (js2-object-prop-node-right elem)))
-                     (when (and (equal
-                                 (cond ((js2-name-node-p key)
-                                        (js2-name-node-name key))
-                                       ((js2-string-node-p key)
-                                        (js2-string-node-value key)))
-                                 "name")
-                                (js2-string-node-p value))
-                       (js2-string-node-value value))))))
+             (cl-loop for elem in (js2-object-node-elems options)
+                      thereis
+                      (let ((key (js2-object-prop-node-left elem))
+                            (value (js2-object-prop-node-right elem)))
+                        (when (and (equal
+                                    (cond ((js2-name-node-p key)
+                                           (js2-name-node-name key))
+                                          ((js2-string-node-p key)
+                                           (js2-string-node-value key)))
+                                    "name")
+                                   (js2-string-node-p value))
+                          (js2-string-node-value value))))))
         (when name-value
           (js2-record-object-literal options
                                      (if js2-imenu-split-string-identifiers
@@ -213,8 +211,8 @@ Currently used for jQuery widgets, Dojo and Enyo declarations."
 (defun js2-imenu-record-sencha-class ()
   (let* ((node (js2-node-at-point (1- (point))))
          (args (js2-call-node-args node))
-         (name (first args))
-         (methods (second args)))
+         (name (cl-first args))
+         (methods (cl-second args)))
     (when (and (js2-string-node-p name) (js2-object-node-p methods))
       (let ((name-value (js2-string-node-value name)))
         (js2-record-object-literal methods
@@ -299,7 +297,6 @@ NODE must be `js2-object-prop-node'."
       (unless (and js2-imenu-function-map
                    (gethash fn-node js2-imenu-function-map))
         (let ((key-node (js2-object-prop-node-left node))
-              (parent-prop-node (js2-imenu-parent-prop-node node))
               chain)
           (setq chain (nconc (js2-imenu-parent-key-names node)
                              (list (js2-prop-node-name key-node))))

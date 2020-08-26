@@ -29,16 +29,13 @@
 
 (require 'cl-lib)
 (require 'haskell-cabal)
-(require 'haskell-string)
 (require 'haskell-customize)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Globals
 
 ;; Used internally
-(defvar haskell-session)
-
-(make-variable-buffer-local 'haskell-session)
+(defvar-local haskell-session nil)
 
 (defvar haskell-sessions (list)
   "All Haskell sessions in the Emacs session.")
@@ -92,7 +89,7 @@
 This could be helpful for temporary or auxiliary buffers such as
 presentation mode buffers (e.g. in case when session is killed
 with all relevant buffers)."
-  (set (make-local-variable 'haskell-session) session))
+  (setq-local haskell-session session))
 
 (defun haskell-session-choose ()
   "Find a session by choosing from a list of the current sessions."
@@ -112,7 +109,7 @@ with all relevant buffers)."
 
 (defun haskell-session-clear ()
   "Clear the buffer of any Haskell session choice."
-  (set (make-local-variable 'haskell-session) nil))
+  (setq-local haskell-session nil))
 
 (defun haskell-session-lookup (name)
   "Get the session by name."
@@ -156,10 +153,49 @@ If `haskell-process-load-or-reload-prompt' is nil, accept `default'."
          (target (if maybe-target maybe-target
                    (let ((new-target
                           (if haskell-process-load-or-reload-prompt
-                              (read-string "build target (empty for default):")
+                              (haskell-session-choose-target "Build target (empty for default): " t)
                             "")))
                      (haskell-session-set-target s new-target)))))
     (if (not (string= target "")) target nil)))
+
+(defun haskell-session-choose-target (&optional prompt blank-default history)
+  "Ask the user which of the available targets they want to use.
+Optional arguments:
+
+PROMPT allows you to specify which prompt should be presented to the user.
+
+BLANK-DEFAULT will allow specifying a default blank argument.
+
+HISTORY provides the history to `completing-read'."
+  (let ((prompt (or prompt "Build Target: "))
+        (known-targets (haskell-session-get-targets (haskell-process-type)))
+        (default-target (when blank-default (list ""))))
+    (completing-read prompt
+                     (append default-target known-targets)
+                     nil
+                     nil
+                     nil
+                     history
+                     default-target)))
+
+(defun haskell-session-get-targets (process-type)
+  "Return a list of available targets."
+  (cl-case process-type
+    (stack-ghci
+     (haskell-session-get-targets-command haskell-process-path-stack "ide" "targets"))
+    (t
+     (haskell-cabal-enum-targets (haskell-process-type)))))
+
+(defun haskell-session-get-targets-command (command &rest args)
+  "Run an external command to obtain a list of available targets."
+  (with-temp-buffer
+    (cl-case (apply #'process-file command nil (current-buffer) t args)
+      (0
+       (cl-remove-if
+        (lambda (line)
+          (string= "" line))
+        (split-string (buffer-string))))
+      (1 nil))))
 
 (defun haskell-session-set-target (s target)
   "Set the session build target."

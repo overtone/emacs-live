@@ -28,7 +28,7 @@
 ;; Add this to your .emacs:
 ;;
 ;; (autoload 'actionscript-mode "actionscript-mode" "Major mode for actionscript." t)
-;; (add-to-list 'auto-mode-alist '("\\.as$" . actionscript-mode))
+;; (add-to-list 'auto-mode-alist '("\\.as\\'" . actionscript-mode))
 ;;
 ;;------------------
 ;;; TODO
@@ -46,9 +46,9 @@
 
 ;;; Code:
 
-(require 'cl)
 (require 'font-lock)
 (eval-when-compile
+  (require 'cl)
   (require 'regexp-opt))
 
 (defconst actionscript-mode-version "7.2.2"
@@ -562,7 +562,7 @@ whitespace. Keep point at same relative point in the line."
 (add-to-list 'hs-special-modes-alist '(actionscript-mode "{" "}" "/[*/]" nil hs-c-like-adjust-block-beginning))
 
 ;;;###autoload
-(add-to-list 'auto-mode-alist '("\\.as$" . actionscript-mode))
+(add-to-list 'auto-mode-alist '("\\.as\\'" . actionscript-mode))
 
 (provide 'actionscript-mode)
 
@@ -575,5 +575,4 @@ whitespace. Keep point at same relative point in the line."
 		(actionscript-mode)
 		(message "actionscript-mode reloaded.")))
 
-(define-key global-map [f5] 'reload-actionscript-mode)
 ;;; actionscript-mode.el ends here

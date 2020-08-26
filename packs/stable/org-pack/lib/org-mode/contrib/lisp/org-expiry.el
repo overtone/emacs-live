@@ -1,6 +1,6 @@
 ;;; org-expiry.el --- expiry mechanism for Org entries
 ;;
-;; Copyright 2007-2016 Free Software Foundation, Inc.
+;; Copyright 2007-2020 Free Software Foundation, Inc.
 ;;
 ;; Author: Bastien Guerry
 ;; Version: 0.2
@@ -52,7 +52,7 @@
 ;; This entry will expire on the 14th, january 2008, one week after its
 ;; creation date.
 ;;
-;; What happen when an entry is expired?  Nothing until you explicitely
+;; What happen when an entry is expired?  Nothing until you explicitly
 ;; M-x org-expiry-process-entries When doing this, org-expiry will check
 ;; for expired entries and request permission to process them.
 ;;
@@ -186,7 +186,7 @@ restart `org-mode' if necessary."
     ;; need this to refresh org-mode hooks
     (when (eq major-mode 'org-mode)
       (org-mode)
-      (if (org-called-interactively-p)
+      (if (called-interactively-p 'any)
 	  (message "Org-expiry insinuated, `org-mode' restarted.")))))
 
 (defun org-expiry-deinsinuate (&optional arg)
@@ -207,7 +207,7 @@ and restart `org-mode' if necessary."
     ;; need this to refresh org-mode hooks
     (when (eq major-mode 'org-mode)
       (org-mode)
-      (if (org-called-interactively-p)
+      (if (called-interactively-p 'any)
 	  (message "Org-expiry de-insinuated, `org-mode' restarted.")))))
 
 ;;; org-expiry-expired-p:
@@ -239,7 +239,7 @@ If FORCE is non-nil, don't require confirmation from the user.
 Otherwise rely on `org-expiry-confirm-flag' to decide."
   (interactive "P")
   (save-excursion
-    (when (org-called-interactively-p) (org-reveal))
+    (when (called-interactively-p) (org-reveal))
     (when (org-expiry-expired-p)
       (org-back-to-heading)
       (looking-at org-complex-heading-regexp)
@@ -253,7 +253,7 @@ Otherwise rely on `org-expiry-confirm-flag' to decide."
 		     (not (interactive)))
 		(and org-expiry-confirm-flag
 		     (y-or-n-p (format "Entry expired by %d days.  Process? " d))))
-	  (funcall 'org-expiry-handler-function))
+	  (funcall org-expiry-handler-function))
 	(delete-overlay ov)))))
 
 (defun org-expiry-process-entries (beg end)
@@ -271,7 +271,7 @@ The expiry process will run the function defined by
 	(while (and (outline-next-heading) (< (point) end))
 	  (when (org-expiry-expired-p)
 	    (setq expired (1+ expired))
-	    (if (if (org-called-interactively-p)
+	    (if (if (called-interactively-p 'any)
 		    (call-interactively 'org-expiry-process-entry)
 		  (org-expiry-process-entry))
 		(setq processed (1+ processed)))))
@@ -339,7 +339,7 @@ and insert today's date."
   (save-excursion
     (if (org-expiry-expired-p)
 	(org-archive-subtree)
-      (if (org-called-interactively-p)
+      (if (called-interactively-p 'any)
 	  (message "Entry at point is not expired.")))))
 
 (defun org-expiry-add-keyword (&optional keyword)
@@ -350,7 +350,7 @@ and insert today's date."
       (save-excursion
 	(if (org-expiry-expired-p)
 	    (org-todo keyword)
-	  (if (org-called-interactively-p)
+	  (if (called-interactively-p 'any)
 	      (message "Entry at point is not expired."))))
     (error "\"%s\" is not a to-do keyword in this buffer" keyword)))
 

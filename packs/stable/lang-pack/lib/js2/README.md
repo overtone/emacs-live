@@ -3,7 +3,7 @@ About [![Build Status](https://travis-ci.org/mooz/js2-mode.svg?branch=master)](h
 
 Improved JavaScript editing mode for GNU Emacs ([description here](http://elpa.gnu.org/packages/js2-mode.html)).
 
-For some of the latest changes, see [latest user-visible changes](https://github.com/mooz/js2-mode/wiki/Latest-user-visible-changes).
+For some of the latest changes, see [latest user-visible changes](https://github.com/mooz/js2-mode/blob/master/NEWS.md).
 
 Installation
 ======
@@ -14,24 +14,44 @@ The stable versions are hosted at [GNU ELPA](http://elpa.gnu.org/)
 You can also install the latest development version from
 [MELPA](https://melpa.org/#/getting-started).
 
-Emacs 22 and 23
-===============
+Requirements
+======
 
-This version requires Emacs 24 and `cl-lib` (either built-in or from GNU ELPA above).
-For a backward compatible version, check out the branch
-[emacs23](https://github.com/mooz/js2-mode/tree/emacs23).
+Emacs 24.1+ and `cl-lib` (either built-in or installed from GNU ELPA).
+
+React and JSX
+======
+
+The currently recommended solution is to install Emacs 27 (still in
+development, you can [build from
+source](http://git.savannah.gnu.org/cgit/emacs.git/tree/INSTALL.REPO)
+or e.g. install a snapshot from a
+[PPA](https://launchpad.net/~ubuntu-elisp/+archive/ubuntu/ppa)) and
+use `js-mode` as the major mode. To make use of the JS2 AST and the
+packages that integrate with it, we recommend `js2-minor-mode`. See
+the corresponding [instructions in the
+Commentary](https://github.com/mooz/js2-mode/blob/bb73461c2c7048d811b38e6b533a30fb5fdcea93/js2-mode.el#L57).
+
+`js-mode` in Emacs 27 includes full support for syntax highlighting
+and indenting of JSX syntax.
+
+[rjsx-mode](https://github.com/felipeochoa/rjsx-mode/) is an
+alternative option which comes with certain tradeoffs.
 
 Bugs
 ====
 
 * See broken syntax highlighting and timer errors? Recently upgraded
-Emacs from version 24.2 or earlier?
-
-* Try
+Emacs from version 24.2 or earlier? Try
 [reinstalling or byte-recompiling](https://github.com/mooz/js2-mode/issues/72)
 the package.
 
-Please report problems at <http://github.com/mooz/js2-mode/issues>.
+* Any indentation problems should be reported with `M-x report-emacs-bug`
+(please try reproducing them with `js-mode` first, for clarity).
+Starting with Emacs 25, `js2-mode` delegates indentation to
+the indentation engine of `js-mode`.
+
+Please report other problems at <http://github.com/mooz/js2-mode/issues>.
 
 Contributing
 ======

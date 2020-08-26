@@ -1,6 +1,6 @@
 ;;; mc-separate-operations.el - functions that work differently on each cursor
 
-;; Copyright (C) 2012 Magnar Sveen
+;; Copyright (C) 2012-2016 Magnar Sveen
 
 ;; Author: Magnar Sveen <magnars@gmail.com>
 ;; Keywords: editing cursors
@@ -29,16 +29,23 @@
 
 (require 'multiple-cursors-core)
 
-;;;###autoload
-(defun mc/insert-numbers (arg)
-  "Insert increasing numbers for each cursor, starting at 0 or ARG."
-  (interactive "P")
-  (setq mc--insert-numbers-number (or (and arg (prefix-numeric-value arg))
-                                      0))
-  (mc/for-each-cursor-ordered
-   (mc/execute-command-for-fake-cursor 'mc--insert-number-and-increase cursor)))
+(defcustom mc/insert-numbers-default 0
+  "The default number at which to start counting for
+`mc/insert-numbers'"
+  :type 'integer
+  :group 'multiple-cursors)
 
 (defvar mc--insert-numbers-number 0)
+
+;;;###autoload
+(defun mc/insert-numbers (arg)
+  "Insert increasing numbers for each cursor, starting at
+`mc/insert-numbers-default' or ARG."
+  (interactive "P")
+  (setq mc--insert-numbers-number (or (and arg (prefix-numeric-value arg))
+                                      mc/insert-numbers-default))
+  (mc/for-each-cursor-ordered
+   (mc/execute-command-for-fake-cursor 'mc--insert-number-and-increase cursor)))
 
 (defun mc--insert-number-and-increase ()
   (interactive)
@@ -54,6 +61,8 @@
                             (mc/cursor-end cursor)) strings))))
     (nreverse strings)))
 
+(defvar mc--insert-letters-number 0)
+
 ;;;###autoload
 (defun mc/insert-letters (arg)
   "Insert increasing letters for each cursor, starting at 0 or ARG.
@@ -66,14 +75,12 @@
 
 (defun mc--number-to-letters (number)
   (let ((letter
-	 (char-to-string
-	  (+ (mod number 26) ?a)))
-	(number2 (/ number 26)))
+         (char-to-string
+          (+ (mod number 26) ?a)))
+        (number2 (/ number 26)))
     (if (> number2 0)
-	(concat (mc--number-to-letters (- number2 1)) letter)
+        (concat (mc--number-to-letters (- number2 1)) letter)
       letter)))
-
-(defvar mc--insert-letters-number 0)
 
 (defun mc--insert-letter-and-increase ()
   (interactive)
@@ -117,7 +124,7 @@
 ;;;###autoload
 (defun mc/vertical-align (character)
   "Aligns all cursors vertically with a given CHARACTER to the one with the
-highest colum number (the rightest).
+highest column number (the rightest).
 Might not behave as intended if more than one cursors are on the same line."
   (interactive "c")
   (let ((rightest-column (current-column)))
@@ -130,19 +137,14 @@ Might not behave as intended if more than one cursors are on the same line."
      (lambda ()
        (interactive)
        (let ((missing-spaces (- rightest-column (current-column))))
-	 (save-excursion (insert (make-string missing-spaces character)))
-	 (forward-char missing-spaces)
-	 )
-       ))
-      )
-    )
+         (save-excursion (insert (make-string missing-spaces character)))
+         (forward-char missing-spaces))))))
 
 ;;;###autoload
 (defun mc/vertical-align-with-space ()
   "Aligns all cursors with whitespace like `mc/vertical-align' does"
   (interactive)
-  (mc/vertical-align 32)
-  )
+  (mc/vertical-align 32))
 
 (provide 'mc-separate-operations)
 ;;; mc-separate-operations.el ends here

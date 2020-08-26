@@ -18,7 +18,7 @@ http://www.emacswiki.org/emacs/ActionScriptMode
 Insert a print statement immediately after the nearest function
 definition before point.
 
-This is bound to `F5`.
+This is unbound by default.  You might want to bind to `F5`.
 
 ### as-insert-trace
 

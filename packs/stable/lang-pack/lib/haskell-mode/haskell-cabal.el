@@ -51,12 +51,26 @@
 (require 'cl-lib)
 (require 'haskell-utils)
 
+(defcustom haskell-hasktags-path "hasktags"
+  "Path to `hasktags' executable."
+  :group 'haskell
+  :type 'string)
+
+(defcustom haskell-hasktags-arguments '("-e" "-x")
+  "Additional arguments for `hasktags' executable.
+By default these are:
+
+-e - generate ETAGS file
+-x - generate additional information in CTAGS file."
+  :group 'haskell
+  :type '(list string))
+
 (defconst haskell-cabal-general-fields
   ;; Extracted with (haskell-cabal-extract-fields-from-doc "general-fields")
   '("name" "version" "cabal-version" "license" "license-file" "copyright"
     "author" "maintainer" "stability" "homepage" "package-url" "synopsis"
     "description" "category" "tested-with" "build-depends" "data-files"
-    "extra-source-files" "extra-tmp-files"))
+    "extra-source-files" "extra-tmp-files" "import"))
 
 (defconst haskell-cabal-library-fields
   ;; Extracted with (haskell-cabal-extract-fields-from-doc "library")
@@ -77,9 +91,9 @@
   (let ((st (make-syntax-table)))
     ;; The comment syntax can't be described simply in syntax-table.
     ;; We could use font-lock-syntactic-keywords, but is it worth it?
-    ;; (modify-syntax-entry ?-  ". 12" st)
+    ;; (modify-syntax-entry ?- ". 12" st)
     (modify-syntax-entry ?\n ">" st)
-    (modify-syntax-entry ?- "w"  st)
+    (modify-syntax-entry ?- "w" st)
     st))
 
 (defvar haskell-cabal-font-lock-keywords
@@ -88,12 +102,14 @@
   '(("^[ \t]*--.*" . font-lock-comment-face)
     ("^ *\\([^ \t:]+\\):" (1 font-lock-keyword-face))
     ("^\\(Library\\)[ \t]*\\({\\|$\\)" (1 font-lock-keyword-face))
-    ("^\\(Executable\\|Test-Suite\\|Benchmark\\)[ \t]+\\([^\n \t]*\\)"
+    ("^\\(Executable\\|Test-Suite\\|Benchmark\\|Common\\|package\\)[ \t]+\\([^\n \t]*\\)"
      (1 font-lock-keyword-face) (2 font-lock-function-name-face))
-    ("^\\(Flag\\)[ \t]+\\([^\n \t]*\\)"
+    ("^\\(Flag\\|install-dirs\\|repository\\)[ \t]+\\([^\n \t]*\\)"
      (1 font-lock-keyword-face) (2 font-lock-constant-face))
     ("^\\(Source-Repository\\)[ \t]+\\(head\\|this\\)"
      (1 font-lock-keyword-face) (2 font-lock-constant-face))
+    ("^\\(haddock\\|source-repository-package\\|program-locations\\|program-default-options\\)\\([ \t]\\|$\\)"
+     (1 font-lock-keyword-face))
     ("^ *\\(if\\)[ \t]+.*\\({\\|$\\)" (1 font-lock-keyword-face))
     ("^ *\\(}[ \t]*\\)?\\(else\\)[ \t]*\\({\\|$\\)"
      (2 font-lock-keyword-face))
@@ -124,7 +140,7 @@ it from list if one of the following conditions are hold:
   (haskell-cabal-buffers-clean (current-buffer)))
 
 ;;;###autoload
-(add-to-list 'auto-mode-alist '("\\.cabal\\'" . haskell-cabal-mode))
+(add-to-list 'auto-mode-alist '("\\.cabal\\'\\|/cabal\\.project\\|/\\.cabal/config\\'" . haskell-cabal-mode))
 
 (defvar haskell-cabal-mode-map
   (let ((map (make-sparse-keymap)))
@@ -139,22 +155,23 @@ it from list if one of the following conditions are hold:
     (define-key map (kbd "M-g l") 'haskell-cabal-goto-library-section)
     (define-key map (kbd "M-g e") 'haskell-cabal-goto-executable-section)
     (define-key map (kbd "M-g b") 'haskell-cabal-goto-benchmark-section)
+    (define-key map (kbd "M-g o") 'haskell-cabal-goto-common-section)
     (define-key map (kbd "M-g t") 'haskell-cabal-goto-test-suite-section)
     map))
 
 ;;;###autoload
 (define-derived-mode haskell-cabal-mode fundamental-mode "Haskell-Cabal"
   "Major mode for Cabal package description files."
-  (set (make-local-variable 'font-lock-defaults)
-       '(haskell-cabal-font-lock-keywords t t nil nil))
+  (setq-local font-lock-defaults
+              '(haskell-cabal-font-lock-keywords t t nil nil))
   (add-to-list 'haskell-cabal-buffers (current-buffer))
   (add-hook 'change-major-mode-hook 'haskell-cabal-unregister-buffer nil 'local)
   (add-hook 'kill-buffer-hook 'haskell-cabal-unregister-buffer nil 'local)
-  (set (make-local-variable 'comment-start) "-- ")
-  (set (make-local-variable 'comment-start-skip) "\\(^[ \t]*\\)--[ \t]*")
-  (set (make-local-variable 'comment-end) "")
-  (set (make-local-variable 'comment-end-skip) "[ \t]*\\(\\s>\\|\n\\)")
-  (set (make-local-variable 'indent-line-function) 'haskell-cabal-indent-line)
+  (setq-local comment-start "-- ")
+  (setq-local comment-start-skip "\\(^[ \t]*\\)--[ \t]*")
+  (setq-local comment-end "")
+  (setq-local comment-end-skip "[ \t]*\\(\\s>\\|\n\\)")
+  (setq-local indent-line-function 'haskell-cabal-indent-line)
   (setq indent-tabs-mode nil)
   )
 
@@ -383,9 +400,9 @@ OTHER-WINDOW use `find-file-other-window'."
   "Find the end of the current section"
   (interactive)
   (save-excursion
-    (if  (re-search-forward "\n\\([ \t]*\n\\)*[[:alnum:]]" nil t)
-         (match-beginning 0)
-         (point-max))))
+    (if (re-search-forward "\n\\([ \t]*\n\\)*[[:alnum:]]" nil t)
+        (match-beginning 0)
+        (point-max))))
 
 (defun haskell-cabal-end-of-section ()
   "go to the end of the section"
@@ -415,7 +432,7 @@ OTHER-WINDOW use `find-file-other-window'."
                 (member (haskell-cabal-classify-line) '(empty section-data)))
       (forward-line))
     (unless (eobp) (forward-line -1))
-    (while (and (equal  (haskell-cabal-classify-line) 'empty)
+    (while (and (equal (haskell-cabal-classify-line) 'empty)
                 (not (bobp)))
       (forward-line -1))
     (end-of-line)
@@ -442,13 +459,16 @@ OTHER-WINDOW use `find-file-other-window'."
   "Get the name and bounds of of the current subsection"
   (save-excursion
     (haskell-cabal-beginning-of-subsection)
-    (when  (looking-at "\\([ \t]*\\(\\w*\\):\\)[ \t]*")
+    (when (looking-at "\\([ \t]*\\(\\w*\\):\\)[ \t]*")
       (list :name (match-string-no-properties 2)
             :beginning (match-end 0)
             :end (save-match-data (haskell-cabal-subsection-end))
             :data-start-column (save-excursion (goto-char (match-end 0))
-                                               (current-column)
-                                               )))))
+                                               (current-column))
+            :data-indent-column (save-excursion (goto-char (match-end 0))
+                                                (when (looking-at "\n  +\\(\\w*\\)") (goto-char (match-beginning 1)))
+                                                (current-column)
+                                                )))))
 
 
 (defun haskell-cabal-section-name (section)
@@ -463,27 +483,45 @@ OTHER-WINDOW use `find-file-other-window'."
 (defun haskell-cabal-section-data-start-column (section)
   (plist-get section :data-start-column))
 
-(defun haskell-cabal-enum-targets ()
-  "Enumerate .cabal targets."
-  (let ((cabal-file (haskell-cabal-find-file)))
+(defun haskell-cabal-section-data-indent-column (section)
+  (plist-get section :data-indent-column))
+
+(defun haskell-cabal-map-component-type (component-type)
+  "Map from cabal file COMPONENT-TYPE to build command component-type."
+  (let ((component-type (downcase component-type)))
+    (cond ((equal component-type "executable") "exe")
+          ((equal component-type "test-suite") "test")
+          ((equal component-type "benchmark")  "bench"))))
+
+(defun haskell-cabal-enum-targets (&optional process-type)
+  "Enumerate .cabal targets. PROCESS-TYPE determines the format of the returned target."
+  (let ((cabal-file (haskell-cabal-find-file))
+        (process-type (if process-type process-type 'ghci)))
     (when (and cabal-file (file-readable-p cabal-file))
       (with-temp-buffer
         (insert-file-contents cabal-file)
         (haskell-cabal-mode)
         (goto-char (point-min))
         (let ((matches)
-              (projectName (haskell-cabal--get-field "name")))
+              (package-name (haskell-cabal--get-field "name")))
           (haskell-cabal-next-section)
           (while (not (eobp))
             (if (haskell-cabal-source-section-p (haskell-cabal-section))
-                (let ((val (car (split-string
-                                 (haskell-cabal-section-value
-                                  (haskell-cabal-section))))))
-                  (if (or (string= val "")
-                          (string= val "{")
-                          (not val))
-                      (push projectName matches)
-                    (push val matches))))
+                (let* ((section (haskell-cabal-section))
+                       (component-type (haskell-cabal-section-name section))
+                       (val (car (split-string
+                                  (haskell-cabal-section-value section)))))
+                  (if (equal (downcase component-type) "library")
+                      (let ((lib-target (if (eq 'stack-ghci process-type)
+                                            (concat package-name ":lib")
+                                          (concat "lib:" package-name))))
+                        (push lib-target matches))
+                    (push (concat  (when (eq 'stack-ghci process-type)
+                                     (concat package-name ":"))
+                                   (haskell-cabal-map-component-type component-type)
+                                   ":"
+                                   val)
+                          matches))))
             (haskell-cabal-next-section))
           (reverse matches))))))
 
@@ -500,8 +538,8 @@ resulting buffer-content"
         (section-data (make-symbol "section-data")))
     `(let* ((,section ,subsection)
             (,beg (plist-get ,section :beginning))
-            (,end (plist-get  ,section :end))
-            (,start-col (plist-get  ,section :data-start-column))
+            (,end (plist-get ,section :end))
+            (,start-col (plist-get ,section :data-start-column))
             (,section-data (buffer-substring ,beg ,end)))
        (save-excursion
          (prog1
@@ -622,12 +660,13 @@ nil: no commas, e.g.
     Foo Bar
 
 If the styles are mixed, the position of the first comma
-determines the style."
+determines the style. If there is only one element then `after'
+style is assumed."
   (let (comma-style)
     ;; split list items on single line
     (goto-char (point-min))
     (while (re-search-forward
-            "\\([^ \t,\n]\\)[ \t]*\\(,\\)[ \t]*\\([^ \t,\n]\\)"  nil t)
+            "\\([^ \t,\n]\\)[ \t]*\\(,\\)[ \t]*\\([^ \t,\n]\\)" nil t)
       (when (haskell-cabal-comma-separatorp (match-beginning 2))
         (setq comma-style 'single)
         (replace-match "\\1\n\\3" nil nil)))
@@ -642,6 +681,13 @@ determines the style."
       (unless (eq comma-style 'before)
         (setq comma-style 'after))
       (replace-match "" nil nil))
+
+    ;; if there is just one line then set default as 'after
+    (unless comma-style
+      (goto-char (point-min))
+      (forward-line)
+      (when (eobp)
+        (setq comma-style 'after)))
     (goto-char (point-min))
 
     (haskell-cabal-each-line (haskell-cabal-chomp-line))
@@ -663,9 +709,8 @@ styles."
         (insert ", "))))
     ('after
      (goto-char (point-max))
-     (while (not (bobp))
+     (while (equal 0 (forward-line -1))
        (unless (haskell-cabal-ignore-line-p)
-         (forward-line -1)
          (end-of-line)
          (insert ",")
          (beginning-of-line))))
@@ -702,16 +747,31 @@ Respect the comma style."
      (haskell-cabal-goto-mark)
      (haskell-cabal-remove-mark)))
 
+(defun haskell-cabal-sort-lines-depends-compare (key1 key2)
+  (let* ((key1str (buffer-substring (car key1) (cdr key1)))
+         (key2str (buffer-substring (car key2) (cdr key2)))
+         (base-regex "^[ \t]*base\\($\\|[^[:alnum:]-]\\)"))
+    (cond
+     ((string-match base-regex key1str) t)
+     ((string-match base-regex key2str) nil)
+     (t (string< key1str key2str)))))
+
 (defun haskell-cabal-subsection-arrange-lines ()
   "Sort lines of current subsection"
   (interactive)
   (haskell-cabal-save-position
-   (haskell-cabal-with-subsection
-    (haskell-cabal-subsection) t
-    (haskell-cabal-with-cs-list
-     (sort-subr nil 'forward-line 'end-of-line
-                'haskell-cabal-sort-lines-key-fun)
-     ))))
+   (let* ((subsection (haskell-cabal-section-name (haskell-cabal-subsection)))
+          (compare-lines (if (string= (downcase subsection) "build-depends")
+                            'haskell-cabal-sort-lines-depends-compare
+                          nil)))
+     (haskell-cabal-with-subsection
+      (haskell-cabal-subsection) t
+      (haskell-cabal-with-cs-list
+       (sort-subr nil 'forward-line 'end-of-line
+                  'haskell-cabal-sort-lines-key-fun
+                  'end-of-line
+                  compare-lines
+                  ))))))
 
 (defun haskell-cabal-subsection-beginning ()
   "find the beginning of the current subsection"
@@ -723,7 +783,7 @@ Respect the comma style."
     (point)))
 
 (defun haskell-cabal-beginning-of-subsection ()
-  "go to the beginniing of the current subsection"
+  "go to the beginning of the current subsection"
   (interactive)
   (goto-char (haskell-cabal-subsection-beginning)))
 
@@ -844,7 +904,7 @@ resulting buffer-content.  Unmark line at the end."
                                     (line-end-position)))))
 
 (defun haskell-cabal-module-to-filename (module)
-  (concat  (replace-regexp-in-string "[.]" "/" module ) ".hs"))
+  (concat (replace-regexp-in-string "[.]" "/" module ) ".hs"))
 
 (defconst haskell-cabal-module-sections '("exposed-modules" "other-modules")
   "List of sections that contain module names"
@@ -860,13 +920,13 @@ resulting buffer-content.  Unmark line at the end."
   '("library" "executable" "test-suite" "benchmark"))
 
 (defun haskell-cabal-source-section-p (section)
-  (not (not  (member (downcase (haskell-cabal-section-name section))
-                      haskell-cabal-source-bearing-sections))))
+  (not (not (member (downcase (haskell-cabal-section-name section))
+                    haskell-cabal-source-bearing-sections))))
 
 (defun haskell-cabal-line-filename ()
   "Expand filename in current line according to the subsection type
 
-Module names in exposed-modules and other-modules are expanded by replacing each dot (.) in the module name with a foward slash (/) and appending \".hs\"
+Module names in exposed-modules and other-modules are expanded by replacing each dot (.) in the module name with a forward slash (/) and appending \".hs\"
 
 Example: Foo.Bar.Quux ==> Foo/Bar/Quux.hs
 
@@ -928,7 +988,7 @@ Source names from main-is and c-sources sections are left untouched
           (eobp)
           (string=
            (downcase type)
-           (downcase  (haskell-cabal-section-name (haskell-cabal-section))))))
+           (downcase (haskell-cabal-section-name (haskell-cabal-section))))))
       (haskell-cabal-next-section))
     (if (eobp)
       (if wrap (progn
@@ -937,7 +997,7 @@ Source names from main-is and c-sources sections are left untouched
         nil)
       (point))))
 
-(defun haskell-cabal-goto-section-type  (type)
+(defun haskell-cabal-goto-section-type (type)
   (let ((section (haskell-cabal-find-section-type type t)))
     (if section (goto-char section)
       (message "No %s section found" type))))
@@ -958,6 +1018,9 @@ Source names from main-is and c-sources sections are left untouched
   (interactive)
   (haskell-cabal-goto-section-type "benchmark"))
 
+(defun haskell-cabal-goto-common-section ()
+  (interactive)
+  (haskell-cabal-goto-section-type "common"))
 
 
 (defun haskell-cabal-line-entry-column ()
@@ -966,7 +1029,7 @@ Source names from main-is and c-sources sections are left untouched
     (cl-case (haskell-cabal-classify-line)
       (section-data (beginning-of-line)
                     (when (looking-at "[ ]*\\(?:,[ ]*\\)?")
-                      (goto-char  (match-end 0))
+                      (goto-char (match-end 0))
                       (current-column)))
       (subsection-header
        (haskell-cabal-section-data-start-column (haskell-cabal-subsection))))))
@@ -984,7 +1047,7 @@ Source names from main-is and c-sources sections are left untouched
   (cl-case (haskell-cabal-classify-line)
     (section-data
      (save-excursion
-       (let ((indent (haskell-cabal-section-data-start-column
+       (let ((indent (haskell-cabal-section-data-indent-column
                       (haskell-cabal-subsection))))
          (indent-line-to indent)
          (beginning-of-line)
@@ -1004,7 +1067,7 @@ Source names from main-is and c-sources sections are left untouched
                  (result (and section (funcall fun (haskell-cabal-section)))))
             (when section (setq results (cons result results))))
           (haskell-cabal-next-section))
-        (nreverse  results))))
+        (nreverse results))))
 
 (defun haskell-cabal-section-add-build-dependency (dependency &optional sort sec)
   "Add a build dependency to the build-depends section"
@@ -1033,10 +1096,10 @@ Pass SILENT argument to update all sections without asking user."
            (progn
              (when
                  (or silent
-                     (y-or-n-p (format  "Add dependency %s to %s section %s?"
-                                        dependency
-                                        (haskell-cabal-section-name section)
-                                        (haskell-cabal-section-value section))))
+                     (y-or-n-p (format "Add dependency %s to %s section %s?"
+                                       dependency
+                                       (haskell-cabal-section-name section)
+                                       (haskell-cabal-section-value section))))
                (haskell-cabal-section-add-build-dependency dependency
                                                            sort
                                                            section))
@@ -1080,13 +1143,12 @@ buffer not visiting a file returns nil."
 
 (defun haskell-cabal--compose-hasktags-command (dir)
   "Prepare command to execute `hasktags` command in DIR folder.
-By default following parameters are passed to Hasktags
-executable:
--e - generate ETAGS file
--x - generate additional information in CTAGS file.
 
-This function takes into account user's operation system: in case
-of Windows it generates simple command, relying on Hasktags
+To customise the command executed, see `haskell-hasktags-path'
+and `haskell-hasktags-arguments'.
+
+This function takes into account the user's operating system: in case
+of Windows it generates a simple command, relying on Hasktags
 itself to find source files:
 
 hasktags --output=DIR\TAGS -x -e DIR
@@ -1096,17 +1158,22 @@ recursively avoiding visiting unnecessary heavy directories like
 .git, .svn, _darcs and build directories created by
 cabal-install, stack, etc and passes list of found files to Hasktags."
   (if (eq system-type 'windows-nt)
-      (format "hasktags --output=\"%s\\TAGS\" -x -e \"%s\"" dir dir)
+      (format "%s --output=%s %s %s"
+              haskell-hasktags-path
+              (shell-quote-argument (expand-file-name "TAGS" dir))
+              (mapconcat #'identity haskell-hasktags-arguments " ")
+              (shell-quote-argument dir))
     (format "cd %s && %s | %s"
-            dir
+            (shell-quote-argument dir)
             (concat "find . "
                     "-type d \\( "
-                    "-path ./.git "
-                    "-o -path ./.svn "
-                    "-o -path ./_darcs "
-                    "-o -path ./.stack-work "
-                    "-o -path ./dist "
-                    "-o -path ./.cabal-sandbox "
+                    "-name .git "
+                    "-o -name .svn "
+                    "-o -name _darcs "
+                    "-o -name .stack-work "
+                    "-o -name dist "
+                    "-o -name dist-newstyle "
+                    "-o -name .cabal-sandbox "
                     "\\) -prune "
                     "-o -type f \\( "
                     "-name '*.hs' "
@@ -1116,7 +1183,9 @@ cabal-install, stack, etc and passes list of found files to Hasktags."
                     "-name '#*' "
                     "-or -name '.*' "
                     "\\) -print0")
-            "xargs -0 hasktags -e -x")))
+            (format "xargs -0 %s %s"
+                    (shell-quote-argument haskell-hasktags-path)
+                    (mapconcat #'identity haskell-hasktags-arguments " ")))))
 
 (provide 'haskell-cabal)
 ;;; haskell-cabal.el ends here

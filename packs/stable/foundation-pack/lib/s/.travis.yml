@@ -10,6 +10,5 @@ before_install:
 env:
   - EMACS=emacs23
   - EMACS=emacs24
-  - EMACS=emacs-snapshot
 script:
   ./run-travis-ci.sh

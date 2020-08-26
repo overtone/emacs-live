@@ -1,4 +1,4 @@
-;;;; org-test.el --- Tests for Org-mode
+;;;; org-test.el --- Tests for Org
 
 ;; Copyright (c) 2010-2015 Sebastian Rose, Eric Schulte
 ;; Authors:
@@ -54,35 +54,13 @@
       (org-babel-do-load-languages
        'org-babel-load-languages '((shell . t) (org . t))))
 
-    (let* ((load-path (cons
-		       org-test-dir
-		       (cons
-			(expand-file-name "jump" org-test-dir)
-			load-path))))
-      (require 'cl)
-      (when (= emacs-major-version 22)
-	(defvar special-mode-map
-	  (let ((map (make-sparse-keymap)))
-	    (suppress-keymap map)
-	    (define-key map "q" 'quit-window)
-	    (define-key map " " 'scroll-up)
-	    (define-key map "\C-?" 'scroll-down)
-	    (define-key map "?" 'describe-mode)
-	    (define-key map "h" 'describe-mode)
-	    (define-key map ">" 'end-of-buffer)
-	    (define-key map "<" 'beginning-of-buffer)
-	    (define-key map "g" 'revert-buffer)
-	    (define-key map "z" 'kill-this-buffer)
-	    map))
-
-	(put 'special-mode 'mode-class 'special)
-	(define-derived-mode special-mode nil "Special"
-	  "Parent major mode from which special major modes should inherit."
-	  (setq buffer-read-only t)))
+    (let ((load-path (cons org-test-dir
+			   (cons (expand-file-name "jump" org-test-dir)
+				 load-path))))
+      (require 'cl-lib)
       (require 'ert)
       (require 'ert-x)
-      (when (file-exists-p
-	     (expand-file-name "jump/jump.el" org-test-dir))
+      (when (file-exists-p (expand-file-name "jump/jump.el" org-test-dir))
 	(require 'jump)
 	(require 'which-func)))))
 
@@ -109,6 +87,9 @@ org-test searches this directory up the directory tree.")
 (defconst org-test-no-heading-file
   (expand-file-name "no-heading.org" org-test-example-dir))
 
+(defconst org-test-attachments-file
+  (expand-file-name "attachments.org" org-test-example-dir))
+
 (defconst org-test-link-in-heading-file
   (expand-file-name "link-in-heading.org" org-test-dir))
 
@@ -126,7 +107,7 @@ org-test searches this directory up the directory tree.")
 This can be used at the top of code-block-language specific test
 files to avoid loading the file on systems without the
 executable."
-  (unless (reduce
+  (unless (cl-reduce
 	   (lambda (acc dir)
 	     (or acc (file-exists-p (expand-file-name exe dir))))
 	   exec-path :initial-value nil)
@@ -156,7 +137,7 @@ currently executed.")
 	     (condition-case nil
 		 (progn
 		   (org-show-subtree)
-		   (org-show-block-all))
+		   (org-show-all '(blocks)))
 	       (error nil))
 	     (save-restriction ,@body)))
        (unless (or visited-p (not to-be-removed))
@@ -164,11 +145,12 @@ currently executed.")
 (def-edebug-spec org-test-at-id (form body))
 
 (defmacro org-test-in-example-file (file &rest body)
-  "Execute body in the Org-mode example file."
+  "Execute body in the Org example file."
   (declare (indent 1))
   `(let* ((my-file (or ,file org-test-file))
 	  (visited-p (get-file-buffer my-file))
-	  to-be-removed)
+	  to-be-removed
+	  results)
      (save-window-excursion
        (save-match-data
 	 (find-file my-file)
@@ -180,11 +162,12 @@ currently executed.")
 	     (progn
 	       (outline-next-visible-heading 1)
 	       (org-show-subtree)
-	       (org-show-block-all))
+	       (org-show-all '(blocks)))
 	   (error nil))
-	 (save-restriction ,@body)))
+	 (setq results (save-restriction ,@body))))
      (unless visited-p
-       (kill-buffer to-be-removed))))
+       (kill-buffer to-be-removed))
+     results))
 (def-edebug-spec org-test-in-example-file (form body))
 
 (defmacro org-test-at-marker (file marker &rest body)
@@ -200,7 +183,7 @@ files."
 (def-edebug-spec org-test-at-marker (form form body))
 
 (defmacro org-test-with-temp-text (text &rest body)
-  "Run body in a temporary buffer with Org-mode as the active
+  "Run body in a temporary buffer with Org mode as the active
 mode holding TEXT.  If the string \"<point>\" appears in TEXT
 then remove it and place the point there before running BODY,
 otherwise place the point at the beginning of the inserted text."
@@ -220,20 +203,30 @@ otherwise place the point at the beginning of the inserted text."
 (def-edebug-spec org-test-with-temp-text (form body))
 
 (defmacro org-test-with-temp-text-in-file (text &rest body)
-  "Run body in a temporary file buffer with Org-mode as the active mode."
+  "Run body in a temporary file buffer with Org mode as the active mode.
+If the string \"<point>\" appears in TEXT then remove it and
+place the point there before running BODY, otherwise place the
+point at the beginning of the buffer."
   (declare (indent 1))
-  (let ((results (gensym)))
-    `(let ((file (make-temp-file "org-test"))
-	   (kill-buffer-query-functions nil)
-	   (inside-text (if (stringp ,text) ,text (eval ,text)))
-	   ,results)
-       (with-temp-file file (insert inside-text))
-       (find-file file)
-       (org-mode)
-       (setq ,results (progn ,@body))
-       (save-buffer) (kill-buffer (current-buffer))
-       (delete-file file)
-       ,results)))
+  `(let ((file (make-temp-file "org-test"))
+	 (inside-text (if (stringp ,text) ,text (eval ,text)))
+	 buffer)
+     (with-temp-file file (insert inside-text))
+     (unwind-protect
+	 (progn
+	   (setq buffer (find-file file))
+	   (when (re-search-forward "<point>" nil t)
+	     (replace-match ""))
+	   (org-mode)
+	   (progn ,@body))
+       (let ((kill-buffer-query-functions nil))
+	 (when buffer
+	   (set-buffer buffer)
+	   ;; Ignore changes, we're deleting the file in the next step
+	   ;; anyways.
+	   (set-buffer-modified-p nil)
+	   (kill-buffer))
+	 (delete-file file)))))
 (def-edebug-spec org-test-with-temp-text-in-file (form body))
 
 (defun org-test-table-target-expect (target &optional expect laps
@@ -299,7 +292,7 @@ setting `pp-escape-newlines' to nil manually."
      ("testing/lisp/test-\\1.el" . "lisp/\\1.el")
      ("testing/lisp/\\1.el" . "lisp/\\1.el/test.*.el"))
     (concat org-base-dir "/")
-    "Jump between org-mode files and their tests."
+    "Jump between Org files and their tests."
     (lambda (path)
       (let* ((full-path (expand-file-name path org-base-dir))
 	     (file-name (file-name-nondirectory path))
@@ -313,7 +306,7 @@ setting `pp-escape-newlines' to nil manually."
 	 ";; Released under the GNU General Public License version 3\n"
 	 ";; see: http://www.gnu.org/licenses/gpl-3.0.html\n\n"
 	 ";;;; Comments:\n\n"
-	 ";; Template test file for Org-mode tests\n\n"
+	 ";; Template test file for Org tests\n\n"
 	 "\n"
 	 ";;; Code:\n"
 	 "(let ((load-path (cons (expand-file-name\n"
@@ -344,7 +337,7 @@ setting `pp-escape-newlines' to nil manually."
 
 
 (defun org-test-string-exact-match (regex string &optional start)
-  "case sensative string-match"
+  "Case sensitive string-match"
   (let ((case-fold-search nil)
         (case-replace nil))
     (if(and (equal regex "")
@@ -356,9 +349,9 @@ setting `pp-escape-newlines' to nil manually."
 
 ;;; Load and Run tests
 (defun org-test-load ()
-  "Load up the org-mode test suite."
+  "Load up the Org test suite."
   (interactive)
-  (flet ((rld (base)
+  (cl-flet ((rld (base)
 	      ;; Recursively load all files, if files throw errors
 	      ;; then silently ignore the error and continue to the
 	      ;; next file.  This allows files to error out if
@@ -396,7 +389,7 @@ setting `pp-escape-newlines' to nil manually."
 	       "/")))
 
 (defvar org-test-buffers nil
-  "Hold buffers open for running Org-mode tests.")
+  "Hold buffers open for running Org tests.")
 
 (defun org-test-touch-all-examples ()
   (dolist (file (directory-files
@@ -439,6 +432,58 @@ Load all test files first."
   (org-test-load)
   (ert "\\(org\\|ob\\)")
   (org-test-kill-all-examples))
+
+(defmacro org-test-at-time (time &rest body)
+  "Run body while pretending that the current time is TIME.
+TIME can be a non-nil Lisp time value, or a string specifying a date and time."
+  (declare (indent 1))
+  (let ((tm (cl-gensym))
+	(at (cl-gensym)))
+    `(let* ((,tm ,time)
+	    (,at (if (stringp ,tm)
+		     (apply #'encode-time (org-parse-time-string ,tm))
+		   ,tm)))
+       (cl-letf
+	   ;; Wrap builtins whose behavior can depend on the current time.
+	   (((symbol-function 'current-time)
+	     (lambda () ,at))
+	    ((symbol-function 'current-time-string)
+	     (lambda (&optional time &rest args)
+	       (apply ,(symbol-function 'current-time-string)
+		      (or time ,at) args)))
+	    ((symbol-function 'current-time-zone)
+	     (lambda (&optional time &rest args)
+	       (apply ,(symbol-function 'current-time-zone)
+		      (or time ,at) args)))
+	    ((symbol-function 'decode-time)
+	     (lambda (&optional time) (funcall ,(symbol-function 'decode-time)
+					       (or time ,at))))
+	    ((symbol-function 'encode-time)
+	     (lambda (time &rest args)
+	       (apply ,(symbol-function 'encode-time) (or time ,at) args)))
+	    ((symbol-function 'float-time)
+	     (lambda (&optional time)
+	       (funcall ,(symbol-function 'float-time) (or time ,at))))
+	    ((symbol-function 'format-time-string)
+	     (lambda (format &optional time &rest args)
+	       (apply ,(symbol-function 'format-time-string)
+		      format (or time ,at) args)))
+	    ((symbol-function 'set-file-times)
+	     (lambda (file &optional time)
+	       (funcall ,(symbol-function 'set-file-times) file (or time ,at))))
+	    ((symbol-function 'time-add)
+	     (lambda (a b) (funcall ,(symbol-function 'time-add)
+				    (or a ,at) (or b ,at))))
+	    ((symbol-function 'time-equal-p)
+	     (lambda (a b) (funcall ,(symbol-function 'time-equal-p)
+				    (or a ,at) (or b ,at))))
+	    ((symbol-function 'time-less-p)
+	     (lambda (a b) (funcall ,(symbol-function 'time-less-p)
+				    (or a ,at) (or b ,at))))
+	    ((symbol-function 'time-subtract)
+	     (lambda (a b) (funcall ,(symbol-function 'time-subtract)
+				    (or a ,at) (or b ,at)))))
+	 ,@body))))
 
 (provide 'org-test)
 

@@ -52,15 +52,14 @@
 ;;
 ;;; Code:
 
-(eval-when-compile
-  (require 'cl))
-
+(require 'cl-lib)
 (require 'org)
 (require 'gnus-util)
 (require 'gnus-art)
 (require 'mail-utils)
 (require 'org-agenda)
 (require 'org-capture)
+(require 'ol)
 
 (defgroup org-contacts nil
   "Options about contacts management."
@@ -161,12 +160,14 @@ The following replacements are available:
   :group 'org-contacts)
 
 (defcustom org-contacts-matcher
-  (mapconcat 'identity (list org-contacts-email-property
-			     org-contacts-alias-property
-			     org-contacts-tel-property
-			     org-contacts-address-property
-			     org-contacts-birthday-property)
-			     "<>\"\"|")
+  (mapconcat #'identity
+	     (mapcar (lambda (x) (concat x "<>\"\""))
+		     (list org-contacts-email-property
+			   org-contacts-alias-property
+			   org-contacts-tel-property
+			   org-contacts-address-property
+			   org-contacts-birthday-property))
+	     "|")
   "Matching rule for finding heading that are contacts.
 This can be a tag name, or a property check."
   :type 'string
@@ -232,7 +233,7 @@ A regexp matching strings of whitespace, `,' and `;'.")
 (defun org-contacts-db-need-update-p ()
   "Determine whether `org-contacts-db' needs to be refreshed."
   (or (null org-contacts-last-update)
-      (org-find-if (lambda (file)
+      (cl-find-if (lambda (file)
 		     (or (time-less-p org-contacts-last-update
 				      (elt (file-attributes file) 5))))
 		   (org-contacts-files))
@@ -252,9 +253,8 @@ to dead or no buffer."
 
 (defun org-contacts-db ()
   "Return the latest Org Contacts Database."
-  (let* (todo-only
-	 (contacts-matcher
-	  (cdr (org-make-tags-matcher org-contacts-matcher)))
+  (let* ((org--matcher-tags-todo-only nil)
+	 (contacts-matcher (cdr (org-make-tags-matcher org-contacts-matcher)))
 	 result)
     (when (org-contacts-db-need-update-p)
       (let ((progress-reporter
@@ -288,10 +288,9 @@ to dead or no buffer."
 		(error "File %s is not in `org-mode'" file))
 	      (setf result
 		    (append result
-			    (org-scan-tags
-			     'org-contacts-at-point
-			     contacts-matcher
-			     todo-only)))))
+			    (org-scan-tags 'org-contacts-at-point
+					   contacts-matcher
+					   org--matcher-tags-todo-only)))))
 	  (progress-reporter-update progress-reporter (setq i (1+ i))))
 	(setf org-contacts-db result
 	      org-contacts-last-update (current-time))
@@ -316,22 +315,22 @@ cell corresponding to the contact properties.
 	   (null prop-match)
 	   (null tags-match))
       (org-contacts-db)
-    (loop for contact in (org-contacts-db)
-	  if (or
-	      (and name-match
-		   (org-string-match-p name-match
-				       (first contact)))
-	      (and prop-match
-		   (org-find-if (lambda (prop)
-				  (and (string= (car prop-match) (car prop))
-				       (org-string-match-p (cdr prop-match) (cdr prop))))
-				(caddr contact)))
-	      (and tags-match
-		   (org-find-if (lambda (tag)
-				  (org-string-match-p tags-match tag))
-				(org-split-string
-				 (or (cdr (assoc-string "ALLTAGS" (caddr contact))) "") ":"))))
-	  collect contact)))
+    (cl-loop for contact in (org-contacts-db)
+	     if (or
+		 (and name-match
+		      (string-match-p name-match
+					  (first contact)))
+		 (and prop-match
+		      (cl-find-if (lambda (prop)
+				     (and (string= (car prop-match) (car prop))
+					  (string-match-p (cdr prop-match) (cdr prop))))
+				   (caddr contact)))
+		 (and tags-match
+		      (cl-find-if (lambda (tag)
+				     (string-match-p tags-match tag))
+				   (org-split-string
+				    (or (cdr (assoc-string "ALLTAGS" (caddr contact))) "") ":"))))
+	     collect contact)))
 
 (when (not (fboundp 'completion-table-case-fold))
   ;; That function is new in Emacs 24...
@@ -344,34 +343,34 @@ cell corresponding to the contact properties.
   "Custom implementation of `try-completion'.
 This version works only with list and alist and it looks at all
 prefixes rather than just the beginning of the string."
-  (loop with regexp = (concat "\\b" (regexp-quote to-match))
-	with ret = nil
-	with ret-start = nil
-	with ret-end = nil
+  (cl-loop with regexp = (concat "\\b" (regexp-quote to-match))
+	   with ret = nil
+	   with ret-start = nil
+	   with ret-end = nil
 
-	for el in collection
-	for string = (if (listp el) (car el) el)
+	   for el in collection
+	   for string = (if (listp el) (car el) el)
 
-	for start = (when (or (null predicate) (funcall predicate string))
-		      (string-match regexp string))
+	   for start = (when (or (null predicate) (funcall predicate string))
+			 (string-match regexp string))
 
-	if start
-	do (let ((end (match-end 0))
-		 (len (length string)))
-	     (if (= end len)
-		 (return t)
-	       (destructuring-bind (string start end)
-		   (if (null ret)
-		       (values string start end)
-		     (org-contacts-common-substring
-		      ret ret-start ret-end
-		      string start end))
-		 (setf ret string
-		       ret-start start
-		       ret-end end))))
+	   if start
+	   do (let ((end (match-end 0))
+		    (len (length string)))
+		(if (= end len)
+		    (cl-return t)
+		  (cl-destructuring-bind (string start end)
+		      (if (null ret)
+			  (values string start end)
+			(org-contacts-common-substring
+			 ret ret-start ret-end
+			 string start end))
+		    (setf ret string
+			  ret-start start
+			  ret-end end))))
 
-	finally (return
-		 (replace-regexp-in-string "\\`[ \t\n]*" "" ret))))
+	   finally (cl-return
+		    (replace-regexp-in-string "\\`[ \t\n]*" "" ret))))
 
 (defun org-contacts-compare-strings (s1 start1 end1 s2 start2 end2 &optional ignore-case)
   "Compare the contents of two strings, using `compare-strings'.
@@ -430,22 +429,22 @@ This function returns a list whose contains:
   "Custom version of `all-completions'.
 This version works only with list and alist and it looks at all
 prefixes rather than just the beginning of the string."
-  (loop with regexp = (concat "\\b" (regexp-quote to-match))
-	for el in collection
-	for string = (if (listp el) (car el) el)
-	for match? = (when (and (or (null predicate) (funcall predicate string)))
-		       (string-match regexp string))
-	if match?
-	collect (progn
-		  (let ((end (match-end 0)))
-		    (org-no-properties string)
-		    (when (< end (length string))
-		      ;; Here we add a text property that will be used
-		      ;; later to highlight the character right after
-		      ;; the common part between each addresses.
-		      ;; See `org-contacts-display-sort-function'.
-		      (put-text-property end (1+ end) 'org-contacts-prefix 't string)))
-		  string)))
+  (cl-loop with regexp = (concat "\\b" (regexp-quote to-match))
+	   for el in collection
+	   for string = (if (listp el) (car el) el)
+	   for match? = (when (and (or (null predicate) (funcall predicate string)))
+			  (string-match regexp string))
+	   if match?
+	   collect (progn
+		     (let ((end (match-end 0)))
+		       (org-no-properties string)
+		       (when (< end (length string))
+			 ;; Here we add a text property that will be used
+			 ;; later to highlight the character right after
+			 ;; the common part between each addresses.
+			 ;; See `org-contacts-display-sort-function'.
+			 (put-text-property end (1+ end) 'org-contacts-prefix 't string)))
+		     string)))
 
 (defun org-contacts-make-collection-prefix (collection)
   "Make a collection function from COLLECTION which will match on prefixes."
@@ -460,7 +459,7 @@ prefixes rather than just the beginning of the string."
 	    ((eq flag 'lambda)
 	     (org-contacts-test-completion-prefix string collection predicate))
 	    ((and (listp flag) (eq (car flag) 'boundaries))
-	     (destructuring-bind (to-ignore &rest suffix)
+	     (cl-destructuring-bind (to-ignore &rest suffix)
 		 flag
 	       (org-contacts-boundaries-prefix string collection predicate suffix)))
 	    ((eq flag 'metadata)
@@ -471,31 +470,28 @@ prefixes rather than just the beginning of the string."
 (defun org-contacts-display-sort-function (completions)
   "Sort function for contacts display."
   (mapcar (lambda (string)
-	    (loop with len = (1- (length string))
-		  for i upfrom 0 to len
-		  if (memq 'org-contacts-prefix
-			   (text-properties-at i string))
-		  do (set-text-properties
-		      i (1+ i)
-		      (list 'font-lock-face
-			    (if (char-equal (aref string i)
-					    (string-to-char " "))
-				;; Spaces can't be bold.
-				'underline
-			      'bold)) string)
-		  else
-		  do (set-text-properties i (1+ i) nil string)
-		  finally (return string)))
+	    (cl-loop with len = (1- (length string))
+		     for i upfrom 0 to len
+		     if (memq 'org-contacts-prefix
+			      (text-properties-at i string))
+		     do (set-text-properties
+			 i (1+ i)
+			 (list 'font-lock-face
+			       (if (char-equal (aref string i)
+					       (string-to-char " "))
+				   ;; Spaces can't be bold.
+				   'underline
+				 'bold)) string)
+		     else
+		     do (set-text-properties i (1+ i) nil string)
+		     finally (cl-return string)))
 	  completions))
 
 (defun org-contacts-test-completion-prefix (string collection predicate)
-  ;; Prevents `org-find-if' from redefining `predicate' and going into
-  ;; an infinite loop.
-  (lexical-let ((predicate predicate))
-    (org-find-if (lambda (el)
-		   (and (or (null predicate) (funcall predicate el))
-			(string= string el)))
-		 collection)))
+  (cl-find-if (lambda (el)
+		(and (or (null predicate) (funcall predicate el))
+		     (string= string el)))
+	      collection))
 
 (defun org-contacts-boundaries-prefix (string collection predicate suffix)
   (list* 'boundaries (completion-boundaries string collection predicate suffix)))
@@ -510,7 +506,7 @@ prefixes rather than just the beginning of the string."
 
 A group FOO is composed of contacts with the tag FOO."
   (let* ((completion-ignore-case org-contacts-completion-ignore-case)
-	 (group-completion-p (org-string-match-p
+	 (group-completion-p (string-match-p
 			      (concat "^" org-contacts-group-prefix) string)))
     (when group-completion-p
       (let ((completion-list
@@ -520,9 +516,9 @@ A group FOO is composed of contacts with the tag FOO."
 			(propertize (concat org-contacts-group-prefix group)
 				    'org-contacts-group group))
 		      (org-uniquify
-		       (loop for contact in (org-contacts-filter)
-			     nconc (org-split-string
-				    (or (cdr (assoc-string "ALLTAGS" (caddr contact))) "") ":")))))))
+		       (cl-loop for contact in (org-contacts-filter)
+				nconc (org-split-string
+				       (or (cdr (assoc-string "ALLTAGS" (caddr contact))) "") ":")))))))
 	(list start end
 	      (if (= (length completion-list) 1)
 		  ;; We've found the correct group, returns the address
@@ -530,21 +526,21 @@ A group FOO is composed of contacts with the tag FOO."
 							(car completion-list))))
 		    (lambda (string pred &optional to-ignore)
 		      (mapconcat 'identity
-				 (loop for contact in (org-contacts-filter
-						       nil
-						       tag)
-				       ;; The contact name is always the car of the assoc-list
-				       ;; returned by `org-contacts-filter'.
-				       for contact-name = (car contact)
-				       ;; Grab the first email of the contact
-				       for email = (org-contacts-strip-link
-						    (or (car (org-contacts-split-property
-							      (or
-							       (cdr (assoc-string org-contacts-email-property
-										  (caddr contact)))
-							       ""))) ""))
-				       ;; If the user has an email address, append USER <EMAIL>.
-				       if email collect (org-contacts-format-email contact-name email))
+				 (cl-loop for contact in (org-contacts-filter
+							  nil
+							  tag)
+					  ;; The contact name is always the car of the assoc-list
+					  ;; returned by `org-contacts-filter'.
+					  for contact-name = (car contact)
+					  ;; Grab the first email of the contact
+					  for email = (org-contacts-strip-link
+						       (or (car (org-contacts-split-property
+								 (or
+								  (cdr (assoc-string org-contacts-email-property
+										     (cl-caddr contact)))
+								  ""))) ""))
+					  ;; If the user has an email address, append USER <EMAIL>.
+					  if email collect (org-contacts-format-email contact-name email))
 				 ", ")))
 		;; We haven't found the correct group
 		(completion-table-case-fold completion-list
@@ -559,30 +555,30 @@ with BAR.
 See (org) Matching tags and properties for a complete
 description."
   (let* ((completion-ignore-case org-contacts-completion-ignore-case)
-	 (completion-p (org-string-match-p
+	 (completion-p (string-match-p
 			(concat "^" org-contacts-tags-props-prefix) string)))
     (when completion-p
       (let ((result
 	     (mapconcat
 	      'identity
-	      (loop for contact in (org-contacts-db)
-		    for contact-name = (car contact)
-		    for email = (org-contacts-strip-link (or (car (org-contacts-split-property
-							       (or
-								(cdr (assoc-string org-contacts-email-property
-										   (caddr contact)))
-								""))) ""))
-		    for tags = (cdr (assoc "TAGS" (nth 2 contact)))
-		    for tags-list = (if tags
-					(split-string (substring (cdr (assoc "TAGS" (nth 2 contact))) 1 -1) ":")
-				      '())
-		    for marker = (second contact)
-		    if (with-current-buffer (marker-buffer marker)
-			 (save-excursion
-			   (goto-char marker)
-			   (let (todo-only)
-			     (eval (cdr (org-make-tags-matcher (subseq string 1)))))))
-		    collect (org-contacts-format-email contact-name email))
+	      (cl-loop for contact in (org-contacts-db)
+		       for contact-name = (car contact)
+		       for email = (org-contacts-strip-link (or (car (org-contacts-split-property
+								      (or
+								       (cdr (assoc-string org-contacts-email-property
+											  (cl-caddr contact)))
+								       ""))) ""))
+		       for tags = (cdr (assoc "TAGS" (nth 2 contact)))
+		       for tags-list = (if tags
+					   (split-string (substring (cdr (assoc "TAGS" (nth 2 contact))) 1 -1) ":")
+					 '())
+		       for marker = (nth 1 contact)
+		       if (with-current-buffer (marker-buffer marker)
+			    (save-excursion
+			      (goto-char marker)
+			      (let (todo-only)
+				(eval (cdr (org-make-tags-matcher (cl-subseq string 1)))))))
+		       collect (org-contacts-format-email contact-name email))
 	      ",")))
 	(when (not (string= "" result))
 	  ;; return (start end function)
@@ -593,37 +589,37 @@ description."
 (defun org-contacts-remove-ignored-property-values (ignore-list list)
   "Remove all ignore-list's elements from list and you can use
    regular expressions in the ignore list."
-    (org-remove-if (lambda (el)
-		     (org-find-if (lambda (x)
-				    (string-match-p x el))
-				  ignore-list))
-		   list))
+  (cl-remove-if (lambda (el)
+		  (cl-find-if (lambda (x)
+				 (string-match-p x el))
+			       ignore-list))
+		list))
 
 (defun org-contacts-complete-name (start end string)
   "Complete text at START with a user name and email."
   (let* ((completion-ignore-case org-contacts-completion-ignore-case)
          (completion-list
-	  (loop for contact in (org-contacts-filter)
-		;; The contact name is always the car of the assoc-list
-		;; returned by `org-contacts-filter'.
-		for contact-name = (car contact)
+	  (cl-loop for contact in (org-contacts-filter)
+		   ;; The contact name is always the car of the assoc-list
+		   ;; returned by `org-contacts-filter'.
+		   for contact-name = (car contact)
 
-		;; Build the list of the email addresses which has
-		;; been expired
-		for ignore-list = (org-contacts-split-property
-				   (or (cdr (assoc-string org-contacts-ignore-property
-							  (caddr contact))) ""))
-		;; Build the list of the user email addresses.
-		for email-list = (org-contacts-remove-ignored-property-values
-				  ignore-list
-				  (org-contacts-split-property
-				   (or (cdr (assoc-string org-contacts-email-property
-							  (caddr contact))) "")))
-		;; If the user has email addresses…
-		if email-list
-		;; … append a list of USER <EMAIL>.
-		nconc (loop for email in email-list
-			    collect (org-contacts-format-email contact-name (org-contacts-strip-link email)))))
+		   ;; Build the list of the email addresses which has
+		   ;; been expired
+		   for ignore-list = (org-contacts-split-property
+				      (or (cdr (assoc-string org-contacts-ignore-property
+							     (nth 2 contact))) ""))
+		   ;; Build the list of the user email addresses.
+		   for email-list = (org-contacts-remove-ignored-property-values
+				     ignore-list
+				     (org-contacts-split-property
+				      (or (cdr (assoc-string org-contacts-email-property
+							     (nth 2 contact))) "")))
+		   ;; If the user has email addresses…
+		   if email-list
+		   ;; … append a list of USER <EMAIL>.
+		   nconc (cl-loop for email in email-list
+				  collect (org-contacts-format-email contact-name (org-contacts-strip-link email)))))
 	 (completion-list (org-contacts-all-completions-prefix
 			   string
 			   (org-uniquify completion-list))))
@@ -662,13 +658,13 @@ description."
   (let* ((address (org-contacts-gnus-get-name-email))
          (name (car address))
          (email (cadr address)))
-    (cadar (or (org-contacts-filter
-                nil
-		nil
-                (cons org-contacts-email-property (concat "\\b" (regexp-quote email) "\\b")))
-               (when name
-                 (org-contacts-filter
-                  (concat "^" name "$")))))))
+    (cl-cadar (or (org-contacts-filter
+		   nil
+		   nil
+		   (cons org-contacts-email-property (concat "\\b" (regexp-quote email) "\\b")))
+		  (when name
+		    (org-contacts-filter
+		     (concat "^" name "$")))))))
 
 (defun org-contacts-gnus-article-from-goto ()
   "Go to contact in the From address of current Gnus message."
@@ -677,14 +673,9 @@ description."
     (when marker
       (switch-to-buffer-other-window (marker-buffer marker))
       (goto-char marker)
-      (when (eq major-mode 'org-mode)
-        (org-show-context 'agenda)
-        (save-excursion
-          (and (outline-next-heading)
-               ;; show the next heading
-               (org-flag-heading nil)))))))
+      (when (eq major-mode 'org-mode) (org-show-context 'agenda)))))
 
-(org-no-warnings (defvar date)) ;; unprefixed, from calendar.el
+(with-no-warnings (defvar date)) ;; unprefixed, from calendar.el
 (defun org-contacts-anniversaries (&optional field format)
   "Compute FIELD anniversary for each contact, returning FORMAT.
 Default FIELD value is \"BIRTHDAY\".
@@ -698,23 +689,23 @@ Format is a string matching the following format specification:
   (let ((calendar-date-style 'american)
         (entry ""))
     (unless format (setq format org-contacts-birthday-format))
-    (loop for contact in (org-contacts-filter)
-          for anniv = (let ((anniv (cdr (assoc-string
-                                         (or field org-contacts-birthday-property)
-                                         (caddr contact)))))
-                        (when anniv
-                          (calendar-gregorian-from-absolute
-                           (org-time-string-to-absolute anniv))))
-          ;; Use `diary-anniversary' to compute anniversary.
-          if (and anniv (apply 'diary-anniversary anniv))
-          collect (format-spec format
-                               `((?l . ,(org-with-point-at (cadr contact) (org-store-link nil)))
-                                 (?h . ,(car contact))
-                                 (?y . ,(- (calendar-extract-year date)
-                                           (calendar-extract-year anniv)))
-                                 (?Y . ,(let ((years (- (calendar-extract-year date)
-                                                        (calendar-extract-year anniv))))
-                                          (format "%d%s" years (diary-ordinal-suffix years)))))))))
+    (cl-loop for contact in (org-contacts-filter)
+	     for anniv = (let ((anniv (cdr (assoc-string
+					    (or field org-contacts-birthday-property)
+					    (nth 2 contact)))))
+			   (when anniv
+			     (calendar-gregorian-from-absolute
+			      (org-time-string-to-absolute anniv))))
+	     ;; Use `diary-anniversary' to compute anniversary.
+	     if (and anniv (apply 'diary-anniversary anniv))
+	     collect (format-spec format
+				  `((?l . ,(org-with-point-at (cadr contact) (org-store-link nil)))
+				    (?h . ,(car contact))
+				    (?y . ,(- (calendar-extract-year date)
+					      (calendar-extract-year anniv)))
+				    (?Y . ,(let ((years (- (calendar-extract-year date)
+							   (calendar-extract-year anniv))))
+					     (format "%d%s" years (diary-ordinal-suffix years)))))))))
 
 (defun org-completing-read-date (prompt collection
                                         &optional predicate require-match initial-input
@@ -995,7 +986,7 @@ to do our best."
 
 (defun org-contacts-vcard-format (contact)
   "Formats CONTACT in VCard 3.0 format."
-  (let* ((properties (caddr contact))
+  (let* ((properties (nth 2 contact))
 	 (name (org-contacts-vcard-escape (car contact)))
 	 (n (org-contacts-vcard-encode-name name))
 	 (email (cdr (assoc-string org-contacts-email-property properties)))
@@ -1023,7 +1014,7 @@ to do our best."
 			(setq phones-list (org-contacts-remove-ignored-property-values ignore-list (org-contacts-split-property tel)))
 			(setq result "")
 			(while phones-list
-			  (setq result (concat result  "TEL:" (org-link-unescape (org-contacts-strip-link (car phones-list))) "\n"))
+			  (setq result (concat result  "TEL:" (org-contacts-strip-link (org-link-unescape (car phones-list))) "\n"))
 			  (setq phones-list (cdr phones-list)))
 			result))
 	    (when bday
@@ -1054,15 +1045,15 @@ passed to `org-contacts-export-as-vcard-internal'."
   (interactive "P")
   (when (called-interactively-p 'any)
     (cl-psetf name
-	     (when name
-	       (read-string "Contact name: "
-			    (first (org-contacts-at-point))))
-	     file
-	     (when (equal name '(16))
-	       (read-file-name "File: " nil org-contacts-vcard-file))
-	     to-buffer
-	     (when (equal name '(64))
-	       (read-buffer "Buffer: "))))
+	      (when name
+		(read-string "Contact name: "
+			     (nth 0 (org-contacts-at-point))))
+	      file
+	      (when (equal name '(16))
+		(read-file-name "File: " nil org-contacts-vcard-file))
+	      to-buffer
+	      (when (equal name '(64))
+		(read-buffer "Buffer: "))))
   (org-contacts-export-as-vcard-internal name file to-buffer))
 
 (defun org-contacts-export-as-vcard-internal (&optional name file to-buffer)
@@ -1094,9 +1085,9 @@ Requires google-maps-el."
     (error "`org-contacts-show-map' requires `google-maps-el'"))
   (google-maps-static-show
    :markers
-   (loop
+   (cl-loop
     for contact in (org-contacts-filter name)
-    for addr = (cdr (assoc-string org-contacts-address-property (caddr contact)))
+    for addr = (cdr (assoc-string org-contacts-address-property (nth 2 contact)))
     if addr
     collect (cons (list addr) (list :label (string-to-char (car contact)))))))
 
@@ -1114,6 +1105,10 @@ link string and return the pure link target."
             (setq startpos (string-match "mailto:" link))
             (setq colonpos (string-match ":" link))
             (if startpos (substring link (1+ colonpos)) link)))))
+
+;; Add the link type supported by org-contacts-strip-link
+;; so everything is in order for its use in Org files
+(org-link-set-parameters "tel")
 
 (defun org-contacts-split-property (string &optional separators omit-nulls)
   "Custom version of `split-string'.

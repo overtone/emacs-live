@@ -1,6 +1,7 @@
 ;;; haskell-collapse.el --- Collapse expressions -*- lexical-binding: t -*-
 
 ;; Copyright (c) 2014 Chris Done. All rights reserved.
+;; Copyright (c) 2017 Vasantha Ganesh Kanniappan <vasanthaganesh.k@tuta.io>.
 
 ;; This file is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -17,49 +18,97 @@
 
 ;;; Code:
 
-(define-button-type 'haskell-collapse-toggle-button
-  'action 'haskell-collapse-toggle-button-callback
-  'follow-link t
-  'help-echo "Click to expand…")
+(require 'hideshow)
 
-(defun haskell-collapse (beg end)
-  "Collapse."
-  (interactive "r")
-  (goto-char end)
-  (let ((break nil))
-    (while (and (not break)
-                (search-backward-regexp "[[({]" beg t 1))
-      (unless (elt (syntax-ppss) 3)
-        (let ((orig (point)))
-          (haskell-collapse-sexp)
-          (goto-char orig)
-          (forward-char -1)
-          (when (= (point) orig)
-            (setq break t)))))))
+;;; TODO:
+;;; -> Make it work for braces
 
-(defun haskell-collapse-sexp ()
-  "Collapse the sexp starting at point."
-  (let ((beg (point)))
-    (forward-sexp)
-    (let ((end (point)))
-      (let ((o (make-overlay beg end)))
-        (overlay-put o 'invisible t)
-        (let ((start (point)))
-          (insert "…")
-          (let ((button (make-text-button start (point)
-                                          :type 'haskell-collapse-toggle-button)))
-            (button-put button 'overlay o)
-            (button-put button 'hide-on-click t)))))))
+(defun haskell-hide-toggle ()
+  "Toggle visibility of existing forms at point. "
+  (interactive)
+  (hs-minor-mode 1)
+  (save-excursion
+    (let* ((modified (buffer-modified-p))
+           (inhibit-read-only t)
+           (position (haskell-indented-block))
+           (beg (car position))
+           (end (cdr position)))
+      (if (and beg end)
+          (if (overlays-in beg end)
+              (hs-discard-overlays beg end)
+            (hs-make-overlay beg end 'code)))
+      (set-buffer-modified-p modified))))
 
-(defun haskell-collapse-toggle-button-callback (btn)
-  "The callback to toggle the overlay visibility."
-  (let ((overlay (button-get btn 'overlay)))
-    (when overlay
-      (overlay-put overlay
-                   'invisible
-                   (not (overlay-get overlay
-                                     'invisible)))))
-  (button-put btn 'invisible t)
-  (delete-region (button-start btn) (button-end btn)))
+(defun haskell-blank-line-p ()
+  "Returns `t' if line is empty or composed only of whitespace."
+  (save-excursion
+    (beginning-of-line)
+    (= (point-at-eol)
+       (progn (skip-chars-forward "[:blank:]") (point)))))
+
+(defun haskell-indented-block ()
+  "return (start-of-indentation . end-of-indentation)"
+  (let ((cur-indent (current-indentation))
+        (nxt-line-indent (haskell-next-line-indentation 1))
+        (prev-line-indent (haskell-next-line-indentation -1))
+        (beg-of-line (save-excursion (end-of-line)
+                                     (point))))
+    (cond ((and (= cur-indent 0)
+                (= nxt-line-indent 0)) nil)
+          ((haskell-blank-line-p) nil)
+          ((> nxt-line-indent cur-indent)
+           (cons beg-of-line
+                 (haskell-find-line-with-indentation '> 1)))
+          ((or (= nxt-line-indent cur-indent)
+               (<= prev-line-indent cur-indent))
+           (cons (haskell-find-line-with-indentation '>= -1)
+                 (haskell-find-line-with-indentation '>= 1)))
+          (t nil))))
+
+(defun haskell-next-line-indentation (dir)
+  "returns (integer) indentation of the next if dir=1, previous line
+indentation if dir=-1"
+  (save-excursion
+    (progn
+      (while (and (zerop (forward-line dir))
+                  (haskell-blank-line-p)))
+      (current-indentation))))
+
+(defun haskell-find-line-with-indentation (comparison direction)
+  "comparison is >= or >, direction if 1 finds forward, if -1 finds backward"
+  (save-excursion
+    (let ((start-indent (current-indentation)))
+      (progn
+        (while (and (zerop (forward-line direction))
+                    (or (haskell-blank-line-p)
+                        (funcall comparison (current-indentation) start-indent))))
+        (when (= direction 1) (forward-line -1))
+        (end-of-line)
+        (point)))))
+
+(defun haskell-hide-toggle-all ()
+  "hides all top level functions"
+  (interactive)
+  (save-excursion
+    (goto-char (point-max))
+    (while (zerop (forward-line -1))
+      (goto-char (point-at-bol))
+      (when (= (current-indentation) 0) (haskell-hide-toggle)))))
+
+(defvar haskell-collapse-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c @ C-c") 'haskell-hide-toggle)
+    (define-key map (kbd "C-c @ C-M-c") 'haskell-hide-toggle-all)
+    (define-key map (kbd "C-c @ C-M-s") 'haskell-hide-toggle-all)
+    (define-key map (kbd "C-c @ C-M-h") 'haskell-hide-toggle-all)
+    map)
+  "Keymap for using `haskell-collapse-mode'.")
+
+;;;###autoload
+(define-minor-mode haskell-collapse-mode
+  "Minor mode to collapse and expand haskell expressions"
+  :init-value nil
+  :lighter " Haskell-Collapse"
+  :keymap haskell-collapse-mode-map)
 
 (provide 'haskell-collapse)

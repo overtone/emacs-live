@@ -1,10 +1,10 @@
 ;;; eldo.el --- Elisp Doc-to-Org converter
 
-;; Copyright (C) 2012--2014  Bastien Guerry
+;; Copyright (C) 2012--2019  Bastien Guerry
 ;;
 ;; Author: Bastien Guerry <bzg@gnu.org>
 ;; Keywords: elisp, documentation, org
-;; Homepage: http://orgmode.org
+;; Homepage: https://orgmode.org
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -38,10 +38,10 @@
 (defvar eldo-keymaps nil)
 
 (defvar eldo-git-raw-file
-  "http://orgmode.org/w/?p=org-mode.git;a=blob_plain;f=lisp/%s;hb=HEAD")
+  "https://orgmode.org/cgit.cgi/org-mode.git/plain/lisp/%s")
 
 (defvar eldo-git-search-string
-  "http://orgmode.org/w/?p=org-mode.git&a=search&h=HEAD&st=commit&s=%s&sr=1")
+  "https://orgmode.org/cgit.cgi/org-mode.git/log/?qt=grep&q=%s")
 
 (defvar eldo-file nil)
 
@@ -100,7 +100,7 @@
     (goto-char (point-max))))
 
 (defun eldo-write-commands (commands)
-  "Write commands documentaiton in the current buffer."
+  "Write commands documentation in the current buffer."
   (insert "\n* Commands\n")
   (org-set-property "CUSTOM_ID" "commands")
   (dolist (c commands)

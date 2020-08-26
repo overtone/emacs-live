@@ -51,7 +51,7 @@
 ;; C-c C-l (on the above line for example) you will get:
 
 ;; * ~/org-annotate-file.el
-;; ** `org-annotate-file-add-search` to non-nil value.  Then whe...
+;; ** `org-annotate-file-add-search` to non-nil value.  Then when...
 
 ;; Note that both of the above will be links.
 

@@ -117,7 +117,7 @@
   :ID:       e112bc2e-419a-4890-99c2-7ac4779531cc
   :END:
 
-#+tblname: tinomogen
+#+name: tinomogen
   | day       | quty |
   |-----------+------|
   | monday    |   34 |

@@ -15,3 +15,5 @@
 (live-load-config-file "extempore-conf.el")
 (live-load-config-file "haskell-conf.el")
 (live-load-config-file "erlang-conf.el")
+(live-load-config-file "cmake-conf.el")
+(live-load-config-file "elixir-conf.el")

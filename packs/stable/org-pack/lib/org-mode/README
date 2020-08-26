@@ -1,11 +1,11 @@
-The is a distribution of Org, a plain text notes and project planning
+This is a distribution of Org, a plain text notes and project planning
 tool for Emacs.
 
 The homepage of Org is at:
-  http://orgmode.org
+  https://orgmode.org
 
 The installations instructions are at:
-  http://orgmode.org/org.html#Installation
+  https://orgmode.org/org.html#Installation
 
 This distribution contains:
 
@@ -18,7 +18,7 @@ COPYING
 Makefile
     The makefile to compile and install Org.  For installation
     instructions, see the manual or the more detailed procedure
-    on Worg: http://orgmode.org/worg/dev/org-build-system.html
+    on Worg: https://orgmode.org/worg/dev/org-build-system.html
 
 mk/
     Files needed for building Org.

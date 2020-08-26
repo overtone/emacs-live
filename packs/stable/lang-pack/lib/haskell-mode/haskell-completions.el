@@ -40,6 +40,25 @@
 (require 'haskell-process)
 (require 'haskell-interactive-mode)
 
+;;;###autoload
+(defgroup haskell-completions nil
+  "Settings for completions provided by `haskell-mode'"
+  :link '(custom-manual "(haskell-mode)Completion support")
+  :group 'haskell)
+
+(defcustom haskell-completions-complete-operators
+  t
+  "Should `haskell-completions-sync-repl-completion-at-point' complete operators.
+
+Note: GHCi prior to version 8.0.1 have bug in `:complete`
+ command: when completing operators it returns a list of all
+ imported identifiers (see Track ticket URL
+ `https://ghc.haskell.org/trac/ghc/ticket/10576'). This leads to
+ significant Emacs slowdown. To aviod slowdown you should set
+ this variable to `nil'."
+  :group 'haskell-completions
+  :type 'boolean)
+
 (defvar haskell-completions--pragma-names
   (list "DEPRECATED"
         "INCLUDE"
@@ -99,6 +118,7 @@ This list comes from GHC documentation (URL
    "proc"
    "qualified"
    "rec"
+   "signature"
    "then"
    "type family"
    "type instance"
@@ -112,7 +132,7 @@ in this list.")
 (defun haskell-completions-can-grab-prefix ()
   "Check if the case is appropriate for grabbing completion prefix.
 Returns t if point is either at whitespace character, or at
-punctuation, or at line end and preceeding character is not a
+punctuation, or at line end and preceding character is not a
 whitespace or new line, otherwise returns nil.
 
   Returns nil in presence of active region."
@@ -233,7 +253,7 @@ identifier at point depending on result of function
                          t)
                     ;; but uppercase ident could occur after `as` keyword, or in
                     ;; module imports after opening parenthesis, in this case
-                    ;; restore identifier type again, it's neccessary to
+                    ;; restore identifier type again, it's necessary to
                     ;; distinguish the means of completions retrieval
                     (setq type 'haskell-completions-identifier-prefix))))))
           (when (nth 8 (syntax-ppss))
@@ -296,11 +316,12 @@ PREFIX should be a list such one returned by
                ('haskell-completions-language-extension-prefix
                 haskell-ghc-supported-extensions)
                (otherwise
-                (append (tags-completion-table)
+                (append (when (bound-and-true-p haskell-tags-on-save)
+                          tags-completion-table)
                         haskell-completions--keywords)))))
         (list beg end candidates)))))
 
-
+;;;###autoload
 (defun haskell-completions-completion-at-point ()
   "Provide completion list for thing at point.
 This function is used in non-interactive `haskell-mode'.  It
@@ -325,15 +346,10 @@ Returns nil if no completions available."
     (when prefix-data
       (cl-destructuring-bind (beg end pfx typ) prefix-data
         (when (and (not (eql typ 'haskell-completions-general-prefix))
-                   ;; GHCi prior to version 8.0.1 have bug in `:complete`
-                   ;; command: when completing operators it returns a list of
-                   ;; all imported identifiers (see Track ticket URL
-                   ;; `https://ghc.haskell.org/trac/ghc/ticket/10576').  This
-                   ;; leads to significant Emacs slowdown.  To aviod slowdown
-                   ;; operator completions are disabled for now.
-                   (not (save-excursion
-                          (goto-char (1- end))
-                          (haskell-mode--looking-at-varsym))))
+                   (or haskell-completions-complete-operators
+                       (not (save-excursion
+                              (goto-char (1- end))
+                              (haskell-mode--looking-at-varsym)))))
           ;; do not complete things in comments
           (if (cl-member
                typ

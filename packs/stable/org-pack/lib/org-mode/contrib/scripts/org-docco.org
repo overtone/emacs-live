@@ -5,7 +5,7 @@
 
 The =docco= tool (see http://jashkenas.github.com/docco/) generates
 HTML from JavaScript source code providing an attractive side-by-side
-display of source code and comments.  This file (see [[http://orgmode.org/cgit.cgi/org-mode.git/plain/contrib/scripts/org-docco.org][org-docco.org]])
+display of source code and comments.  This file (see [[https://orgmode.org/cgit.cgi/org-mode.git/plain/contrib/scripts/org-docco.org][org-docco.org]])
 generates the same type of output from Org-mode documents with code
 embedded in code blocks.
 
@@ -18,7 +18,7 @@ document.
 
 A pure source code file can be extracted (or "/tangled/") from the
 Org-mode document using the normal =org-babel-tangle= function.  See
-[[http://orgmode.org/manual/Working-With-Source-Code.html][Working With Source Code]] chapter of the Org-mode manual for more
+[[https://orgmode.org/manual/Working-With-Source-Code.html][Working With Source Code]] chapter of the Org-mode manual for more
 information on using code blocks in Org-mode files.
 
 *Disclaimer*: this currently only works on /very/ simple Org-mode
@@ -36,7 +36,7 @@ support this code moving forward.  /Caveat Emptor/
 
 ;; Author: Eric Schulte
 ;; Keywords: org-mode, literate programming, html
-;; Homepage: http://orgmode.org/worg/org-contrib/org-mime.php
+;; Homepage: https://orgmode.org/worg/org-contrib/org-mime.php
 ;; Version: 0.01
 
 ;; This file is not part of GNU Emacs.

@@ -1,6 +1,6 @@
-;;; test-ob-R.el --- tests for ob-R.el
+;;; test-property-inheritance.el --- tests for property-inheritance.el
 
-;; Copyright (c) 2011-2014 Eric Schulte
+;; Copyright (c) 2011-2014, 2019 Eric Schulte
 ;; Authors: Eric Schulte
 
 ;; This file is not part of GNU Emacs.
@@ -33,36 +33,18 @@
    (org-babel-next-src-block 1)
    (should (equal 3 (org-babel-execute-src-block)))))
 
-(ert-deftest test-org-property-accumulation-top-val ()
-  (test-org-in-property-buffer
-   (goto-char (point-min))
-   (org-babel-next-src-block 2)
-   (should (string= "foo=1 bar=2" (org-babel-execute-src-block)))))
-
 (ert-deftest test-org-property-accumulation-overwrite-use ()
   (test-org-in-property-buffer
    (goto-char (point-min))
-   (org-babel-next-src-block 3)
+   (org-babel-next-src-block 2)
    (should (= 7 (org-babel-execute-src-block)))))
-
-(ert-deftest test-org-property-accumulation-overwrite-val ()
-  (test-org-in-property-buffer
-   (goto-char (point-min))
-   (org-babel-next-src-block 4)
-   (should (string= "foo=7" (org-babel-execute-src-block)))))
 
 (ert-deftest test-org-property-accumulation-append-use ()
   (test-org-in-property-buffer
    (goto-char (point-min))
-   (org-babel-next-src-block 5)
+   (org-babel-next-src-block 3)
    (should (= 6 (org-babel-execute-src-block)))))
-
-(ert-deftest test-org-property-accumulation-append-val ()
-  (test-org-in-property-buffer
-   (goto-char (point-min))
-   (org-babel-next-src-block 6)
-   (should (string= "foo=1 bar=2 baz=3" (org-babel-execute-src-block)))))
 
 (provide 'test-ob-R)
 
-;;; test-ob-R.el ends here
+;;; test-property-inheritance.el ends here

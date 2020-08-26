@@ -14,10 +14,10 @@ the source file.
 
 Even when using `auto-compile-on-save-mode` it can happen that some
 source file is newer than the respective byte code file, which is a
-problem because by default Emacs load the byte code file even when
+problem because by default Emacs loads the byte code file even when
 the respective source file has been modified more recently.
 
-Starting with Emacs version 24.4, setting `load-prefer-newer` to t
+Starting with Emacs version 24.4, setting `load-prefer-newer` to `t`
 prevents outdated byte code files from being loaded.  However this
 does not cause re-compilation of the source file, to actually do
 that `auto-compile-on-load-mode` is still required.
@@ -25,31 +25,55 @@ that `auto-compile-on-load-mode` is still required.
 Setup
 -----
 
-To reduce the risk of loading outdated byte code files, you should set
-`load-prefer-newer` and enable `auto-compile-on-load-mode` as early as
-possible.  Then also enable `auto-compile-on-save-mode`.  You should
-also consider not byte-compiling your personal init file, or setting
-`load-prefer-newer` in a system-wide init file.
+To reduce the risk of loading outdated byte code files, you should
+set `load-prefer-newer` and enable `auto-compile-on-load-mode` as
+early as possible.  Then also enable `auto-compile-on-save-mode`.
+You should also consider not byte-compiling your personal init
+file, or setting `load-prefer-newer` in a system-wide init file.
 
 If you use `package.el` then use something like this:
 
-    ;;; init.el --- user init file      -*- no-byte-compile: t -*-
-    (setq load-prefer-newer t)
-    (package-initialize)
-    (require 'auto-compile)
-    (auto-compile-on-load-mode)
-    (auto-compile-on-save-mode)
+```elisp
+;;; init.el --- user init file
+(setq load-prefer-newer t)
+(package-initialize)
+(require 'auto-compile)
+(auto-compile-on-load-mode)
+(auto-compile-on-save-mode)
+```
 
 otherwise:
 
-    ;;; init.el --- user init file      -*- no-byte-compile: t -*-
-    (setq load-prefer-newer t)
-    (add-to-list 'load-path "/path/to/dash")
-    (add-to-list 'load-path "/path/to/packed")
-    (add-to-list 'load-path "/path/to/auto-compile")
-    (require 'auto-compile)
-    (auto-compile-on-load-mode)
-    (auto-compile-on-save-mode)
+```elisp
+;;; init.el --- user init file
+(setq load-prefer-newer t)
+(add-to-list 'load-path "/path/to/packed")
+(add-to-list 'load-path "/path/to/auto-compile")
+(require 'auto-compile)
+(auto-compile-on-load-mode)
+(auto-compile-on-save-mode)
+```
+
+You might want to set the file-local value of `no-byte-compile` to
+`t`, e.g. by adding `-*- no-byte-compile: t -*-` at the end of the
+very first line.  That way _all_ user files benefit from the
+protection offered by `load-prefer-newer` and the modes that are
+defined here, otherwise `~/.emacs.d/init.el` is the unfortunate
+exception.
+
+If you are using Emacs 27 or later, then these settings should be
+placed in `early-init.el`, which should never be compiled:
+
+```elisp
+;;; early-init.el --- early bird  -*- no-byte-compile: t -*-
+(setq load-prefer-newer t)
+(add-to-list 'load-path "/path/to/packed")
+(add-to-list 'load-path "/path/to/auto-compile")
+(require 'auto-compile)
+(auto-compile-on-load-mode)
+(auto-compile-on-save-mode)
+;;; early-init.el ends here
+```
 
 Usage
 -----
@@ -74,8 +98,10 @@ Once you have done that you might also want to keep that buffer
 from being automatically displayed and instead only show the number
 of compile warnings for the current file in the mode-line.
 
-    (setq auto-compile-display-buffer nil)
-    (setq auto-compile-mode-line-counter t)
+```elisp
+(setq auto-compile-display-buffer nil)
+(setq auto-compile-mode-line-counter t)
+```
 
 To display the buffer use `M-x auto-compile-display-log` or click
 on the counter in the mode-line.
@@ -83,4 +109,3 @@ on the counter in the mode-line.
 Using `auto-compile-inhibit-compile-hook` it is possible to inhibit
 automatic compilation under certain circumstances; e.g. when HEAD
 is detached inside a Git repository (useful during rebase sessions).
-

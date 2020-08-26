@@ -23,7 +23,7 @@ New features always go on =master=.
 
 ** Major release
 
-The release number for main releases look like this: =7.13=
+The release number for main releases look like this: =9.1=
 
 Main releases are made whenever Org is in a state where the feature
 set is consistent and we feel that the features that are implemented
@@ -38,11 +38,11 @@ branch back into maint to synchronize the two.
 
 ** Minor release
 
-The release number for minor releases look like this:  =7.13.1=
+The release number for minor releases look like this: =9.1.7=
 
 Minor releases are small amends to main releases.  Usually they fix
 critical bugs discovered in a main release.  Minor bugs are usually
-not fixed -- they will be adressed in the next main release.
+not fixed -- they will be addressed in the next main release.
 
 Only the fix to the bug is bundled into a release, without the main
 development work going on in the master branch.  Since the bug fix
@@ -54,7 +54,7 @@ maint then merged in master.
 When doing a major and a minor release, after all necessary merging is
 done, tag the _maint_ branch for the release with:
 
-  git tag -a release_7.9.1 -m "Adding release tag"
+  git tag -a release_9.1.7 -m "Adding release tag"
 
 and push tags with
 
@@ -62,7 +62,7 @@ and push tags with
 
 We also encourage you to sign release tags like this:
 
-  git tag -s release_7.9.1 -m "Adding release tag"
+  git tag -s release_9.1.7 -m "Adding release tag"
 
 ** Uploading the release files from the orgmode.org server
 
@@ -74,139 +74,130 @@ From there do
   make release
   make upload
 
-to create the .tar.gz and .zip files, the documentation, and to
-upload everything at the right place.
+to create the =.tar.gz= and =.zip= files, the documentation, and to upload
+everything at the right place.
 
 * Available Org's builds on the server
 
 There are two cron tasks on the server: one that builds the ELPA
-packages and one that builds org-latest.tar.gz and org-latest.zip.
+packages and one that builds =org-latest.tar.gz= and =org-latest.zip=.
 
 ELPA packages are built from the *maint* branch.  One ELPA package
 contains Org's core, another one called "org-plus-contrib" contains
 Org and contributed libraries.
 
-org-latest* snapshots are built from the *master* branch.
+=org-latest*= snapshots are built from the *master* branch.
 
-* Synchronization with Emacs
+* Synchronization Org and upstream Emacs
 
-** Updating etc/ORG-NEWS
+Below it is described how Org is kept in sync with the upstream Emacs.
 
-Latest changes in Emacs are described in Emacs =etc/NEWS=, and latest
-changes in major Emacs packages are described in =etc/ORG-NEWS=. 
+** Backporting changes from upstream Emacs
 
-If a major release is meant to be merged with the Emacs trunk (as it
-always should), you need to update Org's =etc/ORG-NEWS= file so that
-you can merge it with that of Emacs.  There is one top-level section
-for each release that is merged with Emacs.
+Sometimes Emacs maintainers make changes to Org files.  The process of
+propagating the changes back to the Org repository is called
+/backporting/ for historical reasons.
 
-** Merging with Emacs trunk branch
+To find changes that need to be backported from the Emacs repository,
+the following =git= command, courtesy of [[http://permalink.gmane.org/gmane.emacs.devel/215861][Kyle Meyer]], can be used:
 
-This is still a significant headache.  Some hand work is needed here.
+#+begin_src shell
+  git log $rev..origin/emacs-25 -- lisp/org doc/misc/org.texi \
+    etc/refcards/orgcard.tex etc/ORG-NEWS etc/org \
+    etc/schema/od-manifest-schema-v1.2-os.rnc \
+    etc/schema/od-schema-v1.2-os.rnc
+#+end_src
 
-Emacs uses bzr.  A useful introduction to bzr for Emacs developers can
-be found [[http://www.emacswiki.org/emacs/BzrForEmacsDevs][here]].  While I see all the advantages this would have, I
-cannot bring myself to switch away from git for my day-to-day work,
-because I know git so well, and because git seems to me as being much
-more powerful, conceptionally simple (once you have [[http://newartisans.com/2008/04/git-from-the-bottom-up/][bent your head
-around it]]), and so much faster.
+here, =$rev= is the last commit from the =emacs-25= branch that was
+backported.  The should also be done for the =master= branch.
 
-So the way I have been doing things with Emacs is this:
+There is also a [[http://git.savannah.gnu.org/cgit/emacs.git/atom/lisp/org/][feed]] to keep track of new changes in the =lisp/org=
+folder in the Emacs repository.
 
-1. I do not update the version in Emacs too often.  Just once every
-   few months - this is frequently enough for the Emacs release cycle.
-   Care must be taken to get in a *new and stable* version shortly
-   before Emacs goes into feature freeze and pretest, because that
-   version is going to be in the wild for a long time.
+** Updating the Org version in upstream Emacs
 
-2. I watch the Emacs diffs for changes made by the maintainers of
-   Emacs in the org-mode files in Emacs.  Any changes that come up
-   there, I merge into the development version of Org-mode.
-   Occasionally I do not do this, if I do not agree with a change.
-   The changes go into Org /without/ a ChangeLog-like entry in the
-   commit message.  The reason for this is that we will later generate
-   a ChangeLog file from our commit messages, and I do not want double
-   ChangeLog entries in the Emacs ChangeLog file.
+New releases of Org should be added to the [[https://git.savannah.gnu.org/cgit/emacs.git][Emacs repository]].
 
-3. When I have made a release (usually I wait for the minor releases
-   to stabilize), I *copy* org files into the Emacs repository.  Yes,
-   I do not merge, I copy.  This has been the source of some problems
-   in the past - Emacs developers are not happy when I accidentally
-   overwrite changes they made.  But I have not had the patience to
-   work out a better mechanism, and I really dislike the idea that the
-   version in Emacs starts diverging from my own.
+Typically, Org can be synchronized by copying over files from the
+=emacs-sync= branch of the Org repository to the =master= branch of Emacs
+repository.  The =emacs-sync= branch has a few extra changes compared
+with the =maint= branch.  If the Emacs maintainers are planning a new
+release of Emacs soon, it is possible that another branch should be
+used.
 
-   Careful: Copy /org.texi/ and /orgcard.tex/ into the right places,
-   and also copy the lisp files with *one exception*: Do *not* copy
-   /org-loaddefs.el/, Emacs generates its own autoloads.
+If the new release of Org contains many changes, it may be useful to
+use a separate branch before merging, e.g. =scratch/org-mode-merge=.
+This branch can then be merged with the =master= branch, when everything
+has been tested.
 
-4. Generate the ChangeLog entries
+Please see [[http://git.savannah.gnu.org/cgit/emacs.git/tree/CONTRIBUTE][CONTRIBUTE]] in the Emacs repository for guidelines on
+contributing to the Emacs repository.
 
-   For this, I do in the org-mode git repository
+*** Where to files go
 
-   : mk/make_emacs_changelog release_7.02.05..release_7.03.02
+The following list shows where files in Org repository are copied to
+in the Emacs repository, folder by folder.
 
-   This will spit out ChangeLog entries (for the given commit range)
-   that need to go into the ChangeLog files in Emacs.  Org-mode
-   contributes to 3 different ChangeLog files in Emacs:
+**** =org-mode/doc=
 
-   : lisp/org/ChangeLog    (for lisp changes)
-   : doc/misc/ChangeLog    (for org.texi changes)
-   : etc/ChangeLog         (for refcard changes)
+- =org.texi= :: Copy to =emacs/doc/misc=.  It may be necessary to replace,
+     ~@include org-version.inc~ with ~@set VERSION 9.0.9~ or similar.
 
-   When you run the =make_emacs_changelog= program, you will be
-   prompted for a date in ISO format YYYY-MM-DD, this date will be
-   used in the ChangeLog entries - Emacs developers want these dates
-   to be the time when the change has been installed into Emacs, not
-   the time when we made the change in our own repository.  So all the
-   ChangeLog entries will get the same date.  You will also be
-   prompted for the kind of ChangeLog you want to make, possible
-   answers are =lisp=, =texi=, and =card=.  The program will then
-   select the correct entries for the specified ChangeLog file.  If
-   you don't like being prompted, you can give the date and type as
-   second and third command line arguments to =make_emacs_changelog=,
-   for example
+- =orgcard.tex= :: Copy to =emacs/etc/refcards=.  Make sure that
+     ~\def\orgversionnumber~ and ~\def\versionyear~ are up to date.
 
-   : mk/make_emacs_changelog release_7.02.05..release_7.03.02 2010-12-11 lisp
+**** =org-mode/etc=
 
-   These entries need to be added to the ChangeLog files in Emacs.
-   You should, in the ChangeLog file, select the inserted region of
-   new entries and do =M-x fill-region=, so that the entries are
-   formatted correctly.  I then do look through the entries quickly to
-   make sure they are formatted properly, that the email addresses
-   look right etc.
+- =styles/*= :: Copy to =emacs/etc/org=.
 
-5. Commit the changes into the bzr repository and you are done.  Emacs
-   developers often look throught the commit and make minor changes -
-   these need to be merged back into our own repo.
+- =schema/*.rnc= :: Copy to =emacs/etc/schema=.
+
+- =schema/schemas.xml= :: Any new entries in this file should be added
+     to =emacs/etc/schema/schemas.xml=.
+
+- =ORG-NEWS= :: Copy to =emacs/etc=
+
+**** =org-mode/lisp=
+
+- Copy =*.el= files to =emacs/lisp/org=, except =org-loaddefs.el=!
+
+- You should create =org-version.el= in =emacs/lisp/org=.  The file is
+  created when you =make= Org.
+
+**** TODO =org-mode/testing=
+
+*** Update  =emacs/etc/NEWS=
+
+Whenever a new (major) version of Org is synchronized to the Emacs
+repository, it should be mentioned in the NEWS file.
 
 * Updating the list of hooks/commands/options on Worg
 
-  Load the =mk/eldo.el= file then =M-x eldo-make-doc RET=.
+Load the =mk/eldo.el= file then =M-x eldo-make-doc RET=.
 
-  This will produce an org file with the documentation.
+This will produce an org file with the documentation.
 
-  Import this file into =worg/doc.org=, leaving the header untouched
-  (except for the release number).
+Import this file into =worg/doc.org=, leaving the header untouched
+(except for the release number).
 
-  Then commit and push the change on the =worg.git= repository.
+Then commit and push the change on the =worg.git= repository.
 
 * Copyright assignments
 
-  The maintainer needs to keep track of copyright assignments.
-  Even better, find a volunteer to do this.
+The maintainer needs to keep track of copyright assignments.  Even
+better, find a volunteer to do this.
 
-  The assignment form is included in the repository as a file that
-  you can send to contributors: =request-assign-future.txt=
+The assignment form is included in the repository as a file that you
+can send to contributors: =request-assign-future.txt=
 
-  The list of all contributors from who we have the papers is kept on
-  Worg at http://orgmode.org/worg/org-contribute.html, so that
-  committers can check if a patch can go into the core.
+The list of all contributors from who we have the papers is kept on
+Worg at https://orgmode.org/worg/org-contribute.html, so that
+committers can check if a patch can go into the core.
 
-  The assignment process does not allways go smoothly, and it has
-  happened several times that it gets stuck or forgotten at the FSF.
-  The contact at the FSF for this is: mailto:copyright-clerk@fsf.org
+The assignment process does not always go smoothly, and it has
+happened several times that it gets stuck or forgotten at the FSF.
+The contact at the FSF for this is: mailto:copyright-clerk@fsf.org
 
-  Emails from the paper submitter have been ignored in the past, but
-  an email from me (Carsten) as the maintainer of Org mode has usually
-  fixed such cases within a few days.
+Emails from the paper submitter have been ignored in the past, but an
+email from me (Carsten) as the maintainer of Org mode has usually
+fixed such cases within a few days.

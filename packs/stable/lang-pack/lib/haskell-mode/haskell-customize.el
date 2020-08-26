@@ -64,7 +64,11 @@ be located, then stack-ghci will be used.
 Otherwise if there's a *.cabal file, cabal-repl will be used.
 
 If none of the above apply, ghci will be used."
-  :type '(choice (const auto) (const ghci) (const cabal-repl) (const stack-ghci))
+  :type '(choice (const auto)
+                 (const ghci)
+                 (const cabal-repl)
+                 (const stack-ghci)
+                 (const cabal-new-repl))
   :group 'haskell-interactive)
 
 (defcustom haskell-process-wrapper-function
@@ -87,12 +91,11 @@ a per-project basis."
           (function-item :tag "None" :value identity)
           (function :tag "Custom function")))
 
-(defcustom haskell-ask-also-kill-buffers
-  t
-  "Ask whether to kill all associated buffers when a session
- process is killed."
-  :type 'boolean
-  :group 'haskell-interactive)
+(defcustom haskell-session-kill-hook nil
+  "Hook called when the interactive session is killed.
+You might like to call `projectile-kill-buffers' here."
+  :group 'haskell-interactive
+  :type 'hook)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Configuration
@@ -158,8 +161,20 @@ pass additional flags to `ghc'."
   :group 'haskell-interactive
   :type '(repeat (string :tag "Argument")))
 
+(defcustom haskell-process-args-cabal-new-repl
+  '("--ghc-option=-ferror-spans")
+  "Additional arguments for `cabal new-repl' invocation.
+Note: The settings in `haskell-process-path-ghci' and
+`haskell-process-args-ghci' are not automatically reused as
+`cabal new-repl' currently invokes `ghc --interactive'. Use
+`--with-ghc=<path-to-executable>' if you want to use a different
+interactive GHC frontend; use `--ghc-option=<ghc-argument>' to
+pass additional flags to `ghc'."
+  :group 'haskell-interactive
+  :type '(repeat (string :tag "Argument")))
+
 (defcustom haskell-process-args-stack-ghci
-  '("--ghc-options=-ferror-spans")
+  '("--ghci-options=-ferror-spans" "--no-build" "--no-load")
   "Additional arguments for `stack ghci' invocation."
   :group 'haskell-interactive
   :type '(repeat (string :tag "Argument")))
@@ -180,6 +195,13 @@ See `haskell-process-do-cabal' for more details."
 (defcustom haskell-process-show-debug-tips
   t
   "Show debugging tips when starting the process."
+  :type 'boolean
+  :group 'haskell-interactive)
+
+(defcustom haskell-process-show-overlays
+  t
+  "Show in-buffer overlays for errors/warnings.
+Flycheck users might like to disable this."
   :type 'boolean
   :group 'haskell-interactive)
 
@@ -285,12 +307,6 @@ imports become available?"
   :type 'boolean
   :group 'haskell-interactive)
 
-(defcustom haskell-interactive-mode-scroll-to-bottom
-  nil
-  "Scroll to bottom in the REPL always."
-  :type 'boolean
-  :group 'haskell-interactive)
-
 (defcustom haskell-interactive-popup-errors
   t
   "Popup errors in a separate buffer."
@@ -310,8 +326,21 @@ ambiguous class constraint."
   :type 'boolean
   :group 'haskell-interactive)
 
-(defvar haskell-interactive-prompt "λ> "
-  "The prompt to use.")
+(defcustom haskell-interactive-prompt "λ> "
+  "The prompt to use."
+  :type 'string
+  :group 'haskell-interactive)
+
+(define-obsolete-variable-alias 'haskell-interactive-prompt2 'haskell-interactive-prompt-cont "17.1")
+
+(defcustom haskell-interactive-prompt-cont (replace-regexp-in-string
+                                            "> $"
+                                            "| "
+                                            haskell-interactive-prompt)
+  "The multi-line prompt to use.
+The default is `haskell-interactive-prompt' with the last > replaced with |."
+  :type 'string
+  :group 'haskell-interactive)
 
 (defcustom haskell-interactive-mode-eval-mode
   nil
@@ -335,6 +364,21 @@ ambiguous class constraint."
   t
   "Include the file name of the module being compiled when
 printing compilation messages."
+  :type 'boolean
+  :group 'haskell-interactive)
+
+(defcustom haskell-interactive-mode-read-only
+  t
+  "Non-nil means most GHCi/haskell-interactive-mode output is read-only.
+This does not include the prompt.  Configure
+`haskell-interactive-prompt-read-only' to change the prompt's
+read-only property."
+  :type 'boolean
+  :group 'haskell-interactive)
+
+(defcustom haskell-interactive-prompt-read-only
+  haskell-interactive-mode-read-only
+  "Non-nil means the prompt (and prompt2) is read-only."
   :type 'boolean
   :group 'haskell-interactive)
 
@@ -367,8 +411,7 @@ properties; such as an indentation mode) that don't know what
 extensions to use can use this variable. Examples: hlint,
 hindent, structured-haskell-mode, tool-de-jour, etc.
 
-You can set this per-project with a .dir-locals.el file, in the
-same vein as `haskell-indent-spaces'."
+You can set this per-project with a .dir-locals.el file"
   :group 'haskell
   :type '(repeat 'string))
 
@@ -382,22 +425,46 @@ imports."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Accessor functions
 
+(defvar inferior-haskell-root-dir nil
+  "The path which is considered as project root, this is determined by the
+presence of a *.cabal file or stack.yaml file or something similar.")
+
 (defun haskell-process-type ()
-  "Return `haskell-process-type', or a guess if that variable is 'auto."
-  (if (eq 'auto haskell-process-type)
-      (cond
-       ;; User has explicitly initialized this project with cabal
-       ((locate-dominating-file default-directory "cabal.sandbox.config")
-        'cabal-repl)
-       ((and (locate-dominating-file default-directory "stack.yaml")
-             (executable-find "stack"))
-        'stack-ghci)
-       ((locate-dominating-file
-         default-directory
-         (lambda (d)
-           (cl-find-if (lambda (f) (string-match-p ".\\.cabal\\'" f)) (directory-files d))))
-        'cabal-repl)
-       (t 'ghci))
-    haskell-process-type))
+  "Return `haskell-process-type', or a guess if that variable is 'auto.
+This function also sets the `inferior-haskell-root-dir'"
+  (let ((cabal-sandbox (locate-dominating-file default-directory
+                                               "cabal.sandbox.config"))
+        (stack         (locate-dominating-file default-directory
+                                               "stack.yaml"))
+        (cabal         (locate-dominating-file default-directory
+                                               (lambda (d)
+                                                 (cl-find-if
+                                                  (lambda (f)
+                                                    (string-match-p ".\\.cabal\\'" f))
+                                                  (directory-files d))))))
+    (if (eq 'auto haskell-process-type)
+        (cond
+         ;; User has explicitly initialized this project with cabal
+         ((and cabal-sandbox
+               (executable-find "cabal"))
+          (setq inferior-haskell-root-dir cabal-sandbox)
+          'cabal-repl)
+         ((and stack
+               (executable-find "stack"))
+          (setq inferior-haskell-root-dir stack)
+          'stack-ghci)
+         ((and cabal
+               (executable-find "cabal"))
+          (setq inferior-haskell-root-dir cabal)
+          'cabal-repl)
+         ((executable-find "ghc")
+          (setq inferior-haskell-root-dir default-directory)
+          'ghci)
+         ((executable-find "stack")
+          (setq inferior-haskell-root-dir default-directory)
+          'stack-ghci)
+         (t
+          (error "Could not find any installation of GHC.")))
+      haskell-process-type)))
 
 (provide 'haskell-customize)
