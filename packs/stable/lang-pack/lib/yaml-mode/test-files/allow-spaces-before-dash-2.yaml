@@ -1,0 +1,7 @@
+# For comparison: this is handled correctly in v0.0.12
+#
+# (1) Move to line containing l3
+# (2) TAB indents l3 by 2 spaces to start below '|'
+#
+- |
+l3

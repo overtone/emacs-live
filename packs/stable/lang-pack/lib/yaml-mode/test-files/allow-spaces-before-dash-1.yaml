@@ -1,0 +1,18 @@
+
+## Old behaviour (v0.0.12)
+##
+## (1) open this file
+##
+## (2) move to the line containing l1
+##
+## (3) Press TAB. First character of l1 should now be below '|', but
+##     it is below the dash
+##
+## New behaviour:
+##
+## (1) When l1 is unindented, pressing TAB indents it to start below '|'
+##
+##
+- bb:
+    - |
+l1
