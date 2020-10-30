@@ -1,5 +1,4 @@
-
-<img src="http://github.com/downloads/overtone/emacs-live/emacs-live.png" />
+![Emacs Live Logo](screenshots/emacs-live-logo.png "Emacs Live Logo")
 
 <!--
            MM""""""""`M
