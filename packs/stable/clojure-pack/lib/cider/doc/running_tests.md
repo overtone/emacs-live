@@ -3,11 +3,35 @@
 You can run `clojure.test` tests pretty quickly in CIDER. Pressing <kbd>C-c C-t
 n</kbd> or <kbd>C-c C-t C-n</kbd> in a source buffer or a REPL buffer will run
 the tests for the namespace you're currently in. CIDER is smart enough to figure
-out the namespace containing the tests. You can also run all loaded tests with
-<kbd>C-c C-t l</kbd> or <kbd>C-c C-t C-l</kbd> and all tests within a project
-with <kbd>C-c C-t p</kbd> or <kbd>C-c C-t C-p</kbd> (note that this will load
-**all** namespaces in your project). Using <kbd>C-c C-t t</kbd> or <kbd>C-c C-t
-C-t</kbd>, you can execute only the test a point.
+out the namespace containing the tests. The inference logic works in a pretty
+simple manner - if you're in an implementation namespace (e.g. `some.ns`) CIDER
+will try to find a matching test namespace (by default `some.ns-test`) and run
+the tests there. On the other hand - if you're in something that looks like a
+test namespace (e.g. `some.ns-test`), then the command will simply run the tests
+in that namespace. From time to time, however, you might want to suppress the
+test namespace inference logic (e.g. you have some tests in the implementation
+namespace that were defined with `clojure.test/with-test`)
+- in such cases you should use <kbd>C-u C-c C-t C-n</kbd>, which will simply run
+whatever tests are present in the currently visited/active namespace.
+
+You can also press <kbd>C-c C-t C-s</kbd> to run a subset of the tests defined in
+the namespace filtered by test selectors. CIDER will ask you for those test selectors
+in the minibuffer. If you call this command with a prefix (<kbd>C-u C-c C-t C-s</kbd>)
+you can suppress the inference logic as for run tests for the namespace.
+
+You can also run all loaded tests with <kbd>C-c C-t l</kbd> or <kbd>C-c C-t
+C-l</kbd> and all tests within a project with <kbd>C-c C-t p</kbd> or <kbd>C-c
+C-t C-p</kbd> (note that this will load **all** namespaces in your
+project). If you call these two with a prefix CIDER will ask for test selector filters
+and only run those tests in the project which match the selector inclusions/exclusions. Using
+<kbd>C-c C-t t</kbd> or <kbd>C-c C-t C-t</kbd>, you can execute only the
+test at point.
+
+Test selectors are originally a `leiningen` feature - see `lein help test` for some explanation.
+People use them to define subsets of tests usually run together for different purposes. For
+example you can mark some of your tests with the `^:smoke` metadata marker others with
+`^:integration`. This enables you to run these tests separately in your build pipeline.
+This feature in CIDER helps you to run these test subsets in your development environment.
 
 All test commands are available in REPL buffers as well. There you can also use
 <kbd>,</kbd> to invoke some of the testing commands.
@@ -19,6 +43,7 @@ Keyboard shortcut               | Description
 --------------------------------|-------------------------------
 <kbd>g</kbd>                    | Run test at point.
 <kbd>n</kbd>                    | Run tests for current namespace.
+<kbd>s</kbd>                    | Run tests for current namespace with selector filter.
 <kbd>l</kbd>                    | Run tests for all loaded namespaces.
 <kbd>p</kbd>                    | Run tests for all project namespaces. This loads the additional namespaces.
 <kbd>f</kbd>                    | Re-run test failures/errors.
@@ -34,6 +59,11 @@ Certain aspects of the test execution behavior are configurable:
 customize the variable `cider-test-infer-test-ns`. It should be bound to a
 function that takes the current namespace and returns the matching test
 namespace (which may be the same as the current namespace).
+
+* If your individual tests are not defined by `deftest` or `defspec`, CIDER will
+not recognize them when searching for a test at point in `cider-test-run-test`.
+You can customize the variable `cider-test-defining-forms` to add additional
+forms for CIDER to recognize as individual test definitions.
 
 * If you want to view the test report regardless of whether the tests have
 passed or failed:
@@ -72,3 +102,6 @@ As a test framework author, supporting the built-in `clojure.test` machinery
 The `test.check` library is a good example here. It was also designed completely
 independently of `clojure.test`. It just adds compatibility in this
 [namespace](https://github.com/clojure/test.check/blob/24f74b83f1c7a032f98efdcc1db9d74b3a6a794d/src/main/clojure/clojure/test/check/clojure_test.cljc).
+
+[clojure-expectations](https://github.com/clojure-expectations/expectations) added
+support for `clojure.test` in version 2.2 and should also work with CIDER.

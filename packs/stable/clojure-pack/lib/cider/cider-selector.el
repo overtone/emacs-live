@@ -1,7 +1,7 @@
 ;;; cider-selector.el --- Buffer selection command inspired by SLIME's selector -*- lexical-binding: t -*-
 
 ;; Copyright © 2012-2013 Tim King, Phil Hagelberg, Bozhidar Batsov
-;; Copyright © 2013-2016 Bozhidar Batsov, Artur Malabarba and CIDER contributors
+;; Copyright © 2013-2018 Bozhidar Batsov, Artur Malabarba and CIDER contributors
 ;;
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Phil Hagelberg <technomancy@gmail.com>
@@ -32,7 +32,7 @@
 ;;; Code:
 
 (require 'cider-client)
-(require 'cider-interaction)
+(require 'cider-eval)
 (require 'cider-scratch)
 
 (defconst cider-selector-help-buffer "*CIDER Selector Help*"
@@ -44,9 +44,11 @@ Each element is a list (KEY DESCRIPTION FUNCTION).
 DESCRIPTION is a one-line description of what the key selects.")
 
 (defvar cider-selector-other-window nil
-  "If non-nil use `switch-to-buffer-other-window'.")
+  "If non-nil use `switch-to-buffer-other-window'.
+Not meant to be set by users.  It's used internally
+by `cider-selector'.")
 
-(defun cider--recently-visited-buffer (mode)
+(defun cider-selector--recently-visited-buffer (mode)
   "Return the most recently visited buffer, deriving its `major-mode' from MODE.
 Only considers buffers that are not already visible."
   (cl-loop for buffer in (buffer-list)
@@ -64,7 +66,6 @@ Only considers buffers that are not already visible."
 The user is prompted for a single character indicating the method by
 which to choose a new buffer.  The `?' character describes then
 available methods.  OTHER-WINDOW provides an optional target.
-
 See `def-cider-selector-method' for defining new methods."
   (interactive)
   (message "Select [%s]: "
@@ -85,7 +86,6 @@ See `def-cider-selector-method' for defining new methods."
 
 (defmacro def-cider-selector-method (key description &rest body)
   "Define a new `cider-select' buffer selection method.
-
 KEY is the key the user will enter to choose this method.
 
 DESCRIPTION is a one-line sentence describing how the method
@@ -127,40 +127,38 @@ is chosen.  The returned buffer is selected with
 
 (def-cider-selector-method ?c
   "Most recently visited clojure-mode buffer."
-  (cider--recently-visited-buffer 'clojure-mode))
+  (cider-selector--recently-visited-buffer 'clojure-mode))
 
 (def-cider-selector-method ?e
   "Most recently visited emacs-lisp-mode buffer."
-  (cider--recently-visited-buffer 'emacs-lisp-mode))
+  (cider-selector--recently-visited-buffer 'emacs-lisp-mode))
 
 (def-cider-selector-method ?q "Abort."
   (top-level))
 
 (def-cider-selector-method ?r
   "Current REPL buffer."
-  (cider-current-repl-buffer))
-
-(def-cider-selector-method ?n
-  "Connections browser buffer."
-  (cider-connection-browser)
-  cider--connection-browser-buffer-name)
+  (cider-current-repl))
 
 (def-cider-selector-method ?m
   "Current connection's *nrepl-messages* buffer."
-  (cider-current-messages-buffer))
+  (nrepl-messages-buffer (cider-current-repl)))
 
 (def-cider-selector-method ?x
   "*cider-error* buffer."
   cider-error-buffer)
 
+(def-cider-selector-method ?p
+  "CIDER profiler buffer."
+  cider-profile-buffer)
+
 (def-cider-selector-method ?d
   "*cider-doc* buffer."
   cider-doc-buffer)
 
-(declare-function cider-find-or-create-scratch-buffer "cider-scratch")
 (def-cider-selector-method ?s
   "*cider-scratch* buffer."
-  (cider-find-or-create-scratch-buffer))
+  (cider-scratch-find-or-create-buffer))
 
 (provide 'cider-selector)
 

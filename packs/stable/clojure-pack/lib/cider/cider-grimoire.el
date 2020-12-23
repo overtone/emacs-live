@@ -1,6 +1,6 @@
 ;;; cider-grimoire.el --- Grimoire integration -*- lexical-binding: t -*-
 
-;; Copyright © 2014-2016 Bozhidar Batsov and CIDER contributors
+;; Copyright © 2014-2018 Bozhidar Batsov and CIDER contributors
 ;;
 ;; Author: Bozhidar Batsov <bozhidar@batsov.com>
 
@@ -27,12 +27,16 @@
 
 (require 'cider-client)
 (require 'cider-common)
+(require 'subr-x)
 (require 'cider-compat)
 (require 'cider-popup)
 
 (require 'nrepl-dict)
 
 (require 'url-vars)
+
+(declare-function markdown-mode "markdown-mode.el")
+(declare-function markdown-toggle-fontify-code-blocks-natively "markdown-mode.el")
 
 (defconst cider-grimoire-url "http://conj.io/")
 
@@ -54,7 +58,7 @@
 
 (defun cider-grimoire-web-lookup (symbol)
   "Open the grimoire documentation for SYMBOL in a web browser."
-  (if-let ((var-info (cider-var-info symbol)))
+  (if-let* ((var-info (cider-var-info symbol)))
       (let ((name (nrepl-dict-get var-info "name"))
             (ns (nrepl-dict-get var-info "ns")))
         (browse-url (cider-grimoire-url name ns)))
@@ -77,15 +81,23 @@ opposite of what that option dictates."
   (with-current-buffer (cider-popup-buffer cider-grimoire-buffer t)
     (read-only-mode -1)
     (insert content)
-    (read-only-mode +1)
+    (when (require 'markdown-mode nil 'noerror)
+      (markdown-mode)
+      (cider-popup-buffer-mode 1)
+      (when (fboundp 'markdown-toggle-fontify-code-blocks-natively)
+        (markdown-toggle-fontify-code-blocks-natively 1)))
+    (view-mode 1)
     (goto-char (point-min))
     (current-buffer)))
 
 (defun cider-grimoire-lookup (symbol)
-  "Look up the grimoire documentation for SYMBOL."
-  (if-let ((var-info (cider-var-info symbol)))
+  "Look up the grimoire documentation for SYMBOL.
+
+If SYMBOL is a special form, the clojure.core ns is used, as is
+Grimoire's convention."
+  (if-let* ((var-info (cider-var-info symbol)))
       (let ((name (nrepl-dict-get var-info "name"))
-            (ns (nrepl-dict-get var-info "ns"))
+            (ns (nrepl-dict-get var-info "ns" "clojure.core"))
             (url-request-method "GET")
             (url-request-extra-headers `(("Content-Type" . "text/plain"))))
         (url-retrieve (cider-grimoire-url name ns)

@@ -1,6 +1,6 @@
 ;;; cider-overlays.el --- Managing CIDER overlays  -*- lexical-binding: t; -*-
 
-;; Copyright © 2015-2016 Bozhidar Batsov, Artur Malabarba and CIDER contributors
+;; Copyright © 2015-2018 Bozhidar Batsov, Artur Malabarba and CIDER contributors
 
 ;; Author: Artur Malabarba <bruce.connor.am@gmail.com>
 
@@ -26,6 +26,7 @@
 ;;; Code:
 
 (require 'cider-common)
+(require 'subr-x)
 (require 'cider-compat)
 (require 'cl-lib)
 
@@ -132,7 +133,8 @@ This function also removes itself from `post-command-hook'."
   "Whether to display evaluation indicators on the left fringe."
   :safe #'booleanp
   :group 'cider
-  :type 'boolean)
+  :type 'boolean
+  :package-version '(cider . "0.13.0"))
 
 (defun cider--make-fringe-overlay (&optional end)
   "Place an eval indicator at the fringe before a sexp.
@@ -141,19 +143,19 @@ END is the position where the sexp ends, and defaults to point."
     (with-current-buffer (if (markerp end)
                              (marker-buffer end)
                            (current-buffer))
-      (save-excursion 
+      (save-excursion
         (if end
             (goto-char end)
           (setq end (point)))
         (clojure-forward-logical-sexp -1)
         ;; Create the green-circle overlay.
         (cider--make-overlay (point) end 'cider-fringe-indicator
-                         'before-string cider--fringe-overlay-good)))))
+                             'before-string cider--fringe-overlay-good)))))
 
 (cl-defun cider--make-result-overlay (value &rest props &key where duration (type 'result)
-                                        (format (concat " " cider-eval-result-prefix "%s "))
-                                        (prepend-face 'cider-result-overlay-face)
-                                        &allow-other-keys)
+                                            (format (concat " " cider-eval-result-prefix "%s "))
+                                            (prepend-face 'cider-result-overlay-face)
+                                            &allow-other-keys)
   "Place an overlay displaying VALUE at the end of line.
 VALUE is used as the overlay's after-string property, meaning it is
 displayed at the end of the overlay.  The overlay itself is placed from
@@ -237,11 +239,9 @@ overlay."
                            #'cider--remove-result-overlay-after-command
                            nil 'local)
                (cider--remove-result-overlay-after-command))))
-          (when-let ((win (get-buffer-window buffer)))
+          (when-let* ((win (get-buffer-window buffer)))
             ;; Left edge is visible.
-            (when (and (<= (window-start win) (point))
-                       ;; In 24.3 `<=' is still a binary perdicate.
-                       (<= (point) (window-end win))
+            (when (and (<= (window-start win) (point) (window-end win))
                        ;; Right edge is visible. This is a little conservative
                        ;; if the overlay contains line breaks.
                        (or (< (+ (current-column) (string-width value))

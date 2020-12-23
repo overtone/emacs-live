@@ -1,6 +1,6 @@
 ;;; cider-browse-ns.el --- CIDER namespace browser
 
-;; Copyright © 2014-2016 John Andrews, Bozhidar Batsov and CIDER contributors
+;; Copyright © 2014-2018 John Andrews, Bozhidar Batsov and CIDER contributors
 
 ;; Author: John Andrews <john.m.andrews@gmail.com>
 
@@ -35,15 +35,17 @@
 
 ;;; Code:
 
-(require 'cider-interaction)
 (require 'cider-client)
+(require 'cider-popup)
 (require 'cider-compat)
 (require 'cider-util)
 (require 'nrepl-dict)
 
-(defconst cider-browse-ns-buffer "*cider-ns-browser*")
+(require 'subr-x)
+(require 'easymenu)
+(require 'thingatpt)
 
-(push cider-browse-ns-buffer cider-ancillary-buffers)
+(defconst cider-browse-ns-buffer "*cider-ns-browser*")
 
 (defvar-local cider-browse-ns-current-ns nil)
 
@@ -58,6 +60,13 @@
     (define-key map "^" #'cider-browse-ns-all)
     (define-key map "n" #'next-line)
     (define-key map "p" #'previous-line)
+    (easy-menu-define cider-browse-ns-mode-menu map
+      "Menu for CIDER's namespace browser"
+      '("Namespace Browser"
+        ["Show doc" cider-browse-ns-doc-at-point]
+        ["Go to definition" cider-browse-ns-find-at-point]
+        "--"
+        ["Browse all namespaces" cider-browse-ns-all]))
     map))
 
 (defvar cider-browse-ns-mouse-map
@@ -69,9 +78,10 @@
   "Major mode for browsing Clojure namespaces.
 
 \\{cider-browse-ns-mode-map}"
-  (setq buffer-read-only t)
   (setq-local electric-indent-chars nil)
-  (setq-local truncate-lines t)
+  (setq-local sesman-system 'CIDER)
+  (when cider-special-mode-truncate-lines
+    (setq-local truncate-lines t))
   (setq-local cider-browse-ns-current-ns nil))
 
 (defun cider-browse-ns--text-face (var-meta)
@@ -148,7 +158,7 @@ Each item consists of a ns-var and the first line of its docstring."
 (defun cider-browse-ns (namespace)
   "List all NAMESPACE's vars in BUFFER."
   (interactive (list (completing-read "Browse namespace: " (cider-sync-request:ns-list))))
-  (with-current-buffer (cider-popup-buffer cider-browse-ns-buffer t)
+  (with-current-buffer (cider-popup-buffer cider-browse-ns-buffer 'select nil 'ancillary)
     (cider-browse-ns--list (current-buffer)
                            namespace
                            (cider-browse-ns--items namespace))
@@ -158,7 +168,7 @@ Each item consists of a ns-var and the first line of its docstring."
 (defun cider-browse-ns-all ()
   "List all loaded namespaces in BUFFER."
   (interactive)
-  (with-current-buffer (cider-popup-buffer cider-browse-ns-buffer t)
+  (with-current-buffer (cider-popup-buffer cider-browse-ns-buffer 'select nil 'ancillary)
     (let ((names (cider-sync-request:ns-list)))
       (cider-browse-ns--list (current-buffer)
                              "All loaded namespaces"
@@ -170,13 +180,13 @@ Each item consists of a ns-var and the first line of its docstring."
 (defun cider-browse-ns--thing-at-point ()
   "Get the thing at point.
 Return a list of the type ('ns or 'var) and the value."
-  (let ((line (car (split-string (cider-string-trim (thing-at-point 'line)) " "))))
+  (let ((line (car (split-string (string-trim (thing-at-point 'line)) " "))))
     (if (string-match "\\." line)
-        (list 'ns line)
-      (list 'var (format "%s/%s"
-                         (or (get-text-property (point) 'cider-browse-ns-current-ns)
-                             cider-browse-ns-current-ns)
-                         line)))))
+        `(ns ,line)
+      `(var ,(format "%s/%s"
+                     (or (get-text-property (point) 'cider-browse-ns-current-ns)
+                         cider-browse-ns-current-ns)
+                     line)))))
 
 (defun cider-browse-ns-doc-at-point ()
   "Show the documentation for the thing at current point."
@@ -198,6 +208,9 @@ be displayed."
     (if (eq type 'ns)
         (cider-browse-ns value)
       (cider-doc-lookup value))))
+
+(declare-function cider-find-ns "cider-find")
+(declare-function cider-find-var "cider-find")
 
 (defun cider-browse-ns-find-at-point ()
   "Find the definition of the thing at point."

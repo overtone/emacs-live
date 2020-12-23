@@ -1,6 +1,6 @@
 ;;; cider-common-tests.el
 
-;; Copyright © 2012-2016 Tim King, Bozhidar Batsov
+;; Copyright © 2012-2018 Tim King, Bozhidar Batsov
 
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Bozhidar Batsov <bozhidar@batsov.com>
@@ -28,7 +28,6 @@
 ;;; Code:
 
 (require 'buttercup)
-(require 'cider)
 (require 'cider-common)
 
 ;;; cider-common tests
@@ -64,3 +63,14 @@
     (expect (cider--kw-to-symbol ":clj.core/str") :to-equal "clj.core/str")
     (expect (cider--kw-to-symbol "::keyword") :to-equal "keyword")
     (expect (cider--kw-to-symbol nil) :to-equal nil)))
+
+(describe "cider-make-tramp-prefix"
+  (it "returns tramp-prefix only"
+      ;;; The third parameter is a host. It must contains a port number.
+      (expect (cider-make-tramp-prefix "ssh" "cider-devs" "192.168.50.9#22")
+              :to-equal "/ssh:cider-devs@192.168.50.9#22:")
+      ;;; These two cases are for using ssh config alias.
+      (expect (cider-make-tramp-prefix "ssh" nil "test.cider.com")
+              :to-equal "/ssh:test.cider.com:")
+      (expect (cider-make-tramp-prefix "ssh" nil "test.local")
+              :to-equal "/ssh:test.local:")))

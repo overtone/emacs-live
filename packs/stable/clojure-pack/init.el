@@ -17,6 +17,7 @@
 (live-load-config-file "clojure-conf.el")
 (live-load-config-file "cider-conf.el")
 (live-load-config-file "highlight-flash-conf.el")
-
+(live-load-config-file "cider-autoloads.el")
+(require 'cider-autoloads)
 
 ;;(live-load-config-file "overtone-conf.el") TODO - fix for cider

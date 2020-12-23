@@ -26,9 +26,7 @@ guidelines](https://github.com/clojure-emacs/cider/blob/master/.github/CONTRIBUT
 
 Good documentation is just as important as good code.
 
-Consider improving and extending the
-this manual and the
-[community wiki](https://github.com/clojure-emacs/cider/wiki).
+Consider improving and extending this manual.
 
 ### Working on the Manual
 
@@ -53,40 +51,32 @@ $ mkdocs serve
 If you want to make changes to the manual's page structure you'll have to edit
 [mkdocs.yml](https://github.com/clojure-emacs/cider/blob/master/mkdocs.yml).
 
-## Donations
+## Funding
+
+While CIDER is free software and will always be, the project would benefit immensely from some funding.
+Raising a monthly budget of a couple of thousand dollars would make it possible to pay people to work on
+certain complex features, fund other development related stuff (e.g. hardware, conference trips) and so on.
+Raising a monthly budget of over $5000 would open the possibility of someone working full-time on the project
+which would speed up the pace of development significantly.
+
+We welcome both individual and corporate sponsors! We also offer a wide array of funding channels to account
+for your preferences (although currently [Open Collective](https://opencollective.com/cider) is our preferred funding platform).
+
+If you're working in a company that's making significant use of CIDER we'd appreciate it if you suggest to your company
+to become a CIDER sponsor.
 
 You can support the development of CIDER, [clojure-mode][] and [inf-clojure][] via
+[Open Collective](https://opencollective.com/cider),
 [Salt](https://salt.bountysource.com/teams/cider),
-[Gratipay](https://www.gratipay.com/cider) and PayPal.
-
-[![Support via Gratipay](https://cdn.rawgit.com/gratipay/gratipay-badge/2.1.3/dist/gratipay.png)](https://gratipay.com/cider)
+[Patreon](https://www.patreon.com/bbatsov),
+[Liberapay](https://liberapay.com/bbatsov/donate) and PayPal.
 
 [![Paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=GRQKNBM6P8VRQ)
 
-## Running the tests in batch mode
+### Open Collective
 
-Install [cask](https://github.com/cask/cask) if you haven't
-already, then:
-
-```
-$ cd /path/to/cider
-$ cask
-```
-
-Run all tests with:
-
-```
-$ make test
-```
-
-(Note: tests may not run correctly inside Emacs' `shell-mode` buffers. Running
-them in a terminal is recommended.)
-
-You can also check for the presence of byte-compilation warnings in batch mode:
-
-```
-$ make test-bytecomp
-```
+* [[Become a backer](https://opencollective.com/cider#backer)] (for individuals)
+* [[Become a sponsor](https://opencollective.com/cider#sponsor)] (for companies)
 
 [clojure-mode]: https://github.com/clojure-emacs/clojure-mode
 [inf-clojure]: https://github.com/clojure-emacs/inf-clojure

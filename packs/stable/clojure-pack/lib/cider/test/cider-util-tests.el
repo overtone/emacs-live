@@ -1,6 +1,6 @@
 ;;; cider-util-tests.el
 
-;; Copyright © 2012-2016 Tim King, Bozhidar Batsov
+;; Copyright © 2012-2018 Tim King, Bozhidar Batsov
 
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Bozhidar Batsov <bozhidar@batsov.com>
@@ -28,7 +28,6 @@
 ;;; Code:
 
 (require 'buttercup)
-(require 'cider)
 (require 'cider-util)
 
 ;;; cider-util tests
@@ -53,6 +52,22 @@
     (setq cider-version "0.11.0-snapshot"
           cider-codename "Victory")
     (expect (cider--version) :to-equal "0.11.0snapshot (package: 20160301.2217)")))
+
+(defvar some-cider-hook)
+
+(describe "cider-run-chained-hook"
+  :var (some-cider-hook)
+
+  (it "chains correctly"
+    (setq some-cider-hook (list #'upcase (lambda (x) (substring x 2 5))))
+    (expect (cider-run-chained-hook 'some-cider-hook "abcdefg")
+            :to-equal "CDE"))
+
+  (it "exits on first nil"
+    (let (here)
+      (setq some-cider-hook (list #'upcase (lambda (x) nil) (lambda (x) (setq here t))))
+      (cider-run-chained-hook 'some-cider-hook "A")
+      (expect here :to-be nil))))
 
 (describe "cider-symbol-at-point"
   (it "doesn't move the cursor"
@@ -109,6 +124,73 @@
         (delete-char -1)
         (insert "'")
         (expect (cider-sexp-at-point 'bounds) :to-equal '(5 15))))))
+
+(defmacro cider-buffer-with-text
+    (text &rest body)
+  "Run body in a temporary clojure buffer with TEXT.
+TEXT is a string with a | indicating where point is. The | will be erased
+and point left there."
+  (declare (indent 2))
+  `(progn
+     (with-temp-buffer
+       (erase-buffer)
+       (clojure-mode)
+       (insert ,text)
+       (goto-char (point-min))
+       (re-search-forward "|")
+       (delete-char -1)
+       ,@body)))
+
+(describe "cider-defun-inside-comment-form"
+  (describe "when param 'bounds is not given"
+    (it "returns the form containing point"
+      (cider-buffer-with-text
+          "(comment
+              (wrong)
+              (wrong)
+              (rig|ht)
+              (wrong))"
+          (expect (cider-defun-inside-comment-form) :to-equal "(right)")))
+    (it "attaches to the previous top level comment"
+     (cider-buffer-with-text
+         "(comment
+              (wrong)
+              (wrong)
+              (right)     |
+              (wrong))"
+         (expect (cider-defun-inside-comment-form) :to-equal "(right)")))
+    (it "attaches to the next top level comment even if its on the same line"
+      (cider-buffer-with-text
+          "(comment
+              (wrong)
+              (wrong)
+              (right)
+    |         (wrong))"
+          (expect (cider-defun-inside-comment-form) :to-equal "(right)")))
+    (it "returns the top level even if heavily nested"
+      (cider-buffer-with-text
+          "(comment
+              (wrong)
+              (wrong)
+              (((((r|ight)))))
+              (wrong))"
+          (expect (cider-defun-inside-comment-form) :to-equal "(((((right)))))")))
+    (it "works even on the last form in a comment"
+      (cider-buffer-with-text
+          "(comment
+              (wrong)
+              (wrong)
+              (right|))"
+          (expect (cider-defun-inside-comment-form) :to-equal "(right)")))
+    (it "works on the last form even after the comment form"
+      (cider-buffer-with-text
+          "(comment (wrong) (wrong) (right)) |"
+          (expect (cider-defun-inside-comment-form) :to-equal "(right)"))))
+  (describe "returns entire comment form when"
+    (it "the comment form is empty"
+      (cider-buffer-with-text
+          "(comment|)"
+          (expect (cider-defun-inside-comment-form) :to-equal "(comment)")))))
 
 (describe "cider-defun-at-point"
   (describe "when the param 'bounds is not given"
@@ -168,11 +250,11 @@
   :var (cider-version)
   (it "returns the manual correct url for stable cider versions"
     (setq cider-version "0.11.0")
-    (expect (cider-manual-url) :to-equal "http://cider.readthedocs.org/en/stable/"))
+    (expect (cider-manual-url) :to-equal "http://docs.cider.mx/en/stable/"))
 
   (it "returns the manual correct url for snapshot cider versions"
     (setq cider-version "0.11.0-snapshot")
-    (expect (cider-manual-url) :to-equal "http://cider.readthedocs.org/en/latest/")))
+    (expect (cider-manual-url) :to-equal "http://docs.cider.mx/en/latest/")))
 
 (describe "cider-refcard-url"
   :var (cider-version)
@@ -183,3 +265,56 @@
   (it "returns the refcard correct url for snapshot cider versions"
     (setq cider-version "0.11.0-snapshot")
     (expect (cider-refcard-url) :to-equal "https://github.com/clojure-emacs/cider/raw/master/doc/cider-refcard.pdf")))
+
+(describe "cider-second-sexp-in-list"
+  (it "returns the second sexp in the list"
+    (with-temp-buffer
+      (clojure-mode)
+      (insert "(test-function arg1 arg2 arg3)")
+      (backward-char 2)
+      (expect (cider-second-sexp-in-list) :to-equal "arg1"))))
+
+(describe "cider-ansi-color-string-detect"
+  (it "detect ansi color successfully"
+    (expect (cider-ansi-color-string-p "[31man-ansi-str[0m")
+            :to-be-truthy)
+    (expect (cider-ansi-color-string-p "[34m[[0m[31man-ansi-str[0m[34m][0m")
+            :to-be-truthy)
+    (expect (cider-ansi-color-string-p "[an-ansi-str]")
+            :not :to-be-truthy)
+    (expect (cider-ansi-color-string-p "'an-ansi-str")
+            :not :to-be-truthy)))
+
+(describe "cider-add-face"
+  :var (str)
+
+  (before-each
+    (setq str "aaa bbb\n cccc\n dddd"))
+
+  (describe "works in strings"
+    (it "fontifies with correct face"
+      (cider-add-face "c+" 'font-lock-comment-face nil nil str)
+      (expect (get-pos-property 1 'face str)
+              :to-be nil)
+      (expect (get-pos-property 10 'face str)
+              :to-be 'font-lock-comment-face))
+    (it "fontifies foreground with correct face"
+      (cider-add-face "b+" 'font-lock-comment-face t nil str)
+      (expect (get-pos-property 5 'face str)
+              :to-equal `((foreground-color . ,(face-attribute 'font-lock-comment-face
+                                                               :foreground nil t)))))
+    (it "fontifies sub-expression correctly"
+      (cider-add-face "\\(a\\)aa" 'font-lock-comment-face nil 1 str)
+      (expect (get-pos-property 0 'face str)
+              :to-be 'font-lock-comment-face)
+      (expect (get-pos-property 1 'face str)
+              :to-be nil)))
+
+  (describe "works in buffers"
+    (it "fontifies with correct face"
+      (with-temp-buffer
+        (insert "aaa bbb\n cccc\n ddddd")
+        (goto-char 1)
+        (cider-add-face "c+" 'font-lock-comment-face)
+        (expect (get-pos-property 11 'face)
+                :to-be 'font-lock-comment-face)))))

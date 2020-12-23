@@ -1,6 +1,6 @@
 ;;; cider-doc.el --- CIDER documentation functionality -*- lexical-binding: t -*-
 
-;; Copyright © 2014-2016 Bozhidar Batsov, Jeff Valk and CIDER contributors
+;; Copyright © 2014-2018 Bozhidar Batsov, Jeff Valk and CIDER contributors
 
 ;; Author: Jeff Valk <jv@jeffvalk.com>
 
@@ -26,6 +26,7 @@
 ;;; Code:
 
 (require 'cider-common)
+(require 'subr-x)
 (require 'cider-compat)
 (require 'cider-util)
 (require 'cider-popup)
@@ -35,6 +36,7 @@
 (require 'org-table)
 (require 'button)
 (require 'easymenu)
+(require 'cider-browse-spec)
 
 
 ;;; Variables
@@ -44,6 +46,16 @@
   :prefix "cider-doc-"
   :group 'cider)
 
+(defcustom cider-doc-auto-select-buffer t
+  "Controls whether to auto-select the doc popup buffer."
+  :type 'boolean
+  :group 'cider-doc
+  :package-version  '(cider . "0.15.0"))
+
+(declare-function cider-apropos "cider-apropos")
+(declare-function cider-apropos-select "cider-apropos")
+(declare-function cider-apropos-documentation "cider-apropos")
+(declare-function cider-apropos-documentation-select "cider-apropos")
 
 (defvar cider-doc-map
   (let (cider-doc-map)
@@ -95,7 +107,6 @@
   :group 'cider-docview-mode
   :package-version '(cider . "0.7.0"))
 
-
 
 ;; Faces
 
@@ -134,6 +145,11 @@
   "When theme is changed, update `cider-docview-code-background-color'."
   (setq cider-docview-code-background-color (cider-scale-background-color)))
 
+
+(defadvice disable-theme (after cider-docview-adapt-to-theme activate)
+  "When theme is disabled, update `cider-docview-code-background-color'."
+  (setq cider-docview-code-background-color (cider-scale-background-color)))
+
 
 ;; Mode & key bindings
 
@@ -168,7 +184,9 @@
 
 \\{cider-docview-mode-map}"
   (setq buffer-read-only t)
-  (setq-local truncate-lines t)
+  (setq-local sesman-system 'CIDER)
+  (when cider-special-mode-truncate-lines
+    (setq-local truncate-lines t))
   (setq-local electric-indent-chars nil)
   (setq-local cider-docview-symbol nil)
   (setq-local cider-docview-javadoc-url nil)
@@ -207,15 +225,12 @@ opposite of what that option dictates."
            "Javadoc for"
            #'cider-javadoc-handler))
 
-(declare-function cider-find-file "cider-common")
-(declare-function cider-jump-to "cider-interaction")
-
 (defun cider-docview-source ()
   "Open the source for the current symbol, if available."
   (interactive)
   (if cider-docview-file
-      (if-let ((buffer (and (not (cider--tooling-file-p cider-docview-file))
-                            (cider-find-file cider-docview-file))))
+      (if-let* ((buffer (and (not (cider--tooling-file-p cider-docview-file))
+                             (cider-find-file cider-docview-file))))
           (cider-jump-to buffer (if cider-docview-line
                                     (cons cider-docview-line nil)
                                   cider-docview-symbol)
@@ -246,17 +261,16 @@ opposite of what that option dictates."
     (error "%s cannot be looked up on Grimoire" cider-docview-symbol)))
 
 (defconst cider-doc-buffer "*cider-doc*")
-(add-to-list 'cider-ancillary-buffers cider-doc-buffer)
 
 (defun cider-create-doc-buffer (symbol)
   "Populates *cider-doc* with the documentation for SYMBOL."
-  (when-let ((info (cider-var-info symbol)))
-    (cider-docview-render (cider-make-popup-buffer cider-doc-buffer) symbol info)))
+  (when-let* ((info (cider-var-info symbol)))
+    (cider-docview-render (cider-make-popup-buffer cider-doc-buffer nil 'ancillary) symbol info)))
 
 (defun cider-doc-lookup (symbol)
   "Look up documentation for SYMBOL."
-  (if-let ((buffer (cider-create-doc-buffer symbol)))
-      (cider-popup-buffer-display buffer t)
+  (if-let* ((buffer (cider-create-doc-buffer symbol)))
+      (cider-popup-buffer-display buffer cider-doc-auto-select-buffer)
     (user-error "Symbol %s not resolved" symbol)))
 
 (defun cider-doc (&optional arg)
@@ -366,7 +380,7 @@ Tables are marked to be ignored by line wrap."
         (cider-docview-wrap-text buffer))))) ; ignores code, table blocks
 
 (defun cider--abbreviate-file-protocol (file-with-protocol)
-  "Abbreviate the file-path in `file:/path/to/file'."
+  "Abbreviate the file-path in `file:/path/to/file' of FILE-WITH-PROTOCOL."
   (if (string-match "\\`file:\\(.*\\)" file-with-protocol)
       (let ((file (match-string 1 file-with-protocol))
             (proj-dir (clojure-project-dir)))
@@ -384,8 +398,10 @@ Tables are marked to be ignored by line wrap."
          (depr    (nrepl-dict-get info "deprecated"))
          (macro   (nrepl-dict-get info "macro"))
          (special (nrepl-dict-get info "special-form"))
-         (forms   (nrepl-dict-get info "forms-str"))
-         (args    (nrepl-dict-get info "arglists-str"))
+         (forms   (when-let* ((str (nrepl-dict-get info "forms-str")))
+                    (split-string str "\n")))
+         (args    (when-let* ((str (nrepl-dict-get info "arglists-str")))
+                    (split-string str "\n")))
          (doc     (or (nrepl-dict-get info "doc")
                       "Not documented."))
          (url     (nrepl-dict-get info "url"))
@@ -414,24 +430,14 @@ Tables are marked to be ignored by line wrap."
             (emit (concat "            "(cider-font-lock-as 'java-mode iface)))))
         (when (or super ifaces)
           (insert "\n"))
-        (when (or forms args)
-          (insert " ")
-          (save-excursion
-            (emit (cider-font-lock-as-clojure
-                   ;; All `defn's use ([...] [...]), but some special forms use
-                   ;; (...). We only remove the parentheses on the former.
-                   (replace-regexp-in-string "\\`(\\(\\[.*\\]\\))\\'" "\\1"
-                                             (or forms args)))))
-          ;; It normally doesn't happen, but it's technically conceivable for
-          ;; the args string to contain unbalanced sexps, so `ignore-errors'.
-          (ignore-errors
-            (forward-sexp 1)
-            (while (not (looking-at "$"))
-              (insert "\n")
-              (forward-sexp 1)))
-          (forward-line 1))
-        (when (or special macro)
-          (emit (if special "Special Form" "Macro") 'font-lock-variable-name-face))
+        (when-let* ((forms (or forms args)))
+          (dolist (form forms)
+            (insert " ")
+            (emit (cider-font-lock-as-clojure form))))
+        (when special
+          (emit "Special Form" 'font-lock-keyword-face))
+        (when macro
+          (emit "Macro" 'font-lock-variable-name-face))
         (when added
           (emit (concat "Added in " added) 'font-lock-comment-face))
         (when depr
@@ -457,9 +463,14 @@ Tables are marked to be ignored by line wrap."
           (insert ".\n"))
         (insert "\n")
         (when spec
-          (emit "Spec: " 'font-lock-function-name-face)
-          (mapc (lambda (s) (insert s "\n")) spec)
-          (insert "\n"))
+          (emit "Spec:" 'font-lock-function-name-face)
+          (insert (cider-browse-spec--pprint-indented spec))
+          (insert "\n\n")
+          (insert-text-button "Browse spec"
+                              'follow-link t
+                              'action (lambda (_)
+                                        (cider-browse-spec (format "%s/%s" ns name))))
+          (insert "\n\n"))
         (if cider-docview-file
             (progn
               (insert (propertize (if class java-name clj-name)
@@ -480,9 +491,9 @@ Tables are marked to be ignored by line wrap."
                          ;; if the var belongs to the same namespace,
                          ;; we omit the namespace to save some screen space
                          (symbol (if (equal ns see-also-ns) see-also-sym ns-sym)))
-                    (insert-button symbol
-                                   'type 'help-xref
-                                   'help-function (apply-partially #'cider-doc-lookup symbol)))
+                    (insert-text-button symbol
+                                        'type 'help-xref
+                                        'help-function (apply-partially #'cider-doc-lookup symbol)))
                   (insert " "))
                 see-also))
         (cider--doc-make-xrefs)

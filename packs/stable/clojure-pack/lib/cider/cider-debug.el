@@ -1,6 +1,6 @@
 ;;; cider-debug.el --- CIDER interaction with the cider.debug nREPL middleware  -*- lexical-binding: t; -*-
 
-;; Copyright © 2015-2016 Bozhidar Batsov, Artur Malabarba and CIDER contributors
+;; Copyright © 2015-2018 Bozhidar Batsov, Artur Malabarba and CIDER contributors
 
 ;; Author: Artur Malabarba <bruce.connor.am@gmail.com>
 
@@ -27,12 +27,13 @@
 
 (require 'nrepl-dict)
 (require 'nrepl-client) ; `nrepl--mark-id-completed'
-(require 'cider-interaction)
+(require 'cider-eval)
 (require 'cider-client)
 (require 'cider-util)
 (require 'cider-inspector)
 (require 'cider-browse-ns)
 (require 'cider-common)
+(require 'subr-x)
 (require 'cider-compat)
 (require 'seq)
 (require 'spinner)
@@ -101,7 +102,7 @@ configure `cider-debug-prompt' instead."
   :package-version '(cider . "0.9.1"))
 
 (defcustom cider-debug-print-level 10
-  "The print-level for values displayed by the debugger.
+  "The print level for values displayed by the debugger.
 This variable must be set before starting the repl connection."
   :type '(choice (const :tag "No limit" nil)
                  (integer :tag "Max depth" 10))
@@ -109,7 +110,7 @@ This variable must be set before starting the repl connection."
   :package-version '(cider . "0.10.0"))
 
 (defcustom cider-debug-print-length 10
-  "The print-length for values displayed by the debugger.
+  "The print length for values displayed by the debugger.
 This variable must be set before starting the repl connection."
   :type '(choice (const :tag "No limit" nil)
                  (integer :tag "Max depth" 10))
@@ -121,8 +122,8 @@ This variable must be set before starting the repl connection."
 (defun cider-browse-instrumented-defs ()
   "List all instrumented definitions."
   (interactive)
-  (if-let ((all (thread-first (cider-nrepl-send-sync-request (list "op" "debug-instrumented-defs"))
-                  (nrepl-dict-get "list"))))
+  (if-let* ((all (thread-first (cider-nrepl-send-sync-request '("op" "debug-instrumented-defs"))
+                   (nrepl-dict-get "list"))))
       (with-current-buffer (cider-popup-buffer cider-browse-ns-buffer t)
         (let ((inhibit-read-only t))
           (erase-buffer)
@@ -161,11 +162,11 @@ This variable must be set before starting the repl connection."
 (defun cider--debug-init-connection ()
   "Initialize a connection with the cider.debug middleware."
   (cider-nrepl-send-request
-   (append '("op" "init-debugger")
-           (when cider-debug-print-level
-             (list "print-level" cider-debug-print-level))
-           (when cider-debug-print-length
-             (list "print-length" cider-debug-print-length)))
+   (nconc '("op" "init-debugger")
+          (when cider-debug-print-level
+            `("print-level" ,cider-debug-print-level))
+          (when cider-debug-print-length
+            `("print-length" ,cider-debug-print-length)))
    #'cider--debug-response-handler))
 
 
@@ -227,9 +228,9 @@ Each element of LOCALS should be a list of at least two elements."
   ;; Force `default' face, otherwise the overlay "inherits" the face of the text
   ;; after it.
   (format (propertize "%s\n" 'face 'default)
-          (cider-string-join
+          (string-join
            (nrepl-dict-map (lambda (char cmd)
-                             (when-let ((pos (cl-search char cmd)))
+                             (when-let* ((pos (cl-search char cmd)))
                                (put-text-property pos (1+ pos) 'face 'cider-debug-prompt-face cmd))
                              cmd)
                            command-dict)
@@ -319,7 +320,7 @@ In order to work properly, this mode must be activated by
                   (apply-partially #'cider--debug-lexical-eval
                                    (nrepl-dict-get cider--debug-mode-response "key")))
             ;; Set the keymap.
-            (nrepl-dict-map (lambda (char cmd)
+            (nrepl-dict-map (lambda (char _cmd)
                               (unless (string= char "h") ; `here' needs a special command.
                                 (define-key cider--debug-mode-map char #'cider-debug-mode-send-reply))
                               (when (string= char "o")
@@ -342,8 +343,8 @@ In order to work properly, this mode must be activated by
     ;; We wait a moment before clearing overlays and the read-onlyness, so that
     ;; cider-nrepl has a chance to send the next message, and so that the user
     ;; doesn't accidentally hit `n' between two messages (thus editing the code).
-    (when-let ((proc (unless nrepl-ongoing-sync-request
-                       (get-buffer-process (cider-current-connection)))))
+    (when-let* ((proc (unless nrepl-ongoing-sync-request
+                        (get-buffer-process (cider-current-repl)))))
       (accept-process-output proc 1))
     (unless cider--debug-mode
       (setq buffer-read-only nil)
@@ -395,7 +396,7 @@ In order to work properly, this mode must be activated by
     ["Customize" (customize-group 'cider-debug)]))
 
 (defun cider--uppercase-command-p ()
-  "Return true if the last command was uppercase letter."
+  "Return non-nil if the last command was uppercase letter."
   (ignore-errors
     (let ((case-fold-search nil))
       (string-match "[[:upper:]]" (string last-command-event)))))
@@ -416,8 +417,9 @@ message."
   (when (and (string-prefix-p ":" command) force)
     (setq command (format "{:response %s :force? true}" command)))
   (cider-nrepl-send-unhandled-request
-   (list "op" "debug-input" "input" (or command ":quit")
-         "key" (or key (nrepl-dict-get cider--debug-mode-response "key"))))
+   `("op" "debug-input"
+     "input" ,(or command ":quit")
+     "key" ,(or key (nrepl-dict-get cider--debug-mode-response "key"))))
   (ignore-errors (cider--debug-mode -1)))
 
 (defun cider--debug-quit ()
@@ -441,7 +443,7 @@ Return trimmed CODE."
 ID is the id of the message that instrumented CODE.
 REASON is a keyword describing why this buffer was necessary."
   (let ((buffer-name (format cider--debug-buffer-format id)))
-    (if-let ((buffer (get-buffer buffer-name)))
+    (if-let* ((buffer (get-buffer buffer-name)))
         (cider-popup-buffer-display buffer 'select)
       (with-current-buffer (cider-popup-buffer buffer-name 'select
                                                #'clojure-mode 'ancillary)
@@ -463,7 +465,7 @@ REASON is a keyword describing why this buffer was necessary."
 
 (defun cider--debug-goto-keyval (key)
   "Find KEY in current sexp or return nil."
-  (when-let ((limit (ignore-errors (save-excursion (up-list) (point)))))
+  (when-let* ((limit (ignore-errors (save-excursion (up-list) (point)))))
     (search-forward-regexp (concat "\\_<" (regexp-quote key) "\\_>")
                            limit 'noerror)))
 
@@ -578,9 +580,9 @@ is a coordinate measure in sexps."
       (save-excursion
         (let ((out))
           ;; We prefer in-source debugging.
-          (when-let ((buf (and file line column
-                               (ignore-errors
-                                 (cider--find-buffer-for-file file)))))
+          (when-let* ((buf (and file line column
+                                (ignore-errors
+                                  (cider--find-buffer-for-file file)))))
             ;; The logic here makes it hard to use `with-current-buffer'.
             (with-current-buffer buf
               ;; This is for restoring point inside buf.
@@ -646,7 +648,7 @@ needed.  It is expected to contain at least \"key\", \"input-type\", and
 RESPONSE is a message received from the nrepl describing the value and
 coordinates of a sexp.  Create an overlay after the specified sexp
 displaying its value."
-  (when-let ((marker (cider--debug-find-source-position response)))
+  (when-let* ((marker (cider--debug-find-source-position response)))
     (with-current-buffer (marker-buffer marker)
       (save-excursion
         (goto-char marker)
@@ -708,7 +710,8 @@ TARGET is inside it.  The returned list is suitable for use in
         (goto-char starting-point)))))
 
 (defun cider-debug-move-here (&optional force)
-  "Skip any breakpoints up to point."
+  "Skip any breakpoints up to point.
+The boolean value of FORCE will be sent in the reply."
   (interactive (list (cider--uppercase-command-p)))
   (unless cider--debug-mode
     (user-error "`cider-debug-move-here' only makes sense during a debug session"))

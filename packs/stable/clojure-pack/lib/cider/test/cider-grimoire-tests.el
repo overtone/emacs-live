@@ -1,6 +1,6 @@
 ;;; cider-grimoire-tests.el
 
-;; Copyright © 2012-2016 Tim King, Bozhidar Batsov
+;; Copyright © 2012-2018 Tim King, Bozhidar Batsov
 
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Bozhidar Batsov <bozhidar@batsov.com>
@@ -28,7 +28,6 @@
 ;;; Code:
 
 (require 'buttercup)
-(require 'cider)
 (require 'cider-grimoire)
 
 ;;; grimoire tests
