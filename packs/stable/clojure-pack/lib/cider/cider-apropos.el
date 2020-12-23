@@ -1,6 +1,6 @@
 ;;; cider-apropos.el --- Apropos functionality for Clojure -*- lexical-binding: t -*-
 
-;; Copyright © 2014-2018 Jeff Valk, Bozhidar Batsov and CIDER contributors
+;; Copyright © 2014-2020 Jeff Valk, Bozhidar Batsov and CIDER contributors
 ;;
 ;; Author: Jeff Valk <jv@jeffvalk.com>
 
@@ -25,16 +25,17 @@
 
 ;;; Code:
 
-(require 'cider-doc)
+(require 'cider-doc) ; for cider-doc-lookup
+(require 'cider-find) ; for cider--find-var
 (require 'cider-util)
 (require 'subr-x)
 (require 'cider-compat)
+(require 'cider-connection) ; for cider-ensure-connected
 
 (require 'cider-client)
 (require 'cider-popup)
 (require 'nrepl-dict)
 
-(require 'clojure-mode)
 (require 'apropos)
 (require 'button)
 
@@ -42,7 +43,7 @@
 
 (defcustom cider-apropos-actions '(("display-doc" . cider-doc-lookup)
                                    ("find-def" . cider--find-var)
-                                   ("lookup-on-grimoire" . cider-grimoire-lookup))
+                                   ("lookup-on-clojuredocs" . cider-clojuredocs-lookup))
   "Controls the actions to be applied on the symbol found by an apropos search.
 The first action key in the list will be selected as default.  If the list
 contains only one action key, the associated action function will be
@@ -92,14 +93,18 @@ and be case-sensitive (based on CASE-SENSITIVE-P)."
                          'font-lock-face apropos-match-face doc)))
   doc)
 
+(defvar cider-use-tooltips)
 (defun cider-apropos-result (result query docs-p)
   "Emit a RESULT matching QUERY into current buffer, formatted for DOCS-P."
   (nrepl-dbind-response result (name type doc)
     (let* ((label (capitalize (if (string= type "variable") "var" type)))
-           (help (concat "Display doc for this " (downcase label))))
-      (cider-propertize-region (list 'apropos-symbol name
-                                     'action 'cider-apropos-doc
-                                     'help-echo help)
+           (help (concat "Display doc for this " (downcase label)))
+           (props (list 'apropos-symbol name
+                        'action 'cider-apropos-doc))
+           (props (if cider-use-tooltips
+                      (append props (list 'help-echo help))
+                    props)))
+      (cider-propertize-region props
         (insert-text-button name 'type 'apropos-symbol)
         (insert "\n  ")
         (insert-text-button label 'type (intern (concat "apropos-" type)))
@@ -110,8 +115,6 @@ and be case-sensitive (based on CASE-SENSITIVE-P)."
             (insert doc)
             (fill-region beg (point))))
         (insert "\n")))))
-
-(declare-function cider-mode "cider-mode")
 
 (defun cider-show-apropos (summary results query docs-p)
   "Show SUMMARY and RESULTS for QUERY in a pop-up buffer, formatted for DOCS-P."

@@ -1,6 +1,6 @@
 ;;; org-interactive-query.el --- Interactive modification of agenda query
 ;;
-;; Copyright 2007-2016 Free Software Foundation, Inc.
+;; Copyright 2007-2020 Free Software Foundation, Inc.
 ;;
 ;; Author: Christopher League <league at contrapunctus dot net>
 ;; Version: 1.0
@@ -81,7 +81,7 @@ not change the current one."
 	(split-window-vertically)
 	(org-switch-to-buffer-other-window (get-buffer-create " *Org tags*")))
       (erase-buffer)
-      (org-set-local 'org-done-keywords done-keywords)
+      (setq-local org-done-keywords done-keywords)
       (insert "Query:    " current "\n")
       (org-agenda-query-op-line op)
       (insert "\n\n")

@@ -21,7 +21,7 @@
 
      - Using hippie-expand
 
-   - Call [[sym:yas-insert-snippet][=yas-insert-snippet=]] (use =M-x yas-insert-snippet== or its
+   - Call [[sym:yas-insert-snippet][=yas-insert-snippet=]] (use =M-x yas-insert-snippet= or its
      keybinding =C-c & C-s=).
 
    - Use m2m's excellent auto-complete
@@ -32,16 +32,32 @@
 ** Trigger key
 
 [[sym:yas-expand][=yas-expand=]] tries to expand a /snippet abbrev/ (also known as
-/snippet key/) before point.
+/snippet key/) before point.  YASnippet also provides a /conditional
+binding/ for this command: the variable [[sym:yas-expand][=yas-maybe-expand=]] contains a
+special value which, when bound in a keymap, tells Emacs to call
+[[sym:yas-expand][=yas-expand=]] if and only if there is a snippet abbrev before point.
+If there is no snippet to expand, Emacs will behave as if [[sym:yas-expand][=yas-expand=]]
+is unbound and so will run whatever command is bound to that key
+normally.
 
-When [[sym:yas-minor-mode][=yas-minor-mode=]] is enabled, it binds [[sym:yas-expand][=yas-expand=]] to =TAB= and
-=<tab>= by default, however, you can freely set it to some other key:
+When [[sym:yas-minor-mode][=yas-minor-mode=]] is enabled, it binds [[sym:yas-maybe-expand][=yas-maybe-expand=]] to =TAB=
+and =<tab>= by default, however, you can freely remove those bindings:
 
 #+begin_src emacs-lisp :exports code
    (define-key yas-minor-mode-map (kbd "<tab>") nil)
    (define-key yas-minor-mode-map (kbd "TAB") nil)
-   (define-key yas-minor-mode-map (kbd "<the new key>") 'yas-expand)
 #+end_src
+
+And set your own:
+
+#+begin_src emacs-lisp :exports code
+  ;; Bind `SPC' to `yas-expand' when snippet expansion available (it
+  ;; will still call `self-insert-command' otherwise).
+  (define-key yas-minor-mode-map (kbd "SPC") yas-maybe-expand)
+  ;; Bind `C-c y' to `yas-expand' ONLY.
+  (define-key yas-minor-mode-map (kbd "C-c y") #'yas-expand)
+#+end_src
+
 
 To enable the YASnippet minor mode in all buffers globally use the
 command [[sym:yas-global-mode][=yas-global-mode=]]. This will enable a modeline indicator,
@@ -50,28 +66,18 @@ command [[sym:yas-global-mode][=yas-global-mode=]]. This will enable a modeline 
 [[./images/minor-mode-indicator.png]]
 
 When you use [[sym:yas-global-mode][=yas-global-mode=]] you can also selectively disable
-YASnippet in some buffers by setting the buffer-local variable
-[[sym:yas-dont-active][=yas-dont-active=]] in the buffer's mode hook.
+YASnippet in some buffers by calling [[sym:yas-minor-mode][=yas-minor-mode=]] with a negative
+argument in the buffer's mode hook.
 
 *** Fallback behaviour
 
-[[sym:yas-fallback-behaviour][=yas-fallback-behaviour=]] is a customization variable bound to
-'=call-other-command= by default. If [[sym:yas-expand][=yas-expand=]] failed to find any
-suitable snippet to expand, it will disable the minor mode temporarily
-and find if there's any other command bound to the same key.
-
-If found, the command will be called. Usually this works very well
---when there's a snippet, expand it, otherwise, call whatever command
-originally bind to the trigger key.
-
-However, you can change this behavior by customizing the
-[[sym:yas-fallback-behavior][=yas-fallback-behavior=]] variable. If you set this variable to
-'=return-nil=, it will return =nil= instead of trying to call the
-/original/ command when no snippet is found.
+YASnippet used to support a more complicated way of sharing
+keybindings before [[sym:yas-expand][=yas-maybe-expand=]] was added.  This is now
+obsolete.
 
 ** Insert at point
 
-The command [[#yas-insert-snippet][=yas-insert-snippet=]] lets you insert snippets at point
+The command [[sym:yas-insert-snippet][=yas-insert-snippet=]] lets you insert snippets at point
 /for your current major mode/. It prompts you for the snippet key
 first, and then for a snippet template if more than one template
 exists for the same key.
@@ -88,7 +94,7 @@ The prompting methods used are again controlled by
 It's often useful to inject already written text in the middle of a
 snippet.  The variable [[sym:yas-wrap-around-region][=yas-wrap-around-region=]] when to t substitute
 the region contents into the =$0= placeholder of a snippet expanded by
-[[#yas-insert-snippet][=yas-insert-snippet=]].  Setting it to a character value (e.g. =?0=)
+[[sym:yas-insert-snippet][=yas-insert-snippet=]].  Setting it to a character value (e.g. =?0=)
 will insert the contents of corresponding register.
 
 Older (versions 0.9.1 and below) of Yasnippet, supported a setting of
@@ -155,15 +161,17 @@ In particular, the following things matter:
    =M-x describe-variable RET major-mode RET= to find out which major
    mode you are in currently.
 
--  Parent tables
+- Parent tables
 
-   Snippet tables defined as the parent of some other eligible table are
-   also considered. This works recursively, i.e. parents of parents of
-   eligible tables are also considered.
+  Snippet tables defined as the parent of some other eligible table
+  are also considered.  This works recursively, i.e., parents of
+  parents of eligible tables are also considered.  As a special case,
+  if a mode doesn't have a parent, then =fundamental-mode= is
+  considered to be its parent.
 
 -  Buffer-local list of extra modes
 
-   Use [[#yas-activate-extra-mode][=yas-activate-extra-mode=]] to
+   Use [[sym:yas-activate-extra-mode][=yas-activate-extra-mode=]] to
    consider snippet tables whose name does not correspond to a major
    mode. Typically, you call this from a minor mode hook, for example:
 
@@ -175,46 +183,44 @@ In particular, the following things matter:
                 (yas-activate-extra-mode 'rails-mode)))
 #+END_SRC
 
--  Buffer-local
-   [[sym:yas-buffer-local-condition][=yas-buffer-local-condition=]]
-   variable
+-  Buffer-local [[sym:yas-buffer-local-condition][=yas-buffer-local-condition=]] variable
 
    This variable provides finer grained control over what snippets can
-   be expanded in the current buffer. The default value won't let you
-   expand snippets inside comments or string literals for example. See
-   The condition system\_ for more info.
+   be expanded in the current buffer.  For example, the constant
+   [[sym:yas-not-string-or-comment-condition][=yas-not-string-or-comment-condition=]] has a value that disables
+   snippet expansion inside comments or string literals.  See [[condition-system][the
+   condition system]] for more info.
 
-** The condition system
+** The condition system <<condition-system>>
 
 Consider this scenario: you are an old Emacs hacker. You like the
 abbrev-way and bind [[sym:yas-expand][=yas-expand=]] to =SPC=. However, you don't want
 =if= to be expanded as a snippet when you are typing in a comment
 block or a string (e.g. in =python-mode=).
 
-If you use the =# condition := directive (see
-[[./snippet-development.org][Writing Snippets]]) you could just specify
-the condition for =if= to be =(not (python-in-string/comment))=. But how
-about =while=, =for=, etc. ? Writing the same condition for all the
-snippets is just boring. So has a buffer local variable
-[[sym:yas-buffer-local-condition][=yas-buffer-local-condition=]]. You can set this variable to
-=(not (python-in-string/comment))= in =python-mode-hook=.
+If you use the =# condition := directive (see [[./snippet-development.org][Writing Snippets]]) you
+could just specify the condition for =if= to be =(not
+(python-syntax-comment-or-string-p))=.  But how about =while=, =for=,
+etc?  Writing the same condition for all the snippets is just boring.
+So you can instead set [[sym:yas-buffer-local-condition][=yas-buffer-local-condition=]] to =(not
+(python-syntax-comment-or-string-p))= in =python-mode-hook=.
 
 Then, what if you really want some particular snippet to expand even
-inside a comment? Set [[sym:yas-buffer-local-condition][=yas-buffer-local-condition=]] like this
+inside a comment?  Set [[sym:yas-buffer-local-condition][=yas-buffer-local-condition=]] like this
 
 #+BEGIN_SRC emacs-lisp
   (add-hook 'python-mode-hook
             (lambda ()
               (setq yas-buffer-local-condition
-                    '(if (python-in-string/comment)
+                    '(if (python-syntax-comment-or-string-p)
                          '(require-snippet-condition . force-in-comment)
                        t))))
 #+END_SRC
 
-... and specify the condition for a snippet that you're going to expand
-in comment to be evaluated to the symbol =force-in-comment=. Then it can
-be expanded as you expected, while other snippets like =if= still can't
-expanded in comment.
+... and for a snippet that you want to expand in comments, specify a
+condition which evaluates to the symbol =force-in-comment=.  Then it
+can be expanded as you expected, while other snippets like =if= still
+can't expanded in comments.
 
 For the full set of possible conditions, see the documentation for
 [[sym:yas-buffer-local-condition][=yas-buffer-local-condition=]].

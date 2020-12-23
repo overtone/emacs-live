@@ -1,0 +1,208 @@
+# -*- mode: org -*-
+* v0.2.0    2020-02-26
+
+- ~transient-args~ must now be called with a transient prefix command
+  as argument.  It is now the only argument and its value must be a
+  symbol now, an object is no longer supported.  When this command
+  does not match ~current-transient-command~, then this function now
+  returns the set, saved or default value.  0312b93, 7d0db28,
+  d33fe5a, a6ce195
+
+- No longer use the last history element as initial minibuffer input
+  by default.  Added new option ~transient-read-with-initial-input~ to
+  allow users to restore the old default. dcf7a4d, 5decc6e
+
+- The set and saved values were not always used.  #68
+
+- Added support for inserting and removing groups.  #36
+
+- Added support for specifying where to insert elements and groups
+  using coordinates.  #26
+
+- Added support for moving the cursor inside the transient popup
+  buffer using the arrow keys or Isearch, and for invoke suffix
+  commands using RET or mouse clicks.  Unlike Magit-Popup, Transient
+  doesn't make the transient popup buffer the current buffer.  This
+  is important when invoking suffix commands that take the current
+  position into account, but it has the drawback that we do not get
+  these features for free.  Because I also consider them unnecessary
+  I did not implement them initially.  Turns out quite a few users
+  strongly disagree.  Set ~transient-enable-popup-navigation~ to ~t~ to
+  enable these features.  #42
+
+- Explicitly support Edebug.  Previously when Edebug was triggered
+  while a transient was active, then Emacs entered an unrecoverable
+  state.  #19
+
+- No longer attempt to display a thin line in termcap frames.  0a96a57
+
+- Work around some Ivy bugs/incompatibilities.  af243d5, fed7ab1
+
+- The new option ~transient-force-fixed-pitch~ allows users to use a
+  monospaced font in transient's popup buffer even if they use a
+  proportional font for the rest of Emacs.  #25, #67
+
+- Adapted to backward incompatible changes in Emacs 27 that prevented
+  faces from extending to the edge of the window as expected.  c1ae1ee
+
+- No longer depend on dash (or any other third-party package).  #66
+
+- When a transient has conflicting key bindings and Transient is
+  configure to warn about that, then Emacs entered an unrecoverable
+  state instead.  75de1f0
+
+- ~transient-format-value~ now supports options with multiple values.
+  #65
+
+- Removing a suffix based on its position was broken.  41cbf49
+
+- In our popup buffers disable the tab feature that Emacs 27
+  introduces.  #62
+
+- Inserting a new suffix next to another ended up replacing the latter
+  instead if its key binding was defined in the suffix object.  #58
+
+- ~transient-undefined~ learned to make some noise.  #57
+
+- Fix replacing a suffix with another suffix bound to the same key.
+  5a360bb, 4ce1868
+
+- Characters are no longer allowed as pseudo suffixes.  To insert a
+  an empty cell into a table use the empty string instead.  71687ba
+
+- Added new variable ~transient--buffer-name~.  #45
+
+- Some misconfiguration that affects how the transient popup buffer
+  is displayed could lead to Emacs entering an unrecoverable state.
+  #34, #44
+
+- The echo area is now cleared when the transient popup buffer is
+  shown.  afdf1f0
+
+- If ~transient-show-popup~ is 0 or a negative number, then not even
+  a one-line summary is shown initially.  #41
+
+- Added new function ~transient-read-directory~.  a87cb2c
+
+- ~define-transient-command~ now supports specifying the level of a
+  suffix using the ~:level~ keyword argument.  6506cfd
+
+- The mode-related suffix predicates now also support a list of modes
+  as argument in addition to a single mode as before.  1c6afb8
+
+- The new ~incompatible~ slot of prefix objects makes it possible to
+  specify which arguments should be autoatically disabled when the
+  user enables certain other arguments.  544b3bb
+
+- ~transient--history-push~ is now defined as generic function.  47b7975
+
+- The a new ~history-key~ slot and ~transient--history-key~ generic
+  function for prefix objects.  3668aeb, e627d45
+
+- Disallow setting the level of essential suffixes that are shared
+  between all transients.  #29
+
+- The active infix is now highlight while reading its value from the
+  user.  #30
+
+- The commands ~transient-set~  and ~transient-save~ can now be configured
+  to exit the transient, though by default they still don't.  a47ae94
+
+- Always respect the ~transient~ slot of a suffix, even if that suffix
+  has a binding in ~transient-predicate-map~.  919fc66
+
+- Added new generic functions ~transient-set-value~ and
+  ~transient-save-value~ intended for prefix commands.  ebe9d9d
+
+- It is no longer possible to set a prefix level to 0, which is an
+  invalid value.  #28
+
+- All transient prefix and suffix commands are now automatically
+  declared to be for interactive use only.  a6295fa
+
+- Infix arguments are no longer added to ~command-history~ because
+  these entries were both useless and extremely noisy.  #23
+
+- ~digit-argument~ no longer exits the transient.  5f0ec7d
+
+- A new keymap, ~transient-base-map~ was added to make it easier to
+  change key bindings that are shared between all transients.  This
+  new keymap is used as the parent of all the other keymaps that are
+  shared between all transients.
+
+- Added new commands ~transient-scroll-up~ and ~transient-scroll-down~,
+  which scroll the transient window.  ~C-v~ and ~M-v~ (and ~<next>~ and
+  ~<prior>~) are bound to these commands.  These keys were chosen they
+  are bound to scrolling commands in the global map too.  This made
+  it necessary to find a new binding for ~transient-show~, which ~C-t~ is
+  bound to now.  #17
+
+- The new option ~transient-mode-line-format~ allows users to use
+  a mode-line for the transient popup buffer instead of just a
+  thin line that separates it from the echo area.  When using a
+  non-standard value for ~transient-display-buffer-action~ it may
+  be necessary to do that.  #17
+
+- The new option ~transient-display-buffer-action~ allows users to
+  specify how a window is selected to display the transient popup
+  buffer.  The ~lv~ library is no longer used.  #17
+
+- The window that was selected before the transient window was shown
+  is no longer re-selected before calling a suffix that exits the
+  transient.  If a suffix changes the selected window unintentionally,
+  then that is a bug.  This makes it possible to intentionally change
+  the window layout using transients.
+
+- An infix is a special kind of suffix.  Depending on context
+  "suffixes" means "suffixes (including infixes)" or "non-infix
+  suffixes".  This is now mention in a few places where users might
+  otherwise get confused.
+
+- Stopped claiming that the transient is shown in the "echo area",
+  because technically that is not correct.  Instead talk about the
+  "popup buffer".
+
+- Fixed handling of suffix commands that are undefined at the time the
+  prefix is invoked.  This is still an error, but the error message
+  now explains what is wrong.  a729bbb
+
+- Fixed saving values/history/levels, making sure that the printed
+  expression is never abbreviated.  #15
+
+- Fixed jumping to the correct place in a manpage when showing the
+  documentation for an infix argument.  c4bf4af
+
+- Bound ~ESC ESC ESC~ to ~transient-quit-all~ because the convention is
+  that it should be possible to exit any temporary state using this
+  binding.  #12
+
+- Fixed referencing suffix bindings by their key when the key binding
+  is defined in the suffix object instead of in the suffix spec.
+  e4ffb97
+
+- Remove trailing whitespace from popup text for the benefit of users
+  who have set enabled ~show-trailing-whitespace~ globally.  0758efa
+
+- Fixed showing available bindings on a single line instead of using
+  the usual popup buffer.  2f011c9, 99d3bf6
+
+- Added a line between the ~lv~ window and the echo area.  ca18bb6
+
+- Fixed adding a new suffix at the end of a group and removing a
+  group's last suffix.  #20, #6
+
+- No longer use ~cl-typep~, which appears to have a bug on Emacs 25.
+  9183fe1
+
+- Fixed ~lisp~ make target.  170a3fd
+
+- Fixed reading a number as the value of an infix.  8219c0b
+
+- Various bug fixes to
+  ~transient--goto-argument-description~ (4f80a89),
+  ~transient-show-help~ (ccac95e),
+  ~transient-infix-read~ (7bf9759).
+
+* v0.1.0    2019-01-14
+
+- First release.

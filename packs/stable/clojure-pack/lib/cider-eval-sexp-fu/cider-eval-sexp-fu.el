@@ -6,8 +6,8 @@
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; Keywords: languages, clojure, cider
 ;; Created: 20 Mar 2015
-;; Version: 1.1
-;; Package-Requires: ((emacs "24") (highlight "0") (eval-sexp-fu "0.4.0"))
+;; Version: 1.2
+;; Package-Requires: ((emacs "24") (eval-sexp-fu "0.5.0"))
 
 ;; This file is not part of GNU Emacs.
 
@@ -32,7 +32,6 @@
 
 ;;; Code:
 
-(require 'highlight)
 (require 'eval-sexp-fu)
 
 (defun cider-esf--bounds-of-last-sexp ()
@@ -53,7 +52,7 @@ area is identical to that which is evaluated."
     (eval-sexp-fu-flash (cider-esf--bounds-of-last-sexp)))
   (define-eval-sexp-fu-flash-command cider-eval-defun-at-point
     (eval-sexp-fu-flash (let ((bounds (cider-defun-at-point 'bounds)))
-                          (cons (first bounds) (second bounds)))))
+                          (cons (car bounds) (cadr bounds)))))
 
   ;; Defines:
   ;; `eval-sexp-fu-cider-sexp-inner-list',

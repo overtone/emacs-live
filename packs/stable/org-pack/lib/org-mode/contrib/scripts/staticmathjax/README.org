@@ -46,7 +46,7 @@ The code is licensed under the GNU General Public License version
 	  if --embed-fonts is not specified, this
       must be the URL to a MathJax installation folder (e.g. "MathJax"
       if MathJax is installed in a subdirectory, or
-      "http://orgmode.org/mathjax" to use the version hosted on the Org
+      "https://orgmode.org/mathjax" to use the version hosted on the Org
       website.
 	  
 	  All references to math fonts in the output file will point to

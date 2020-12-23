@@ -2,8 +2,7 @@ EMACS ?= emacs
 CASK ?= cask
 EMACS23=emacs23
 
-ELPA_DIR = \
-	.cask/$(shell $(EMACS) -Q --batch --eval '(princ emacs-version)')/elpa
+ELPA_DIR = $(shell EMACS=$(EMACS) $(CASK) package-directory)
 
 .PHONY: test test-nw test-emacs23 test-emacs23-nw travis-ci
 

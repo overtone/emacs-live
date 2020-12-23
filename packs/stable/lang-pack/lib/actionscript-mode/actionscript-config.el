@@ -143,5 +143,4 @@ with a directory named 'as' from which it builds package names."
     (visit-tags-table (concat default-directory "/TAGS"))))
 
 ;; Keybindings
-(define-key actionscript-mode-map [f5] 'as-print-func-info)
 (define-key actionscript-mode-map "\C-c\C-t" 'as-insert-trace)

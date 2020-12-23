@@ -1,12 +1,12 @@
 ;;; org-eval-light.el --- Display result of evaluating code in various languages (light)
 
-;; Copyright (C) 2008-2016 Free Software Foundation, Inc.
+;; Copyright (C) 2008-2020 Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <carsten at orgmode dot org>,
 ;;         Eric Schulte <schulte dot eric at gmail dot com>
 ;; Keywords: outlines, hypermedia, calendar, wp, literate programming,
 ;;           reproducible research
-;; Homepage: http://orgmode.org
+;; Homepage: https://orgmode.org
 ;; Version: 0.04
 
 ;; This file is not yet part of GNU Emacs.

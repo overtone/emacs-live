@@ -1,6 +1,6 @@
 ;;; test-ob-sed.el --- tests for ob-sed.el
 
-;; Copyright (c) 2015 Bjarte Johansen
+;; Copyright (c) 2015, 2019 Bjarte Johansen
 ;; Authors: Bjarte Johansen
 
 ;; This file is not part of GNU Emacs.
@@ -19,6 +19,8 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ;;; Code:
+
+(require 'ob-sed)
 (org-test-for-executable "sed")
 (unless (featurep 'ob-sed)
   (signal 'missing-test-dependency "Support for Sed code blocks"))
@@ -27,7 +29,7 @@
   "Test simple execution of script."
   (org-test-at-id "C7E7CA6A-2601-42C9-B534-4102D62E458D"
     (org-babel-next-src-block)
-    (should (string= "A processed sentence.\n"
+    (should (string= "A processed sentence."
 		     (org-babel-execute-src-block)))))
 
 (ert-deftest ob-sed-test/in-file-header-argument ()
@@ -38,7 +40,7 @@
 	(insert "A test file.")
 	(write-file "test1.txt"))
       (org-babel-next-src-block)
-      (should (string= "A tested file.\n"
+      (should (string= "A tested file."
 		       (org-babel-execute-src-block))))))
 
 (ert-deftest ob-sed-test/cmd-line-header-argument ()

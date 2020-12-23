@@ -11,6 +11,12 @@
 #+end_src
 
 #+source: simple
+#+begin_src cpp :includes <iostream> :results silent
+  std::cout << 42;
+  return 0;
+#+end_src
+
+#+source: simple
 #+begin_src D :results silent
   writefln ("%s", 42);
 #+end_src
@@ -117,7 +123,7 @@
   :ID:       e112bc2e-419a-4890-99c2-7ac4779531cc
   :END:
 
-#+tblname: tinomogen
+#+name: tinomogen
   | day       | quty |
   |-----------+------|
   | monday    |   34 |

@@ -32,11 +32,13 @@ reliably would also make a huge difference.
 
 ## Pull requests
 
+* Read the [Hacking on CIDER][8] manual section.
 * Read [how to properly contribute to open source projects on Github][2].
 * Use a topic branch to easily amend a pull request later, if necessary.
 * Use the same coding conventions as the rest of the project.
 * Verify your Emacs Lisp code with `checkdoc` (<kbd>C-c ? d</kbd>).
-* Make sure that the unit tests are passing (`make test`).
+* Make sure that the unit tests are passing (`eldev test`).
+* Make sure that there are no lint warnings (`eldev lint`).
 * Write [good commit messages][3].
 * Mention related tickets in the commit messages (e.g. `[Fix #N] Add command ...`).
 * Update the [changelog][6].
@@ -51,3 +53,4 @@ reliably would also make a huge difference.
 [5]: http://gitready.com/advanced/2009/02/10/squashing-commits-with-rebase.html
 [6]: https://github.com/clojure-emacs/cider/blob/master/CHANGELOG.md
 [7]: http://cider.readthedocs.org/en/latest/troubleshooting/
+[8]: https://cider.readthedocs.io/en/latest/hacking_on_cider/

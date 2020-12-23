@@ -24,17 +24,25 @@
 (require 'dash)
 (require 'dash-functional)
 (require 'help-fns)
+(require 'package)
+
+(setq text-quoting-style 'grave)
 
 (defvar functions '())
 
+(defun dash-get-package-version ()
+  "Get version of dash package."
+  (with-current-buffer (find-file-noselect "dash.el")
+    (mapconcat 'number-to-string (package-desc-version (package-buffer-info)) version-separator)))
+
 (defun example-to-string (example)
   (-let* (((actual sym expected) example)
-	  (comment
-	   (cond
-	    ((eq sym '=>) (format "=> %S" expected))
-	    ((eq sym '~>) (format "~> %S" expected))
-	    ((eq sym '!!>) (format "Error"))
-	    (t (error "Invalid test case: %S" `(,actual ,sym ,expected))))))
+      (comment
+       (cond
+        ((eq sym '=>) (format "=> %S" expected))
+        ((eq sym '~>) (format "~> %S" expected))
+        ((eq sym '!!>) (format "Error"))
+        (t (error "Invalid test case: %S" `(,actual ,sym ,expected))))))
     (--> comment
       (format "%S ;; %s" actual it)
       (replace-regexp-in-string "\\\\\\?" "?" it)
@@ -145,8 +153,8 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
 
 (defun simplify-quotes ()
   (goto-char (point-min))
-  (while (search-forward "(quote nil)" nil t)
-    (replace-match "'()"))
+  (while (re-search-forward (rx (or "'nil" "(quote nil)")) nil t)
+    (replace-match "'()" t t))
   (goto-char (point-min))
   (while (search-forward "(quote " nil t)
     (forward-char -7)
@@ -155,12 +163,26 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
       (delete-char -1)
       (goto-char p)
       (delete-char 7)
-      (insert "'"))))
+      (insert "'")))
+  (goto-char (point-min))
+  (while (search-forward "(function " nil t)
+    (forward-char -10)
+    (let ((p (point)))
+      (forward-sexp 1)
+      (delete-char -1)
+      (goto-char p)
+      (delete-char 10)
+      (insert "#'"))))
 
 (defun goto-and-remove (s)
   (goto-char (point-min))
   (search-forward s)
   (delete-char (- (length s))))
+
+(defun goto-and-replace-all (s replacement)
+  (while (progn (goto-char (point-min)) (search-forward s nil t))
+    (delete-char (- (length s)))
+    (insert replacement)))
 
 (defun create-docs-file ()
   (let ((functions (nreverse functions)))
@@ -172,6 +194,8 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
 
       (goto-and-remove "[[ function-docs ]]")
       (insert (mapconcat 'function-to-md functions "\n"))
+
+      (goto-and-replace-all "[[ version ]]" (dash-get-package-version))
 
       (simplify-quotes))))
 

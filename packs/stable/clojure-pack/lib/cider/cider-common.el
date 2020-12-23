@@ -1,6 +1,6 @@
 ;;; cider-common.el --- Common use functions         -*- lexical-binding: t; -*-
 
-;; Copyright © 2015-2018  Artur Malabarba
+;; Copyright © 2015-2020  Artur Malabarba
 
 ;; Author: Artur Malabarba <bruce.connor.am@gmail.com>
 
@@ -31,7 +31,7 @@
 (require 'etags) ; for find-tags-marker-ring
 (require 'tramp)
 
-(defcustom cider-prompt-for-symbol t
+(defcustom cider-prompt-for-symbol nil
   "Controls when to prompt for symbol when a command requires one.
 
 When non-nil, always prompt, and use the symbol at point as the default
@@ -127,6 +127,21 @@ On failure, read a symbol name using PROMPT and call CALLBACK with that."
 
 (declare-function cider-mode "cider-mode")
 
+(defcustom cider-jump-to-pop-to-buffer-actions
+  '((display-buffer-reuse-window display-buffer-same-window))
+  "Determines what window `cider-jump-to` uses.
+The value is passed as the `action` argument to `pop-to-buffer`.
+
+The default value means:
+
+- If the target file is already visible in a window, reuse it (switch to it).
+- Otherwise, open the target buffer in the current window.
+
+For further details, see https://docs.cider.mx/cider/repl/configuration.html#_control_what_window_to_use_when_jumping_to_a_definition"
+  :type 'sexp
+  :group 'cider
+  :package-version '(cider . "0.24.0"))
+
 (defun cider-jump-to (buffer &optional pos other-window)
   "Push current point onto marker ring, and jump to BUFFER and POS.
 POS can be either a number, a cons, or a symbol.
@@ -138,40 +153,44 @@ If OTHER-WINDOW is non-nil don't reuse current window."
   (with-no-warnings
     (ring-insert find-tag-marker-ring (point-marker)))
   (if other-window
-      (pop-to-buffer buffer)
-    ;; like switch-to-buffer, but reuse existing window if BUFFER is visible
-    (pop-to-buffer buffer '((display-buffer-reuse-window display-buffer-same-window))))
+      (pop-to-buffer buffer 'display-buffer-pop-up-window)
+    (pop-to-buffer buffer cider-jump-to-pop-to-buffer-actions))
   (with-current-buffer buffer
     (widen)
     (goto-char (point-min))
     (cider-mode +1)
-    (cond
-     ;; Line-column specification.
-     ((consp pos)
-      (forward-line (1- (or (car pos) 1)))
-      (if (cdr pos)
-          (move-to-column (cdr pos))
-        (back-to-indentation)))
-     ;; Point specification.
-     ((numberp pos)
-      (goto-char pos))
-     ;; Symbol or string.
-     (pos
-      ;; Try to find (def full-name ...).
-      (if (or (save-excursion
-                (search-forward-regexp (format "(def.*\\s-\\(%s\\)" (regexp-quote pos))
-                                       nil 'noerror))
-              (let ((name (replace-regexp-in-string ".*/" "" pos)))
-                ;; Try to find (def name ...).
-                (or (save-excursion
-                      (search-forward-regexp (format "(def.*\\s-\\(%s\\)" (regexp-quote name))
-                                             nil 'noerror))
-                    ;; Last resort, just find the first occurrence of `name'.
-                    (save-excursion
-                      (search-forward name nil 'noerror)))))
-          (goto-char (match-beginning 0))
-        (message "Can't find %s in %s" pos (buffer-file-name))))
-     (t nil))))
+    (let ((status
+           (cond
+            ;; Line-column specification.
+            ((consp pos)
+             (forward-line (1- (or (car pos) 1)))
+             (if (cdr pos)
+                 (move-to-column (cdr pos))
+               (back-to-indentation)))
+            ;; Point specification.
+            ((numberp pos)
+             (goto-char pos))
+            ;; Symbol or string.
+            (pos
+             ;; Try to find (def full-name ...).
+             (if (or (save-excursion
+                       (search-forward-regexp (format "(def.*\\s-\\(%s\\)" (regexp-quote pos))
+                                              nil 'noerror))
+                     (let ((name (replace-regexp-in-string ".*/" "" pos)))
+                       ;; Try to find (def name ...).
+                       (or (save-excursion
+                             (search-forward-regexp (format "(def.*\\s-\\(%s\\)" (regexp-quote name))
+                                                    nil 'noerror))
+                           ;; Last resort, just find the first occurrence of `name'.
+                           (save-excursion
+                             (search-forward name nil 'noerror)))))
+                 (goto-char (match-beginning 0))
+               (message "Can't find %s in %s" pos (buffer-file-name))
+               'not-found))
+            (t 'not-found))))
+      (unless (eq status 'not-found)
+        ;; Make sure the location we jump to is centered within the target window
+        (recenter)))))
 
 (defun cider--find-buffer-for-file (file)
   "Return a buffer visiting FILE.
@@ -255,11 +274,48 @@ otherwise, nil."
         localname)
     name))
 
+(defcustom cider-path-translations nil
+  "Alist of path prefixes to path prefixes.
+Useful to intercept the location of a path in a container (or virtual
+machine) and translate to the oringal location.  If your project is located
+at \"~/projects/foo\" and the src directory of foo is mounted at \"/src\"
+in the container, the alist would be `((\"/src\" \"~/projects/foo/src\"))."
+  :type '(alist :key-type string :value-type string)
+  :group 'cider
+  :package-version '(cider . "0.23.0"))
+
+(defun cider--translate-path (path direction)
+  "Attempt to translate the PATH in the given DIRECTION.
+Looks at `cider-path-translations' for (container . host) alist of path
+prefixes and translates PATH from container to host or viceversa depending on
+whether DIRECTION is 'from-nrepl or 'to-nrepl."
+  (seq-let [from-fn to-fn path-fn] (cond ((eq direction 'from-nrepl) '(car cdr identity))
+                                         ((eq direction 'to-nrepl) '(cdr car expand-file-name)))
+    (let ((path (funcall path-fn path)))
+      (seq-some (lambda (translation)
+                  (let ((prefix (file-name-as-directory (expand-file-name (funcall from-fn translation)))))
+                    (when (string-prefix-p prefix path)
+                      (replace-regexp-in-string (format "^%s" (regexp-quote prefix))
+                                                (file-name-as-directory
+                                                 (expand-file-name (funcall to-fn translation)))
+                                                path))))
+                cider-path-translations))))
+
+(defun cider--translate-path-from-nrepl (path)
+  "Attempt to translate the nREPL PATH to a local path."
+  (cider--translate-path path 'from-nrepl))
+
+(defun cider--translate-path-to-nrepl (path)
+  "Attempt to translate the local PATH to an nREPL path."
+  (cider--translate-path (expand-file-name path) 'to-nrepl))
+
 (defvar cider-from-nrepl-filename-function
   (with-no-warnings
-    (if (eq system-type 'cygwin)
-        #'cygwin-convert-file-name-from-windows
-      #'identity))
+    (lambda (path)
+      (let ((path* (if (eq system-type 'cygwin)
+                       (cygwin-convert-file-name-from-windows path)
+                     path)))
+        (or (cider--translate-path-from-nrepl path*) path*))))
   "Function to translate nREPL namestrings to Emacs filenames.")
 
 (defcustom cider-prefer-local-resources nil
@@ -286,10 +342,13 @@ If no local or remote file exists, return nil."
 (defun cider-find-file (url)
   "Return a buffer visiting the file URL if it exists, or nil otherwise.
 If URL has a scheme prefix, it must represent a fully-qualified file path
-or an entry within a zip/jar archive.  If URL doesn't contain a scheme
-prefix and is an absolute path, it is treated as such.  Finally, if URL is
-relative, it is expanded within each of the open Clojure buffers till an
-existing file ending with URL has been found."
+or an entry within a zip/jar archive.  If AVFS (archive virtual file
+system; see online docs) is mounted the archive entry is opened inside the
+AVFS directory, otherwise the entry is archived into a temporary read-only
+buffer.  If URL doesn't contain a scheme prefix and is an absolute path, it
+is treated as such.  Finally, if URL is relative, it is expanded within each
+of the open Clojure buffers till an existing file ending with URL has been
+found."
   (require 'arc-mode)
   (cond ((string-match "^file:\\(.+\\)" url)
          (when-let* ((file (cider--url-to-file (match-string 1 url)))
@@ -297,42 +356,39 @@ existing file ending with URL has been found."
            (find-file-noselect path)))
         ((string-match "^\\(jar\\|zip\\):\\(file:.+\\)!/\\(.+\\)" url)
          (when-let* ((entry (match-string 3 url))
-                     (file  (cider--url-to-file (match-string 2 url)))
-                     (path  (cider--file-path file))
-                     ;; It is used for targeting useless intermediate buffer.
-                     ;; That buffer is made by (find-file path) below.
-                     ;; It has the name which is the last part of the path.
-                     (trash (replace-regexp-in-string "^/.+/" "" path))
-                     (name  (format "%s:%s" path entry)))
-           (or (find-buffer-visiting name)
-               (if (tramp-tramp-file-p path)
-                   (progn
-                     ;; Use emacs built in archiving.
-                     ;; This makes a list of files in archived Zip or Jar.
-                     ;; That list buffer is useless after jumping to the
-                     ;; buffer which has the real definition.
-                     ;; It'll be removed by (kill-buffer trash) below.
-                     (find-file path)
-                     (goto-char (point-min))
-                     ;; Make sure the file path is followed by a newline to
-                     ;; prevent eg. clj matching cljs.
-                     (search-forward (concat entry "\n"))
-                     ;; moves up to matching line
-                     (forward-line -1)
-                     (archive-extract)
-                     ;; Remove useless buffer made by (find-file path) above.
-                     (kill-buffer trash)
-                     (current-buffer))
-                 ;; Use external zip program to just extract the single file
-                 (with-current-buffer (generate-new-buffer
-                                       (file-name-nondirectory entry))
-                   (archive-zip-extract path entry)
-                   (set-visited-file-name name)
-                   (setq-local default-directory (file-name-directory path))
-                   (setq-local buffer-read-only t)
-                   (set-buffer-modified-p nil)
-                   (set-auto-mode)
-                   (current-buffer))))))
+                     (file (cider--url-to-file (match-string 2 url)))
+                     (path (cider--file-path file))
+                     (name (format "%s:%s" path entry))
+                     (avfs (format "%s%s#uzip/%s"
+                                   (expand-file-name (or (getenv "AVFSBASE")  "~/.avfs/"))
+                                   path entry)))
+           (cond
+            ;; 1) use avfs
+            ((file-exists-p avfs)
+             (find-file-noselect avfs))
+            ;; 2) already uncompressed
+            ((find-buffer-visiting name))
+            ;; 3) on remotes use Emacs built-in archiving
+            ((tramp-tramp-file-p path)
+             (find-file path)
+             (goto-char (point-min))
+             ;; anchor to eol to prevent eg. clj matching cljs.
+             (re-search-forward (concat entry "$"))
+             (let ((archive-buffer (current-buffer)))
+               (archive-extract)
+               (kill-buffer archive-buffer))
+             (current-buffer))
+            ;; 4) Use external zip program to extract a single file
+            (t
+             (with-current-buffer (generate-new-buffer
+                                   (file-name-nondirectory entry))
+               (archive-zip-extract path entry)
+               (set-visited-file-name name)
+               (setq-local default-directory (file-name-directory path))
+               (setq-local buffer-read-only t)
+               (set-buffer-modified-p nil)
+               (set-auto-mode)
+               (current-buffer))))))
         (t (if-let* ((path (cider--file-path url)))
                (find-file-noselect path)
              (unless (file-name-absolute-p url)

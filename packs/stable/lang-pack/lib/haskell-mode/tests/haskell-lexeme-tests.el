@@ -1,4 +1,4 @@
-;; unit tests for haskell-string.el
+;; unit tests for haskell-string.el  -*- lexical-binding: t -*-
 
 (require 'ert)
 (require 'haskell-lexeme) ;; implementation under test
@@ -16,10 +16,14 @@ order."
   (save-current-buffer
     (set-buffer (get-buffer-create "*haskell-mode-buffer*"))
 
+    (when (fboundp 'jit-lock-debug-mode)
+      ;; to see stack traces from inside font-lock
+      (jit-lock-debug-mode))
+
     ;; Note that all of this should work both in haskell-mode and
     ;; outside of it. Currently we test only haskell-mode setup.
     (if literate
-        (literate-haskell-mode)
+        (haskell-literate-mode)
       (haskell-mode))
 
     (if (consp lines-or-contents)
@@ -42,6 +46,39 @@ order."
         (setq left-lexemes (cdr left-lexemes))
         (goto-char (match-end 0)))
       (should (equal nil left-lexemes)))))
+
+(defun check-lexemes-nocheck (lines-or-contents &optional literate)
+  "Checks if tokenization works as expected.
+
+LINES is a list of strings that will be inserted to a new
+buffer."
+  (when (get-buffer "*haskell-mode-buffer*")
+    (kill-buffer "*haskell-mode-buffer*"))
+  (save-current-buffer
+    (set-buffer (get-buffer-create "*haskell-mode-buffer*"))
+
+    (if (consp lines-or-contents)
+        (dolist (line lines-or-contents)
+          (insert line)
+          (insert "\n"))
+      (insert lines-or-contents))
+
+    (when (fboundp 'jit-lock-debug-mode)
+      ;; to see stack traces from inside font-lock
+      (jit-lock-debug-mode))
+
+    ;; Note that all of this should work both in haskell-mode and
+    ;; outside of it. Currently we test only haskell-mode setup.
+    (if literate
+        (haskell-literate-mode)
+      (haskell-mode))
+
+    (font-lock-fontify-buffer)
+
+    ;; here we check only if tokenization did not end in exception thrown
+    (goto-char (point-min))
+    (while (haskell-lexeme-looking-at-token)
+      (goto-char (match-end 0)))))
 
 (ert-deftest haskell-lexeme-classify-chars-1 ()
   (should (equal 'varsym (haskell-lexeme-classify-by-first-char ?=)))
@@ -147,6 +184,16 @@ order."
    '("'D'")
    '("'D'")))
 
+(ert-deftest haskell-lexeme-char-literal-5 ()
+  (check-lexemes
+   '("':'")
+   '("':'")))
+
+(ert-deftest haskell-lexeme-char-literal-6 ()
+  (check-lexemes
+   '("(':')")
+   '("(" "':'" ")")))
+
 (ert-deftest haskell-lexeme-string-literal-1 ()
   (check-lexemes
    '("\"\\   \\\"")
@@ -245,6 +292,26 @@ order."
    "[xml| <xml />"
    '("[xml| <xml />")))
 
+(ert-deftest haskell-lexeme-quasi-quote-qual-1 ()
+  (check-lexemes
+   '("[Mod.xml| <xml /> |]")
+   '("[Mod.xml| <xml /> |]")))
+
+(ert-deftest haskell-lexeme-quasi-quote-qual-2 ()
+  (check-lexemes
+   '("[Mod.xml| <xml /> |] |]")
+   '("[Mod.xml| <xml /> |]" "|" "]")))
+
+(ert-deftest haskell-lexeme-quasi-quote-qual-3 ()
+  (check-lexemes
+   "[Mod.xml| <xml /> |"
+   '("[Mod.xml| <xml /> |")))
+
+(ert-deftest haskell-lexeme-quasi-quote-qual-4 ()
+  (check-lexemes
+   "[Mod.xml| <xml />"
+   '("[Mod.xml| <xml />")))
+
 (ert-deftest haskell-lexeme-literate-1 ()
   (check-lexemes
    '("no code"
@@ -270,3 +337,63 @@ order."
      "code"
      "no code")
    'literate))
+
+(ert-deftest haskell-lexeme-big-01-quasi-literal ()
+  (check-lexemes-nocheck
+   (concat "x = " "[th|"
+           (make-string (* 10 1000 1000) ? )
+           "|]")))
+
+(ert-deftest haskell-lexeme-big-02-string ()
+  (check-lexemes-nocheck
+   (concat "x = " "\""
+           (make-string (* 10 1000 1000) ? )
+           "\"")))
+
+(ert-deftest haskell-lexeme-big-03-string-with-escapes ()
+  (check-lexemes-nocheck
+   (concat "x = " "\""
+           (let ((result "\\x01\\&,..\\NUL"))
+             (dotimes (i 10)
+               (setq result (concat result result)))
+             result)
+           "\"")))
+
+(ert-deftest haskell-lexeme-big-04-long-id ()
+  (check-lexemes-nocheck
+   (concat "x = " (make-string 1000000 ?x))))
+
+(ert-deftest haskell-lexeme-big-05-long-sym()
+  (check-lexemes-nocheck
+   (concat "x = " (make-string 1000000 ?+))))
+
+(ert-deftest haskell-lexeme-big-06-long-module-name()
+  (check-lexemes-nocheck
+   (concat "x = " (make-string 10000000 ?M) ".x")))
+
+(ert-deftest haskell-lexeme-big-07-many-modules-id()
+  (check-lexemes-nocheck
+   (concat "x = "
+           (let ((result "M."))
+             (dotimes (i 20)
+               (setq result (concat result result)))
+             result)
+           "x")))
+
+(ert-deftest haskell-lexeme-big-08-many-modules-sym()
+  (check-lexemes-nocheck
+   (concat "x = "
+           (let ((result "M."))
+             (dotimes (i 20)
+               (setq result (concat result result)))
+             result)
+           "++")))
+
+(ert-deftest haskell-lexeme-big-09-backticks-long-id()
+  (check-lexemes-nocheck
+   (concat "x = `"
+           (let ((result "xx"))
+             (dotimes (i 20)
+               (setq result (concat result result)))
+             result)
+           "id`")))

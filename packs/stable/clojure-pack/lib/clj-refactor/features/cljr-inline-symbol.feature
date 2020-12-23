@@ -80,4 +80,17 @@ Feature: Inlining of symbols
 
     (map (fn [n]
       (+ 1 n)) (range 10))
-  """
+    """
+
+  Scenario: Inline composed functions as first level def
+    When I insert:
+    """
+    (def trim-lower (comp str/lower-case str/trim))
+
+    (trim-lower a-string)
+    """
+    And I call the cljr--inline-symbol function directly with mockdata to inline trim-lower
+    Then I should see:
+    """
+    ((comp str/lower-case str/trim) a-string)
+    """

@@ -6,13 +6,13 @@
   :ID:       9e998b2a-3581-43fe-b26d-07d3c507b86a
   :END:
 Run without input stream
-#+begin_src awk :ouput silent :results silent
+#+begin_src awk :output silent :results silent
   BEGIN {
       print 42
   }
 #+end_src
 
-Use a code block ouput as an input
+Use a code block output as an input
 #+begin_src awk  :stdin genseq :results silent
   {
       print 42+$1

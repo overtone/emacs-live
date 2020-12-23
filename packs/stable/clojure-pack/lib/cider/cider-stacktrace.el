@@ -1,6 +1,6 @@
 ;;; cider-stacktrace.el --- Stacktrace navigator -*- lexical-binding: t -*-
 
-;; Copyright © 2014-2018 Jeff Valk, Bozhidar Batsov and CIDER contributors
+;; Copyright © 2014-2020 Jeff Valk, Bozhidar Batsov and CIDER contributors
 
 ;; Author: Jeff Valk <jv@jeffvalk.com>
 
@@ -25,17 +25,18 @@
 
 ;;; Code:
 
-(require 'cl-lib)
-(require 'cider-popup)
 (require 'button)
+(require 'cl-lib)
 (require 'easymenu)
-(require 'cider-common)
+(require 'map)
+(require 'seq)
 (require 'subr-x)
+
+(require 'cider-common)
 (require 'cider-compat)
 (require 'cider-client)
+(require 'cider-popup)
 (require 'cider-util)
-
-(require 'seq)
 
 ;; Variables
 
@@ -58,31 +59,9 @@ If nil, messages will not be wrapped.  If truthy but non-numeric,
   :group 'cider-stacktrace
   :package-version '(cider . "0.6.0"))
 
-(defcustom cider-stacktrace-print-length 50
-  "Set the maximum length of sequences in displayed cause data.
-
-This sets the value of Clojure's `*print-length*` when pretty printing the
-`ex-data` map for exception causes in the stacktrace that are instances of
-`IExceptionInfo`.
-
-Be advised that setting this to `nil` will cause the attempted printing of
-infinite data structures."
-  :type '(choice integer (const nil))
-  :group 'cider-stacktrace
-  :package-version '(cider . "0.9.0"))
-
-(defcustom cider-stacktrace-print-level 50
-  "Set the maximum level of nesting in displayed cause data.
-
-This sets the value of Clojure's `*print-level*` when pretty printing the
-`ex-data` map for exception causes in the stacktrace that are instances of
-`IExceptionInfo`.
-
-Be advised that setting this to `nil` will cause the attempted printing of
-cyclical data structures."
-  :type '(choice integer (const nil))
-  :group 'cider-stacktrace
-  :package-version '(cider . "0.8.0"))
+(make-obsolete 'cider-stacktrace-print-length 'cider-stacktrace-print-options "0.20")
+(make-obsolete 'cider-stacktrace-print-level 'cider-stacktrace-print-options "0.20")
+(make-obsolete-variable 'cider-stacktrace-print-options 'cider-print-options "0.21")
 
 (defvar cider-stacktrace-detail-max 2
   "The maximum detail level for causes.")
@@ -601,6 +580,10 @@ prompt and whether to use a new window.  Similar to `cider-find-var'."
 
 
 ;; Rendering
+(defvar cider-use-tooltips)
+(defun cider-stacktrace-tooltip (tooltip)
+  "Return TOOLTIP if `cider-use-tooltips' is set to true, nil otherwise."
+  (when cider-use-tooltips tooltip))
 
 (defun cider-stacktrace-emit-indented (text &optional indent fill fontify)
   "Insert TEXT, and optionally FILL and FONTIFY as clojure the entire block.
@@ -638,8 +621,9 @@ others."
                           'filter (cadr filter)
                           'follow-link t
                           'action 'cider-stacktrace-filter
-                          'help-echo (format "Toggle %s stack frames"
-                                             (car filter)))
+                          'help-echo (cider-stacktrace-tooltip
+                                      (format "Toggle %s stack frames"
+                                              (car filter))))
       (insert " "))
     (insert "\n")
     (insert "  Hide: ")
@@ -648,8 +632,9 @@ others."
                           'filter (cadr filter)
                           'follow-link t
                           'action 'cider-stacktrace-filter
-                          'help-echo (format "Toggle %s stack frames"
-                                             (car filter)))
+                          'help-echo (cider-stacktrace-tooltip
+                                      (format "Toggle %s stack frames"
+                                              (car filter))))
       (insert " "))
 
     (let ((hidden "(0 frames hidden)"))
@@ -664,10 +649,11 @@ others."
       (insert-text-button "M-x cider-report-bug"
                           'follow-link t
                           'action (lambda (_button) (cider-report-bug))
-                          'help-echo "Report bug to the CIDER team.")
+                          'help-echo (cider-stacktrace-tooltip
+                                      "Report bug to the CIDER team."))
       (insert "`.\n\n")
       (insert "\
-  If these stacktraces are occuring frequently, consider using the
+  If these stacktraces are occurring frequently, consider using the
   button(s) below to suppress these types of errors for the duration of
   your current CIDER session. The stacktrace buffer will still be
   generated, but it will \"pop under\" your current buffer instead of
@@ -682,8 +668,9 @@ others."
                               'face (if suppressed
                                         'cider-stacktrace-suppressed-button-face
                                       'cider-stacktrace-promoted-button-face)
-                              'help-echo (format "Click to %s these stacktraces."
-                                                 (if suppressed "promote" "suppress"))))
+                              'help-echo (cider-stacktrace-tooltip
+                                          (format "Click to %s these stacktraces."
+                                                  (if suppressed "promote" "suppress")))))
         (insert " ")))))
 
 (defun cider-stacktrace-render-frame (buffer frame)
@@ -700,7 +687,8 @@ This associates text properties to enable filtering and source navigation."
                             'name name 'file file 'line line
                             'flags flags 'follow-link t
                             'action 'cider-stacktrace-navigate
-                            'help-echo "View source at this location"
+                            'help-echo (cider-stacktrace-tooltip
+                                        "View source at this location")
                             'font-lock-face 'cider-stacktrace-face
                             'type 'cider-plain-button)
         (save-excursion
@@ -726,7 +714,9 @@ This associates text properties to enable filtering and source navigation."
                             'file file 'line line 'column column 'follow-link t
                             'action (lambda (_button)
                                       (cider-jump-to (cider-find-file file)
-                                                     (cons line column))))
+                                                     (cons line column)))
+                            'help-echo (cider-stacktrace-tooltip
+                                        "Jump to the line that caused the error"))
         (insert (propertize (format " at (%d:%d)" line column)
                             'font-lock-face message-face))))))
 
@@ -832,7 +822,7 @@ the NAME.  The whole group is prefixed by string INDENT."
           (cider-propertize-region '(detail 2)
             (insert "\n")
             (let ((beg (point))
-                  (bg `(:background ,cider-stacktrace-frames-background-color)))
+                  (bg `(:background ,cider-stacktrace-frames-background-color :extend t)))
               (dolist (frame stacktrace)
                 (cider-stacktrace-render-frame buffer frame))
               (overlay-put (make-overlay beg (point)) 'font-lock-face bg)))

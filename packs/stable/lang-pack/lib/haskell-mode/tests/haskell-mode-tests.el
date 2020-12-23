@@ -1,4 +1,4 @@
-;;; haskell-mode-tests.el ---
+;;; haskell-mode-tests.el ---  -*- lexical-binding: t -*-
 
 ;; Copyright (c) 2014 Chris Done. All rights reserved.
 
@@ -19,6 +19,7 @@
 
 (require 'ert)
 (require 'haskell-mode)
+(require 'haskell-test-utils)
 
 (ert-deftest haskell-mode-ident-at-point-empty ()
   (should (with-temp-buffer
@@ -297,8 +298,8 @@ the beginning of the buffer.
 
 (ert-deftest fill-comment-2 ()
   (check-fill '("{- a b c d e"
-                "f g h i j"
-                "k -}")
+                " f g h i j"
+                " k -}")
               '("{- @a b c d e f g h i j k -}")))
 
 (ert-deftest fill-comment-3 ()
@@ -322,7 +323,7 @@ the beginning of the buffer.
 (ert-deftest fill-comment-5 ()
   (check-fill '("    {-"
                 " a b c d e"
-                "f g h i"
+                " f g h i"
                 "    -}")
               '("    {-" " @a b c d e f g h i" "    -}")))
 
@@ -398,7 +399,6 @@ Also should respect 10 column fill."
 as defined, just the content should move properly.
 
 Also should respect 10 column fill."
-  :expected-result :failed
   (check-fill '("  --  a b"
                 "  -- c d e"
                 "  -- f g h"
@@ -412,7 +412,6 @@ as defined, just the content should move properly. Following
 lines should take position from second line.
 
 Also should respect 10 column fill."
-  :expected-result :failed
   (check-fill '("  --  a b"
                 "  -- c d e"
                 "  -- f g h"
@@ -534,5 +533,137 @@ moves over sexps."
             (goto-char 15)
             (haskell-forward-sexp -4)
             (eq (point) 3))))
+
+(ert-deftest haskell-guess-module-name ()
+  "Check if `haskell-guess-module-name'."
+  (should (equal nil (haskell-guess-module-name-from-file-name "nonmodule.hs")))
+  (should (equal "Mod" (haskell-guess-module-name-from-file-name "Mod.hs")))
+  (should (equal "Żółw" (haskell-guess-module-name-from-file-name "Żółw.hs")))
+  (should (equal "Mod" (haskell-guess-module-name-from-file-name "żółw/Mod.hs")))
+  (should (equal "Module" (haskell-guess-module-name-from-file-name "Juicy-pixels/Module.lhs")))
+  (should (equal "Mod.Mod.Mod" (haskell-guess-module-name-from-file-name "src/Mod/Mod/Mod.hs")))
+  (should (equal "Żółw1.Żółw2.Żółw3" (haskell-guess-module-name-from-file-name "Żółw1/Żółw2/Żółw3.lhs")))
+  (should (equal "Mod'X.Mod" (haskell-guess-module-name-from-file-name "c:/Mod'X/Mod.lhs")))
+  (should (equal "Mod" (haskell-guess-module-name-from-file-name "Mod.xx/Mod.hs"))))
+
+(defun haskell-generate-tags-test-helper ()
+  (with-current-buffer (find-file-noselect "TAGS-test-format")
+    (erase-buffer)
+    (dolist (arg (sort argv #'string<))
+      (insert arg "\n"))
+    (save-buffer)
+    (kill-buffer)))
+
+(ert-deftest haskell-generate-tags ()
+  ;; this test is special for Unix because under Windows the
+  ;; invocation is different
+  :expected-result (if (equal system-type 'windows-nt)
+                       :failed
+                     :passed)
+  (with-temp-dir-structure
+   (("xxx.cabal" . "")
+    ("T1.hs" . "i1 :: Int")
+    ("src" . (("T2.hs" . "i2 :: Int")))
+    (".git" . (("Tx.hs" . "should_not_see_me :: Int"))))
+    (with-script-path
+     haskell-hasktags-path
+     haskell-generate-tags-test-helper
+     (haskell-mode-generate-tags)
+     (with-current-buffer (find-file-noselect "TAGS-test-format")
+       (should (equal "-e\n-x\n./T1.hs\n./src/T2.hs\n"
+                      (buffer-substring (point-min) (point-max))))))))
+
+(defun haskell-stylish-haskell-add-first-line ()
+  (message-stdout "-- HEADER")
+  (let (line)
+    (while (setq line (read-stdin))
+      (message-stdout line))))
+
+(defun haskell-stylish-haskell-no-change ()
+  (let (line)
+    (while (setq line (read-stdin))
+      (message-stdout line))))
+
+(defun haskell-stylish-haskell-bad-exit-code ()
+  (when noninteractive
+    (kill-emacs 34)))
+
+(defun haskell-stylish-haskell-error-message ()
+  (message-stderr "Something wrong"))
+
+(ert-deftest haskell-stylish-on-save-add-first-line ()
+  (with-temp-dir-structure
+   (("T.hs" . "main :: IO ()\n"))
+    (with-script-path
+     haskell-mode-stylish-haskell-path
+     haskell-stylish-haskell-add-first-line
+     (let ((haskell-stylish-on-save t))
+       (with-current-buffer (find-file-noselect "T.hs")
+         (goto-char (point-max))
+         (save-excursion
+           (insert "main = return ()\n"))
+         (save-buffer)
+         ;; should have header added
+         (goto-char (point-min))
+         (should (looking-at-p "-- HEADER")))))))
+
+(ert-deftest haskell-stylish-on-save-keep-point ()
+  ;; Looks like insert-file-contents under Windows does not keep the
+  ;; point as it should.
+  :expected-result (if (equal system-type 'windows-nt)
+                       :failed
+                     :passed)
+  (with-temp-dir-structure
+   (("T.hs" . "main :: IO ()\n"))
+    (with-script-path
+     haskell-mode-stylish-haskell-path
+     haskell-stylish-haskell-add-first-line
+     (let ((haskell-stylish-on-save t))
+       (with-current-buffer (find-file-noselect "T.hs")
+         (goto-char (point-max))
+         (save-excursion
+           (insert "main = return ()\n"))
+         (save-buffer)
+         ;; should keep pointer in place
+         (should (looking-at-p "main = return")))))))
+
+(ert-deftest haskell-stylish-on-save-no-change ()
+  (with-temp-dir-structure
+   (("T.hs" . "main :: IO ()"))
+    (with-script-path
+     haskell-mode-stylish-haskell-path
+     haskell-stylish-haskell-no-change
+     (let ((haskell-stylish-on-save t))
+       (with-current-buffer (find-file-noselect "T.hs")
+         (insert "main = return ()\n")
+         (save-buffer)
+         (goto-char (point-min))
+         (should (looking-at-p "main = return")))))))
+
+(ert-deftest haskell-stylish-on-save-bad-exit-code ()
+  (with-temp-dir-structure
+   (("T.hs" . "main :: IO ()"))
+    (with-script-path
+     haskell-mode-stylish-haskell-path
+     haskell-stylish-haskell-bad-exit-code
+     (let ((haskell-stylish-on-save t))
+       (with-current-buffer (find-file-noselect "T.hs")
+         (insert "main = return ()\n")
+         (save-buffer)
+         (goto-char (point-min))
+         (should (looking-at-p "main = return ()")))))))
+
+(ert-deftest haskell-stylish-on-save-error-message ()
+  (with-temp-dir-structure
+   (("T.hs" . "main :: IO ()"))
+    (with-script-path
+     haskell-mode-stylish-haskell-path
+     haskell-stylish-haskell-error-message
+     (let ((haskell-stylish-on-save t))
+       (with-current-buffer (find-file-noselect "T.hs")
+         (insert "main = return ()\n")
+         (save-buffer)
+         (goto-char (point-min))
+         (should (looking-at-p "main = return ()")))))))
 
 (provide 'haskell-mode-tests)

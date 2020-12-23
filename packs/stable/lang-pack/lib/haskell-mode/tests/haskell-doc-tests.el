@@ -1,4 +1,4 @@
-;;; haskell-doc-tests.el --- Tests for `haskell-docs' package
+;;; haskell-doc-tests.el --- Tests for `haskell-docs' package -*- lexical-binding: t -*-
 
 ;; Copyright © 2016 Arthur Fayzrakhmanov. All rights reserved.
 

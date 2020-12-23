@@ -1,6 +1,6 @@
 #
 # Note: Due to MELPA distributing directly from github source version
-# needs to be embedded in files as is without proprocessing.
+# needs to be embedded in files as is without preprocessing.
 #
 # Version string is present in:
 # - Makefile
@@ -10,7 +10,7 @@
 # We should have a script that changes it everywhere it is needed and
 # syncs it with current git tag.
 #
-VERSION = 13.20
+VERSION = 17.2-git
 
 INSTALL_INFO = install-info
 
@@ -23,19 +23,12 @@ INSTALL_INFO = install-info
 #
 # This is particularly useful when EMACS is set in ~/.bash_profile
 #
-EMACS := $(shell which "$${EMACS}" || which "emacs")
+EMACS ?= emacs
 EMACS_VERSION := $(shell "$(EMACS)" -Q --batch --eval '(princ emacs-version)')
 
-EFLAGS = --eval "(add-to-list 'load-path (expand-file-name \"tests/compat\") 'append)" \
-	 --eval "(when (< emacs-major-version 24) \
-		    (setq byte-compile-warnings '(not cl-functions)))" \
-	 --eval '(setq byte-compile-error-on-warn t)' \
-	 --eval '(when (not (version< emacs-version "24.4")) (setq load-prefer-newer t))' \
-	 --eval '(defun byte-compile-dest-file (filename) \
-                    (concat (file-name-directory filename) "build-" emacs-version "/" \
-                            (file-name-nondirectory filename) "c"))'
+EFLAGS = --eval "(when (boundp 'load-prefer-newer) (setq load-prefer-newer t))"
 
-BATCH = $(EMACS) $(EFLAGS) --batch -Q -L .
+BATCH = @echo EMACS $@; "$(EMACS)" $(EFLAGS) --batch -Q -L .
 
 ELFILES := $(filter-out haskell-mode-autoloads.el haskell-mode-pkg.el,$(wildcard *.el))
 
@@ -45,13 +38,25 @@ AUTOLOADS = haskell-mode-autoloads.el
 
 PKG_DIST_FILES = $(ELFILES) logo.svg NEWS haskell-mode.info dir
 
-.PHONY: all compile info clean check check-emacs-version
+INIT_PACKAGES="(progn \
+  (require 'package) \
+  (push '(\"melpa\" . \"https://melpa.org/packages/\") package-archives) \
+  (package-initialize) \
+  (dolist (pkg '(package-lint)) \
+    (unless (package-installed-p pkg) \
+      (unless (assoc pkg package-archive-contents) \
+        (package-refresh-contents)) \
+      (package-install pkg))) \
+  )"
+
+
+.PHONY: all compile info clean check check-emacs-version check-ert check-package-lint check-relint
 
 all: check-emacs-version compile $(AUTOLOADS) info
 
 check-emacs-version :
-	@$(BATCH) --eval "(when (< emacs-major-version 23)					\
-                            (message \"Error: haskell-mode requires Emacs 23 or later\")	\
+	$(BATCH) --eval "(when (version< emacs-version \"25.1\")				\
+                            (message \"Error: haskell-mode requires Emacs 25.1 or later\")	\
                             (message \"Your version of Emacs is %s\" emacs-version)		\
                             (message \"Found as '$(EMACS)'\")					\
                             (message \"Use one of:\")						\
@@ -59,34 +64,43 @@ check-emacs-version :
                             (message \"   2.  EMACS=/path/to/emacs make\")			\
                             (message \"   3.  make EMACS=/path/to/emacs\")			\
                             (kill-emacs 2))"
+	@echo Using EMACS = $(EMACS), version = $(EMACS_VERSION)
 
-compile: build-$(EMACS_VERSION)
+compile: build-$(EMACS_VERSION)/build-flag
 
-build-$(EMACS_VERSION) : $(ELFILES)
-	if [ ! -d $@ ]; then mkdir $@; fi
-	$(BATCH) -f batch-byte-compile-if-not-done $^
+build-$(EMACS_VERSION) :
+	mkdir $@
+
+# Emacs byte compilation state leaks from file to file if multiple
+# files are requested to be build at the same time. We have to
+# workaround this issue on Makefile level. Note also that we consider
+# an .el file to be dependent on all other files because we do not do
+# proper dependency tracking (yet).
+build-$(EMACS_VERSION)/%.elc : %.el $(ELFILES)
+	$(BATCH) --eval '(setq byte-compile-error-on-warn t)'						\
+	         --eval "(setq byte-compile-dest-file-function (lambda (filename)					\
+	               	       (concat (file-name-directory filename) \"build-\" emacs-version \"/\"	\
+	                      	    (file-name-nondirectory filename) \"c\")))"				\
+	         --eval "(when (check-declare-file \"$<\") (kill-emacs 2))" \
+	         -f batch-byte-compile $<								\
+
+build-$(EMACS_VERSION)/build-flag : build-$(EMACS_VERSION) $(patsubst %.el,build-$(EMACS_VERSION)/%.elc,$(ELFILES))
+	touch $@
 
 check-%: tests/%-tests.el
 	$(BATCH) -l "$<" -f ert-run-tests-batch-and-exit;
 
-check: $(ELCHECKS) build-$(EMACS_VERSION)
-	$(BATCH) --eval "(when (= emacs-major-version 24)					\
-                           (require 'undercover)						\
-                           (undercover \"*.el\"							\
-                              (:exclude \"haskell-mode-pkg.el\" \"haskell-compat.el\")))"	\
-                 -L tests									\
+check: compile $(AUTOLOADS) check-package-lint check-relint check-ert
+
+check-ert: $(ELCHECKS)
+	$(BATCH) -L tests									\
                  $(patsubst %,-l %,$(ELCHECKS))							\
                  -f ert-run-tests-batch-and-exit
-	@TAB=$$(echo "\t"); \
-	if grep -Hn "[ $${TAB}]\+\$$" *.el tests/*.el; then \
-	    echo "Error: Files contain whitespace at the end of lines" >&2; \
-	    exit 3; \
-	fi; \
-	if grep -Hn "[$${TAB}]" *.el tests/*.el; then \
-	    echo "Error: Tab character is not allowed" >&2; \
-	    exit 3; \
-	fi
 	@echo "checks passed!"
+
+# TODO: fix issues, then enforce build failure if this fails
+check-package-lint:
+	$(BATCH) --eval $(INIT_PACKAGES) --eval '(setq package-lint-main-file "haskell-mode-pkg.el")' -f package-lint-batch-and-exit $(ELFILES) || true
 
 clean:
 	$(RM) -r build-$(EMACS_VERSION) $(AUTOLOADS) $(AUTOLOADS:.el=.elc) haskell-mode.info dir
@@ -135,7 +149,7 @@ deploy-manual : doc/html
 $(AUTOLOADS): $(ELFILES)
 	$(BATCH) \
 		--eval '(setq make-backup-files nil)' \
-		--eval '(setq generated-autoload-file "$(CURDIR)/$@")' \
+		--eval "(setq generated-autoload-file (concat command-line-default-directory \"/\" \"$@\"))" \
 		-f batch-update-autoloads "."
-	# check if autoloads will really load
+# check if autoloads will really load
 	$(BATCH) -l "$@"

@@ -2,6 +2,12 @@ import socket
 import select
 
 try:
+    import ssl
+    assert ssl
+except ImportError:
+    ssl = False
+
+try:
     from . import api, msg
     from .. import editor
     from ..common.exc_fmt import str_e, pp_e
@@ -133,6 +139,9 @@ class _Reactor(object):
             fd = fd_map[fileno]
             try:
                 fd.write()
+            except ssl.SSLError as e:
+                if e.args[0] != ssl.SSL_ERROR_WANT_WRITE:
+                    raise
             except Exception as e:
                 msg.error('Couldn\'t write to socket: ', str_e(e))
                 msg.debug('Couldn\'t write to socket: ', pp_e(e))
@@ -142,6 +151,9 @@ class _Reactor(object):
             fd = fd_map[fileno]
             try:
                 fd.read()
+            except ssl.SSLError as e:
+                if e.args[0] != ssl.SSL_ERROR_WANT_READ:
+                    raise
             except Exception as e:
                 msg.error('Couldn\'t read from socket: ', str_e(e))
                 msg.debug('Couldn\'t read from socket: ', pp_e(e))

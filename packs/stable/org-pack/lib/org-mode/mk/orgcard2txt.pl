@@ -54,7 +54,7 @@ close(IN);
 
 print <<HEAD;
 ================================================================================
-Org-Mode Reference Card (for version $orgversionnumber)
+Org Mode Reference Card (for version $orgversionnumber)
 ================================================================================
 HEAD
 
@@ -74,7 +74,7 @@ while(<IN>){
   }
   next if($page != 1);
   next if(/^%/);
-  next if /Org-Mode Reference Card \([12]\/2\)/;
+  next if /Org Mode Reference Card \([12]\/2\)/;
   next if /\\centerline{\(for version \\orgversionnumber\)}/;
   next if /\(for version  \)/;
   next if /\\newcolumn/;

@@ -1,6 +1,6 @@
 # -*- mode:org -*-
-#+TITLE: Org-mode Testing
-#+PROPERTY: results silent
+#+TITLE: Org mode Testing
+#+PROPERTY: header-args:emacs-lisp :results silent
 
 * Dependencies
 
@@ -11,9 +11,9 @@ repository]].
 
 * Non-interactive batch testing from the command line
 
-The simplest way to run the Org-mode test suite is from the command
+The simplest way to run the Org mode test suite is from the command
 line with the following invocation.  Note that the paths below are
-relative to the base of the Org-mode directory.
+relative to the base of the Org mode directory.
 
 Also note that many of the current tests uses babel evaluation...
 
@@ -32,13 +32,63 @@ The options in the above command are explained below.
 
 | -Q      | ignores any personal configuration ensuring a vanilla Emacs instance is used |
 | --batch | runs Emacs in "batch" mode with no gui and termination after execution       |
-| -l      | loads Org-mode and the org mode test suite defined in testing/org-test.el    |
-| --eval  | reloads Org-mode and allows evaluation of code blocks by the tests           |
+| -l      | loads Org mode and the Org mode test suite defined in testing/org-test.el    |
+| --eval  | reloads Org mode and allows evaluation of code blocks by the tests           |
 | -f      | actually runs the tests using the `org-test-run-batch-tests' function        |
+
+* Trigger the tests with 'make'
+
+** Recompile all
+
+Target ~test~ can be used to trigger a test run.  The tests start
+after cleaning up and recompilation.
+
+#+BEGIN_SRC sh :dir (expand-file-name "..") :results silent
+make test
+#+END_SRC
+
+See ../mk/default.mk for details.
+
+** Test dirty
+
+The 'dirty' targets are for recompiling without cleaning and
+rebuilding everything.  This usually speeds up the recompilation
+considerably.  Note that this speed up comes to the price of possibly
+weird errors due to the unclean build.
+
+The dirty target for testing is called ~test-dirty~.
+
+#+BEGIN_SRC sh :dir (expand-file-name "..") :results silent
+make test-dirty
+#+END_SRC
+
+** Select tests by regexp
+
+Variable ~BTEST_RE~ can be set to limit the tests which are performed.
+~BTEST_RE~ is interpreted as regexp.
+
+Example:
+
+#+begin_src shell
+make BTEST_RE='test-.*-inlinetask' test-dirty
+#+end_src
+
+yields
+
+#+begin_example
+...
+selected tests: test-.*-inlinetask
+Running 2 tests (2017-12-28 15:04:45+0100)
+   passed  1/2  test-org-export/handle-inlinetasks
+   passed  2/2  test-org-inlinetask/goto-end
+
+Ran 2 tests, 2 results as expected (2017-12-28 15:04:45+0100)
+...
+#+end_example
 
 * Interactive testing from within Emacs
 
-To run the Org-mode test suite from a current Emacs instance simply
+To run the Org mode test suite from a current Emacs instance simply
 load and run the test suite with the following commands.
 
 1) First load the test suite.
@@ -68,36 +118,40 @@ load and run the test suite with the following commands.
    When a test fails, run it interactively and investigate the problem
    in the ERT results buffer.
 
-   How to run one test:
-   Use this as a demo example of a failing test
+   To run one test: Use this as a demo example of a failing test
    #+BEGIN_SRC emacs-lisp
-     (ert-deftest test-org/org-link-escape-ascii-character-demo-of-fail ()
-       (should (string= "%5B"  ;; expecting %5B is right
-                        (org-link-escape "[")))
-       (should (string= "%5C"  ;; expecting %5C is wrong, %5D right
-                        (org-link-escape "]"))))
+     (ert-deftest test-org/org-link-encode-ascii-character-demo-of-fail ()
+       (should (string= "%5B"  ; Expecting %5B is correct.
+                        (org-link-encode "[")))
+       (should (string= "%5C"  ; Expecting %5C is wrong, %5D correct.
+                        (org-link-encode "]"))))
    #+END_SRC
-   or evaluate the ert-deftest form of the test you want to run.  Then
-   "M-x ert RET test-org/org-link-escape-ascii-character-demo-of-fail RET"
-   When not visible yet switch to the ERT results buffer named
-   "\*ert\*".  When a test failed the ERT results buffer shows the
-   details of the first "should" that failed.  See
-   (info "(ert)Running Tests Interactively") on how to re-run, start
-   the debugger etc.
+   or evaluate the ~ert-deftest form~ of the test you want to run.
+   Then ~M-x ert RET
+   test-org/org-link-encode-ascii-character-demo-of-fail RET~.  When
+   not visible yet switch to the ERT results buffer named ~*ert*~.
+   When a test failed the ERT results buffer shows the details of the
+   first ~should~ that failed.  See ~(info "(ert)Running Tests
+   Interactively")~ on how to re-run, start the debugger etc.
 
-   How to run all tests of a single test file:
-   "M-x ert-delete-all-tests RET", confirm.  Open the file
-   ./lisp/test-*.el, "M-x eval-buffer RET", "M-x ert RET t RET"
+   To run several tests: ~M-x ert RET "<your regexp here>" RET~.
 
-   Consider to set pp-escape-newlines nil before running the test when
-   looking at "should" in the ERT results buffer.  Especially when
-   using "l" to look at passed test results and possibly missing an
-   appropriate setting of pp-escape-newlines made only temporarily for
-   the running time of the test as e. g. tests using
-   org-test-table-target-expect-tblfm do.
+   To run all tests of a single test file: ~M-x ert-delete-all-tests
+   RET~ and confirm.  ~M-x load-file RET testing/lisp/<file>.el RET
+   M-x ert RET t RET~.
+
+   Consider to set
+   #+BEGIN_SRC emacs-lisp
+     (setq pp-escape-newlines nil)
+   #+END_SRC
+   before running the test when looking at ~should~ in the ERT results
+   buffer.  Especially when using ~l~ to look at passed test results
+   and possibly missing an appropriate setting of ~pp-escape-newlines~
+   made only temporarily for the running time of the test as
+   e. g. tests using ~org-test-table-target-expect-tblfm~ do.
 
 * Troubleshooting
 
-- If the value of the =org-babel-no-eval-on-ctrl-c-ctrl-c= is non-nil
-  then it will result in some test failure, as there are tests which
-  rely on this behavior.
+- If the variable ~org-babel-no-eval-on-ctrl-c-ctrl-c~ is non-nil then
+  it will result in some test failure, as there are tests which rely
+  on this behavior.

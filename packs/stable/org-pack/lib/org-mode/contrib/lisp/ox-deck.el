@@ -32,7 +32,7 @@
 ;;
 ;; Add the path to the extracted code to the variable
 ;; `org-deck-directories' There are a number of customization in the
-;; org-export-deck group, most of which can be overrriden with buffer
+;; org-export-deck group, most of which can be overridden with buffer
 ;; local customization (starting with DECK_.)
 
 ;; See ox.el and ox-html.el for more details on how this exporter
@@ -137,7 +137,7 @@ transitions (with full paths) to a temporary buffer."
 
 (defcustom org-deck-include-extensions nil
   "If non-nil, list of extensions to include instead of all available.
-Can be overriden or set with the DECK_INCLUDE_EXTENSIONS property.
+Can be overridden or set with the DECK_INCLUDE_EXTENSIONS property.
 During output generation, the extensions found by
 `org-deck--find-extensions' are searched for the appropriate
 files (scripts and/or stylesheets) to include in the generated
@@ -147,12 +147,12 @@ html. The href/src attributes are created relative to `org-deck-base-url'."
 
 (defcustom org-deck-exclude-extensions nil
   "If non-nil, list of extensions to exclude.
-Can be overriden or set with the DECK_EXCLUDE_EXTENSIONS property."
+Can be overridden or set with the DECK_EXCLUDE_EXTENSIONS property."
   :group 'org-export-deck
   :type '(repeat (string :tag "Extension")))
 
 (defcustom org-deck-theme "swiss.css"
-  "deck.js theme. Can be overriden with the DECK_THEME property.
+  "deck.js theme. Can be overridden with the DECK_THEME property.
 If this value contains a path component (\"/\"), it is used as a
 literal path (url). Otherwise it is prepended with
 `org-deck-base-url'/themes/style/."
@@ -160,7 +160,7 @@ literal path (url). Otherwise it is prepended with
   :type 'string)
 
 (defcustom org-deck-transition "fade.css"
-  "deck.js transition theme. Can be overriden with the
+  "deck.js transition theme. Can be overridden with the
 DECK_TRANSITION property.
 If this value contains a path component (\"/\"), it is used as a
 literal path (url). Otherwise it is prepended with
@@ -171,7 +171,7 @@ literal path (url). Otherwise it is prepended with
 (defcustom org-deck-base-url "deck.js"
   "Url prefix to deck.js base directory containing the core, extensions
 and themes directories.
-Can be overriden with the DECK_BASE_URL property."
+Can be overridden with the DECK_BASE_URL property."
   :group 'org-export-deck
   :type 'string)
 
@@ -180,7 +180,7 @@ Can be overriden with the DECK_BASE_URL property."
     (preamble "position: absolute; top: 10px;")
     (postamble ""))
   "Alist of css styles for the preamble, postamble and both respectively.
-Can be overriden in `org-deck-styles'. See also `org-html-divs'.")
+Can be overridden in `org-deck-styles'. See also `org-html-divs'.")
 
 (defcustom org-deck-postamble "<h1>%a - %t</h1>"
   "Non-nil means insert a postamble in HTML export.
@@ -239,7 +239,7 @@ precedence over this variable."
     "#table-of-contents ul {margin-bottom: 0;}"
     "#table-of-contents li {padding: 0;}") "\n")
   "Default css styles used for formatting a table of contents slide.
-Can be overriden in `org-deck-styles'.
+Can be overridden in `org-deck-styles'.
 Note that when the headline numbering option is true, a \"list-style: none\"
 is automatically added to avoid both numbers and bullets on the toc entries.")
 

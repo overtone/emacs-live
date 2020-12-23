@@ -1,6 +1,6 @@
 ;;; test-ob-ruby.el --- tests for ob-ruby.el
 
-;; Copyright (c) 2013-2015 Oleh Krehel
+;; Copyright (c) 2013-2015, 2019 Oleh Krehel
 ;; Authors: Oleh Krehel
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -22,57 +22,58 @@
   (signal 'missing-test-dependency "Support for Ruby code blocks"))
 
 (ert-deftest test-ob-ruby/session-output-1 ()
-    (should (equal (org-test-with-temp-text "#+begin_src ruby :session :results output
+    (should (equal (org-test-with-temp-text "#+begin_src ruby :session org-test-ruby :results output
 s = \"1\"
 s = \"2\"
 s = \"3\"
 puts s
+s = \"4\"
 #+end_src"
   (org-babel-execute-maybe)
   (substring-no-properties
    (buffer-string)))
-		   "#+begin_src ruby :session :results output
+		   "#+begin_src ruby :session org-test-ruby :results output
 s = \"1\"
 s = \"2\"
 s = \"3\"
 puts s
+s = \"4\"
 #+end_src
 
 #+RESULTS:
 : 3
-
 ")))
 (ert-deftest test-ob-ruby/session-output-2 ()
-    (should (equal (org-test-with-temp-text "#+begin_src ruby :session :results output
-s = \"5\"
+    (should (equal (org-test-with-temp-text "#+begin_src ruby :session org-test-ruby :results output
 puts s
+s = \"5\"
 #+end_src"
   (org-babel-execute-maybe)
   (substring-no-properties
    (buffer-string)))
-		   "#+begin_src ruby :session :results output
-s = \"5\"
+		   "#+begin_src ruby :session org-test-ruby :results output
 puts s
+s = \"5\"
 #+end_src
 
 #+RESULTS:
-: 5
-
+: 4
 ")))
 (ert-deftest test-ob-ruby/session-output-3 ()
-    (should (equal (org-test-with-temp-text "#+begin_src ruby :session :results output
+    (should (equal (org-test-with-temp-text "#+begin_src ruby :session org-test-ruby :results output
 puts s
+s = \"6\"
 #+end_src"
   (org-babel-execute-maybe)
   (substring-no-properties
    (buffer-string)))
-		   "#+begin_src ruby :session :results output
+		   "#+begin_src ruby :session org-test-ruby :results output
 puts s
+s = \"6\"
 #+end_src
 
 #+RESULTS:
 : 5
-
 ")))
 
 (provide 'test-ob-ruby)

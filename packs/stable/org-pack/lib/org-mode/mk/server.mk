@@ -15,7 +15,7 @@ help helpall helpserver::
 	$(info release             - clean up, create the distribution archives)
 	$(info elpa                - clean up, create the org-*.tar ELPA archive)
 	$(info elpaplus            - clean up, create the org-plus-contrib-*.tar ELPA archive)
-	$(info upload-release      - clean up, populate the server with arhives)
+	$(info upload-release      - clean up, populate the server with archives)
 	$(info upload-elpa         - clean up, populate the server with org-*.tar)
 	$(info upload-elpaplus     - clean up, populate the server with org-plus-contrib-*.tar)
 	$(info upload-doc          - clean up, populate the server with docs)
@@ -38,7 +38,7 @@ ORGFULL   = README COPYING lisp/ \
 		etc/ contrib/ doc/ testing/
 ORGFULL  := $(ORGFULL:%/=%/*)
 ORGELPA   = README_ELPA COPYING etc/ORG-NEWS lisp/ \
-		doc/dir doc/org doc/orgcard.pdf \
+		doc/dir doc/org doc/orgguide doc/orgcard.pdf \
 		etc/styles/ org-pkg.el
 ORGELPA  := $(ORGELPA:%/=%/*)
 ORGELPAPLUS := $(ORGELPA:org-pkg%=org-plus-contrib-pkg%)
@@ -67,8 +67,10 @@ elpa-dirty:
 	ln -s . $(ORGDIR)
 	echo "(define-package \"org\""                        > org-pkg.el
 	echo "  \"$(PKG_TAG)\" \"$(PKG_DOC)\" ($(PKG_REQ)))" >> org-pkg.el
+	echo ";; Local Variables:"                           >> org-pkg.el
 	echo ";; no-byte-compile: t"                         >> org-pkg.el
-	tar --exclude=Makefile --exclude="org-colview-xemacs.el" \
+	echo ";; End:"                                       >> org-pkg.el
+	tar --exclude=Makefile \
 	  --transform='s:\(lisp\|doc\)/::' -cf $(ORGDIR).tar \
 	  $(foreach dist, $(ORGELPA), $(ORGDIR)/$(dist))
 	-@$(RM) $(ORGDIR) org-pkg.el
@@ -80,7 +82,7 @@ archive-contents:
 	echo "   (org-plus-contrib . [($(PKG_TAG)) ($(PKG_REQ)) \"$(PKG_DOC)\" tar]))" >> $@
 
 elpaplus:		cleanall info card elpaplus-dirty
-elpaplus-dirty elpaplus-up:	ORG_ADD_CONTRIB=org*.el ob-*.el ox-*.el
+elpaplus-dirty elpaplus-up:	ORG_ADD_CONTRIB=org*.el ob-*.el ox-*.el ol-*.el
 elpaplus-dirty elpaplus-up:	ORGDIR=org-plus-contrib-$(PKG_TAG)
 elpaplus-dirty:
 	@$(MAKE) GITVERSION=$(GITVERSION:release_%=%)-elpaplus version autoloads
@@ -88,8 +90,10 @@ elpaplus-dirty:
 	ln -s . $(ORGDIR)
 	echo "(define-package \"org-plus-contrib\""           > org-plus-contrib-pkg.el
 	echo "  \"$(PKG_TAG)\" \"$(PKG_DOC)\" ($(PKG_REQ)))" >> org-plus-contrib-pkg.el
+	echo ";; Local Variables:"                           >> org-plus-contrib-pkg.el
 	echo ";; no-byte-compile: t"                         >> org-plus-contrib-pkg.el
-	tar --exclude=Makefile --exclude="org-colview-xemacs.el" \
+	echo ";; End:"                                       >> org-plus-contrib-pkg.el
+	tar --exclude=Makefile \
 	  --transform='s:\(lisp\|doc\)/::' -cf $(ORGDIR).tar \
 	  $(foreach dist, $(ORGELPAPLUS), $(ORGDIR)/$(dist))
 	-@$(RM) $(ORGDIR) org-plus-contrib-pkg.el

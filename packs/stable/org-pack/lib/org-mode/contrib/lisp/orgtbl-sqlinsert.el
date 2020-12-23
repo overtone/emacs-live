@@ -1,6 +1,6 @@
 ;;; orgtbl-sqlinsert.el --- orgtbl to SQL insert statements.
 
-;; Copyright (C) 2008-2016  Free Software Foundation
+;; Copyright (C) 2008-2020  Free Software Foundation
 
 ;; Author: Jason Riedy <jason@acm.org>
 ;; Keywords: org, tables, sql
@@ -36,7 +36,7 @@ PARAMS is a property list of parameters that can influence the conversion.
 Names and strings are modified slightly by default.  Single-ticks
 are doubled as per SQL's standard mechanism.  Backslashes and
 dollar signs are deleted.  And tildes are changed to spaces.
-These modifications were chosed for use with TeX.  See
+These modifications were chosen for use with TeX.  See
 ORGTBL-SQL-STRIP-AND-QUOTE.
 
 Supports all parameters from ORGTBL-TO-GENERIC.  New to this function

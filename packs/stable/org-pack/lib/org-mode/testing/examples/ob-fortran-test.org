@@ -42,7 +42,7 @@ Real array as input
 write (*, '(3f5.2)'), s
 #+end_src
 
-#+tblname: test_tbl
+#+name: test_tbl
 | 1.0 |
 | 2.0 |
 

@@ -1,6 +1,6 @@
 ;;; test-ob-maxima.el --- tests for ob-maxima.el
 
-;; Copyright (c) 2010-2014 Sergey Litvinov
+;; Copyright (c) 2010-2014, 2019 Sergey Litvinov
 ;; Authors: Sergey Litvinov
 
 ;; This file is not part of GNU Emacs.
@@ -65,7 +65,9 @@
   "Test of table output"
   (org-test-at-id "cc158527-b867-4b1d-8ae0-b8c713a90fd7"
     (org-babel-next-src-block)
-    (should (equal '((1 2 3) (2 3 4) (3 4 5)) (org-babel-execute-src-block)))))
+    (should
+     (equal
+      '((1 2 3) (2 3 4) (3 4 5)) (org-babel-execute-src-block)))))
 
 (provide 'test-ob-maxima)
 

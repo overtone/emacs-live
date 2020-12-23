@@ -2,7 +2,7 @@
 you're running the latest stable clojure-mode and that the problem you're reporting
 hasn't been reported (and potentially fixed) already.*
 
-**Remove all of the placeholder text in your final report!**
+**Please, remove all of the placeholder text (the one in italics) in your final report!**
 
 ## Expected behavior
 
@@ -15,7 +15,7 @@ a problem will expedite its solution.*
 
 ## Environment & Version information
 
-### clojure-mode version information
+### clojure-mode version
 
 *Include here the version string displayed by `M-x
 clojure-mode-display-version`. Here's an example:*

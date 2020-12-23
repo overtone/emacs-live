@@ -55,6 +55,8 @@
   (require 'cl)
   (require 'org))
 
+(declare-function org-duration-from-minutes "org-duration" (minutes &optional fmt fractional))
+
 (defgroup org-invoice nil
   "OrgMode Invoice Helper"
   :tag "Org-Invoice" :group 'org)
@@ -159,7 +161,7 @@ looks like tree2, where the level is 2."
       (setq title (replace-match "" nil nil title)))
     (when (string-match "[ \t]+$" title)
       (setq title (replace-match "" nil nil title)))
-    (setq work (org-hh:mm-string-to-minutes work))
+    (setq work (org-duration-to-minutes work))
     (setq rate (string-to-number rate))
     (setq org-invoice-current-item (list (cons 'title title)
           (cons 'date date)
@@ -176,8 +178,8 @@ looks like tree2, where the level is 2."
   "Return a list where the car is the min level, and the cdr the max."
   (let ((max 0) min level)
     (dolist (info ls)
-      (when (cdr (assoc 'date info))
-        (setq level (cdr (assoc 'level info)))
+      (when (cdr (assq 'date info))
+        (setq level (cdr (assq 'level info)))
         (when (or (not min) (< level min)) (setq min level))
         (when (> level max) (setq max level))))
     (cons (or min 0) max)))
@@ -186,11 +188,11 @@ looks like tree2, where the level is 2."
   "Reorganize the given list by dates."
   (let ((min-max (org-invoice-level-min-max ls)) new)
     (dolist (info ls)
-      (let* ((date (cdr (assoc 'date info)))
-             (work (cdr (assoc 'work info)))
-             (price (cdr (assoc 'price info)))
-             (long-date (cdr (assoc 'long-date info)))
-             (level (cdr (assoc 'level info)))
+      (let* ((date (cdr (assq 'date info)))
+             (work (cdr (assq 'work info)))
+             (price (cdr (assq 'price info)))
+             (long-date (cdr (assq 'long-date info)))
+             (level (cdr (assq 'level info)))
              (bucket (cdr (assoc date new))))
         (if (and (/= (car min-max) (cdr min-max))
                    (=  (car min-max) level)
@@ -208,26 +210,26 @@ looks like tree2, where the level is 2."
             (push (cons date bucket) new)
             (setq bucket (cdr (assoc date new))))
           (when (and date bucket)
-            (setcdr (assoc 'total-work (car bucket))
-                    (+ work (cdr (assoc 'total-work (car bucket)))))
-            (setcdr (assoc 'price (car bucket))
-                    (+ price (cdr (assoc 'price (car bucket)))))
+            (setcdr (assq 'total-work (car bucket))
+                    (+ work (cdr (assq 'total-work (car bucket)))))
+            (setcdr (assq 'price (car bucket))
+                    (+ price (cdr (assq 'price (car bucket)))))
             (nconc bucket (list info))))))
     (nreverse new)))
 
 (defun org-invoice-info-to-table (info)
   "Create a single org table row from the given info alist."
-  (let ((title (cdr (assoc 'title info)))
-        (total (cdr (assoc 'total-work info)))
-        (work  (cdr (assoc 'work info)))
-        (price (cdr (assoc 'price info)))
+  (let ((title (cdr (assq 'title info)))
+        (total (cdr (assq 'total-work info)))
+        (work  (cdr (assq 'work info)))
+        (price (cdr (assq 'price info)))
         (with-price (plist-get org-invoice-table-params :price)))
     (unless total
       (setq
        org-invoice-total-time (+ org-invoice-total-time work)
        org-invoice-total-price (+ org-invoice-total-price price)))
-    (setq total (and total (org-minutes-to-clocksum-string total)))
-    (setq work  (and work  (org-minutes-to-clocksum-string work)))
+    (setq total (and total (org-duration-from-minutes total)))
+    (setq work  (and work  (org-duration-from-minutes work)))
     (insert-before-markers
      (concat "|" title
              (cond
@@ -251,7 +253,7 @@ looks like tree2, where the level is 2."
     (when with-summary
       (insert-before-markers
        (concat "|-\n|Total:|"
-               (org-minutes-to-clocksum-string org-invoice-total-time)
+               (org-duration-from-minutes org-invoice-total-time)
                (and with-price (concat "|" (format "%.2f" org-invoice-total-price)))
                "|\n")))))
 

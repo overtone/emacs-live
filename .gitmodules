@@ -176,3 +176,21 @@
 [submodule "packs/dev/clojure-pack/vendor/submodules/jump.el"]
 	path = packs/dev/clojure-pack/vendor/submodules/jump.el
 	url = git://github.com/eschulte/jump.el.git
+[submodule "packs/dev/power-pack/vendor/submodules/marshal.el"]
+	path = packs/dev/power-pack/vendor/submodules/marshal.el
+	url = https://github.com/sigma/marshal.el.git
+[submodule "packs/dev/git-pack/vendor/submodules/transient"]
+	path = packs/dev/git-pack/vendor/submodules/transient
+	url = https://github.com/magit/transient.git
+[submodule "packs/dev/clojure-pack/vendor/submodules/parseedn"]
+	path = packs/dev/clojure-pack/vendor/submodules/parseedn
+	url = https://github.com/clojure-emacs/parseedn.git
+[submodule "packs/dev/clojure-pack/vendor/submodules/a.el"]
+	path = packs/dev/clojure-pack/vendor/submodules/a.el
+	url = https://github.com/plexus/a.el.git
+[submodule "packs/dev/clojure-pack/vendor/submodules/parseclj"]
+	path = packs/dev/clojure-pack/vendor/submodules/parseclj
+	url = https://github.com/clojure-emacs/parseclj.git
+[submodule "packs/dev/clojure-pack/vendor/submodules/sesman"]
+	path = packs/dev/clojure-pack/vendor/submodules/sesman
+	url = https://github.com/vspinu/sesman.git

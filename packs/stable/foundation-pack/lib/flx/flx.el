@@ -230,11 +230,11 @@ See documentation for logic."
       sorted-list))
 
 (defun flx-make-filename-cache ()
-  "Return cache hashtable appropraite for storing filenames."
+  "Return cache hashtable appropriate for storing filenames."
   (flx-make-string-cache 'flx-get-heatmap-file))
 
 (defun flx-make-string-cache (&optional heat-func)
-  "Return cache hashtable appropraite for storing strings."
+  "Return cache hashtable appropriate for storing strings."
   (let ((hash (make-hash-table :test 'equal
                                :size 4096)))
     (puthash 'heatmap-func (or heat-func 'flx-get-heatmap-str) hash)

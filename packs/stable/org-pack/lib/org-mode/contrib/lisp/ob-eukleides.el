@@ -1,10 +1,10 @@
 ;;; ob-eukleides.el --- Org-babel functions for eukleides evaluation
 
-;; Copyright (C) 2010-2016  Free Software Foundation, Inc.
+;; Copyright (C) 2010-2020  Free Software Foundation, Inc.
 
 ;; Author: Luis Anaya
 ;; Keywords: literate programming, reproducible research
-;; Homepage: http://orgmode.org
+;; Homepage: https://orgmode.org
 
 ;; This file is not part of GNU Emacs.
 
@@ -58,12 +58,12 @@
 (defun org-babel-execute:eukleides (body params)
   "Execute a block of eukleides code with org-babel.
 This function is called by `org-babel-execute-src-block'."
-  (let* ((result-params (split-string (or (cdr (assoc :results params)) "")))
-	 (out-file (or (cdr (assoc :file params))
+  (let* ((result-params (split-string (or (cdr (assq :results params)) "")))
+	 (out-file (or (cdr (assq :file params))
 		       (error "Eukleides requires a \":file\" header argument")))
-	 (cmdline (cdr (assoc :cmdline params)))
+	 (cmdline (cdr (assq :cmdline params)))
 	 (in-file (org-babel-temp-file "eukleides-"))
-	 (java (or (cdr (assoc :java params)) ""))
+	 (java (or (cdr (assq :java params)) ""))
 	 (cmd (if (not org-eukleides-path)
 		  (error "`org-eukleides-path' is not set")
 		(concat (expand-file-name org-eukleides-path)

@@ -29,14 +29,13 @@
 (eval-when-compile
   (require 'cl))
 
-;;;###autoload
 (require 'eieio)
 
 (require 'pcache)
 
 (defconst gh-cache-outdated-expiration-delay (* 60 60 24))
 
-(defconst gh-cache-internal-version-constant 3)
+(defconst gh-cache-internal-version-constant 4)
 
 (defconst gh-cache-version-constant
   (format "%s/gh-%s" pcache-version-constant gh-cache-internal-version-constant))

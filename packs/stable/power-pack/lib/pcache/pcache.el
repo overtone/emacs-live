@@ -4,7 +4,7 @@
 
 ;; Author: Yann Hodique <yann.hodique@gmail.com>
 ;; Keywords:
-;; Version: 0.3.2
+;; Version: 0.4.2
 ;; Package-Requires: ((eieio "1.3"))
 
 ;; This file is free software; you can redistribute it and/or modify
@@ -51,9 +51,7 @@
 
 ;;; Code:
 
-(eval-when-compile
-  (require 'cl))
-
+(require 'cl)
 (require 'eieio)
 (require 'eieio-base)
 
@@ -66,7 +64,10 @@
 
 (defconst pcache-default-save-delay 300)
 
-(defconst pcache-version-constant "0.3")
+(defconst pcache-internal-version-constant "0.4")
+
+(defconst pcache-version-constant
+  (format "%s/%s" emacs-version pcache-internal-version-constant))
 
 (defclass pcache-repository (eieio-persistent eieio-named)
   ((version :initarg :version :initform nil)
@@ -96,8 +97,7 @@
                  (let* ((pcache-avoid-recursion t)
 			(*pcache-repository-name* newname)
                         (obj (eieio-persistent-read path 'pcache-repository t)))
-                   (and (or (equal (oref obj :version)
-                                   (oref-default (object-class obj) version-constant))
+                   (and (or (pcache-validate-repo obj)
                             (error "wrong version"))
                         (puthash newname obj *pcache-repositories*)
                         obj))
@@ -107,14 +107,34 @@
           (unless (file-exists-p dir)
             (make-directory dir t))
           (oset obj :file path)
+          (oset obj :version (oref-default obj version-constant))
           (puthash newname obj *pcache-repositories*)
           obj))))
+
+(defun pcache-hash-table-values (h)
+  (let (values)
+    (maphash (lambda (k v) (push v values)) h)
+    values))
+
+(defun pcache-validate-repo (cache)
+  (and
+   (equal (oref cache :version)
+          (oref-default (object-class cache) version-constant))
+   (hash-table-p (oref cache :entries))
+   (every
+    (lambda (entry)
+      (and (object-of-class-p entry (oref cache :entry-cls))
+           (or (null (oref entry :value-cls))
+               (object-of-class-p
+                (oref entry :value) (oref entry :value-cls)))))
+    (pcache-hash-table-values (oref cache :entries)))))
 
 (defclass pcache-entry ()
   ((timestamp :initarg :timestamp
               :initform (float-time (current-time)))
    (ttl :initarg :ttl :initform nil)
-   (value :initarg :value :initform nil)))
+   (value :initarg :value :initform nil)
+   (value-cls :initarg :value-cls :initform nil)))
 
 (defmethod pcache-entry-valid-p ((entry pcache-entry))
   (let ((ttl (oref entry :ttl)))
@@ -145,7 +165,10 @@
         (entry (or (and (eieio-object-p value)
                         (object-of-class-p value 'pcache-entry)
                         value)
-                   (make-instance (oref cache :entry-cls) :value value))))
+                   (make-instance
+                    (oref cache :entry-cls)
+                    :value value
+                    :value-cls (and (object-p value) (object-class value))))))
     (when ttl
       (oset entry :ttl ttl))
     (prog1

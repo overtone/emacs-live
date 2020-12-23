@@ -28,7 +28,6 @@
 ;;; Code:
 
 (require 'cl-lib)
-(require 'haskell-compat)
 (require 'haskell-session)
 (require 'haskell-process)
 (require 'haskell-interactive-mode)
@@ -61,8 +60,7 @@
 Each line describes one session.
 Letters do not insert themselves; instead, they are commands."
   (setq buffer-read-only t)
-  (set (make-local-variable 'revert-buffer-function)
-       'haskell-menu-revert-function)
+  (setq-local revert-buffer-function 'haskell-menu-revert-function)
   (setq truncate-lines t)
   (haskell-menu-revert-function nil t))
 

@@ -26,11 +26,13 @@
 (require 'quail)
 
 ;;;###autoload
-(defun turn-on-haskell-unicode-input-method ()
-  "Set input method `haskell-unicode'.
-See Info node `Unicode(haskell-mode)' for more details."
+(defun haskell-unicode-input-method-enable ()
+  "Set input method `haskell-unicode'."
   (interactive)
   (set-input-method "haskell-unicode"))
+
+;;;###autoload
+(define-obsolete-function-alias 'turn-on-haskell-unicode-input-method 'haskell-unicode-input-method-enable "2020-04")
 
 (quail-define-package
  "haskell-unicode" ;; name
@@ -293,8 +295,7 @@ packages (base-unicode-symbols and containers-unicode-symbols).
  ("^6 "              ["⁶"])
  ("^7 "              ["⁷"])
  ("^8 "              ["⁸"])
- ("^9 "              ["⁹"])
- )
+ ("^9 "              ["⁹"]))
 
 (provide 'haskell-unicode-input-method)
 

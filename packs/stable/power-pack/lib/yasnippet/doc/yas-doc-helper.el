@@ -31,75 +31,103 @@
     (require 'ox-publish))
 (require 'yasnippet) ; docstrings must be loaded
 
-(defun yas--org-raw-html (tag content)
+(defun yas--org-raw-html (tag content &optional attrs)
   ;; in version 8.0 org-mode changed the export syntax, see
   ;; http://orgmode.org/worg/org-8.0.html#sec-8-1
   (format (if (version< org-version "8.0.0")
               "@<%s>%s@</%s>"                ; old: @<tag>
             "@@html:<%s>@@%s@@html:</%s>@@") ; new: @@html:<tag>@@
-          tag content tag))
+          (concat tag (if attrs " ") attrs)
+          content tag))
 
 (defun yas--document-symbol (symbol level)
-  (flet ((concat-lines (&rest lines)
-                       (mapconcat #'identity lines "\n")))
-    (let* ((stars (make-string level ?*))
-           (args (and (fboundp symbol)
-                      (mapcar #'symbol-name (help-function-arglist symbol t))))
-           (heading (cond ((fboundp symbol)
-                           (format
-                            "%s =%s= (%s)" stars symbol
-                            (mapconcat (lambda (a)
-                                         (format (if (string-prefix-p "&" a)
-                                                     "/%s/" "=%s=") a))
-                                       args " ")))
-                          (t
-                           (format "%s =%s=\n" stars symbol))))
-           (after-heading
-            (concat-lines ":PROPERTIES:"
-                          (format ":CUSTOM_ID: %s" symbol)
-                          ":END:"))
-           (body (or (cond ((fboundp symbol)
-                            (let ((doc-synth (car-safe (get symbol 'function-documentation))))
-                              (if (functionp doc-synth)
-                                  (funcall doc-synth nil)
-                                (documentation symbol t))))
-                           ((boundp symbol)
-                            (documentation-property symbol 'variable-documentation t))
-                           (t
-                            (format "*WARNING*: no symbol named =%s=" symbol)))
-                     (format "*WARNING*: no doc for symbol =%s=" symbol)))
-           (case-fold-search nil))
-      ;; do some transformations on the body:
-      ;; ARGxxx becomes @<code>arg@</code>xxx
-      ;; FOO becomes /foo/
-      ;; `bar' becomes [[#bar][=bar=]]
-      (setq body (replace-regexp-in-string
-                  "\\<\\([A-Z][-A-Z0-9]+\\)\\(\\sw+\\)?\\>"
-                  #'(lambda (match)
-                      (let* ((match1 (match-string 1 match))
-                             (prefix (downcase match1))
-                             (suffix (match-string 2 match))
-                             (fmt (cond
-                                   ((member prefix args)
-                                    (yas--org-raw-html "code" "%s"))
-                                   ((null suffix) "/%s/"))))
-                        (if fmt (format fmt prefix)
-                          match1)))
-                  body t t 1)
-            body (replace-regexp-in-string
-                  "`\\([a-z-]+\\)'"
-                  #'(lambda (match)
-                      (let* ((name (downcase (match-string 1 match)))
-                             (sym (intern name)))
-                        (if (memq sym yas--exported-syms)
-                            (format "[[#%s][=%s=]]" name name)
-                          (format "=%s=" name))))
-                  body t))
-      ;; output the paragraph
-      ;;
-      (concat-lines heading
-                    after-heading
-                    body))))
+  (let* ((stars (make-string level ?*))
+         (args (and (fboundp symbol)
+                    (mapcar #'symbol-name (help-function-arglist symbol t))))
+         (heading (cond ((fboundp symbol)
+                         (format
+                          "%s %s (%s)\n" stars (yas--org-raw-html "code" symbol "class='function'")
+                          (mapconcat (lambda (a)
+                                       (format (if (string-prefix-p "&" a)
+                                                   "/%s/" "=%s=")
+                                               a))
+                                     args " ")))
+                        (t
+                         (format "%s %s\n" stars
+                                 (yas--org-raw-html "code" symbol "class='variable'")))))
+         (after-heading (format ":PROPERTIES:\n:CUSTOM_ID: %s\n:END:" symbol))
+         (text-quoting-style 'grave)
+         (body (or (cond ((fboundp symbol)
+                          (let ((doc-synth (car-safe (get symbol 'function-documentation))))
+                            (if (functionp doc-synth)
+                                (funcall doc-synth nil)
+                              (documentation symbol t))))
+                         ((boundp symbol)
+                          (documentation-property symbol 'variable-documentation t))
+                         (t
+                          (format "*WARNING*: no symbol named =%s=" symbol)))
+                   (format "*WARNING*: no doc for symbol =%s=" symbol)))
+         (case-fold-search nil))
+    ;; Do some transformations on the body:
+    ;; ARGxxx becomes @<code>arg@</code>xxx
+    ;; FOO becomes /foo/
+    ;; `bar' becomes [[#bar][=bar=]]
+    ;;    (...) becomes #+BEGIN_SRC elisp (...) #+END_SRC
+    ;; Info node `(some-manual) Node Name' becomes
+    ;; [[https://www.gnu.org/software/emacs/manual/html_node/some-manual/Node-Name.html]
+    ;;  [(some-manual) Node Name]]
+    ;;
+    ;; This is fairly fragile, though it seems to be working for
+    ;; now...
+    (setq body (replace-regexp-in-string
+                "\\<\\([A-Z][-A-Z0-9]+\\)\\(\\sw+\\)?\\>"
+                #'(lambda (match)
+                    (let* ((match1 (match-string 1 match))
+                           (prefix (downcase match1))
+                           (suffix (match-string 2 match))
+                           (fmt (cond
+                                 ((member prefix args)
+                                  (yas--org-raw-html "code" "%s"))
+                                 ((null suffix) "/%s/"))))
+                      (if fmt (format fmt prefix)
+                        match1)))
+                body t t 1)
+          body (replace-regexp-in-string
+                "\\\\{[^}]+}"
+                (lambda (match)
+                  (concat "#+BEGIN_EXAMPLE\n"
+                          (substitute-command-keys match)
+                          "#+END_EXAMPLE\n"))
+                body t t)
+          body (substitute-command-keys body)
+          body (replace-regexp-in-string
+                "Info node `(\\([-a-z]+\\)) \\([A-Za-z0-9 ]+\\)'"
+                (lambda (match)
+                  (let* ((manual (match-string 1 match))
+                         (node (match-string 2 match))
+                         (html-node (replace-regexp-in-string " " "-" node t t)))
+                    (format "Info node\
+ [[https://www.gnu.org/software/emacs/manual/html_node/%s/%s.html][(%s) %s]]"
+                            manual html-node manual node)))
+                body t t)
+          body (replace-regexp-in-string
+                "`\\([-a-z]+\\)'"
+                #'(lambda (match)
+                    (let* ((name (downcase (match-string 1 match)))
+                           (sym (intern-soft name)))
+                      (if (memq sym yas--exported-syms)
+                          (format "[[#%s][=%s=]]" name name)
+                        (format "=%s=" name))))
+                body t t)
+          body (replace-regexp-in-string
+                "\n\n    +(.+\\(?:\n    +.+\\)*"
+                (lambda (match)
+                  (concat "\n#+BEGIN_SRC elisp\n"
+                          match
+                          "\n#+END_SRC\n"))
+                body t t))
+    ;; output the paragraph
+    (concat heading after-heading "\n" body)))
 
 (defun yas--document-symbols (level &rest names-and-predicates)
   (let ((sym-lists (make-vector (length names-and-predicates) nil))
@@ -126,26 +154,52 @@
 ;; This lets all the org files be exported to HTML with
 ;; `org-publish-current-project' (C-c C-e P).
 
+(defun yas--make-preamble (props)
+  "Return contents of nav-menu-html.inc.
+But replace link to \"current\" page with a span element."
+  (with-temp-buffer
+    (let ((dir (file-name-directory (plist-get props :input-file))))
+      (insert-file-contents (expand-file-name "nav-menu.html.inc" dir))
+      (goto-char (point-min))
+      (search-forward (concat "<a href=\""
+                              (file-name-nondirectory
+                               (plist-get props :output-file))
+                              "\">"))
+      (replace-match "<span class='current'>")
+      (search-forward "</a>")
+      (replace-match "</span>")
+      (buffer-string))))
+
 (let* ((dir (if load-file-name (file-name-directory load-file-name)
               default-directory))
-       (rev (with-temp-file (expand-file-name "html-revision" dir)
-              (or (when (eq (call-process "git" nil t nil
-                                          "rev-parse" "--verify" "HEAD") 0)
-                    (buffer-string))
-                  (princ yas--version (current-buffer)))))
+       (src-epoch (getenv "SOURCE_DATE_EPOCH"))
+       ;; Presence of SOURCE_DATE_EPOCH indicates a reproducible
+       ;; build, don't depend on git.
+       (rev (unless src-epoch
+              (ignore-errors
+                (car (process-lines "git" "describe" "--dirty")))))
+       (date (format-time-string
+              "(%Y-%m-%d %H:%M:%S)"
+              (seconds-to-time
+               (string-to-number
+                (or (if rev (car (process-lines "git" "show" "--format=%ct"))
+                      src-epoch)
+                    "0")))
+              t))
        (proj-plist
         `(,@(when (fboundp 'org-html-publish-to-html)
               '(:publishing-function org-html-publish-to-html))
           :base-directory ,dir :publishing-directory ,dir
-          :html-preamble
-          ,(with-temp-buffer
-             (insert-file-contents (expand-file-name "nav-menu.html.inc" dir))
-             (buffer-string))
+          :html-preamble yas--make-preamble
+          ;;:with-broken-links mark
           :html-postamble
-          ,(concat "<hr><p class='creator'>Generated by %c on %d from "
-                   rev "</p>\n"
+          ,(concat "<hr><p class='creator'>Generated by %c from "
+                   (or rev yas--version) " " date "</p>\n"
                    "<p class='xhtml-validation'>%v</p>\n")))
        (project (assoc "yasnippet" org-publish-project-alist)))
+  (when rev ;; Rakefile :doc:upload uses "html-revision".
+    (with-temp-file (expand-file-name "html-revision" dir)
+      (princ rev (current-buffer))))
   (if project
       (setcdr project proj-plist)
     (push `("yasnippet" . ,proj-plist)

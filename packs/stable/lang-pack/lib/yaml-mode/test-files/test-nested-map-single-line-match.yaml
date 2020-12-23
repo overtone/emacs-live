@@ -1,0 +1,6 @@
+# indent on line "bar: baz" should not go deeper than "foo: bar"
+a:
+  foo: bar
+  bar: baz
+b:
+  1

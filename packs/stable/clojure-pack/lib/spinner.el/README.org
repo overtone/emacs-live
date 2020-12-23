@@ -73,4 +73,4 @@ defined in the ~spinner-types~ variable or even define your own.
 Both ~spinner-start~ and ~spinner-create~ take extra options to configure the spinner, these are:
 
 - ~FPS~: The number of frames to display per second. Defaults to ~spinner-frames-per-second~.
-- ~DELAY~: After startin a spinner, it still won’t be displayed for this many seconds.
+- ~DELAY~: After starting a spinner, it still won’t be displayed for this many seconds.

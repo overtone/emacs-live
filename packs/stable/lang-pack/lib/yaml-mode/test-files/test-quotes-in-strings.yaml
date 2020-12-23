@@ -1,0 +1,6 @@
+some's'strings'some's'nots:
+- here: syntax is not string
+- this: 'is a string with "quotes"'
+- and: 'to express one single quote, use '' two of them'
+- finally: syntax is not string
+- singlequotedoesntfreeze: '

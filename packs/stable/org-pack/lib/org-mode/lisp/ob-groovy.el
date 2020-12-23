@@ -1,10 +1,11 @@
-;;; ob-groovy.el --- org-babel functions for Groovy evaluation
+;;; ob-groovy.el --- Babel Functions for Groovy      -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2013-2016 Free Software Foundation, Inc.
+;; Copyright (C) 2013-2020 Free Software Foundation, Inc.
 
 ;; Author: Miro Bezjak
+;; Maintainer: Palak Mathur
 ;; Keywords: literate programming, reproducible research
-;; Homepage: http://orgmode.org
+;; Homepage: https://orgmode.org
 
 ;; This file is part of GNU Emacs.
 
@@ -19,7 +20,7 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 ;; Currently only supports the external execution.  No session support yet.
@@ -31,7 +32,6 @@
 
 ;;; Code:
 (require 'ob)
-(eval-when-compile (require 'cl))
 
 (defvar org-babel-tangle-lang-exts) ;; Autoloaded
 (add-to-list 'org-babel-tangle-lang-exts '("groovy" . "groovy"))
@@ -46,14 +46,13 @@ parameters may be used, like groovy -v"
   :type 'string)
 
 (defun org-babel-execute:groovy (body params)
-  "Execute a block of Groovy code with org-babel.  This function is
-called by `org-babel-execute-src-block'"
+  "Execute a block of Groovy code with org-babel.
+This function is called by `org-babel-execute-src-block'."
   (message "executing Groovy source code block")
   (let* ((processed-params (org-babel-process-params params))
          (session (org-babel-groovy-initiate-session (nth 0 processed-params)))
-         (vars (nth 1 processed-params))
          (result-params (nth 2 processed-params))
-         (result-type (cdr (assoc :result-type params)))
+         (result-type (cdr (assq :result-type params)))
          (full-body (org-babel-expand-body:generic
                      body params))
          (result (org-babel-groovy-evaluate
@@ -62,12 +61,11 @@ called by `org-babel-execute-src-block'"
     (org-babel-reassemble-table
      result
      (org-babel-pick-name
-      (cdr (assoc :colname-names params)) (cdr (assoc :colnames params)))
+      (cdr (assq :colname-names params)) (cdr (assq :colnames params)))
      (org-babel-pick-name
-      (cdr (assoc :rowname-names params)) (cdr (assoc :rownames params))))))
+      (cdr (assq :rowname-names params)) (cdr (assq :rownames params))))))
 
 (defvar org-babel-groovy-wrapper-method
-
   "class Runner extends Script {
     def out = new PrintWriter(new ByteArrayOutputStream())
     def run() { %s }
@@ -76,22 +74,21 @@ called by `org-babel-execute-src-block'"
 println(new Runner().run())
 ")
 
-
 (defun org-babel-groovy-evaluate
-  (session body &optional result-type result-params)
+    (session body &optional result-type result-params)
   "Evaluate BODY in external Groovy process.
 If RESULT-TYPE equals `output' then return standard output as a string.
 If RESULT-TYPE equals `value' then return the value of the last statement
 in BODY as elisp."
   (when session (error "Sessions are not (yet) supported for Groovy"))
-  (case result-type
-    (output
-     (let ((src-file (org-babel-temp-file "groovy-")))
+  (pcase result-type
+    (`output
+     (let ((src-file (org-babel-temp-file "groovy_")))
        (progn (with-temp-file src-file (insert body))
               (org-babel-eval
                (concat org-babel-groovy-command " " src-file) ""))))
-    (value
-     (let* ((src-file (org-babel-temp-file "groovy-"))
+    (`value
+     (let* ((src-file (org-babel-temp-file "groovy_"))
             (wrapper (format org-babel-groovy-wrapper-method body)))
        (with-temp-file src-file (insert wrapper))
        (let ((raw (org-babel-eval
@@ -101,18 +98,16 @@ in BODY as elisp."
            (org-babel-script-escape raw)))))))
 
 
-(defun org-babel-prep-session:groovy (session params)
+(defun org-babel-prep-session:groovy (_session _params)
   "Prepare SESSION according to the header arguments specified in PARAMS."
   (error "Sessions are not (yet) supported for Groovy"))
 
-(defun org-babel-groovy-initiate-session (&optional session)
+(defun org-babel-groovy-initiate-session (&optional _session)
   "If there is not a current inferior-process-buffer in SESSION
 then create.  Return the initialized session.  Sessions are not
 supported in Groovy."
   nil)
 
 (provide 'ob-groovy)
-
-
 
 ;;; ob-groovy.el ends here

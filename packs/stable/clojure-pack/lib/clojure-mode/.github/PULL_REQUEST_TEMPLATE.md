@@ -1,17 +1,15 @@
-**Replace this placeholder text with a summary of the changes in your PR.
-The more detailed you are, the better.**
+**Replace this placeholder text with a summary of the changes in your PR.**
 
 -----------------
 
-Before submitting a PR make sure the following things have been done (and denote this
-by checking the relevant checkboxes):
+Before submitting a PR mark the checkboxes for the items you've done (if you
+think a checkbox does not apply, then leave it unchecked):
 
-- [ ] The commits are consistent with our [contribution guidelines][1]
-- [ ] You've added tests (if possible) to cover your change(s). Indentation & font-lock tests are extremely important!
-- [ ] All tests are passing (`make test`)
-- [ ] The new code is not generating bytecode or `M-x checkdoc` warnings
-- [ ] You've updated the changelog (if adding/changing user-visible functionality)
-- [ ] You've updated the readme (if adding/changing user-visible functionality)
+- [ ] The commits are consistent with our [contribution guidelines][1].
+- [ ] You've added tests (if possible) to cover your change(s). Bugfix, indentation, and font-lock tests are extremely important!
+- [ ] You've run `M-x checkdoc` and fixed any warnings in the code you've written.
+- [ ] You've updated the changelog (if adding/changing user-visible functionality).
+- [ ] You've updated the readme (if adding/changing user-visible functionality).
 
 Thanks!
 

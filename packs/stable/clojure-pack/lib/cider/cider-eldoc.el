@@ -1,7 +1,7 @@
 ;;; cider-eldoc.el --- eldoc support for Clojure -*- lexical-binding: t -*-
 
 ;; Copyright © 2012-2013 Tim King, Phil Hagelberg, Bozhidar Batsov
-;; Copyright © 2013-2018 Bozhidar Batsov, Artur Malabarba and CIDER contributors
+;; Copyright © 2013-2020 Bozhidar Batsov, Artur Malabarba and CIDER contributors
 ;;
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Phil Hagelberg <technomancy@gmail.com>
@@ -308,6 +308,9 @@ if the maximum number of sexps to skip is exceeded."
 It can be a function or var now."
   (pcase (lax-plist-get eldoc-info "type")
     ("function" 'fn)
+    ("special-form" 'special-form)
+    ("macro" 'macro)
+    ("method" 'method)
     ("variable" 'var)))
 
 (defun cider-eldoc-info-at-point ()
@@ -366,9 +369,9 @@ This includes the arglist and ns and symbol name (if available)."
   (let ((thing (cider-eldoc--convert-ns-keywords thing)))
     (when (and (cider-nrepl-op-supported-p "eldoc")
                thing
-               ;; ignore empty strings
-               (not (string= thing ""))
-               ;; ignore strings
+               ;; ignore blank things
+               (not (string-blank-p thing))
+               ;; ignore string literals
                (not (string-prefix-p "\"" thing))
                ;; ignore regular expressions
                (not (string-prefix-p "#" thing))
@@ -454,7 +457,7 @@ Only useful for interop forms.  Clojure forms would be returned unchanged."
           arglists))
     arglists))
 
-(defun cider-eldoc ()
+(defun cider-eldoc (&rest _ignored)
   "Backend function for eldoc to show argument list in the echo area."
   (when (and (cider-connected-p)
              ;; don't clobber an error message in the minibuffer
@@ -466,14 +469,18 @@ Only useful for interop forms.  Clojure forms would be returned unchanged."
            (pos (lax-plist-get sexp-eldoc-info "pos"))
            (thing (lax-plist-get sexp-eldoc-info "thing")))
       (when eldoc-info
-        (if (equal (cider-eldoc-thing-type eldoc-info) 'fn)
-            (cider-eldoc-format-function thing pos eldoc-info)
-          (cider-eldoc-format-variable thing eldoc-info))))))
+        (if (eq (cider-eldoc-thing-type eldoc-info) 'var)
+            (cider-eldoc-format-variable thing eldoc-info)
+          (cider-eldoc-format-function thing pos eldoc-info))))))
 
 (defun cider-eldoc-setup ()
   "Setup eldoc in the current buffer.
 eldoc mode has to be enabled for this to have any effect."
-  (setq-local eldoc-documentation-function #'cider-eldoc)
+  ;; Emacs 28.1 changes the way eldoc is setup.
+  ;; There you can have multiple eldoc functions.
+  (if (boundp 'eldoc-documentation-functions)
+      (add-hook 'eldoc-documentation-functions #'cider-eldoc nil t)
+    (setq-local eldoc-documentation-function #'cider-eldoc))
   (apply #'eldoc-add-command cider-extra-eldoc-commands))
 
 (provide 'cider-eldoc)

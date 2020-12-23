@@ -36,8 +36,8 @@ $contents = <<EOF;
 EOF
 
 $script = <<'EOF';
-</style><link rel="stylesheet" href="http://orgmode.org/org.css" type="text/css" />
-<script type="text/javascript" src="http://orgmode.org/org-keys.js"></script>
+</style><link rel="stylesheet" href="https://orgmode.org/org.css" type="text/css" />
+<script type="text/javascript" src="https://orgmode.org/org-keys.js"></script>
 <script type="text/javascript">
   <!--/*--><![CDATA[/*><!--*/
    OrgKeyReader.registerHref('h', 'index.html');

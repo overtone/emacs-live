@@ -74,10 +74,10 @@ MyCompiler = Emacs.condSend.compiler
 
 %% !! catching some exceptions does not work??
 
-%% exception is not catched
+%% exception is not caught
 try {Bla} catch E then {Error.printException E} {Browse nil} end
 
-%% exception is catched
+%% exception is caught
 try {Browse 1 div 0} catch E then {Error.printException E} {Browse nil} end
 {Browse ok}
 

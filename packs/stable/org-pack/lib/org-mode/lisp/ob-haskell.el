@@ -1,10 +1,11 @@
-;;; ob-haskell.el --- org-babel functions for haskell evaluation
+;;; ob-haskell.el --- Babel Functions for Haskell    -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2009-2016 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2020 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
+;; Maintainer: Lawrence Bottorff <borgauf@gmail.com>
 ;; Keywords: literate programming, reproducible research
-;; Homepage: http://orgmode.org
+;; Homepage: https://orgmode.org
 
 ;; This file is part of GNU Emacs.
 
@@ -19,35 +20,34 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 
-;; Org-Babel support for evaluating haskell source code.  This one will
-;; be sort of tricky because haskell programs must be compiled before
+;; Org Babel support for evaluating Haskell source code.
+;; Haskell programs must be compiled before
 ;; they can be run, but haskell code can also be run through an
 ;; interactive interpreter.
 ;;
-;; For now lets only allow evaluation using the haskell interpreter.
+;; By default we evaluate using the Haskell interpreter.
+;; To use the compiler, specify :compile yes in the header.
 
 ;;; Requirements:
 
-;; - haskell-mode :: http://www.iro.umontreal.ca/~monnier/elisp/#haskell-mode
-;;
-;; - inf-haskell :: http://www.iro.umontreal.ca/~monnier/elisp/#haskell-mode
-;;
-;; - (optionally) lhs2tex :: http://people.cs.uu.nl/andres/lhs2tex/
+;; - haskell-mode: http://www.iro.umontreal.ca/~monnier/elisp/#haskell-mode
+;; - inf-haskell: http://www.iro.umontreal.ca/~monnier/elisp/#haskell-mode
+;; - (optionally) lhs2tex: http://people.cs.uu.nl/andres/lhs2tex/
 
 ;;; Code:
 (require 'ob)
+(require 'org-macs)
 (require 'comint)
-(eval-when-compile (require 'cl))
 
-(declare-function org-remove-indentation "org" (code &optional n))
 (declare-function haskell-mode "ext:haskell-mode" ())
 (declare-function run-haskell "ext:inf-haskell" (&optional arg))
 (declare-function inferior-haskell-load-file
 		  "ext:inf-haskell" (&optional reload))
+(declare-function org-entry-get "org" (pom property &optional inherit literal-nil))
 
 (defvar org-babel-tangle-lang-exts)
 (add-to-list 'org-babel-tangle-lang-exts '("haskell" . "hs"))
@@ -59,44 +59,107 @@
 
 (defvar org-babel-haskell-eoe "\"org-babel-haskell-eoe\"")
 
-(defun org-babel-execute:haskell (body params)
-  "Execute a block of Haskell code."
-  (let* ((session (cdr (assoc :session params)))
-         (vars (mapcar #'cdr (org-babel-get-header params :var)))
-         (result-type (cdr (assoc :result-type params)))
+(defvar haskell-prompt-regexp)
+
+(defcustom org-babel-haskell-compiler "ghc"
+  "Command used to compile a Haskell source code file into an executable.
+May be either a command in the path, like \"ghc\" or an absolute
+path name, like \"/usr/local/bin/ghc\".  The command can include
+a parameter, such as \"ghc -v\"."
+  :group 'org-babel
+  :package-version '(Org "9.4")
+  :type 'string)
+
+(defconst org-babel-header-args:haskell '(compile . :any)
+  "Haskell-specific header arguments.")
+
+(defun org-babel-haskell-execute (body params)
+  "This function should only be called by `org-babel-execute:haskell'"
+  (let* ((tmp-src-file (org-babel-temp-file "Haskell-src-" ".hs"))
+         (tmp-bin-file
+          (org-babel-process-file-name
+           (org-babel-temp-file "Haskell-bin-" org-babel-exeext)))
+         (cmdline (cdr (assq :cmdline params)))
+         (cmdline (if cmdline (concat " " cmdline) ""))
+         (flags (cdr (assq :flags params)))
+         (flags (mapconcat #'identity
+		           (if (listp flags)
+                               flags
+                             (list flags))
+			   " "))
+         (libs (org-babel-read
+	        (or (cdr (assq :libs params))
+	            (org-entry-get nil "libs" t))
+	        nil))
+         (libs (mapconcat #'identity
+		          (if (listp libs) libs (list libs))
+		          " ")))
+    (with-temp-file tmp-src-file (insert body))
+    (org-babel-eval
+     (format "%s -o %s %s %s %s"
+             org-babel-haskell-compiler
+	     tmp-bin-file
+	     flags
+	     (org-babel-process-file-name tmp-src-file)
+	     libs)
+     "")
+    (let ((results (org-babel-eval (concat tmp-bin-file cmdline) "")))
+      (when results
+        (setq results (org-trim (org-remove-indentation results)))
+        (org-babel-reassemble-table
+         (org-babel-result-cond (cdr (assq :result-params params))
+	   (org-babel-read results t)
+	   (let ((tmp-file (org-babel-temp-file "Haskell-")))
+	     (with-temp-file tmp-file (insert results))
+	     (org-babel-import-elisp-from-file tmp-file)))
+         (org-babel-pick-name
+	  (cdr (assq :colname-names params)) (cdr (assq :colnames params)))
+         (org-babel-pick-name
+	  (cdr (assq :rowname-names params)) (cdr (assq :rownames params))))))))
+
+(defun org-babel-interpret-haskell (body params)
+  (require 'inf-haskell)
+  (add-hook 'inferior-haskell-hook
+            (lambda ()
+              (setq-local comint-prompt-regexp
+                          (concat haskell-prompt-regexp "\\|^λ?> "))))
+  (let* ((session (cdr (assq :session params)))
+         (result-type (cdr (assq :result-type params)))
          (full-body (org-babel-expand-body:generic
 		     body params
 		     (org-babel-variable-assignments:haskell params)))
          (session (org-babel-haskell-initiate-session session params))
+	 (comint-preoutput-filter-functions
+	  (cons 'ansi-color-filter-apply comint-preoutput-filter-functions))
          (raw (org-babel-comint-with-output
 		  (session org-babel-haskell-eoe t full-body)
-                (insert (org-babel-trim full-body))
+                (insert (org-trim full-body))
                 (comint-send-input nil t)
                 (insert org-babel-haskell-eoe)
                 (comint-send-input nil t)))
-         (results (mapcar
-                   #'org-babel-haskell-read-string
-                   (cdr (member org-babel-haskell-eoe
-                                (reverse (mapcar #'org-babel-trim raw)))))))
+         (results (mapcar #'org-strip-quotes
+			  (cdr (member org-babel-haskell-eoe
+                                       (reverse (mapcar #'org-trim raw)))))))
     (org-babel-reassemble-table
      (let ((result
-            (case result-type
-              (output (mapconcat #'identity (reverse (cdr results)) "\n"))
-              (value (car results)))))
-       (org-babel-result-cond (cdr (assoc :result-params params))
+            (pcase result-type
+              (`output (mapconcat #'identity (reverse results) "\n"))
+              (`value (car results)))))
+       (org-babel-result-cond (cdr (assq :result-params params))
 	 result (org-babel-script-escape result)))
-     (org-babel-pick-name (cdr (assoc :colname-names params))
-			  (cdr (assoc :colname-names params)))
-     (org-babel-pick-name (cdr (assoc :rowname-names params))
-			  (cdr (assoc :rowname-names params))))))
+     (org-babel-pick-name (cdr (assq :colname-names params))
+			  (cdr (assq :colname-names params)))
+     (org-babel-pick-name (cdr (assq :rowname-names params))
+			  (cdr (assq :rowname-names params))))))
 
-(defun org-babel-haskell-read-string (string)
-  "Strip \\\"s from around a haskell string."
-  (if (string-match "^\"\\([^\000]+\\)\"$" string)
-      (match-string 1 string)
-    string))
+(defun org-babel-execute:haskell (body params)
+  "Execute a block of Haskell code."
+  (let ((compile (string= "yes" (cdr (assq :compile params)))))
+    (if (not compile)
+	(org-babel-interpret-haskell body params)
+      (org-babel-haskell-execute body params))))
 
-(defun org-babel-haskell-initiate-session (&optional session params)
+(defun org-babel-haskell-initiate-session (&optional _session _params)
   "Initiate a haskell session.
 If there is not a current inferior-process-buffer in SESSION
 then create one.  Return the initialized session."
@@ -131,7 +194,7 @@ then create one.  Return the initialized session."
 	    (format "let %s = %s"
 		    (car pair)
 		    (org-babel-haskell-var-to-haskell (cdr pair))))
-	  (mapcar #'cdr (org-babel-get-header params :var))))
+	  (org-babel--get-vars params)))
 
 (defun org-babel-haskell-var-to-haskell (var)
   "Convert an elisp value VAR into a haskell variable.
@@ -144,20 +207,21 @@ specifying a variable of the same value."
 (defvar org-export-copy-to-kill-ring)
 (declare-function org-export-to-file "ox"
 		  (backend file
-			   &optional async subtreep visible-only body-only ext-plist))
+			   &optional async subtreep visible-only body-only
+			   ext-plist post-process))
 (defun org-babel-haskell-export-to-lhs (&optional arg)
   "Export to a .lhs file with all haskell code blocks escaped.
 When called with a prefix argument the resulting
 .lhs file will be exported to a .tex file.  This function will
 create two new files, base-name.lhs and base-name.tex where
-base-name is the name of the current org-mode file.
+base-name is the name of the current Org file.
 
 Note that all standard Babel literate programming
 constructs (header arguments, no-web syntax etc...) are ignored."
   (interactive "P")
   (let* ((contents (buffer-string))
          (haskell-regexp
-          (concat "^\\([ \t]*\\)#\\+begin_src[ \t]haskell*\\(.*\\)?[\r\n]"
+          (concat "^\\([ \t]*\\)#\\+begin_src[ \t]haskell*\\(.*\\)[\r\n]"
                   "\\([^\000]*?\\)[\r\n][ \t]*#\\+end_src.*"))
          (base-name (file-name-sans-extension (buffer-file-name)))
          (tmp-file (org-babel-temp-file "haskell-"))
@@ -178,12 +242,12 @@ constructs (header arguments, no-web syntax etc...) are ignored."
         (save-match-data (setq indentation (length (match-string 1))))
         (replace-match (save-match-data
                          (concat
-                          "#+begin_latex\n\\begin{code}\n"
+                          "#+begin_export latex\n\\begin{code}\n"
                           (if (or preserve-indentp
                                   (string-match "-i" (match-string 2)))
                               (match-string 3)
                             (org-remove-indentation (match-string 3)))
-                          "\n\\end{code}\n#+end_latex\n"))
+                          "\n\\end{code}\n#+end_export\n"))
                        t t)
         (indent-code-rigidly (match-beginning 0) (match-end 0) indentation)))
     (save-excursion
@@ -213,7 +277,5 @@ constructs (header arguments, no-web syntax etc...) are ignored."
       (message "running %s" command) (shell-command command) (find-file tex-file))))
 
 (provide 'ob-haskell)
-
-
 
 ;;; ob-haskell.el ends here

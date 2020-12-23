@@ -479,7 +479,7 @@ NEW-MARK and OLD-MARK are the text of the new and old marks."
 
 ;;; Setting it all up
 
-(eval-after-load "org"
+(eval-after-load 'org
   '(progn
      (add-to-list 'org-todo-setup-filter-hook
 		  #'org-choose-setup-filter)

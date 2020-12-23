@@ -1,6 +1,6 @@
 ;;; test-ob-lilypond.el --- tests for ob-lilypond.el
 
-;; Copyright (c) 2010-2014 Martyn Jago
+;; Copyright (c) 2010-2014, 2019 Martyn Jago
 ;; Authors: Martyn Jago
 
 ;; This file is not part of GNU Emacs.
@@ -135,24 +135,6 @@
 	      "xdg-open"))))
   (custom-reevaluate-setting 'org-babel-lilypond-commands))
 
-(ert-deftest ob-lilypond/ly-commands/customize ()
-  (let ((system-type 'other)
-	org-babel-lilypond-ly-command
-	org-babel-lilypond-pdf-command
-	org-babel-lilypond-midi-command)
-    (custom-initialize-reset 'org-babel-lilypond-commands
-			     '(list "nonsense" "bla" "fasel"))
-    (should (equal
-	     (list
-	      org-babel-lilypond-ly-command
-	      org-babel-lilypond-pdf-command
-	      org-babel-lilypond-midi-command)
-	     (list
-	      "nonsense"
-	      "bla"
-	      "fasel"))))
-  (custom-reevaluate-setting 'org-babel-lilypond-commands))
-
 (ert-deftest ob-lilypond/ly-gen-png ()
   (should (boundp 'org-babel-lilypond-gen-png)))
 
@@ -162,7 +144,7 @@
 (ert-deftest ob-lilypond/ly-gen-html ()
   (should (boundp 'org-babel-lilypond-gen-html)))
 
-(ert-deftest ob-lilypond/ly-gen-html ()
+(ert-deftest ob-lilypond/ly-gen-pdf ()
   (should (boundp 'org-babel-lilypond-gen-pdf)))
 
 (ert-deftest ob-lilypond/use-eps ()
@@ -269,9 +251,8 @@
              (org-babel-lilypond-attempt-to-open-pdf org-babel-lilypond-file t)))
     (delete-file pdf-file)
     (kill-buffer (file-name-nondirectory pdf-file))
-    (should (equal
-             "No pdf file generated so can't display!"
-             (org-babel-lilypond-attempt-to-open-pdf pdf-file)))
+    (should (string-prefix-p "No pdf file generated"
+			     (org-babel-lilypond-attempt-to-open-pdf pdf-file)))
     (setq org-babel-lilypond-display-pdf-post-tangle post-tangle)))
 
 (ert-deftest ob-lilypond/ly-attempt-to-play-midi ()
@@ -292,8 +273,8 @@
              (org-babel-lilypond-attempt-to-play-midi org-babel-lilypond-file t)))
     (delete-file midi-file)
     (kill-buffer (file-name-nondirectory midi-file))
-    (should (equal
-             "No midi file generated so can't play!"
+    (should (string-prefix-p
+             "No midi file generated"
              (org-babel-lilypond-attempt-to-play-midi midi-file)))
     (setq org-babel-lilypond-play-midi-post-tangle post-tangle)))
 

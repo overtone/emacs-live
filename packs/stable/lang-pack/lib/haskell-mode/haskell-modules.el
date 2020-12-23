@@ -71,7 +71,7 @@ to stylish-haskell."
   (let ((session (haskell-session-maybe)))
     (when session
       (let ((modules (shell-command-to-string
-                      (format "%s | %s | %s"
+                      (format "%s 2> /dev/null | %s | %s"
                               (cond
                                ((haskell-sandbox-exists-p session)
                                 (concat "ghc-pkg dump -f "

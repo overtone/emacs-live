@@ -74,3 +74,12 @@ Feature: Add namespace to blank .clj files
                 #?(:clj [clojure.test :as t]
                    :cljs [cljs.test :as t :include-macros true])))
     """
+
+  Scenario: cljs file
+    When I open file "tmp/test/cljr/core_test.cljs"
+    Then I should see:
+    """
+    (ns cljr.core-test
+      (:require [cljr.core :as sut]
+                [cljs.test :as t :include-macros true]))
+    """

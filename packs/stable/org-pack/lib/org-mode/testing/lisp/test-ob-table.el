@@ -1,6 +1,6 @@
 ;;; test-ob-table.el
 
-;; Copyright (c) 2011-2014 Eric Schulte
+;; Copyright (c) 2011-2014, 2019 Eric Schulte
 ;; Authors: Eric Schulte
 
 ;; This file is not part of GNU Emacs.
@@ -20,7 +20,7 @@
 
 ;;; Comments:
 
-;; Template test file for Org-mode tests
+;; Template test file for Org tests
 
 ;;; Code:
 

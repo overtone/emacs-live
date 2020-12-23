@@ -1,6 +1,6 @@
 ;;; ox-taskjuggler.el --- TaskJuggler Back-End for Org Export Engine
 ;;
-;; Copyright (C) 2007-2016 Free Software Foundation, Inc.
+;; Copyright (C) 2007-2020 Free Software Foundation, Inc.
 ;;
 ;; Emacs Lisp Archive Entry
 ;; Filename: ox-taskjuggler.el
@@ -137,7 +137,7 @@
 ;;   :END:
 ;;
 ;;;; * TODO
-;;   - Look at org-file-properties, org-global-properties and
+;;   - Look at org-keyword-properties, org-global-properties and
 ;;     org-global-properties-fixed
 ;;   - What about property inheritance and org-property-inherit-p?
 ;;   - Use TYPE_TODO as an way to assign resources
@@ -520,7 +520,7 @@ headline or finally add more underscore characters (\"_\")."
   (let ((id (org-string-nw-p (org-element-property :TASK_ID item))))
     ;; If an id is specified, use it, as long as it's unique.
     (if (and id (not (member id unique-ids))) id
-      (let* ((parts (org-split-string (org-element-property :raw-value item)))
+      (let* ((parts (split-string (org-element-property :raw-value item)))
 	     (id (org-taskjuggler--clean-id (downcase (pop parts)))))
 	;; Try to add more parts of the headline to make it unique.
 	(while (and (car parts) (member id unique-ids))
@@ -554,8 +554,8 @@ channel."
          (let ((deps (concat (org-element-property :BLOCKER task)
                              (org-element-property :DEPENDS task))))
            (and deps
-                (org-split-string (replace-regexp-in-string "{.*?}" "" deps)
-                                  "[ ,]* +"))))
+                (split-string (replace-regexp-in-string "{.*?}" "" deps)
+			      "[ ,]* +"))))
         depends)
     (when deps-ids
       ;; Find tasks with :task_id: property matching id in DEPS-IDS.
@@ -603,7 +603,7 @@ doesn't include leading \"depends\"."
 		   (let ((id (org-element-property :TASK_ID dep)))
 		     (and id
 			  (string-match (concat id " +\\({.*?}\\)") dep-str)
-			  (org-match-string-no-properties 1 dep-str))))
+			  (match-string-no-properties 1 dep-str))))
 		  path)
 	      ;; Compute number of exclamation marks by looking for the
 	      ;; common ancestor between TASK and DEP.
@@ -720,9 +720,8 @@ Return complete project plan as a string in TaskJuggler syntax."
 	      (mapconcat
 	       'org-element-normalize-string
 	       (mapcar
-		(function
-		 (lambda (report)
-		   (replace-regexp-in-string "%title" report-title  report t t)))
+		(lambda (report)
+		  (replace-regexp-in-string "%title" report-title  report t t))
 		org-taskjuggler-default-reports) "")))))))))
 
 (defun org-taskjuggler--build-project (project info)
@@ -841,8 +840,8 @@ a unique id will be associated to it."
          (priority
           (let ((pri (org-element-property :priority task)))
             (and pri
-                 (max 1 (/ (* 1000 (- org-lowest-priority pri))
-                           (- org-lowest-priority org-highest-priority)))))))
+                 (max 1 (/ (* 1000 (- org-priority-lowest pri))
+                           (- org-priority-lowest org-priority-highest)))))))
     (concat
      ;; Opening task.
      (format "task %s \"%s\" {\n"
@@ -859,11 +858,7 @@ a unique id will be associated to it."
                     "allocations")
                   allocate))
      (and complete (format "  complete %s\n" complete))
-     (and effort
-          (format "  effort %s\n"
-                  (let* ((minutes (org-duration-string-to-minutes effort))
-                         (hours (/ minutes 60.0)))
-                    (format "%.1fh" hours))))
+     (and effort (format "  effort %s\n" effort))
      (and priority (format "  priority %s\n" priority))
      (and milestone "  milestone\n")
      ;; Add other valid attributes.

@@ -43,7 +43,7 @@ BTEST_POST  =
               # -L <path-to>/ert      # needed for Emacs23, Emacs24 has ert built in
               # -L <path-to>/ess      # needed for running R tests
               # -L <path-to>/htmlize  # need at least version 1.34 for source code formatting
-BTEST_OB_LANGUAGES = awk C fortran maxima lilypond octave perl python
+BTEST_OB_LANGUAGES = awk C fortran maxima lilypond octave perl python vala
               # R                     # requires ESS to be installed and configured
               # ruby                  # requires inf-ruby to be installed and configured
 # extra packages to require for testing
@@ -75,11 +75,11 @@ BTEST = $(BATCH) $(BTEST_INIT) \
 		)' \
 	  -l org-loaddefs.el \
 	  -l cl -l testing/org-test.el \
-	  -l ert -l org -l ox \
+	  -l ert -l org -l ox -l ol \
 	  $(foreach req,$(BTEST_EXTRA),$(req-extra)) \
 	  --eval '(org-test-run-batch-tests org-test-select-re)'
 
-# Running a plain emacs with no config and this Org-mode loaded.  This
+# Running a plain emacs with no config and this Org mode loaded.  This
 # should be useful for manual testing and verification of problems.
 NOBATCH = $(EMACSQ) $(BTEST_INIT) -l org -f org-version
 
@@ -115,7 +115,7 @@ MAKE_ORG_INSTALL = $(BATCHL) \
 MAKE_ORG_VERSION = $(BATCHL) \
 	  --eval '(load "org-compat.el")' \
 	  --eval '(load "../mk/org-fixup.el")' \
-	  --eval '(org-make-org-version "$(ORGVERSION)" "$(GITVERSION)" "'$(datadir)'")'
+	  --eval '(org-make-org-version "$(ORGVERSION)" "$(GITVERSION)")'
 
 # How to byte-compile the whole source directory
 ELCDIR	= $(BATCHL) \
@@ -149,6 +149,10 @@ RM	= rm -f
 
 # How to remove files recursively
 RMR	= rm -fr
+
+# How to change file permissions
+# currently only needed for git-annex due to its "lockdown" feature
+CHMOD   = chmod
 
 # How to copy the lisp files and elc files to their destination.
 # CP	= cp -p	# try this if you have no install

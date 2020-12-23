@@ -1,7 +1,7 @@
 ;;; nrepl-dict.el --- Dictionary functions for Clojure nREPL -*- lexical-binding: t -*-
 
 ;; Copyright © 2012-2013 Tim King, Phil Hagelberg, Bozhidar Batsov
-;; Copyright © 2013-2018 Bozhidar Batsov, Artur Malabarba and CIDER contributors
+;; Copyright © 2013-2020 Bozhidar Batsov, Artur Malabarba and CIDER contributors
 ;;
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Phil Hagelberg <technomancy@gmail.com>
@@ -37,6 +37,12 @@
 (defun nrepl-dict (&rest key-vals)
   "Create nREPL dict from KEY-VALS."
   (cons 'dict key-vals))
+
+(defun nrepl-dict-from-hash (hash)
+  "Create nREPL dict from HASH."
+  (let ((dict (nrepl-dict)))
+    (maphash (lambda (k v) (nrepl-dict-put dict k v)) hash)
+    dict))
 
 (defun nrepl-dict-p (object)
   "Return t if OBJECT is an nREPL dict."

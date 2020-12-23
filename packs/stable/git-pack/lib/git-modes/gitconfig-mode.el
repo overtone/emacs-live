@@ -1,7 +1,7 @@
 ;;; gitconfig-mode.el --- Major mode for editing .gitconfig files -*- lexical-binding: t; -*-
 
 ;; Copyright (c) 2012-2013  Sebastian Wiesner
-;; Copyright (C) 2012-2016  The Magit Project Contributors
+;; Copyright (C) 2012-2018  The Magit Project Contributors
 
 ;; Author: Sebastian Wiesner <lunaryorn@gmail.com>
 ;; Maintainer: Jonas Bernoulli <jonas@bernoul.li>
@@ -94,11 +94,12 @@
                     (group (syntax string-quote)
                            (minimal-match (one-or-more not-newline))
                            (syntax string-quote)))
-          "]" (zero-or-more (syntax whitespace)) line-end)
+          "]" (zero-or-more not-newline) line-end)
      (1 'font-lock-type-face t nil)
      (2 'font-lock-function-name-face t t))
     (,(rx line-start (zero-or-more (syntax whitespace)) symbol-start
-          (group (one-or-more (or (syntax word) (syntax symbol))))
+          (group alphanumeric
+                 (zero-or-more (or (syntax word) (syntax symbol))))
           symbol-end (zero-or-more (syntax whitespace))
           (optional "=" (zero-or-more not-newline)) line-end)
      (1 'font-lock-variable-name-face))
@@ -129,6 +130,7 @@
                    "/\\.gitmodules\\'"     "/etc/gitconfig\\'"))
   (add-to-list 'auto-mode-alist (cons pattern 'gitconfig-mode)))
 
+;;; _
 (provide 'gitconfig-mode)
 ;; Local Variables:
 ;; indent-tabs-mode: nil

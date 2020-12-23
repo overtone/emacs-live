@@ -8,7 +8,7 @@
 ;; Author: Georg C. F. Greve <greve at fsfeurope dot org>
 ;; Keywords: outlines, hypermedia, calendar, wp, email, mairix
 ;; Purpose: Integrate mairix email searching into Org mode
-;; See http://orgmode.org and http://www.rpcurnow.force9.co.uk/mairix/
+;; See https://orgmode.org and http://www.rpcurnow.force9.co.uk/mairix/
 ;; Version: 0.5
 ;;
 ;; This file is Free Software; you can redistribute it and/or modify
@@ -82,8 +82,9 @@ correctly, you should not need to change this.
 
 ;;; The hooks to integrate mairix into org
 
-(org-add-link-type "mairix" 'org-mairix-open)
-(add-hook 'org-store-link-functions 'org-mairix-store-gnus-link)
+(org-link-set-parameters "mairix"
+			 :follow #'org-mairix-open
+			 :store #'org-mairix-store-gnus-link)
 
 ;;; Generic org-mairix functions
 
@@ -93,7 +94,7 @@ correctly, you should not need to change this.
           (if org-mairix-threaded-links "t:")
           (if org-mairix-augmented-links "a:")
           "@@"
-          (org-remove-angle-brackets message-id)))
+          (org-unbracket-string "<" ">" message-id)))
 
 (defun org-store-mairix-link-props (&rest plist)
   "Take a property list describing a mail, and add mairix link
@@ -138,7 +139,7 @@ the buffer just like 'message-send-and-exit' does."
           (cons (list link desc) org-stored-links)))
   (message-bury (current-buffer)))
 
-(defun org-mairix-open (search)
+(defun org-mairix-open (search _)
   "Function to open mairix link.
 
 We first need to split it into its individual parts, and then
@@ -185,7 +186,7 @@ applications in order to mimic `org-store-link'.  Used by
   :type 'string)
 
 ;; When we resolve some of the issues with `org-store-link' detailed
-;; at <http://thread.gmane.org/gmane.emacs.orgmode/4217/focus=4635>,
+;; at <https://orgmode.org/list/20071105181739.GB13544@atlantic.linksys.moosehall
 ;; we might not need org-mairix-insert-link.
 
 (defun org-mairix-insert-link ()

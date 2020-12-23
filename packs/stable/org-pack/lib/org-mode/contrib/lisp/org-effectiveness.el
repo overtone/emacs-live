@@ -1,10 +1,10 @@
 ;;; org-effectiveness.el --- Measuring the personal effectiveness
 
-;; Copyright (C) 2013-2016 Free Software Foundation, Inc.
+;; Copyright (C) 2013-2020 Free Software Foundation, Inc.
 
 ;; Author: David Arroyo Menéndez <davidam@es.gnu.org>
 ;; Keywords: effectiveness, plot
-;; Homepage: http://orgmode.org
+;; Homepage: https://orgmode.org
 ;;
 ;; This file is not part of GNU Emacs, yet.
 ;;
@@ -34,7 +34,7 @@
 (require 'org)
 
 (defcustom org-effectiveness-max-todo 50
-  "This variable is useful to advice to the user about 
+  "This variable is useful to advice to the user about
 many TODO pending"
   :type 'integer
   :group 'org-effectiveness)
@@ -42,9 +42,10 @@ many TODO pending"
 (defun org-effectiveness-advice()
   "Advicing about a possible excess of TODOS"
   (interactive)
-  (goto-char (point-min))
-  (if (< org-effectiveness-max-todo (count-matches "* TODO"))
-      (message "An excess of TODOS!")))
+  (save-excursion
+    (goto-char (point-min))
+    (if (< org-effectiveness-max-todo (count-matches "* TODO"))
+	(message "An excess of TODOS!"))))
 
 ;; Check advice starting an org file
 (add-hook 'org-mode-hook 'org-effectiveness-advice)
@@ -59,10 +60,10 @@ many TODO pending"
 (defun org-effectiveness-count-todo()
   "Print a message with the number of todo tasks in the current buffer"
   (interactive)
-  (save-excursion 
+  (save-excursion
     (goto-char (point-min))
     (message "Number of TODO: %d" (count-matches "* TODO"))))
-									     
+
 (defun org-effectiveness-count-done()
   "Print a message with the number of done tasks in the current buffer"
   (interactive)
@@ -77,6 +78,13 @@ many TODO pending"
     (goto-char (point-min))
     (message "Number of Canceled: %d" (count-matches "* CANCEL+ED"))))
 
+(defun org-effectiveness-count-task()
+  "Print a message with the number of tasks and subtasks in the current buffer"
+  (interactive)
+  (save-excursion
+    (goto-char (point-min))
+    (message "Number of tasks: %d" (count-matches "^*"))))
+
 (defun org-effectiveness()
   "Returns the effectiveness in the current org buffer"
   (interactive)
@@ -89,25 +97,41 @@ many TODO pending"
 	(setq effectiveness (* 100 (/ done (+ done canc)))))
       (message "Effectiveness: %f" effectiveness))))
 
+
 (defun org-effectiveness-keywords-in-date(keyword date)
   (interactive "sKeyword: \nsDate: " keyword date)
   (setq count (count-matches (concat keyword ".*\n.*" date)))
   (message (concat "%sS: %d" keyword count)))
 
-(defun org-effectiveness-dones-in-date(date)
-   (interactive "sGive me a date: " date)
-   (setq count (count-matches (concat "DONE.*\n.*" date)))
-   (message "DONES: %d" count))
+(defun org-effectiveness-dones-in-date(date &optional notmessage)
+  (interactive "sGive me a date: " date)
+  (save-excursion
+    (goto-char (point-min))
+    (let ((count (count-matches (concat "DONE.*\n.*" date))))
+      (if (eq notmessage 1)
+	  (message "%d" count)
+	(message "DONES: %d " count)))))
 
-(defun org-effectivenes-todos-in-date(date)
-   (interactive "sGive me a date: " date)
-   (setq count (count-matches (concat "TODO.*\n.*" date)))
-   (message "TODOS: %d" count))
+(defun org-effectiveness-todos-in-date(date)
+  (interactive "sGive me a date: " date)
+  (save-excursion
+    (goto-char (point-min))
+    (setq count (count-matches (concat "TODO.*\n.*" date)))
+    (message "TODOS: %d" count)))
 
 (defun org-effectiveness-canceled-in-date(date)
-   (interactive "sGive me a date: " date)
-   (setq count (count-matches (concat "CANCEL+ED.*\n.*" date)))
-   (message "CANCELEDS: %d" count))
+  (interactive "sGive me a date: " date)
+  (save-excursion
+    (goto-char (point-min))
+    (setq count (count-matches (concat "CANCEL+ED.*\n.*" date)))
+    (message "CANCELEDS: %d" count)))
+
+(defun org-effectiveness-ntasks-in-date(date &optional notmessage)
+  (interactive "sGive me a date: " date)
+  (save-excursion
+    (goto-char (point-min))
+    (let ((tasks (float (count-matches (concat "^*.*\n.*" date)))))
+      (message "%d" tasks))))
 
 (defun org-effectiveness-in-date(date &optional notmessage)
   (interactive "sGive me a date: " date)
@@ -130,14 +154,14 @@ many TODO pending"
 (defun org-effectiveness-plot(startdate enddate &optional save)
   (interactive "sGive me the start date: \nsGive me the end date: " startdate enddate)
   (setq dates (org-effectiveness-check-dates startdate enddate))
-  (setq syear (cadr (assoc 'startyear dates)))
-  (setq smonth (cadr (assoc 'startmonth dates)))
-  (setq eyear (cadr (assoc 'endyear dates)))
-  (setq emonth (assoc 'endmonth dates))
+  (setq syear (cadr (assq 'startyear dates)))
+  (setq smonth (cadr (assq 'startmonth dates)))
+  (setq eyear (cadr (assq 'endyear dates)))
+  (setq emonth (assq 'endmonth dates))
 ;; Checking the format of the dates
-  (if (not (string-match "[0-9][0-9][0-9][0-9]-[0-9][0-9]" startdate)) 
+  (if (not (string-match "[0-9][0-9][0-9][0-9]-[0-9][0-9]" startdate))
       (message "The start date must have the next format YYYY-MM"))
-  (if (not (string-match "[0-9][0-9][0-9][0-9]-[0-9][0-9]" enddate)) 
+  (if (not (string-match "[0-9][0-9][0-9][0-9]-[0-9][0-9]" enddate))
       (message "The end date must have the next format YYYY-MM"))
 ;; Checking if startdate < enddate
   (if (string-match "^[0-9][0-9][0-9][0-9]" startdate)
@@ -152,19 +176,19 @@ many TODO pending"
        (message "The start date must be before that end date"))
   (if (and (= startyear endyear) (> startmonth endmonth))
       (message "The start date must be before that end date"))
-;; Create a file 
+;; Create a file
   (let ((month startmonth)
 	(year startyear)
 	(str ""))
-    (while (or (> endyear year) (and (= endyear year) (>= endmonth month))) 
+    (while (or (> endyear year) (and (= endyear year) (>= endmonth month)))
       (setq str (concat str (number-to-string year) "-" (org-effectiveness-month-to-string month) " " (org-effectiveness-in-date (concat (number-to-string year) "-" (org-effectiveness-month-to-string month)) 1) "\n"))
       (if (= month 12)
-	  (progn 
+	  (progn
 	    (setq year (+ 1 year))
 	    (setq month 1))
 	(setq month (+ 1 month))))
       (write-region str nil "/tmp/org-effectiveness"))
-;; Create the bar graph 
+;; Create the bar graph
   (if (eq save t)
       (setq strplot "/usr/bin/gnuplot -e 'set term png; set output \"/tmp/org-effectiveness.png\"; plot \"/tmp/org-effectiveness\" using 2:xticlabels(1) with histograms' -p")
     (setq strplot "/usr/bin/gnuplot -e 'plot \"/tmp/org-effectiveness\" using 2:xticlabels(1) with histograms' -p"))
@@ -221,9 +245,9 @@ many TODO pending"
 (defun org-effectiveness-check-dates (startdate enddate)
   "Generate a list with ((startyear startmonth) (endyear endmonth))"
   (setq str nil)
-  (if (not (string-match "[0-9][0-9][0-9][0-9]-[0-9][0-9]" startdate)) 
+  (if (not (string-match "[0-9][0-9][0-9][0-9]-[0-9][0-9]" startdate))
       (setq str "The start date must have the next format YYYY-MM"))
-  (if (not (string-match "[0-9][0-9][0-9][0-9]-[0-9][0-9]" enddate)) 
+  (if (not (string-match "[0-9][0-9][0-9][0-9]-[0-9][0-9]" enddate))
       (setq str "The end date must have the next format YYYY-MM"))
 ;; Checking if startdate < enddate
   (if (string-match "^[0-9][0-9][0-9][0-9]" startdate)
@@ -246,12 +270,12 @@ many TODO pending"
 (defun org-effectiveness-plot-ascii (startdate enddate)
   (interactive "sGive me the start date: \nsGive me the end date: " startdate enddate)
   (setq dates (org-effectiveness-check-dates startdate enddate))
-  (let ((syear (cadr (assoc 'startyear dates)))
-	(smonth (cadr (assoc 'startmonth dates)))
-  	(year (cadr (assoc 'startyear dates)))
-	(month (cadr (assoc 'startmonth dates)))
-	(emonth (cadr (assoc 'endmonth dates)))
-	(eyear (cadr (assoc 'endyear dates)))
+  (let ((syear (cadr (assq 'startyear dates)))
+	(smonth (cadr (assq 'startmonth dates)))
+  	(year (cadr (assq 'startyear dates)))
+	(month (cadr (assq 'startmonth dates)))
+	(emonth (cadr (assq 'endmonth dates)))
+	(eyear (cadr (assq 'endyear dates)))
 	(buffer (current-buffer))
   	(str ""))
     (while (or (> eyear year) (and (= eyear year) (>= emonth month)))
@@ -260,22 +284,70 @@ many TODO pending"
       (org-effectiveness-ascii-bar (string-to-number str) (format "%s-%s" year month))
       (switch-to-buffer buffer)
       (if (eq month 12)
-  	  (progn 
+  	  (progn
   	    (setq year (+ 1 year))
   	    (setq month 1))
   	(setq month (+ 1 month)))))
   (switch-to-buffer "*org-effectiveness*"))
 
+
+(defun org-effectiveness-plot-ascii-ntasks (startdate enddate)
+  (interactive "sGive me the start date: \nsGive me the end date: " startdate enddate)
+  (setq dates (org-effectiveness-check-dates startdate enddate))
+  (let ((syear (cadr (assq 'startyear dates)))
+	(smonth (cadr (assq 'startmonth dates)))
+  	(year (cadr (assq 'startyear dates)))
+	(month (cadr (assq 'startmonth dates)))
+	(emonth (cadr (assq 'endmonth dates)))
+	(eyear (cadr (assq 'endyear dates)))
+	(buffer (current-buffer))
+  	(str ""))
+    (while (or (> eyear year) (and (= eyear year) (>= emonth month)))
+      (setq str (org-effectiveness-ntasks-in-date (concat (number-to-string year) "-" (org-effectiveness-month-to-string month)) 1))
+      (switch-to-buffer "*org-effectiveness*")
+      (org-effectiveness-ascii-bar (string-to-number str) (format "%s-%s" year month))
+      (switch-to-buffer buffer)
+      (if (eq month 12)
+  	  (progn
+  	    (setq year (+ 1 year))
+  	    (setq month 1))
+  	(setq month (+ 1 month)))))
+  (switch-to-buffer "*org-effectiveness*"))
+
+(defun org-effectiveness-plot-ascii-dones (startdate enddate)
+  (interactive "sGive me the start date: \nsGive me the end date: " startdate enddate)
+  (setq dates (org-effectiveness-check-dates startdate enddate))
+  (let ((syear (cadr (assq 'startyear dates)))
+	(smonth (cadr (assq 'startmonth dates)))
+  	(year (cadr (assq 'startyear dates)))
+	(month (cadr (assq 'startmonth dates)))
+	(emonth (cadr (assq 'endmonth dates)))
+	(eyear (cadr (assq 'endyear dates)))
+	(buffer (current-buffer))
+  	(str ""))
+    (while (or (> eyear year) (and (= eyear year) (>= emonth month)))
+      (setq str (org-effectiveness-dones-in-date (concat (number-to-string year) "-" (org-effectiveness-month-to-string month)) 1))
+      (switch-to-buffer "*org-effectiveness*")
+      (org-effectiveness-ascii-bar (string-to-number str) (format "%s-%s" year month))
+      (switch-to-buffer buffer)
+      (if (eq month 12)
+  	  (progn
+  	    (setq year (+ 1 year))
+  	    (setq month 1))
+  	(setq month (+ 1 month)))))
+  (switch-to-buffer "*org-effectiveness*"))
+
+
 (defun org-effectiveness-plot-html (startdate enddate)
   "Print html bars about the effectiveness in a buffer"
   (interactive "sGive me the start date: \nsGive me the end date: " startdate enddate)
   (setq dates (org-effectiveness-check-dates startdate enddate))
-  (let ((syear (cadr (assoc 'startyear dates)))
-	(smonth (cadr (assoc 'startmonth dates)))
-  	(year (cadr (assoc 'startyear dates)))
-	(month (cadr (assoc 'startmonth dates)))
-	(emonth (cadr (assoc 'endmonth dates)))
-	(eyear (cadr (assoc 'endyear dates)))
+  (let ((syear (cadr (assq 'startyear dates)))
+	(smonth (cadr (assq 'startmonth dates)))
+  	(year (cadr (assq 'startyear dates)))
+	(month (cadr (assq 'startmonth dates)))
+	(emonth (cadr (assq 'endmonth dates)))
+	(eyear (cadr (assq 'endyear dates)))
 	(buffer (current-buffer))
   	(str ""))
     (switch-to-buffer "*org-effectiveness-html*")
@@ -287,7 +359,7 @@ many TODO pending"
       (switch-to-buffer buffer)
       (format "%s-%s" year month)
       (if (eq month 12)
-    	  (progn 
+    	  (progn
     	    (setq year (+ 1 year))
     	    (setq month 1))
     	(setq month (+ 1 month))))
@@ -295,4 +367,3 @@ many TODO pending"
     (insert "</body></html>")))
 
 (provide 'org-effectiveness)
-

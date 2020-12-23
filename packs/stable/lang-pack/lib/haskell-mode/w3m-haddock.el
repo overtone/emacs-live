@@ -1,5 +1,4 @@
-;;; -*- lexical-binding: t -*-
-;;; w3m-haddock.el --- Make browsing haddocks with w3m-mode better.
+;;; w3m-haddock.el --- Make browsing haddocks with w3m-mode better  -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2014 Chris Done
 
@@ -22,12 +21,16 @@
 ;; the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
 ;; Boston, MA 02110-1301, USA.
 
+;;; Commentary:
+
+;;; Code:
+
 (require 'cl-lib)
 (require 'haskell-mode)
 (require 'haskell-font-lock)
 
-(declare-function w3m-buffer-title "w3m")
-(declare-function w3m-browse-url "w3m")
+(declare-function w3m-buffer-title "ext:w3m")
+(declare-function w3m-browse-url "ext:w3m")
 (defvar w3m-current-url)
 
 (add-hook 'w3m-display-hook 'w3m-haddock-display)
@@ -188,3 +191,4 @@ You can rebind this if you're using hsenv by adding it to your
   (search-forward-regexp "\n[ \n]"))
 
 (provide 'w3m-haddock)
+;;; w3m-haddock.el ends here
