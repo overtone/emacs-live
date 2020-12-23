@@ -1,0 +1,5 @@
+# in case anyone wants to keep ert in the testing directory, e.g., for
+# old versions of Emacs
+ert
+.org-test-id-locations
+.test-org-id-locations

@@ -1,0 +1,6 @@
+# Compiled
+*.elc
+
+# Packaging
+.cask
+/elpa/

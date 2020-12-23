@@ -1,0 +1,8 @@
+# temporary files
+*~
+*\#*\#
+*.\#*
+
+# Emacs byte-compiled files
+*.elc
+.cask
