@@ -4,7 +4,7 @@
 
 ;; Author: Torsten Anders and Eric Schulte
 ;; Keywords: literate programming, reproducible research
-;; Homepage: http://orgmode.org
+;; Homepage: https://orgmode.org
 ;; Version: 0.02
 
 ;; This file is not part of GNU Emacs.
@@ -106,7 +106,7 @@
 ;; back any results from Oz to Emacs. The following code creates a
 ;; socket for sending code to the OPI compiler and results are
 ;; returned by the same socket. On the Oz side, a socket is opened and
-;; conected to the compiler of the OPI (via oz-send-string). On the
+;; connected to the compiler of the OPI (via oz-send-string). On the
 ;; Emacs side, a connection to this socket is created for feeding code
 ;; and receiving results. This additional communication channel to the
 ;; OPI compiler ensures that results are returned cleanly (e.g., only
@@ -197,7 +197,7 @@ StartOzServer.oz is located.")
     result))
 
 (defun org-babel-expand-body:oz (body params)
-  (let ((vars (mapcar #'cdr (org-babel-get-header params :var))))
+  (let ((vars (org-babel--get-vars params)))
     (if vars
 	;; prepend code to define all arguments passed to the code block
 	(let ((var-string (mapcar (lambda (pair)
@@ -214,7 +214,7 @@ StartOzServer.oz is located.")
 (defun org-babel-execute:oz (body params)
   "Execute a block of Oz code with org-babel.  This function is
 called by `org-babel-execute-src-block' via multiple-value-bind."
-  (let* ((result-params (cdr (assoc :result-params params)))
+  (let* ((result-params (cdr (assq :result-params params)))
 	 (full-body (org-babel-expand-body:oz body params))
 	 (wait-time (plist-get params :wait-time)))
     ;; actually execute the source-code block
@@ -227,10 +227,10 @@ called by `org-babel-execute-src-block' via multiple-value-bind."
        (message "Org-babel: executing Oz expression")
        (oz-send-string-expression full-body (or wait-time 1)))
       (t (error "either 'output' or 'results' must be members of :results")))
-     (org-babel-pick-name (cdr (assoc :colname-names params))
-			  (cdr (assoc :colnames params)))
-     (org-babel-pick-name (cdr (assoc :roname-names params))
-			  (cdr (assoc :rownames params))))))
+     (org-babel-pick-name (cdr (assq :colname-names params))
+			  (cdr (assq :colnames params)))
+     (org-babel-pick-name (cdr (assq :roname-names params))
+			  (cdr (assq :rownames params))))))
 
 ;; This function should be used to assign any variables in params in
 ;; the context of the session environment.

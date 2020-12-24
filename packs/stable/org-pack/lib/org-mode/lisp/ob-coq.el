@@ -1,10 +1,10 @@
-;;; ob-coq.el --- org-babel functions for Coq
+;;; ob-coq.el --- Babel Functions for Coq            -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2010-2016 Free Software Foundation, Inc.
+;; Copyright (C) 2010-2020 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;; Keywords: literate programming, reproducible research
-;; Homepage: http://orgmode.org
+;; Homepage: https://orgmode.org
 
 ;; This file is part of GNU Emacs.
 
@@ -19,7 +19,7 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 
@@ -27,7 +27,7 @@
 ;; session evaluation is supported.  Requires both coq.el and
 ;; coq-inferior.el, both of which are distributed with Coq.
 ;;
-;; http://coq.inria.fr/
+;; https://coq.inria.fr/
 
 ;;; Code:
 (require 'ob)
@@ -35,10 +35,11 @@
 (declare-function run-coq "ext:coq-inferior.el" (cmd))
 (declare-function coq-proc "ext:coq-inferior.el" ())
 
+(defvar coq-program-name "coqtop"
+  "Name of the coq toplevel to run.")
+
 (defvar org-babel-coq-buffer "*coq*"
   "Buffer in which to evaluate coq code blocks.")
-
-(defvar org-babel-coq-eoe "org-babel-coq-eoe")
 
 (defun org-babel-coq-clean-prompt (string)
   (if (string-match "^[^[:space:]]+ < " string)
@@ -70,8 +71,10 @@ If there is not a current inferior-process-buffer in SESSION then
 create one.  Return the initialized session."
   (unless (fboundp 'run-coq)
     (error "`run-coq' not defined, load coq-inferior.el"))
-  (save-window-excursion (run-coq "coqtop"))
+  (save-window-excursion (run-coq coq-program-name))
   (sit-for 0.1)
   (get-buffer org-babel-coq-buffer))
 
 (provide 'ob-coq)
+
+;;; ob-coq.el ends here

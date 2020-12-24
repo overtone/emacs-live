@@ -7,8 +7,9 @@
 ;;               Michael Ivey
 ;;               Phil Hagelberg
 ;;               Dan McKinley
-;; Version: 1.3.1
-;; Package-Requires: ((emacs "24.1") (gh "0.9.2"))
+;;               Marcelo Muñoz Araya <ma.munoz.araya@gmail.com>
+;; Version: 1.4.0
+;; Package-Requires: ((emacs "24.1") (gh "0.10.0"))
 ;; Keywords: tools
 ;; Homepage: https://github.com/defunkt/gist.el
 
@@ -92,6 +93,11 @@
   :type 'boolean
   :group 'gist)
 
+(defcustom gist-ask-for-filename nil
+  "If non-nil, prompt for change default file name before submitting gist."
+  :type 'boolean
+  :group 'gist)
+
 (defcustom gist-created-fmt "Paste created: %s"
   "Format for the message that gets shown upon successful gist
 creation.  Must contain a single %s for the location of the newly
@@ -146,6 +152,8 @@ appropriate modes from fetched gist files (based on filenames)."
 (unless (hash-table-p gist-list-db-by-user)
   (setq gist-list-db-by-user (make-hash-table :test 'equal)))
 
+(defvar gist-list-limits nil)
+
 (defvar gist-id nil)
 (make-variable-buffer-local 'gist-id)
 
@@ -182,6 +190,11 @@ appropriate modes from fetched gist files (based on filenames)."
   (when gist-ask-for-description
     (read-from-minibuffer "Gist description: ")))
 
+(defun gist-ask-for-filename-maybe (fname)
+  (if gist-ask-for-filename
+      (read-string (format "File name (%s): " fname) nil nil fname)
+    fname))
+
 ;;;###autoload
 (defun gist-region (begin end &optional private callback)
   "Post the current region as a new paste at gist.github.com
@@ -194,7 +207,8 @@ With a prefix argument, makes a private paste."
          (ext (or (cdr (assoc major-mode gist-supported-modes-alist))
                   (file-name-extension file)
                   "txt"))
-         (fname (concat (file-name-sans-extension name) "." ext))
+         (proposal-fname (concat (file-name-sans-extension name) "." ext))
+         (fname (gist-ask-for-filename-maybe proposal-fname))
          (files (list
                  (make-instance 'gh-gist-gist-file
                                 :filename fname
@@ -329,6 +343,9 @@ Copies the URL into the kill ring."
   (interactive)
   (gist-list-user username t background))
 
+(defun gist-list-redisplay ()
+  (gist-list-user 'current-user))
+
 (defun gist-tabulated-entry (gist)
   (let* ((data (gist-parse-gist gist))
          (repo (oref gist :id)))
@@ -363,7 +380,7 @@ for the gist."
         (creation (gist--get-time gist))
         (desc (or (oref gist :description) ""))
         (public (eq t (oref gist :public)))
-        (fnames (mapcar (lambda (f) (oref f :filename)) (oref gist :files))))
+        (fnames (mapcar (lambda (f) (when f (oref f :filename))) (oref gist :files))))
     (loop for (id label width sort format) in gist-list-format
           collect (let ((string-formatter (if (eq id 'created)
                                               'format-time-string
@@ -460,6 +477,7 @@ for the gist."
     (let* ((old-descr (oref gist :description))
            (new-descr (read-from-minibuffer "Description: " old-descr))
            (g (clone gist
+                     :files nil
                      :description new-descr))
            (resp (gh-gist-edit api g)))
       (gh-url-add-response-callback resp
@@ -520,7 +538,11 @@ for the gist."
 
 (defun gist-current-url ()
   "Helper function to fetch current gist url"
-  (let* ((id (tabulated-list-get-id))
+  (let* ((id (or (and (eq major-mode 'gist-list-mode)
+                      (tabulated-list-get-id))
+                 (and (boundp 'gist-mode)
+                      gist-mode
+                      gist-id)))
          (gist (gist-list-db-get-gist id)))
     (oref gist :html-url)))
 
@@ -593,9 +615,12 @@ put it into `kill-ring'."
     (define-key map "*" 'gist-star)
     (define-key map "^" 'gist-unstar)
     (define-key map "f" 'gist-fork)
+    (define-key map "/p" 'gist-list-push-visibility-limit)
+    (define-key map "/t" 'gist-list-push-tag-limit)
+    (define-key map "/w" 'gist-list-pop-limit)
     map))
 
-(define-derived-mode gist-list-mode tabulated-list-mode "Gist Menu"
+(define-derived-mode gist-list-mode tabulated-list-mode "Gists"
   "Major mode for browsing gists.
 \\<gist-list-menu-mode-map>
 \\{gist-list-menu-mode-map}"
@@ -606,11 +631,76 @@ put it into `kill-ring'."
         tabulated-list-padding 2
         tabulated-list-sort-key nil)
   (tabulated-list-init-header)
-  (use-local-map gist-list-menu-mode-map))
+  (use-local-map gist-list-menu-mode-map)
+  (font-lock-add-keywords nil '(("#[^[:space:]]*" . 'font-lock-keyword-face))))
+
+(defun gist-list-pop-limit (&optional all)
+  (interactive "P")
+  (if all
+      (setq gist-list-limits nil)
+    (pop gist-list-limits))
+  (gist-list-redisplay))
+
+(defun gist-list-push-visibility-limit (&optional private)
+  (interactive "P")
+  (push (apply-partially (lambda (flag g)
+                           (or (and flag (not (oref g :public)))
+                               (and (not flag) (oref g :public))))
+                         private)
+        gist-list-limits)
+  (gist-list-redisplay))
+
+(defun gist-parse-tags (tags)
+  (let ((words (split-string tags))
+        with without)
+    (dolist (w words)
+      (cond ((string-prefix-p "+" w)
+             (push (substring w 1) with))
+            ((string-prefix-p "-" w)
+             (push (substring w 1) without))
+            (t
+             (push w with))))
+    (list with without)))
+
+(defun gist-list-push-tag-limit (tags)
+  (interactive "sTags: ")
+  (let* ((lsts (gist-parse-tags tags))
+         (with (car lsts))
+         (without (cadr lsts)))
+    (push (apply-partially (lambda (with without g)
+                             (and
+                              (every (lambda (tag)
+                                       (string-match-p
+                                        (format "#%s\\>" tag)
+                                        (oref g :description)))
+                                     with)
+                              (not (some (lambda (tag)
+                                           (string-match-p
+                                            (format "#%s\\>" tag)
+                                            (oref g :description)))
+                                         without))))
+                           with without)
+          gist-list-limits))
+  (gist-list-redisplay))
+
+(defun gist-list-apply-limits (gists)
+  (condition-case nil
+      (delete nil
+              (mapcar
+               (lambda (g)
+                 (when (every #'identity
+                              (mapcar (lambda (f) (funcall f g)) gist-list-limits))
+                   g))
+               gists))
+    (error gists)))
 
 (defun gist-list-render (gists &optional background)
   (gist-list-mode)
-  (setq tabulated-list-entries (mapcar 'gist-tabulated-entry gists))
+  (let ((entries (mapcar 'gist-tabulated-entry
+                         (gist-list-apply-limits gists))))
+    (setq tabulated-list-entries entries)
+    (when (not (equal (length gists) (length entries)))
+      (setq mode-name (format "Gists[%d/%d]" (length entries) (length gists)))))
   (tabulated-list-print)
   (gist-list-tag-multi-files)
   (unless background

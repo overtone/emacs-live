@@ -1,7 +1,7 @@
 ;;; cider-mode.el --- Minor mode for REPL interactions -*- lexical-binding: t -*-
 
 ;; Copyright © 2012-2013 Tim King, Phil Hagelberg, Bozhidar Batsov
-;; Copyright © 2013-2018 Bozhidar Batsov, Artur Malabarba and CIDER contributors
+;; Copyright © 2013-2020 Bozhidar Batsov, Artur Malabarba and CIDER contributors
 ;;
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Phil Hagelberg <technomancy@gmail.com>
@@ -39,6 +39,7 @@
 (require 'cider-doc) ; required only for the menu
 (require 'cider-profile) ; required only for the menu
 (require 'cider-completion)
+(require 'cider-inspector)
 (require 'subr-x)
 (require 'cider-compat)
 
@@ -54,14 +55,14 @@ Info contains the connection type, project name and host:port endpoint."
   (if-let* ((current-connection (ignore-errors (cider-current-repl))))
       (with-current-buffer current-connection
         (concat
-         cider-repl-type
+         (symbol-name cider-repl-type)
          (when cider-mode-line-show-connection
            (format ":%s@%s:%s"
                    (or (cider--project-name nrepl-project-dir) "<no project>")
-                   (pcase (car nrepl-endpoint)
+                   (pcase (plist-get nrepl-endpoint :host)
                      ("localhost" "")
                      (x x))
-                   (cadr nrepl-endpoint)))))
+                   (plist-get nrepl-endpoint :port)))))
     "not connected"))
 
 ;;;###autoload
@@ -121,7 +122,7 @@ Clojure buffer."
 (defun cider-switch-to-last-clojure-buffer ()
   "Switch to the last Clojure buffer.
 The default keybinding for this command is
-the same as `cider-switch-to-repl-buffer',
+the same as variable `cider-switch-to-repl-buffer',
 so that it is very convenient to jump between a
 Clojure buffer and the REPL buffer."
   (interactive)
@@ -133,8 +134,8 @@ Clojure buffer and the REPL buffer."
                                       (when-let* ((type (cider-repl-type-for-buffer b)))
                                         (unless a-buf
                                           (setq a-buf b))
-                                        (or (equal type "multi")
-                                            (equal type repl-type)))))
+                                        (or (eq type 'multi)
+                                            (eq type repl-type)))))
                                   (buffer-list)))))
         (if-let* ((buf (or the-buf a-buf)))
             (if cider-repl-display-in-current-window
@@ -151,7 +152,7 @@ the related commands `cider-repl-clear-buffer' and
 `cider-repl-clear-output'."
   (interactive "P")
   (let ((origin-buffer (current-buffer)))
-    (switch-to-buffer (cider-current-repl))
+    (switch-to-buffer (cider-current-repl nil 'ensure))
     (if clear-repl
         (cider-repl-clear-buffer)
       (cider-repl-clear-output))
@@ -167,7 +168,7 @@ the related commands `cider-repl-clear-buffer' and
      (cider-nrepl-send-request
       `("op" "undef"
         "ns" ,(cider-current-ns)
-        "symbol" ,sym)
+        "sym" ,sym)
       (cider-interactive-eval-handler (current-buffer))))))
 
 ;;; cider-run
@@ -217,11 +218,16 @@ With a prefix argument, prompt for function to run instead of -main."
     (define-key map (kbd "C-r") #'cider-insert-region-in-repl)
     (define-key map (kbd "C-n") #'cider-insert-ns-form-in-repl)))
 
-(defcustom cider-switch-to-repl-after-insert-p t
-  "Whether to switch to the repl after inserting a form into the repl."
+(define-obsolete-variable-alias
+  'cider-switch-to-repl-after-insert-p
+  'cider-switch-to-repl-on-insert
+  "0.21.0")
+
+(defcustom cider-switch-to-repl-on-insert t
+  "Whether to switch to the REPL when inserting a form into the REPL."
   :type 'boolean
   :group 'cider
-  :package-version '(cider . "0.18.0"))
+  :package-version '(cider . "0.21.0"))
 
 (defcustom cider-invert-insert-eval-p nil
   "Whether to invert the behavior of evaling.
@@ -234,20 +240,26 @@ and eval and the prefix is required to prevent evaluation."
 
 (defun cider-insert-in-repl (form eval)
   "Insert FORM in the REPL buffer and switch to it.
-If EVAL is non-nil the form will also be evaluated."
+If EVAL is non-nil the form will also be evaluated.  Use
+`cider-invert-insert-eval-p' to invert this behavior."
   (while (string-match "\\`[ \t\n\r]+\\|[ \t\n\r]+\\'" form)
     (setq form (replace-match "" t t form)))
-  (with-current-buffer (cider-current-repl)
-    (goto-char (point-max))
-    (let ((beg (point)))
-      (insert form)
-      (indent-region beg (point)))
-    (when (if cider-invert-insert-eval-p
-              (not eval)
-            eval)
-      (cider-repl-return)))
-  (when cider-switch-to-repl-after-insert-p
-    (cider-switch-to-repl-buffer)))
+  (when cider-switch-to-repl-on-insert
+    (cider-switch-to-repl-buffer))
+  (let ((repl (cider-current-repl)))
+    (with-selected-window (or (get-buffer-window repl)
+                              (selected-window))
+      (with-current-buffer repl
+        (goto-char (point-max))
+        (let ((beg (point)))
+          (insert form)
+          (indent-region beg (point))
+          (cider--font-lock-ensure beg (point)))
+        (when (if cider-invert-insert-eval-p
+                  (not eval)
+                eval)
+          (cider-repl-return))
+        (goto-char (point-max))))))
 
 (defun cider-insert-last-sexp-in-repl (&optional arg)
   "Insert the expression preceding point in the REPL buffer.
@@ -297,7 +309,7 @@ If invoked with a prefix ARG eval the expression after inserting it."
     ["Quit" cider-quit :active (cider-connected-p)]
     ["Restart" cider-restart :active (cider-connected-p)]
     "--"
-    ["Connection info" cider-describe-current-connection
+    ["Connection info" cider-describe-connection
      :active (cider-connected-p)]
     ["Select any CIDER buffer" cider-selector]
     "--"
@@ -312,9 +324,10 @@ If invoked with a prefix ARG eval the expression after inserting it."
     ["Close ancillary buffers" cider-close-ancillary-buffers
      :active (seq-remove #'null cider-ancillary-buffers)]
     ("nREPL" :active (cider-connected-p)
-     ["Describe nrepl session" cider-describe-nrepl-session]
-     ["Toggle message logging" nrepl-toggle-message-logging])
-    "Menu for CIDER mode."))
+     ["List nREPL middleware" cider-list-nrepl-middleware]
+     ["Describe nREPL session" cider-describe-nrepl-session]
+     ["Toggle message logging" nrepl-toggle-message-logging]))
+  "Menu for CIDER mode.")
 
 (defconst cider-mode-eval-menu
   '("CIDER Eval" :visible (cider-connected-p)
@@ -323,6 +336,7 @@ If invoked with a prefix ARG eval the expression after inserting it."
     ["Eval top-level sexp to comment" cider-eval-defun-to-comment]
     ["Eval top-level sexp and pretty-print to comment" cider-pprint-eval-defun-to-comment]
     "--"
+    ["Eval current list" cider-eval-list-at-point]
     ["Eval current sexp" cider-eval-sexp-at-point]
     ["Eval current sexp to point" cider-eval-sexp-up-to-point]
     ["Eval current sexp in context" cider-eval-sexp-at-point-in-context]
@@ -343,15 +357,20 @@ If invoked with a prefix ARG eval the expression after inserting it."
     ["Interrupt evaluation" cider-interrupt]
     "--"
     ["Insert last sexp in REPL" cider-insert-last-sexp-in-repl]
+    ["Insert last sexp in REPL and eval" (cider-insert-last-sexp-in-repl t)
+     :keys "\\[universal-argument] \\[cider-insert-last-sexp-in-repl]"]
     ["Insert top-level sexp in REPL" cider-insert-defun-in-repl]
     ["Insert region in REPL" cider-insert-region-in-repl]
     ["Insert ns form in REPL" cider-insert-ns-form-in-repl]
     "--"
     ["Load this buffer" cider-load-buffer]
+    ["Load this buffer and switch to REPL" cider-load-buffer-and-switch-to-repl-buffer]
     ["Load another file" cider-load-file]
     ["Recursively load all files in directory" cider-load-all-files]
     ["Load all project files" cider-load-all-project-ns]
     ["Refresh loaded code" cider-ns-refresh]
+    ["Require and reload" cider-ns-reload]
+    ["Require and reload all" cider-ns-reload-all]
     ["Run project (-main function)" cider-run])
   "Menu for CIDER mode eval commands.")
 
@@ -376,6 +395,11 @@ If invoked with a prefix ARG eval the expression after inserting it."
      ["Find resource" cider-find-resource]
      ["Find keyword" cider-find-keyword]
      ["Go back" cider-pop-back])
+    ("Xref"
+     ["Find fn references" cider-xref-fn-refs]
+     ["Find fn references and select" cider-xref-fn-refs-select]
+     ["Find fn dependencies" cider-xref-fn-defs]
+     ["Find fn dependencies and select" cider-xref-fn-defs-select])
     ("Browse"
      ["Browse namespace" cider-browse-ns]
      ["Browse all namespaces" cider-browse-ns-all]
@@ -410,6 +434,8 @@ If invoked with a prefix ARG eval the expression after inserting it."
 
 
 (declare-function cider-ns-refresh "cider-ns")
+(declare-function cider-ns-reload "cider-ns")
+(declare-function cider-ns-reload-all "cider-ns")
 (declare-function cider-browse-ns "cider-browse-ns")
 (declare-function cider-eval-ns-form "cider-eval")
 (declare-function cider-repl-set-ns "cider-repl")
@@ -427,6 +453,8 @@ If invoked with a prefix ARG eval the expression after inserting it."
     (define-key map (kbd "M-n") #'cider-repl-set-ns)
     (define-key map (kbd "r") #'cider-ns-refresh)
     (define-key map (kbd "M-r") #'cider-ns-refresh)
+    (define-key map (kbd "l") #'cider-ns-reload)
+    (define-key map (kbd "M-l") #'cider-ns-reload-all)
     map)
   "CIDER NS keymap.")
 
@@ -440,11 +468,24 @@ If invoked with a prefix ARG eval the expression after inserting it."
 (declare-function cider-find-resource "cider-find")
 (declare-function cider-find-keyword "cider-find")
 (declare-function cider-find-var "cider-find")
+(declare-function cider-find-dwim-at-mouse "cider-find")
+(declare-function cider-xref-fn-refs "cider-xref")
+(declare-function cider-xref-fn-refs-select "cider-xref")
+(declare-function cider-xref-fn-deps "cider-xref")
+(declare-function cider-xref-fn-deps-select "cider-xref")
+
+(defconst cider--has-many-mouse-buttons (not (memq window-system '(mac ns)))
+  "Non-nil if system binds forward and back buttons to <mouse-8> and <mouse-9>.
+
+As it stands Emacs fires these events on <mouse-8> and <mouse-9> on 'x' and
+'w32'systems while on macOS it presents them on <mouse-4> and <mouse-5>.")
 
 (defconst cider-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-c C-d") 'cider-doc-map)
     (define-key map (kbd "M-.") #'cider-find-var)
+    (define-key map (kbd (if cider--has-many-mouse-buttons "<mouse-8>" "<mouse-4>")) #'xref-pop-marker-stack)
+    (define-key map (kbd (if cider--has-many-mouse-buttons "<mouse-9>" "<mouse-5>")) #'cider-find-dwim-at-mouse)
     (define-key map (kbd "C-c C-.") #'cider-find-ns)
     (define-key map (kbd "C-c C-:") #'cider-find-keyword)
     (define-key map (kbd "M-,") #'cider-pop-back)
@@ -454,13 +495,13 @@ If invoked with a prefix ARG eval the expression after inserting it."
     (define-key map (kbd "C-c C-c") #'cider-eval-defun-at-point)
     (define-key map (kbd "C-x C-e") #'cider-eval-last-sexp)
     (define-key map (kbd "C-c C-e") #'cider-eval-last-sexp)
+    (define-key map (kbd "C-c C-p") #'cider-pprint-eval-last-sexp)
+    (define-key map (kbd "C-c C-f") #'cider-pprint-eval-defun-at-point)
     (define-key map (kbd "C-c C-v") 'cider-eval-commands-map)
     (define-key map (kbd "C-c C-j") 'cider-insert-commands-map)
     (define-key map (kbd "C-c M-;") #'cider-eval-defun-to-comment)
     (define-key map (kbd "C-c M-e") #'cider-eval-last-sexp-to-repl)
     (define-key map (kbd "C-c M-p") #'cider-insert-last-sexp-in-repl)
-    (define-key map (kbd "C-c C-p") #'cider-pprint-eval-last-sexp)
-    (define-key map (kbd "C-c C-f") #'cider-pprint-eval-defun-at-point)
     (define-key map (kbd "C-c M-:") #'cider-read-and-eval)
     (define-key map (kbd "C-c C-u") #'cider-undef)
     (define-key map (kbd "C-c C-m") #'cider-macroexpand-1)
@@ -479,8 +520,12 @@ If invoked with a prefix ARG eval the expression after inserting it."
     (define-key map (kbd "C-c ,")   'cider-test-commands-map)
     (define-key map (kbd "C-c C-t") 'cider-test-commands-map)
     (define-key map (kbd "C-c M-s") #'cider-selector)
-    (define-key map (kbd "C-c M-d") #'cider-describe-current-connection)
+    (define-key map (kbd "C-c M-d") #'cider-describe-connection)
     (define-key map (kbd "C-c C-=") 'cider-profile-map)
+    (define-key map (kbd "C-c C-? r") #'cider-xref-fn-refs)
+    (define-key map (kbd "C-c C-? C-r") #'cider-xref-fn-refs-select)
+    (define-key map (kbd "C-c C-? d") #'cider-xref-fn-deps)
+    (define-key map (kbd "C-c C-? C-d") #'cider-xref-fn-deps-select)
     (define-key map (kbd "C-c C-q") #'cider-quit)
     (define-key map (kbd "C-c M-r") #'cider-restart)
     (dolist (variable '(cider-mode-interactions-menu
@@ -496,21 +541,23 @@ If invoked with a prefix ARG eval the expression after inserting it."
 ;; loaded yet, this will be shown in Clojure buffers next to the "Clojure"
 ;; menu.
 ;;;###autoload
-(eval-after-load 'clojure-mode
-  '(easy-menu-define cider-clojure-mode-menu-open clojure-mode-map
-     "Menu for Clojure mode.
+(with-eval-after-load 'clojure-mode
+  (easy-menu-define cider-clojure-mode-menu-open clojure-mode-map
+    "Menu for Clojure mode.
   This is displayed in `clojure-mode' buffers, if `cider-mode' is not active."
-     `("CIDER" :visible (not cider-mode)
-       ["Start a Clojure REPL" cider-jack-in
-        :help "Starts an nREPL server (with Leiningen, Boot, or Gradle) and connects a REPL to it."]
-       ["Connect to a Clojure REPL" cider-connect
-        :help "Connects to a REPL that's already running."]
-       ["Connect to a ClojureScript REPL" cider-connect-clojurescript
-        :help "Connects to a ClojureScript REPL that's already running."]
-       ["Start a Clojure REPL, and a ClojureScript REPL" cider-jack-in-cljs
-        :help "Starts an nREPL server, connects a Clojure REPL to it, and then a ClojureScript REPL."]
-       "--"
-       ["View manual online" cider-view-manual])))
+    `("CIDER" :visible (not cider-mode)
+      ["Start a Clojure REPL" cider-jack-in-clj
+       :help "Starts an nREPL server and connects a Clojure REPL to it."]
+      ["Connect to a Clojure REPL" cider-connect-clj
+       :help "Connects to a REPL that's already running."]
+      ["Start a ClojureScript REPL" cider-jack-in-cljs
+       :help "Starts an nREPL server and connects a ClojureScript REPL to it."]
+      ["Connect to a ClojureScript REPL" cider-connect-cljs
+       :help "Connects to a ClojureScript REPL that's already running."]
+      ["Start a Clojure REPL, and a ClojureScript REPL" cider-jack-in-clj&cljs
+       :help "Starts an nREPL server, connects a Clojure REPL to it, and then a ClojureScript REPL."]
+      "--"
+      ["View manual online" cider-view-manual])))
 
 ;;; Dynamic indentation
 (defcustom cider-dynamic-indentation t
@@ -527,7 +574,10 @@ re-visited."
 
 (defun cider--get-symbol-indent (symbol-name)
   "Return the indent metadata for SYMBOL-NAME in the current namespace."
-  (let* ((ns (cider-current-ns)))
+  (let* ((ns (let ((clojure-cache-ns t)) ; we force ns caching here for performance reasons
+               ;; silence bytecode warning of unused lexical var
+               (ignore clojure-cache-ns)
+               (cider-current-ns))))
     (if-let* ((meta (cider-resolve-var ns symbol-name))
               (indent (or (nrepl-dict-get meta "style/indent")
                           (nrepl-dict-get meta "indent"))))
@@ -554,9 +604,9 @@ variable to nil you'll still see basic syntax highlighting.
 
 The value is a list of symbols, each one indicates a different type of var
 that should be font-locked:
-   `macro' (default): Any defined macro gets the `font-lock-builtin-face'.
+   `macro' (default): Any defined macro gets the `font-lock-keyword-face'.
    `function': Any defined function gets the `font-lock-function-face'.
-   `var': Any non-local var gets the `font-lock-variable-face'.
+   `var': Any non-local var gets the `font-lock-variable-name-face'.
    `deprecated' (default): Any deprecated var gets the `cider-deprecated-face'
    face.
    `core' (default): Any symbol from clojure.core (face depends on type).
@@ -655,7 +705,10 @@ the LIMIT in `cider--anchored-search-suppressed-forms`"
 An unused reader conditional expression is an expression for a platform
 that does not match the CIDER connection for the buffer.  Search is done
 with the given LIMIT."
-  (let ((repl-types (seq-uniq (seq-map #'cider-repl-type (cider-repls))))
+  (let ((repl-types (seq-uniq (seq-map
+                               (lambda (repl)
+                                 (symbol-name (cider-repl-type repl)))
+                               (cider-repls))))
         (result 'retry))
     (while (and (eq result 'retry) (<= (point) limit))
       (condition-case condition
@@ -923,7 +976,7 @@ SYM and INFO is passed to `cider-docview-render'"
      (buffer-substring-no-properties (point-min) (1- (point))))))
 
 (defcustom cider-use-tooltips t
-  "If non-nil, CIDER displays mouse-over tooltips."
+  "If non-nil, CIDER displays mouse-over tooltips, as well as the `help-echo' mechanism."
   :group 'cider
   :type 'boolean
   :package-version '(cider "0.12.0"))
@@ -965,7 +1018,8 @@ property."
   (lambda (beg end &rest rest)
     (with-silent-modifications
       (remove-text-properties beg end '(cider-locals nil cider-block-dynamic-font-lock nil))
-      (add-text-properties beg end '(help-echo cider--help-echo))
+      (when cider-use-tooltips
+        (add-text-properties beg end '(help-echo cider--help-echo)))
       (when cider-font-lock-dynamically
         (cider--update-locals-for-region beg end)))
     (apply func beg end rest)))
@@ -986,9 +1040,7 @@ property."
       (progn
         (setq-local sesman-system 'CIDER)
         (cider-eldoc-setup)
-        (make-local-variable 'completion-at-point-functions)
-        (add-to-list 'completion-at-point-functions
-                     #'cider-complete-at-point)
+        (add-hook 'completion-at-point-functions #'cider-complete-at-point nil t)
         (font-lock-add-keywords nil cider--static-font-lock-keywords)
         (cider-refresh-dynamic-font-lock)
         (font-lock-add-keywords nil cider--reader-conditionals-font-lock-keywords)
@@ -1004,6 +1056,7 @@ property."
           (setq-local clojure-get-indent-function #'cider--get-symbol-indent))
         (setq-local clojure-expected-ns-function #'cider-expected-ns)
         (setq next-error-function #'cider-jump-to-compilation-error))
+    ;; Mode cleanup
     (mapc #'kill-local-variable '(completion-at-point-functions
                                   next-error-function
                                   x-gtk-use-system-tooltips
@@ -1013,7 +1066,8 @@ property."
     (font-lock-add-keywords nil cider--reader-conditionals-font-lock-keywords)
     (font-lock-remove-keywords nil cider--dynamic-font-lock-keywords)
     (font-lock-remove-keywords nil cider--static-font-lock-keywords)
-    (cider--font-lock-flush)))
+    (cider--font-lock-flush)
+    (remove-hook 'completion-at-point-functions #'cider-complete-at-point t)))
 
 (defun cider-set-buffer-ns (ns)
   "Set this buffer's namespace to NS and refresh font-locking."

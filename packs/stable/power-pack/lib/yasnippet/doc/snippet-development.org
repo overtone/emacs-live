@@ -8,7 +8,7 @@
 
 There are some ways you can quickly find a snippet file or create a new one:
 
--  =M-x yas-new-snippet=, key bindind: =C-c & C-n=
+-  =M-x yas-new-snippet=, key binding: =C-c & C-n=
 
    Creates a new buffer with a template for making a new snippet.  The
    buffer is in =snippet-mode= (see [[snippet-mode][below]]).  When you are done editing
@@ -62,7 +62,7 @@ expanded.
 Optionally, if the file contains a line of =# --=, the lines above it
 count as comments, some of which can be /directives/ (or meta data).
 Snippet directives look like =# property: value= and tweak certain
-snippets properties described below. If no =# --= is found, the whole
+snippet properties described below. If no =# --= is found, the whole
 file is considered the snippet template.
 
 Here's a typical example:
@@ -80,7 +80,7 @@ Here's a list of currently supported directives:
 
 This is the probably the most important directive, it's the
 abbreviation you type to expand a snippet just before hitting the key
-that runs [[sym:yas-expand][=yas-expand=]]. If you don't specify this
+that runs [[sym:yas-expand][=yas-expand=]]. If you don't specify this,
 the snippet will not be expandable through the trigger mechanism.
 
 ** =# name:= snippet name
@@ -89,12 +89,12 @@ This is a one-line description of the snippet. It will be displayed in
 the menu. It's a good idea to select a descriptive name for a snippet --
 especially distinguishable among similar snippets.
 
-If you omit this name it will default to the file name the snippet was
-loaded from.
+If you omit this name, it will default to the file name the snippet
+was loaded from.
 
 ** =# condition:= snippet condition
 
-This is a piece of Emacs-lisp code. If a snippet has a condition, then
+This is a piece of Emacs Lisp code. If a snippet has a condition, then
 it will only be expanded when the condition code evaluate to some
 non-nil value.
 
@@ -104,7 +104,7 @@ See also [[sym:yas-buffer-local-condition][=yas-buffer-local-condition=]] in
 ** =# group:= snippet menu grouping
 
 When expanding/visiting snippets from the menu-bar menu, snippets for a
-given mode can be grouped into sub-menus . This is useful if one has too
+given mode can be grouped into sub-menus. This is useful if one has too
 many snippets for a mode which will make the menu too long.
 
 The =# group:= property only affect menu construction (See
@@ -113,14 +113,14 @@ achieved by grouping snippets into sub-directories and using the
 =.yas-make-groups= special file (for this see
 [[./snippet-organization.org][Organizing Snippets]]
 
-Refer to the bundled snippets for =ruby-mode= for examples on the
+Refer to the bundled snippets for =ruby-mode= for examples of the
 =# group:= directive. Group can also be nested, e.g.
-=control structure.loops= tells that the snippet is under the =loops=
+=control structure.loops= indicates that the snippet is under the =loops=
 group which is under the =control structure= group.
 
 ** =# expand-env:= expand environment
 
-This is another piece of Emacs-lisp code in the form of a =let= /varlist
+This is another piece of Emacs Lisp code in the form of a =let= /varlist
 form/, i.e. a list of lists assigning values to variables. It can be
 used to override variable values while the snippet is being expanded.
 
@@ -154,9 +154,9 @@ You can use this directive to expand a snippet directly from a normal
 Emacs keybinding. The keybinding will be registered in the Emacs keymap
 named after the major mode the snippet is active for.
 
-Additionally a variable [[sym:yas-prefix][=yas-prefix=]] is set to to the prefix argument
+Additionally a variable [[sym:yas-prefix][=yas-prefix=]] is set to the prefix argument
 you normally use for a command. This allows for small variations on the
-same snippet, for example in this "html-mode" snippet.
+same snippet, for example in this =html-mode= snippet.
 
 #+BEGIN_SRC snippet
   # name: <p>...</p>
@@ -172,7 +172,7 @@ will expand the paragraph tag without newlines.
 ** =# type:= =snippet= or =command=
 
 If the =type= directive is set to =command=, the body of the snippet
-is interpreted as lisp code to be evaluated when the snippet is
+is interpreted as Lisp code to be evaluated when the snippet is
 triggered.
 
 If it's =snippet= (the default when there is no =type= directive), the
@@ -202,14 +202,14 @@ usually interpreted as plain text, except =$= and =`=. You need to
 use =\= to escape them: =\$= and =\`=. The =\= itself may also needed to be
 escaped as =\\= sometimes.
 
-** Embedded Emacs-lisp code
+** Embedded Emacs Lisp code
 
-Emacs-Lisp code can be embedded inside the template, written inside
-back-quotes (=`=). The lisp forms are evaluated when the snippet is
+Emacs Lisp code can be embedded inside the template, written inside
+back-quotes (=`=). The Lisp forms are evaluated when the snippet is
 being expanded. The evaluation is done in the same buffer as the
 snippet being expanded.
 
-Here's an example for c-mode` to calculate the header file guard
+Here's an example for =c-mode= to calculate the header file guard
 dynamically:
 
 #+BEGIN_SRC snippet
@@ -221,8 +221,8 @@ dynamically:
   #endif /* $1 */
 #+END_SRC
 
-From version 0.6, snippets expansions are run with some special
-Emacs-lisp variables bound. One of this is [[sym:yas-selected-text][=yas-selected-text=]]. You can
+From version 0.6, snippet expansions are run with some special
+Emacs Lisp variables bound. One of these is [[sym:yas-selected-text][=yas-selected-text=]]. You can
 therefore define a snippet like:
 
 #+BEGIN_SRC snippet
@@ -234,6 +234,27 @@ therefore define a snippet like:
 to "wrap" the selected region inside your recently inserted snippet.
 Alternatively, you can also customize the variable
 [[sym:yas-wrap-around-region][=yas-wrap-around-region=]] to =t= which will do this automatically.
+
+*** Note: backquote expressions should not modify the buffer
+
+Please note that the Lisp forms in backquotes should *not* modify the
+buffer, doing so will trigger a warning.  For example, instead of
+doing
+
+#+BEGIN_SRC snippet
+  Timestamp: `(insert (current-time-string))`
+#+END_SRC
+
+do this:
+#+BEGIN_SRC snippet
+  Timestamp: `(current-time-string)`
+#+END_SRC
+
+The warning may be suppressed with the following code in your init file:
+#+BEGIN_SRC emacs-lisp
+  (add-to-list 'warning-suppress-types '(yasnippet backquote-change))
+#+END_SRC
+
 
 ** Tab stop fields
 
@@ -256,16 +277,16 @@ like this:
   ${N:default value}
 #+END_SRC
 
-They acts as the default value for a tab stop. But when you firstly
+They act as the default value for a tab stop. But when you first
 type at a tab stop, the default value will be replaced by your typing.
 The number can be omitted if you don't want to create [[mirrors-fields][mirrors]] or
 [[mirror-transformations][transformations]] for this field.
 
 ** Mirrors <<mirrors-fields>>
 
-We refer the tab stops with placeholders as a /field/. A field can have
-mirrors. Its mirrors will get updated when you change the text of a
-field. Here's an example:
+We refer to tab stops with placeholders as a /field/.  A field can
+have mirrors.  *All* mirrors get updated whenever you update any field
+text.  Here's an example:
 
 #+BEGIN_SRC snippet
   \begin{${1:enumerate}}
@@ -278,15 +299,15 @@ also be inserted at =\end{$1}=. The best explanation is to see the
 screencast([[http://www.youtube.com/watch?v=vOj7btx3ATg][YouTube]] or [[http://yasnippet.googlecode.com/files/yasnippet.avi][avi video]]).
 
 The tab stops with the same number to the field act as its mirrors. If
-none of the tab stops has an initial value, the first one is selected as
-the field and others mirrors.
+none of the tab stops have an initial value, the first one is selected as
+the field and the others are its mirrors.
 
 ** Mirrors with transformations <<mirror-transformations>>
 
 If the value of an =${n:=-construct starts with and contains =$(=,
 then it is interpreted as a mirror for field =n= with a
 transformation. The mirror's text content is calculated according to
-this transformation, which is Emacs-lisp code that gets evaluated in
+this transformation, which is Emacs Lisp code that gets evaluated in
 an environment where the variable [[sym:yas-text][=yas-text=]] is bound to the text
 content (string) contained in the field =n=. Here's an example for
 Objective-C:
@@ -341,12 +362,26 @@ is not. Here's an snippet for rst title:
   $0
 #+END_SRC
 
+Note that a mirror with a transform is not restricted to the text of
+the field it is mirroring.  By making use of [[sym:yas-field-value][=yas-field-value=]], a
+mirror can look at any of the snippet's field (as mentioned above, all
+mirrors are updated when any field is updated).  Here is an example
+which shows a "live" result of calling format:
+
+#+BEGIN_SRC snippet
+(format "${1:formatted %s}" "${2:value}")
+=> "${1:$(ignore-errors (format (yas-field-value 1) (yas-field-value 2)))}"
+#+END_SRC
+
+To keep the example simple, it uses =ignore-errors= to suppress errors
+due to incomplete format codes.
+
 ** Fields with transformations
 
-From version 0.6 on, you can also have lisp transformation inside
-fields. These work mostly mirror transformations but are evaluated when
-you first enter the field, after each change you make to the field and
-also just before you exit the field.
+From version 0.6 on, you can also have Lisp transformation inside
+fields. These work mostly like mirror transformations. However, they
+are evaluated when you first enter the field, after each change you
+make to the field and also just before you exit the field.
 
 The syntax is also a tiny bit different, so that the parser can
 distinguish between fields and mirrors. In the following example
@@ -377,25 +412,38 @@ the field, and with some useful variables bound, notably
 can place a transformation in the primary field that lets you select
 default values for it.
 
-The [[sym:yas-choose-value][=yas-choose-value=]] does this work for you. For example:
+For example, the [[sym:yas-choose-value][=yas-completing-read=]] function is version of
+=completing-read= which checks these variables.  For example, asking
+the user for the initial value of a field:
 
 #+BEGIN_SRC snippet
-  <div align="${2:$$(yas-choose-value '("right" "center" "left"))}">
+  <div align="${2:$$(yas-completing-read "Alignment? " '("right" "center" "left"))}">
     $0
   </div>
 #+END_SRC
 
-See the definition of [[sym:yas-choose-value][=yas-choose-value=]] to see how it was written using
-the two variables.
+See the definition of [[sym:yas-choose-value][=yas-completing-read=]] to see how it was written
+using the two variables. If you're really lazy :) and can't spare a
+tab keypress, you can automatically move to the next field (or exit)
+after choosing the value with [[sym:yas-auto-next][=yas-auto-next=]]. The snippet above
+becomes:
 
-Here's another use, for LaTeX-mode, which calls reftex-label just as you
+#+BEGIN_SRC snippet
+  <div align="${2:$$(yas-auto-next
+                      (yas-completing-read
+                        "Alignment? "
+                        '("right" "center" "left")))}">
+    $0
+  </div>
+#+END_SRC
+
+Here's another use, for =LaTeX-mode=, which calls reftex-label just as you
 enter snippet field 2. This one makes use of [[sym:yas-modified-p][=yas-modified-p=]] directly.
 
 #+BEGIN_SRC snippet
   \section{${1:"Titel der Tour"}}%
   \index{$1}%
-  \label{{2:"waiting for reftex-label call..."$(unless yas-modified-p (reftex-label nil 'dont-
-  insert))}}%
+  \label{{2:"waiting for reftex-label call..."$(unless yas-modified-p (reftex-label nil 'dont-insert))}}%
 #+END_SRC
 
 The function [[sym:yas-verify-value][=yas-verify-value=]] has another neat trick, and makes use
@@ -410,7 +458,7 @@ From version 0.6 on, you can also have nested placeholders of the type:
 #+END_SRC
 
 This allows you to choose if you want to give this =div= an =id=
-attribute. If you tab forward after expanding it will let you change
+attribute. If you tab forward after expanding, it will let you change
 "some\_id" to whatever you like. Alternatively, you can just press =C-d=
 (which executes [[sym:yas-skip-and-clear-or-delete-char][=yas-skip-and-clear-or-delete-char=]]) and go straight to
 the exit marker.

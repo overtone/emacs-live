@@ -106,7 +106,7 @@
 	url = git://github.com/jimhourihan/glsl-mode.git
 [submodule "packs/dev/org-pack/vendor/submodules/org-mode"]
 	path = packs/dev/org-pack/vendor/submodules/org-mode
-	url = git://orgmode.org/org-mode.git
+	url = https://code.orgmode.org/bzg/org-mode.git
 [submodule "packs/dev/git-pack/vendor/submodules/git-modes"]
 	path = packs/dev/git-pack/vendor/submodules/git-modes
 	url = git://github.com/magit/git-modes.git
@@ -166,7 +166,7 @@
 	url = git://github.com/Malabarba/spinner.el.git
 [submodule "packs/dev/foundation-pack/vendor/submodules/hydra"]
 	path = packs/dev/foundation-pack/vendor/submodules/hydra
-	url = git://github.com/abo-abo/hydra.git
+	url = https://github.com/abo-abo/hydra.git
 [submodule "packs/dev/foundation-pack/vendor/submodules/swiper"]
 	path = packs/dev/foundation-pack/vendor/submodules/swiper
 	url = git://github.com/abo-abo/swiper.git
@@ -176,3 +176,21 @@
 [submodule "packs/dev/clojure-pack/vendor/submodules/jump.el"]
 	path = packs/dev/clojure-pack/vendor/submodules/jump.el
 	url = git://github.com/eschulte/jump.el.git
+[submodule "packs/dev/power-pack/vendor/submodules/marshal.el"]
+	path = packs/dev/power-pack/vendor/submodules/marshal.el
+	url = https://github.com/sigma/marshal.el.git
+[submodule "packs/dev/git-pack/vendor/submodules/transient"]
+	path = packs/dev/git-pack/vendor/submodules/transient
+	url = https://github.com/magit/transient.git
+[submodule "packs/dev/clojure-pack/vendor/submodules/parseedn"]
+	path = packs/dev/clojure-pack/vendor/submodules/parseedn
+	url = https://github.com/clojure-emacs/parseedn.git
+[submodule "packs/dev/clojure-pack/vendor/submodules/a.el"]
+	path = packs/dev/clojure-pack/vendor/submodules/a.el
+	url = https://github.com/plexus/a.el.git
+[submodule "packs/dev/clojure-pack/vendor/submodules/parseclj"]
+	path = packs/dev/clojure-pack/vendor/submodules/parseclj
+	url = https://github.com/clojure-emacs/parseclj.git
+[submodule "packs/dev/clojure-pack/vendor/submodules/sesman"]
+	path = packs/dev/clojure-pack/vendor/submodules/sesman
+	url = https://github.com/vspinu/sesman.git

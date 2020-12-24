@@ -1,10 +1,11 @@
-;;; ob-screen.el --- org-babel support for interactive terminal
+;;; ob-screen.el --- Babel Support for Interactive Terminal -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2009-2016 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2020 Free Software Foundation, Inc.
 
 ;; Author: Benjamin Andresen
+;; Maintainer: Ken Mankoff
 ;; Keywords: literate programming, interactive shell
-;; Homepage: http://orgmode.org
+;; Homepage: https://orgmode.org
 
 ;; This file is part of GNU Emacs.
 
@@ -19,7 +20,7 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 
@@ -40,7 +41,8 @@
 In case you want to use a different screen than one selected by your $PATH")
 
 (defvar org-babel-default-header-args:screen
-  '((:results . "silent") (:session . "default") (:cmd . "sh") (:terminal . "xterm"))
+  `((:results . "silent") (:session . "default") (:cmd . "sh")
+    (:terminal . "xterm") (:screenrc . ,null-device))
   "Default arguments to use when running screen source blocks.")
 
 (defun org-babel-execute:screen (body params)
@@ -48,23 +50,22 @@ In case you want to use a different screen than one selected by your $PATH")
 \"default\" session is used when none is specified."
   (message "Sending source code block to interactive terminal session...")
   (save-window-excursion
-    (let* ((session (cdr (assoc :session params)))
+    (let* ((session (cdr (assq :session params)))
            (socket (org-babel-screen-session-socketname session)))
       (unless socket (org-babel-prep-session:screen session params))
       (org-babel-screen-session-execute-string
        session (org-babel-expand-body:generic body params)))))
 
-(defun org-babel-prep-session:screen (session params)
+(defun org-babel-prep-session:screen (_session params)
   "Prepare SESSION according to the header arguments specified in PARAMS."
-  (let* ((session (cdr (assoc :session params)))
-         (socket (org-babel-screen-session-socketname session))
-         (cmd (cdr (assoc :cmd params)))
-         (terminal (cdr (assoc :terminal params)))
+  (let* ((session (cdr (assq :session params)))
+         (cmd (cdr (assq :cmd params)))
+         (terminal (cdr (assq :terminal params)))
+         (screenrc (cdr (assq :screenrc params)))
          (process-name (concat "org-babel: terminal (" session ")")))
     (apply 'start-process process-name "*Messages*"
            terminal `("-T" ,(concat "org-babel: " session) "-e" ,org-babel-screen-location
-		      "-c" "/dev/null" "-mS" ,(concat "org-babel-session-" session)
-		      ,cmd))
+		      "-c" ,screenrc "-mS" ,session ,cmd))
     ;; XXX: Is there a better way than the following?
     (while (not (org-babel-screen-session-socketname session))
       ;; wait until screen session is available before returning
@@ -98,17 +99,17 @@ In case you want to use a different screen than one selected by your $PATH")
 			 nil
 			 (mapcar
 			  (lambda (x)
-			    (when (string-match
-				   (concat "org-babel-session-" session) x)
-			      x))
+			    (and (string-match-p (regexp-quote session) x)
+				 x))
 			  sockets)))))
     (when match-socket (car (split-string match-socket)))))
 
-(defun org-babel-screen-session-write-temp-file (session body)
+(defun org-babel-screen-session-write-temp-file (_session body)
   "Save BODY in a temp file that is named after SESSION."
   (let ((tmpfile (org-babel-temp-file "screen-")))
     (with-temp-file tmpfile
       (insert body)
+      (insert "\n")
 
       ;; org-babel has superfluous spaces
       (goto-char (point-min))
@@ -119,16 +120,15 @@ In case you want to use a different screen than one selected by your $PATH")
   "Test if the default setup works.
 The terminal should shortly flicker."
   (interactive)
-  (let* ((session "org-babel-testing")
-         (random-string (format "%s" (random 99999)))
+  (let* ((random-string (format "%s" (random 99999)))
          (tmpfile (org-babel-temp-file "ob-screen-test-"))
          (body (concat "echo '" random-string "' > " tmpfile "\nexit\n"))
-         process tmp-string)
+         tmp-string)
     (org-babel-execute:screen body org-babel-default-header-args:screen)
     ;; XXX: need to find a better way to do the following
     (while (not (file-readable-p tmpfile))
       ;; do something, otherwise this will be optimized away
-      (format "org-babel-screen: File not readable yet."))
+      (message "org-babel-screen: File not readable yet."))
     (setq tmp-string (with-temp-buffer
                        (insert-file-contents-literally tmpfile)
                        (buffer-substring (point-min) (point-max))))
@@ -139,7 +139,5 @@ The terminal should shortly flicker."
 		       "DOESN'T work.")))))
 
 (provide 'ob-screen)
-
-
 
 ;;; ob-screen.el ends here

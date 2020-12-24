@@ -1,10 +1,10 @@
 ;;; org-license.el --- Add a license to your org files
 
-;; Copyright (C) 2013-2016 Free Software Foundation, Inc.
+;; Copyright (C) 2013-2020 Free Software Foundation, Inc.
 
 ;; Author: David Arroyo Menéndez <davidam@es.gnu.org>
 ;; Keywords: licenses, creative commons
-;; Homepage: http://orgmode.org
+;; Homepage: https://orgmode.org
 ;;
 ;; This file is not part of GNU Emacs, yet.
 ;;

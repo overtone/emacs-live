@@ -1,6 +1,6 @@
 ;;; org-toc.el --- Table of contents for Org-mode buffer
 
-;; Copyright 2007-2016 Free Software Foundation, Inc.
+;; Copyright 2007-2020 Free Software Foundation, Inc.
 ;;
 ;; Author: Bastien Guerry <bzg@gnu.org>
 ;; Keywords: Org table of contents
@@ -90,7 +90,7 @@ This variable is only used when `org-toc-recenter-mode' is set to
 
 (defcustom org-toc-info-exclude '("ALLTAGS")
   "A list of excluded properties when displaying info in the
-echo-area. The COLUMNS property is always exluded."
+echo-area. The COLUMNS property is always excluded."
   :group 'org-toc
   :type 'lits)
 
@@ -197,7 +197,7 @@ specified, then make `org-toc-recenter' use this value."
       (setq ov (make-overlay beg end)))
     ;; change the folding status of this headline
     (cond ((or (null status) (eq status 'folded))
-	   (show-children)
+	   (org-show-children)
 	   (message "CHILDREN")
 	   (overlay-put ov 'status 'children))
 	  ((eq status 'children)
@@ -354,7 +354,7 @@ If DELETE is non-nil, delete other windows when in the Org buffer."
 (defun org-toc-quit ()
   "Quit the current Org TOC buffer."
   (interactive)
-  (kill-this-buffer)
+  (kill-buffer)
   (other-window 1)
   (delete-other-windows))
 
@@ -441,7 +441,7 @@ current table of contents to it."
 	    (setq ov (make-overlay (match-beginning 0)
 				   (match-end 0))))
 	  (cond ((eq (cdr hlcfg0) 'children)
-		 (show-children)
+		 (org-show-children)
 		 (message "CHILDREN")
 		 (overlay-put ov 'status 'children))
 		((eq (cdr hlcfg0) 'branches)

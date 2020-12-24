@@ -1,13 +1,13 @@
 ;;; ob-mathomatic.el --- Org-babel functions for mathomatic evaluation
 
-;; Copyright (C) 2009-2016  Free Software Foundation, Inc.
+;; Copyright (C) 2009-2020  Free Software Foundation, Inc.
 
 ;; Author: Eric S Fraga
 ;;	Eric Schulte
 ;;  Luis Anaya (Mathomatic)
 
 ;; Keywords: literate programming, reproducible research, mathomatic
-;; Homepage: http://orgmode.org
+;; Homepage: https://orgmode.org
 
 ;; This file is not part of GNU Emacs.
 
@@ -49,45 +49,45 @@
 
 (defun org-babel-mathomatic-expand (body params)
   "Expand a block of Mathomatic code according to its header arguments."
-  (let ((vars (mapcar #'cdr (org-babel-get-header params :var))))
-     (mapconcat 'identity
-		(list
-		 ;; graphic output
-		 (let ((graphic-file (org-babel-mathomatic-graphical-output-file params)))
-		   (if graphic-file
-		       (cond
-			((string-match ".\.eps$" graphic-file)
-			 (format ;; Need to add command to send to file.
-			  "set plot set terminal postscript eps\\;set output %S "
-			  graphic-file))
-			((string-match ".\.ps$" graphic-file)
-			 (format ;; Need to add command to send to file.
-			  "set plot set terminal postscript\\;set output %S "
-			  graphic-file))
+  (let ((vars (org-babel--get-vars params)))
+    (mapconcat 'identity
+	       (list
+		;; graphic output
+		(let ((graphic-file (org-babel-mathomatic-graphical-output-file params)))
+		  (if graphic-file
+		      (cond
+		       ((string-match ".\.eps$" graphic-file)
+			(format ;; Need to add command to send to file.
+			 "set plot set terminal postscript eps\\;set output %S "
+			 graphic-file))
+		       ((string-match ".\.ps$" graphic-file)
+			(format ;; Need to add command to send to file.
+			 "set plot set terminal postscript\\;set output %S "
+			 graphic-file))
 
-			((string-match ".\.pic$" graphic-file)
-			 (format ;; Need to add command to send to file.
-			  "set plot set terminal gpic\\;set output %S "
-			  graphic-file))
-			(t
-			 (format ;; Need to add command to send to file.
-			  "set plot set terminal png\\;set output %S "
-			  graphic-file)))
-		     ""))
-		 ;; variables
-		 (mapconcat 'org-babel-mathomatic-var-to-mathomatic vars "\n")
-		 ;; body
-		 body
-		 "")
-		"\n")))
+		       ((string-match ".\.pic$" graphic-file)
+			(format ;; Need to add command to send to file.
+			 "set plot set terminal gpic\\;set output %S "
+			 graphic-file))
+		       (t
+			(format ;; Need to add command to send to file.
+			 "set plot set terminal png\\;set output %S "
+			 graphic-file)))
+		    ""))
+		;; variables
+		(mapconcat 'org-babel-mathomatic-var-to-mathomatic vars "\n")
+		;; body
+		body
+		"")
+	       "\n")))
 
 (defun org-babel-execute:mathomatic (body params)
   "Execute a block of Mathomatic entries with org-babel.  This function is
 called by `org-babel-execute-src-block'."
   (message "executing Mathomatic source code block")
-  (let ((result-params (split-string (or (cdr (assoc :results params)) "")))
+  (let ((result-params (split-string (or (cdr (assq :results params)) "")))
 	(result
-	 (let* ((cmdline (or (cdr (assoc :cmdline params)) ""))
+	 (let* ((cmdline (or (cdr (assq :cmdline params)) ""))
 		(in-file (org-babel-temp-file "mathomatic-" ".math"))
 		(cmd (format "%s -t -c -q  %s %s"
 			     org-babel-mathomatic-command in-file cmdline)))

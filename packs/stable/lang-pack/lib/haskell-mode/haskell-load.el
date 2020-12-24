@@ -2,6 +2,7 @@
 
 ;; Copyright © 2014 Chris Done. All rights reserved.
 ;;             2016 Arthur Fayzrakhmanov
+;;             2020 Marc Berkowitz <mberkowitz@github.com>
 
 ;; This file is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -27,7 +28,7 @@
 (require 'haskell-modules)
 (require 'haskell-commands)
 (require 'haskell-session)
-(require 'haskell-utils)
+(require 'haskell-string)
 
 (defun haskell-process-look-config-changes (session)
   "Check whether a cabal configuration file has changed.
@@ -88,7 +89,14 @@ Restarts the SESSION's process if that is the case."
    ((haskell-process-consume process "\nBuilding \\(.+?\\)\\.\\.\\.")
     (let ((msg (format "Building: %s" (match-string 1 buffer))))
       (haskell-interactive-mode-echo (haskell-process-session process) msg)
-      (haskell-mode-message-line msg)))))
+      (haskell-mode-message-line msg)))
+   ((string-match "Collecting type info for [[:digit:]]+ module(s) \\.\\.\\."
+                  (haskell-process-response process)
+                  (haskell-process-response-cursor process))
+    (haskell-mode-message-line (match-string 0 buffer))
+    ;; Do not consume "Ok, modules loaded" that goes before
+    ;; "Collecting type info...", just exit.
+    nil)))
 
 (defun haskell-process-load-complete (session process buffer reload module-buffer &optional cont)
   "Handle the complete loading response. BUFFER is the string of
@@ -100,11 +108,31 @@ actual Emacs buffer of the module being loaded."
   (let* ((ok (cond
               ((haskell-process-consume
                 process
+                "Ok, \\(?:[0-9]+\\) modules? loaded\\.$")
+               t)
+               ((haskell-process-consume
+                process
+                "Ok, \\(?:[a-z]+\\) modules? loaded\\.$") ;; for ghc 8.4
+               t)
+              ((haskell-process-consume
+                process
+                "Failed, \\(?:[0-9]+\\) modules? loaded\\.$")
+               nil)
+              ((haskell-process-consume
+                process
+                "Failed, \\(?:[a-z]+\\) modules? loaded\\.$") ;; ghc 8.6.3 says so
+               nil)
+              ((haskell-process-consume
+                process
                 "Ok, modules loaded: \\(.+\\)\\.$")
                t)
               ((haskell-process-consume
                 process
                 "Failed, modules loaded: \\(.+\\)\\.$")
+               nil)
+	      ((haskell-process-consume
+                process
+                "Failed, no modules loaded\\.$") ;; for ghc 8.4
                nil)
               (t
                (error (message "Unexpected response from haskell process.")))))
@@ -173,6 +201,7 @@ list of modules where missed IDENT was found."
                  (not (string-match "\\([A-Z][A-Za-z]+\\) is deprecated" msg)))
             (string-match "Use \\([A-Z][A-Za-z]+\\) to permit this" msg)
             (string-match "Use \\([A-Z][A-Za-z]+\\) to allow" msg)
+            (string-match "Use \\([A-Z][A-Za-z]+\\) to enable" msg)
             (string-match
              "Use \\([A-Z][A-Za-z]+\\) if you want to disable this"
              msg)
@@ -193,7 +222,7 @@ list of modules where missed IDENT was found."
             file
             (match-string 2 msg)
             line)))
-        ((string-match "Warning: orphan instance: " msg)
+        ((string-match "[Ww]arning: orphan instance: " msg)
          (when haskell-process-suggest-no-warn-orphans
            (haskell-process-suggest-pragma
             session
@@ -217,9 +246,6 @@ list of modules where missed IDENT was found."
                (haskell-process-suggest-imports session file modules ident)))
            (when haskell-process-suggest-haskell-docs-imports
              (let ((modules (haskell-process-haskell-docs-ident ident)))
-               (haskell-process-suggest-imports session file modules ident)))
-           (when haskell-process-suggest-hayoo-imports
-             (let ((modules (haskell-process-hayoo-ident ident)))
                (haskell-process-suggest-imports session file modules ident)))))
         ((string-match "^[ ]+It is a member of the hidden package [‘`‛]\\([^@\r\n]+\\).*['’].$" msg)
          (when haskell-process-suggest-add-package
@@ -227,74 +253,69 @@ list of modules where missed IDENT was found."
 
 (defun haskell-process-do-cabal (command)
   "Run a Cabal command."
-  (let ((process (haskell-interactive-process)))
+  (let ((process (ignore-errors
+                   (haskell-interactive-process))))
     (cond
-     ((let ((child (haskell-process-process process)))
-        (not (equal 'run (process-status child))))
+     ((or (eq process nil)
+          (let ((child (haskell-process-process process)))
+            (not (equal 'run (process-status child)))))
       (message "Process is not running, so running directly.")
       (shell-command (concat "cabal " command)
                      (get-buffer-create "*haskell-process-log*")
                      (get-buffer-create "*haskell-process-log*"))
       (switch-to-buffer-other-window (get-buffer "*haskell-process-log*")))
-     (t (haskell-process-queue-command
-         process
-         (make-haskell-command
-          :state (list (haskell-interactive-session) process command 0)
-          :go
-          (lambda (state)
-            (haskell-process-send-string
-             (cadr state)
-             (format haskell-process-do-cabal-format-string
-                     (haskell-session-cabal-dir (car state))
-                     (format "%s %s"
-                             (cl-ecase (haskell-process-type)
-                               ('ghci haskell-process-path-cabal)
-                               ('cabal-repl haskell-process-path-cabal)
-                               ('cabal-ghci haskell-process-path-cabal)
-                               ('stack-ghci haskell-process-path-stack))
-                             (cl-caddr state)))))
-          :live
-          (lambda (state buffer)
-            (let ((cmd (replace-regexp-in-string "^\\([a-z]+\\).*"
-                                                 "\\1"
-                                                 (cl-caddr state))))
-              (cond ((or (string= cmd "build")
-                         (string= cmd "install"))
-                     (haskell-process-live-build (cadr state) buffer t))
-                    (t
-                     (haskell-process-cabal-live state buffer)))))
-          :complete
-          (lambda (state response)
-            (let* ((process (cadr state))
-                   (session (haskell-process-session process))
-                   (message-count 0)
-                   (cursor (haskell-process-response-cursor process)))
-              ;; XXX: what the hell about the rampant code duplication?
-              (haskell-process-set-response-cursor process 0)
-              (while (haskell-process-errors-warnings nil session process response)
-                (setq message-count (1+ message-count)))
-              (haskell-process-set-response-cursor process cursor)
-              (let ((msg (format "Complete: cabal %s (%s compiler messages)"
-                                 (cl-caddr state)
-                                 message-count)))
-                (haskell-interactive-mode-echo session msg)
-                (when (= message-count 0)
-                  (haskell-interactive-mode-echo
-                   session
-                   "No compiler messages, dumping complete output:")
-                  (haskell-interactive-mode-echo session response))
-                (haskell-mode-message-line msg)
-                (when (and haskell-notify-p
-                           (fboundp 'notifications-notify))
-                  (notifications-notify
-                   :title (format "*%s*" (haskell-session-name (car state)))
-                   :body msg
-                   :app-name (cl-ecase (haskell-process-type)
-                               ('ghci haskell-process-path-cabal)
-                               ('cabal-repl haskell-process-path-cabal)
-                               ('cabal-ghci haskell-process-path-cabal)
-                               ('stack-ghci haskell-process-path-stack))
-                   :app-icon haskell-process-logo)))))))))))
+     (t (let ((app-name (cl-ecase (haskell-process-type)
+                          ('ghci haskell-process-path-cabal)
+                          ('cabal-repl haskell-process-path-cabal)
+                          ('stack-ghci haskell-process-path-stack))))
+          (haskell-process-queue-command
+           process
+           (make-haskell-command
+            :state (list (haskell-interactive-session) process command 0)
+            :go
+            (lambda (state)
+              (haskell-process-send-string
+               (cadr state)
+               (format haskell-process-do-cabal-format-string
+                       (haskell-session-cabal-dir (car state))
+                       (format "%s %s" app-name (cl-caddr state)))))
+            :live
+            (lambda (state buffer)
+              (let ((cmd (replace-regexp-in-string "^\\([a-z]+\\).*"
+                                                   "\\1"
+                                                   (cl-caddr state))))
+                (cond ((or (string= cmd "build")
+                           (string= cmd "install"))
+                       (haskell-process-live-build (cadr state) buffer t))
+                      (t
+                       (haskell-process-cabal-live state buffer)))))
+            :complete
+            (lambda (state response)
+              (let* ((process (cadr state))
+                     (session (haskell-process-session process))
+                     (message-count 0)
+                     (cursor (haskell-process-response-cursor process)))
+                (haskell-process-set-response-cursor process 0)
+                (while (haskell-process-errors-warnings nil session process response)
+                  (setq message-count (1+ message-count)))
+                (haskell-process-set-response-cursor process cursor)
+                (let ((msg (format "Complete: cabal %s (%s compiler messages)"
+                                   (cl-caddr state)
+                                   message-count)))
+                  (haskell-interactive-mode-echo session msg)
+                  (when (= message-count 0)
+                    (haskell-interactive-mode-echo
+                     session
+                     "No compiler messages, dumping complete output:")
+                    (haskell-interactive-mode-echo session response))
+                  (haskell-mode-message-line msg)
+                  (when (and haskell-notify-p
+                             (fboundp 'notifications-notify))
+                    (notifications-notify
+                     :title (format "*%s*" (haskell-session-name (car state)))
+                     :body msg
+                     :app-name app-name
+                     :app-icon haskell-process-logo))))))))))))
 
 (defun haskell-process-echo-load-message (process buffer echo-in-repl th)
   "Echo a load message."
@@ -312,7 +333,7 @@ list of modules where missed IDENT was found."
 (defun haskell-process-extract-modules (buffer)
   "Extract the modules from the process buffer."
   (let* ((modules-string (match-string 1 buffer))
-         (modules (split-string modules-string ", ")))
+         (modules (and modules-string (split-string modules-string ", "))))
     (cons modules modules-string)))
 
 ;;;###autoload
@@ -356,7 +377,7 @@ list of modules where missed IDENT was found."
   (with-current-buffer buffer
     (remove-overlays (point-min) (point-max) 'haskell-check t)))
 
-(defmacro with-overlay-properties (proplist ovl &rest body)
+(defmacro haskell-with-overlay-properties (proplist ovl &rest body)
   "Evaluate BODY with names in PROPLIST bound to the values of
 correspondingly-named overlay properties of OVL."
   (let ((ovlvar (cl-gensym "OVL-")))
@@ -364,26 +385,26 @@ correspondingly-named overlay properties of OVL."
             ,@(mapcar (lambda (p) `(,p (overlay-get ,ovlvar ',p))) proplist))
        ,@body)))
 
-(defun overlay-start> (o1 o2)
+(defun haskell-overlay-start> (o1 o2)
   (> (overlay-start o1) (overlay-start o2)))
-(defun overlay-start< (o1 o2)
+(defun haskell-overlay-start< (o1 o2)
   (< (overlay-start o1) (overlay-start o2)))
 
-(defun first-overlay-in-if (test beg end)
+(defun haskell-first-overlay-in-if (test beg end)
   (let ((ovls (cl-remove-if-not test (overlays-in beg end))))
-    (cl-first (sort (cl-copy-list ovls) 'overlay-start<))))
+    (cl-first (sort (cl-copy-list ovls) 'haskell-overlay-start<))))
 
-(defun last-overlay-in-if (test beg end)
+(defun haskell-last-overlay-in-if (test beg end)
   (let ((ovls (cl-remove-if-not test (overlays-in beg end))))
-    (cl-first (sort (cl-copy-list ovls) 'overlay-start>))))
+    (cl-first (sort (cl-copy-list ovls) 'haskell-overlay-start>))))
 
 (defun haskell-error-overlay-briefly (ovl)
-  (with-overlay-properties
+  (haskell-with-overlay-properties
    (haskell-msg haskell-msg-type) ovl
    (cond
     ((not (eq haskell-msg-type 'warning))
      haskell-msg)
-    ((string-prefix-p "Warning:\n    " haskell-msg)
+    ((string-prefix-p "[Ww]arning:\n    " haskell-msg)
      (cl-subseq haskell-msg 13))
     (t
      (error
@@ -400,7 +421,7 @@ correspondingly-named overlay properties of OVL."
 (defun haskell-goto-first-error ()
   (interactive)
   (haskell-goto-error-overlay
-   (first-overlay-in-if 'haskell-check-overlay-p
+   (haskell-first-overlay-in-if 'haskell-check-overlay-p
                         (buffer-end 0) (buffer-end 1))))
 
 (defun haskell-goto-prev-error ()
@@ -408,7 +429,7 @@ correspondingly-named overlay properties of OVL."
   (haskell-goto-error-overlay
    (let ((ovl-at
           (cl-first (haskell-check-filter-overlays (overlays-at (point))))))
-     (or (last-overlay-in-if 'haskell-check-overlay-p
+     (or (haskell-last-overlay-in-if 'haskell-check-overlay-p
                              (point-min)
                              (if ovl-at (overlay-start ovl-at) (point)))
          ovl-at))))
@@ -418,7 +439,7 @@ correspondingly-named overlay properties of OVL."
   (haskell-goto-error-overlay
    (let ((ovl-at
           (cl-first (haskell-check-filter-overlays (overlays-at (point))))))
-     (or (first-overlay-in-if
+     (or (haskell-first-overlay-in-if
           'haskell-check-overlay-p
           (if ovl-at (overlay-end ovl-at) (point)) (point-max))
          ovl-at))))
@@ -506,7 +527,7 @@ When MODULE-BUFFER is non-NIL, paint error overlays."
              (file (match-string 1 buffer))
              (location-raw (match-string 2 buffer))
              (error-msg (match-string 3 buffer))
-             (type (cond ((string-match "^Warning:" error-msg)  'warning)
+             (type (cond ((string-match "^[Ww]arning:" error-msg)  'warning)
                          ((string-match "^Splicing " error-msg) 'splice)
                          (t                                     'error)))
              (critical (not (eq type 'warning)))
@@ -520,7 +541,7 @@ When MODULE-BUFFER is non-NIL, paint error overlays."
                         (concat file ":" location-raw ": x")))
              (line (plist-get location :line))
              (col1 (plist-get location :col)))
-        (when module-buffer
+        (when (and module-buffer haskell-process-show-overlays)
           (haskell-check-paint-overlay
            module-buffer
            (string= (file-truename (buffer-file-name module-buffer))

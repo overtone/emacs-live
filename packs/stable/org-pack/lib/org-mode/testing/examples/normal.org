@@ -2,12 +2,12 @@
 #+OPTIONS: num:nil ^:nil
 #+STARTUP: hideblocks
 
-This is an example file for use by the Org-mode tests.
+This is an example file for use by the Org mode tests.
 
 * top
 ** code block
    :PROPERTIES:
-   :tangle:   yes
+   :header-args: :tangle yes
    :CUSTOM_ID: code-block-section
    :END:
 Here are a couple of code blocks.
@@ -18,8 +18,8 @@ Here are a couple of code blocks.
 #+end_src
 * accumulating properties in drawers
  :PROPERTIES:
- :var+:     bar=2
- :var:      foo=1
+ :header-args+: :var bar=2
+ :header-args: :var foo=1
  :ID:       75282ba2-f77a-4309-a970-e87c149fe125
  :END:
 

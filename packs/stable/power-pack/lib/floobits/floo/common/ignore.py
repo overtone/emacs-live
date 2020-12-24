@@ -12,7 +12,7 @@ except ImportError:
     import msg
     from exc_fmt import str_e
 
-IGNORE_FILES = ['.gitignore', '.hgignore', '.flooignore']
+IGNORE_FILES = ['.gitignore', '.hgignore', '.ignore', '.flooignore']
 HIDDEN_WHITELIST = ['.floo'] + IGNORE_FILES
 BLACKLIST = [
     '.DS_Store',
@@ -30,6 +30,7 @@ DEFAULT_IGNORES = [
     '*.pyo',
     '*~',
     'extern/',
+    'heroku.yml',
     'node_modules/',
     'tmp',
     'vendor/',

@@ -1,3 +1,6 @@
+[![MELPA](https://melpa.org/packages/actionscript-mode-badge.svg)](https://melpa.org/#/actionscript-mode)
+[![MELPA Stable](https://stable.melpa.org/packages/actionscript-mode-badge.svg)](https://stable.melpa.org/#/actionscript-mode)
+
 # actionscript-mode
 
 This repository contains an actionscript-mode for Emacs and a config
@@ -18,7 +21,7 @@ http://www.emacswiki.org/emacs/ActionScriptMode
 Insert a print statement immediately after the nearest function
 definition before point.
 
-This is bound to `F5`.
+This is unbound by default.  You might want to bind to `F5`.
 
 ### as-insert-trace
 

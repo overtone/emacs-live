@@ -1,6 +1,6 @@
-;;; org-eldoc.el --- display org header and src block info using eldoc
+;;; org-eldoc.el --- display org header and src block info using eldoc -*- lexical-binding: t; -*-
 
-;; Copyright (c) 2014-2016 Free Software Foundation, Inc.
+;; Copyright (c) 2014-2020 Free Software Foundation, Inc.
 
 ;; Author: Łukasz Gruner <lukasz@gruner.lu>
 ;; Maintainer: Łukasz Gruner <lukasz@gruner.lu>
@@ -38,6 +38,10 @@
 (require 'ob-core)
 (require 'eldoc)
 
+(declare-function org-element-at-point "org-element" ())
+(declare-function org-element-property "org-element" (property element))
+(declare-function org-element-type "org-element" (element))
+
 (defgroup org-eldoc nil "" :group 'org)
 
 (defcustom org-eldoc-breadcrumb-separator "/"
@@ -70,7 +74,7 @@
       (save-match-data
         (when (looking-at "^[ \t]*#\\+\\(begin\\|end\\)_src")
           (setq info (org-babel-get-src-block-info 'light)
-                lang (propertize (nth 0 info) 'face 'font-lock-string-face)
+                lang (propertize (or (nth 0 info) "no lang") 'face 'font-lock-string-face)
                 hdr-args (nth 2 info))
           (concat
            lang
@@ -87,13 +91,17 @@
 
 (defun org-eldoc-get-src-lang ()
   "Return value of lang for the current block if in block body and nil otherwise."
-  (let ((case-fold-search t))
-    (save-match-data
-      (when (org-between-regexps-p ".*#\\+begin_src"
-                                   ".*#\\+end_src")
-        (save-excursion
-          (goto-char (org-babel-where-is-src-block-head))
-          (car (org-babel-parse-src-block-match)))))))
+  (let ((element (save-match-data (org-element-at-point))))
+    (and (eq (org-element-type element) 'src-block)
+	 (>= (line-beginning-position)
+	     (org-element-property :post-affiliated element))
+	 (<=
+	  (line-end-position)
+	  (org-with-wide-buffer
+	   (goto-char (org-element-property :end element))
+	   (skip-chars-backward " \t\n")
+	   (line-end-position)))
+	 (org-element-property :language element))))
 
 (defvar org-eldoc-local-functions-cache (make-hash-table :size 40 :test 'equal)
   "Cache of major-mode's eldoc-documentation-functions,
@@ -102,15 +110,22 @@
 (defun org-eldoc-get-mode-local-documentation-function (lang)
   "Check if LANG-mode sets eldoc-documentation-function and return its value."
   (let ((cached-func (gethash lang org-eldoc-local-functions-cache 'empty))
-        (mode-func (intern-soft (format "%s-mode" lang)))
+        (mode-func (org-src-get-lang-mode lang))
         doc-func)
     (if (eq 'empty cached-func)
         (when (fboundp mode-func)
-          (with-temp-buffer
-            (funcall mode-func)
-            (setq doc-func (and eldoc-documentation-function
-                                (symbol-value 'eldoc-documentation-function)))
-            (puthash lang doc-func org-eldoc-local-functions-cache))
+	  (with-temp-buffer
+	    (funcall mode-func)
+	    (setq doc-func (if (boundp 'eldoc-documentation-functions)
+			       (let ((doc-funs eldoc-documentation-functions))
+				 (lambda (callback)
+				   (let ((eldoc-documentation-functions doc-funs))
+				     (run-hook-with-args-until-success
+				      'eldoc-documentation-functions
+				      callback))))
+			     (and eldoc-documentation-function
+				  (symbol-value 'eldoc-documentation-function))))
+	    (puthash lang doc-func org-eldoc-local-functions-cache))
           doc-func)
       cached-func)))
 
@@ -119,7 +134,7 @@
 (declare-function php-eldoc-function "php-eldoc" ())
 (declare-function go-eldoc--documentation-function "go-eldoc" ())
 
-(defun org-eldoc-documentation-function ()
+(defun org-eldoc-documentation-function (&rest args)
   "Return breadcrumbs when on a headline, args for src block header-line,
   calls other documentation functions depending on lang when inside src body."
   (or
@@ -128,10 +143,16 @@
    (let ((lang (org-eldoc-get-src-lang)))
      (cond ((or
              (string= lang "emacs-lisp")
-             (string= lang "elisp")) (if (fboundp 'elisp-eldoc-documentation-function)
-                                         (elisp-eldoc-documentation-function)
-                                       (let (eldoc-documentation-function)
-                                         (eldoc-print-current-symbol-info))))
+             (string= lang "elisp"))
+	    (cond ((boundp 'eldoc-documentation-functions) ; Emacs>=28
+		   (let ((eldoc-documentation-functions
+			  '(elisp-eldoc-var-docstring elisp-eldoc-funcall)))
+		     (eldoc-print-current-symbol-info)))
+		  ((fboundp 'elisp-eldoc-documentation-function)
+		   (elisp-eldoc-documentation-function))
+		  (t  			; Emacs<25
+		   (let (eldoc-documentation-function)
+		     (eldoc-print-current-symbol-info)))))
            ((or
              (string= lang "c") ;; http://github.com/nflath/c-eldoc
              (string= lang "C")) (when (require 'c-eldoc nil t)
@@ -146,14 +167,29 @@
              (string= lang "go")
              (string= lang "golang")) (when (require 'go-eldoc nil t)
                                         (go-eldoc--documentation-function)))
-           (t (let ((doc-fun (org-eldoc-get-mode-local-documentation-function lang)))
-                (when (fboundp doc-fun) (funcall doc-fun))))))))
+           (t (let ((doc-fun (org-eldoc-get-mode-local-documentation-function lang))
+		    (callback (car args)))
+                (when (functionp doc-fun)
+		  (if (functionp callback)
+		      (funcall doc-fun callback)
+		    (funcall doc-fun)))))))))
 
 ;;;###autoload
 (defun org-eldoc-load ()
   "Set up org-eldoc documentation function."
   (interactive)
-  (setq-local eldoc-documentation-function #'org-eldoc-documentation-function))
+  ;; This approach is taken from python.el.
+  (with-no-warnings
+    (cond
+     ((null eldoc-documentation-function) ; Emacs<25
+      (setq-local eldoc-documentation-function
+		  #'org-eldoc-documentation-function))
+     ((boundp 'eldoc-documentation-functions) ; Emacs>=28
+      (add-hook 'eldoc-documentation-functions
+		#'org-eldoc-documentation-function nil t))
+     (t
+      (add-function :before-until (local 'eldoc-documentation-function)
+		    #'org-eldoc-documentation-function)))))
 
 ;;;###autoload
 (add-hook 'org-mode-hook #'org-eldoc-load)

@@ -1,9 +1,25 @@
 * ac-cider
 
+** Deprecation notice
+
+  This package is deprecated as of 2018-02-12 in favor of [[http://company-mode.github.io/][company-mode]]. CIDER
+  supports company-mode out of the box, and company now has all the features of
+  *auto-complete* and then some, namely:
+
+  - [[https://cider.readthedocs.io/en/latest/code_completion/#fuzzy-candidate-matching][fuzzy completion]]
+  - [[https://github.com/expez/company-quickhelp][documentation popup]]
+  - [[https://cider.readthedocs.io/en/latest/code_completion/#completion-annotations][candidate annotations]]
+
+  Migrating to company-mode is easy, follow the [[https://cider.readthedocs.io/en/latest/code_completion/][docs]] to enable and configure it.
+  You are not required to give up *auto-complete* altogether, you can use
+  company-mode for Clojure and auto-complete for other modes.
+
+** About
+
   ac-cider is a completion source for Emacs auto-complete package that uses
   [[https://github.com/clojure-emacs/cider][CIDER]] (and [[https://github.com/alexander-yakushev/compliment][Compliment]]) as candidates provider.
 
-  ac-cider's goal is to eventually replace now deprecated [[https://github.com/clojure-emacs/ac-nrepl][ac-nrepl]] which uses
+  ac-cider is the successor of the now deprecated [[https://github.com/clojure-emacs/ac-nrepl][ac-nrepl]] which uses
   [[https://github.com/ninjudd/clojure-complete][clojure-complete]] as backend.
 
 ** Installation

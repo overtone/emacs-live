@@ -1,7 +1,295 @@
 Yasnippet NEWS -- history of user-visible changes.
 
-Copyright (C) 2016 Free Software Foundation, Inc.
+Copyright (C) 2017-2019 Free Software Foundation, Inc.
 See the end of the file for license conditions.
+
+* 0.14.0 (Dec 22, 2019)
+
+** Changes
+
+*** New 'yas-auto-next' macro, automatically moves to next field.
+See Github #937.
+
+*** Yasnippet now officially requires Emacs 23 or greater.
+See Github #940.
+
+*** Snippets for 'fundamental-mode' are available in all modes.
+See Github #949, and #936.
+
+*** New function for snippets, 'yas-completing-read'.
+See Github #934.
+
+*** New function 'yas-maybe-expand-abbrev-key-filter'.
+This can be used for making conditional keybindings for snippets.
+Promoted from 'yas--maybe-expand-key-filter'.  See Github #943.
+
+*** DEL can now be used to clear fields, similar <delete>.
+It is bound to the new conditional command 'yas-maybe-clear-field', which may
+be bound to other keys as well.  See Github #960 and #957.
+
+*** Snippet field movement commands may now trigger eldoc.
+See Github #952.
+
+*** New variable 'yas-keymap-disable-hook'.
+Can be used (e.g., for company-mode) to temporarily disable
+'yas-keymap' bindings, or any binding made by the new function
+'yas-filtered-definition'.  See Github #987.
+
+*** New variable 'yas-inhibit-overlay-modification-protection'.
+This allows a snippet to remain active, even if some commands make
+modifications outside the expected area (i.e., the active snippet
+field).
+
+*** 'yas-minor-mode' is no longer enabled in temp buffers.
+That is, buffers whose name starts with a space.  This setting may be
+undone by removing 'yas-temp-buffer-p' from
+'yas-dont-activate-functions'.  See Github #985.
+
+*** Accept unescaped '{', for LSP compatibility.
+See Github #979.
+
+** Fixed bugs
+
+*** 'yas-not-string-or-comment-condition' no longer relies on 'this-command'.
+This lets it work correctly with conditional key-bindings.  See Github
+#973, #991.
+
+*** Fix snippet expansion in org src buffers.
+Note that this still doesn't work in text-mode blocks.
+See Github #976, #989.
+
+*** Fix snippet insertion for keyless snippets.
+See Github #1014.
+
+*** Fix errors with company-mode completion within snippet fields.
+See Github #995.
+
+*** Fix errors with cc-mode.
+See Github #962.
+
+*** Fix problems with lsp-mode.
+**** Improve performance in overlay heavy buffers (Github #926).
+**** Fix double call of 'before/after-change-functions' (Github #966).
+
+*** Fix errors with nested snippet expansion.
+See Github #961, #1002.
+
+*** Stop yas-field-highlight-face inheriting from bogus 'quote' face.
+
+
+* 0.13.0 (May 13, 2018)
+
+** Changes
+
+*** Snippets for Yasnippet must now be installed separately.  The
+submodule linking to yasnippet-snippets was removed, as were the
+"classic" snippets that came with the GNU ELPA package.  The latter
+can now be installed via the 'yasnippet-classic-snippets' package from
+GNU ELPA.
+See Github #848, #858, #834, #775.
+
+*** 'snippet-mode' no longer derives from 'text-mode'.
+It will derive from 'prog-mode' where available (Emacs 24.1 and newer)
+or 'fundamental-mode' otherwise.  See Github #826.
+
+*** The default value of 'yas-key-syntaxes' is changed
+Longer snippet abbrev keys are now preferred over shorter ones.
+See Github #805.
+
+*** New snippets are now created for the current major mode by default
+Previously, extra activated modes could be guessed first.
+See Github #875.
+
+*** Yasnippet supports 'unload-feature' via 'yasnippet-unload-function'
+See Github #753, #891.
+
+*** New command 'yas-skip-and-clear-field' conditionally bound to 'C-d'
+replaces obsoleted 'yas-skip-and-clear-or-delete-char'.  The new
+function may be bound to any key via the conditional binding value
+'yas-maybe-skip-and-clear-field', instead of hardcoding the
+'delete-char' fallback action.  See Github #408, #892.
+
+*** 'yas-lookup-snippet' now returns a struct
+This allows 'yas-expand-snippet' to take looked up snippet's
+environment into account.  'yas-expand-snippet' handles both
+structured snippets, and plain text snippet bodies.
+See Github #897.
+
+** Fixed bugs
+
+*** Avoid crashing due to Emacs Bug#30931
+This prevents yasnippet's routines from triggering the bug, although
+it is still possible to trigger it independently.
+
+*** Don't enable undo when it's disabled
+
+*** yas-also-auto-indent-first-line is once again respected
+Yasnippet was behaving as if it was always t for single line snippets.
+See Github #912.
+
+*** Fixed handling of fixed indent with fields at beginning of line
+See Github #906, #908.
+
+*** Fixed incorrect snippets leaving "bad memory"
+and possibly corrupting future expansions.
+See Github #800.
+
+*** 'global-whitespace-mode' now functions in new snippet buffers.
+To fix this, the buffer name for new snippet buffers is now '+new
+snippet+' instead of '*new snippet*'.  See Github #842.
+
+*** Nest snippet expansion may clear default field text
+See Github #844.
+
+*** Fixed undo list corruption snippet expand+indent.
+See Github #869.
+
+*** The '# --' marker in snippets now allows trailing whitespace.
+See Github #862.
+
+*** Fixed handling of nested simple $n fields
+See Github #824, #894.
+
+
+* 0.12.2 (Aug 28, 2017)
+
+** The new option 'yas-also-auto-indent-empty-lines' allows restoring
+the old indent behavior.  See Github #850, #710, #685, #679.
+
+** Keybinding triggered snippets once again deactivate the mark.
+See Github #840.
+
+
+* 0.12.1 (Jul 23, 2017)
+
+This is a quick bugfix release.
+
+** Compilation errors in yasnippet-tests.el and yasnippet-debug.el are fixed.
+
+** A snippet-local setting of 'yas-indent-line' is now respected
+during indentation triggered by auto-fill as well.  See Github #838.
+
+
+* 0.12.0 (Jul 17, 2017)
+
+** Changes and New Features
+
+*** Snippets can now expand in strings & comments by default again.
+'yas-buffer-local-condition' is now a defcustom See Github #774.
+
+*** 'yas-after-exit-snippet-hook' can now be bound in 'expand-env' of
+snippets.  See Github #28, #702, #779, #786.
+
+*** Snippets under directories in 'yas-snippet-dirs' are now in
+snippet-mode automatically.
+
+*** Snippets can now be expanded in org source blocks, if
+'org-src-tab-acts-natively' and 'org-src-fontify-natively' are set.
+See Github #761.
+
+*** 'yas-fallback-behavior' is now obsolete, 'yas-expand' is now bound
+conditionally with an extended menu item, 'yas-maybe-expand'.
+Therefore users wanting to bind 'yas-expand' to a different key, SPC
+for example, should do
+
+    (define-key yas-minor-mode-map (kbd "SPC") yas-maybe-expand)
+
+See Github #760, #808.
+
+*** The documentation build output is now reproducible.  The timestamp
+now depends on the commit date, or the environment variable
+SOURCE_DATE_EPOCH is that is set.
+
+*** 'yas-indent-line' and 'expand-env' are now respected during mirror
+updates.  See Github #743.
+
+*** New function 'yas-active-snippets'.  Renamed from
+'yas--snippets-at-point', which remains as an obsolete alias.  See
+Github #727.
+
+*** New custom option 'yas-overlay-priority'.  This is can be used to
+give the snippet navigation keymaps higher priority than keymaps from
+overlays created by other packages, like 'auto-complete'.  See Github
+#828.
+
+** Fixed bugs
+
+*** Snippets having ${0:soon-to-be-deleted} with no other fields now
+correctly put the field 0 text in the active region after exiting.
+See Github #653.
+
+*** Fix undo of snippet insertion which also triggers indentation.
+See Github #821.
+
+*** Fixed a bug causing whitespace loss between mirrors.
+
+*** Fixed several bugs causing problems when combining Yasnippet with
+other modes and packages, like 'auto-fill-mode', 'c++-mode',
+'rust-mode', and 'lentic'.
+
+**** Fix another bug with auto-fill-mode.
+See Github #784, #794.
+
+**** Fix a bug in parsing of snippet fields for modes that use the
+'syntax-table' text property, 'c++-mode' is one example of this.  See
+Github #815.
+
+**** 'syntax-propertize-function' is now restored before indenting the
+snippet.  This improves compatibility with modes which rely on it for
+indentation, like 'rust-mode'.  See Github #782, #818.
+
+**** Avoid trying to delete a snippet which is already deleted.  This
+prevents an error when using 'rust-mode's 'rust-format-buffer'
+command.
+
+**** Ensure inhibit-modification-hooks is nil while modifying buffer.
+This fixes problems for packages relying on modification hooks, like
+'lentic'.  See Github #756, #712.
+
+
+* 0.11.0 (Oct 26, 2016)
+** Changes and New Features
+
+*** Modifying buffer in backquoted expressions is deprecated!
+Backquoted expressions should only return a string that will be
+inserted.  Snippets which modify the buffer as a side-effect will now
+trigger a warning.
+
+*** The verbosity levels for messages have been adjusted.
+While the default verbosity level was increased by 1 (it was only
+lower before due to a bug), several messages now only print at the
+level 4, so the overall effect should be less messages by default.
+
+*** Saving and loading snippets has been streamlined.  Saving the
+snippet to a file will now automatically load it.  Additionally, the
+buffer will be renamed from "*new snippet*" to whatever the snippet is
+named.  See also Github #718, #733, and #734.
+
+*** `yas-escape-text' no longer signals an error when given nil.
+
+*** `yas-describe-tables' is split into simpler commands.
+**** `yas-describe-tables' takes a prefix arg to show non-active tables.
+**** New command `yas-describe-tables-by-namehash' shows table by namehash.
+
+*** Use the region contents as the snippet body of new snippets.
+
+*** The dependency on `cl' is removed.
+Yasnippet now only requires `cl-lib'.
+
+** Fixed Bugs
+
+*** Fix field navigation (tabbing) in the backwards direction.
+See Github #722
+
+*** Add support for deprecated yas/ symbols in `yas-define-menu'.
+It was left out by accident.  This support is conditional on
+`yas-alias-to-yas/prefix-p', just like other obsolete yas/ bindings.
+
+*** Fix overriding of snippet by a new snippet with same uuid.
+See Github #714.
+
+*** Fix handling of snippets with 2 mirros on the same line.
+See Github #712.
 
 
 * 0.10.0 (June 11th, 2016)
@@ -114,7 +402,7 @@ good enough.  See issue #497.
 
 *** Documentation rewritten in org-mode and updated.
 A tremendous effort by Noam Postavsky.  Hopefully easier to maintain
-and navigate.  Available at <http://capitaomorte.github.io/yasnippet>.
+and navigate.  Available at <http://joaotavora.github.io/yasnippet>.
 
 *** Snippets are now maintained in their own repo.
 Snippets live in Andrea Crotti's
@@ -122,7 +410,7 @@ Snippets live in Andrea Crotti's
 for more details.
 
 *** Textmate snippet importer moved to separate `yasmate' repo.
-URL is <https://github.com/capitaomorte/yasmate>.  See README.md for
+URL is <https://github.com/joaotavora/yasmate>.  See README.md for
 more details.
 
 *** `yas-snippet-dirs' now allows symbols as aliases to directories.

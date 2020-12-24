@@ -1,10 +1,10 @@
-;;; ob-emacs-lisp.el --- org-babel functions for emacs-lisp code evaluation
+;;; ob-emacs-lisp.el --- Babel Functions for Emacs-lisp Code -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2009-2016 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2020 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;; Keywords: literate programming, reproducible research
-;; Homepage: http://orgmode.org
+;; Homepage: https://orgmode.org
 
 ;; This file is part of GNU Emacs.
 
@@ -19,61 +19,92 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 
 ;; Org-Babel support for evaluating emacs-lisp code
 
 ;;; Code:
-(require 'ob)
 
-(defvar org-babel-default-header-args:emacs-lisp nil
-  "Default arguments for evaluating an emacs-lisp source block.")
+(require 'ob-core)
+
+(declare-function org-babel--get-vars "ob" (params))
+(declare-function org-babel-result-cond "ob" (result-params scalar-form &rest table-forms))
+(declare-function org-babel-reassemble-table "ob" (table colnames rownames))
+(declare-function org-babel-pick-name "ob" (names selector))
+
+(defconst org-babel-header-args:emacs-lisp '((lexical . :any))
+  "Emacs-lisp specific header arguments.")
+
+(defvar org-babel-default-header-args:emacs-lisp '((:lexical . "no"))
+  "Default arguments for evaluating an emacs-lisp source block.
+
+A value of \"yes\" or t causes source blocks to be eval'd using
+lexical scoping.  It can also be an alist mapping symbols to
+their value.  It is used both as the optional LEXICAL argument to
+`eval', and as the value for `lexical-binding' in buffers created
+by `org-edit-src-code'.")
 
 (defun org-babel-expand-body:emacs-lisp (body params)
   "Expand BODY according to PARAMS, return the expanded body."
-  (let* ((vars (mapcar #'cdr (org-babel-get-header params :var)))
-         (result-params (cdr (assoc :result-params params)))
-         (print-level nil) (print-length nil)
-         (body (if (> (length vars) 0)
-		   (concat "(let ("
-			   (mapconcat
-			    (lambda (var)
-			      (format "%S" (print `(,(car var) ',(cdr var)))))
-			    vars "\n      ")
-			   ")\n" body "\n)")
-		 (concat body "\n"))))
-    (if (or (member "code" result-params)
-	    (member "pp" result-params))
-	(concat "(pp " body ")") body)))
+  (let ((vars (org-babel--get-vars params))
+	(print-level nil)
+	(print-length nil))
+    (if (null vars) (concat body "\n")
+      (format "(let (%s)\n%s\n)"
+	      (mapconcat
+	       (lambda (var)
+		 (format "%S" (print `(,(car var) ',(cdr var)))))
+	       vars "\n      ")
+	      body))))
 
 (defun org-babel-execute:emacs-lisp (body params)
   "Execute a block of emacs-lisp code with Babel."
-  (save-window-excursion
-    (let ((result
-           (eval (read (format (if (member "output"
-                                           (cdr (assoc :result-params params)))
-                                   "(with-output-to-string %s)"
-                                 "(progn %s)")
-                               (org-babel-expand-body:emacs-lisp
-                                body params))))))
-      (org-babel-result-cond (cdr (assoc :result-params params))
-	(let ((print-level nil)
-              (print-length nil))
-          (if (or (member "scalar" (cdr (assoc :result-params params)))
-                  (member "verbatim" (cdr (assoc :result-params params))))
-              (format "%S" result)
-            (format "%s" result)))
-	(org-babel-reassemble-table
-	 result
-         (org-babel-pick-name (cdr (assoc :colname-names params))
-                              (cdr (assoc :colnames params)))
-         (org-babel-pick-name (cdr (assoc :rowname-names params))
-                              (cdr (assoc :rownames params))))))))
+  (let* ((lexical (cdr (assq :lexical params)))
+	 (result-params (cdr (assq :result-params params)))
+	 (body (format (if (member "output" result-params)
+			   "(with-output-to-string %s\n)"
+			 "(progn %s\n)")
+		       (org-babel-expand-body:emacs-lisp body params)))
+	 (result (eval (read (if (or (member "code" result-params)
+				     (member "pp" result-params))
+				 (concat "(pp " body ")")
+			       body))
+		       (org-babel-emacs-lisp-lexical lexical))))
+    (org-babel-result-cond result-params
+      (let ((print-level nil)
+            (print-length nil))
+        (if (or (member "scalar" result-params)
+                (member "verbatim" result-params))
+            (format "%S" result)
+          (format "%s" result)))
+      (org-babel-reassemble-table
+       result
+       (org-babel-pick-name (cdr (assq :colname-names params))
+                            (cdr (assq :colnames params)))
+       (org-babel-pick-name (cdr (assq :rowname-names params))
+                            (cdr (assq :rownames params)))))))
+
+(defun org-babel-emacs-lisp-lexical (lexical)
+  "Interpret :lexical source block argument.
+Convert LEXICAL into the form appropriate for `lexical-binding'
+and the LEXICAL argument to `eval'."
+  (if (listp lexical)
+      lexical
+    (not (null (member lexical '("yes" "t"))))))
+
+(defun org-babel-edit-prep:emacs-lisp (info)
+  "Set `lexical-binding' in Org edit buffer.
+Set `lexical-binding' in Org edit buffer according to the
+corresponding :lexical source block argument."
+  (setq lexical-binding
+        (org-babel-emacs-lisp-lexical
+         (org-babel-read
+          (cdr (assq :lexical (nth 2 info)))))))
+
+(org-babel-make-language-alias "elisp" "emacs-lisp")
 
 (provide 'ob-emacs-lisp)
-
-
 
 ;;; ob-emacs-lisp.el ends here

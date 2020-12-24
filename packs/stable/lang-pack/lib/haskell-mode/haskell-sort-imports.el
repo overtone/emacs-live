@@ -32,11 +32,14 @@
 
 (require 'cl-lib)
 
-(defvar haskell-sort-imports-regexp
-  (concat "^import[ ]+"
-          "\\(qualified \\)?"
-          "[ ]*\\(\"[^\"]*\" \\)?"
-          "[ ]*\\([A-Za-z0-9_.']*.*\\)"))
+(defconst haskell-sort-imports-regexp
+  (rx (seq bol
+           "import"
+           (+ space)
+           (optional (group "qualified" space))
+           (optional (seq (* space) (group (char ?\") (+ (not (any ?\"))) (char ?\") space)))
+           (* space)
+           (group (+? (or (syntax word) (syntax symbol))) (* nonl)))))
 
 ;;;###autoload
 (defun haskell-sort-imports ()

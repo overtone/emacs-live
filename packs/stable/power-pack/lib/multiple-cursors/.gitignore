@@ -1,0 +1,3 @@
+elpa
+*.elc
+/.ecukes-failing-scenarios

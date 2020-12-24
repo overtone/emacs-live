@@ -1,6 +1,6 @@
 ;;; cider-doc.el --- CIDER documentation functionality -*- lexical-binding: t -*-
 
-;; Copyright © 2014-2018 Bozhidar Batsov, Jeff Valk and CIDER contributors
+;; Copyright © 2014-2020 Bozhidar Batsov, Jeff Valk and CIDER contributors
 
 ;; Author: Jeff Valk <jv@jeffvalk.com>
 
@@ -31,12 +31,17 @@
 (require 'cider-util)
 (require 'cider-popup)
 (require 'cider-client)
-(require 'cider-grimoire)
+(require 'cider-clojuredocs)
 (require 'nrepl-dict)
-(require 'org-table)
 (require 'button)
 (require 'easymenu)
 (require 'cider-browse-spec)
+
+;; we defer loading those, as org-table is a big library
+(declare-function org-table-map-tables "org-table")
+(declare-function org-table-align "org-table")
+(declare-function org-table-begin "org-table")
+(declare-function org-table-end "org-table")
 
 
 ;;; Variables
@@ -70,10 +75,10 @@
     (define-key cider-doc-map (kbd "C-e") #'cider-apropos-documentation-select)
     (define-key cider-doc-map (kbd "d") #'cider-doc)
     (define-key cider-doc-map (kbd "C-d") #'cider-doc)
-    (define-key cider-doc-map (kbd "r") #'cider-grimoire)
-    (define-key cider-doc-map (kbd "C-r") #'cider-grimoire)
-    (define-key cider-doc-map (kbd "w") #'cider-grimoire-web)
-    (define-key cider-doc-map (kbd "C-w") #'cider-grimoire-web)
+    (define-key cider-doc-map (kbd "c") #'cider-clojuredocs)
+    (define-key cider-doc-map (kbd "C-c") #'cider-clojuredocs)
+    (define-key cider-doc-map (kbd "w") #'cider-clojuredocs-web)
+    (define-key cider-doc-map (kbd "C-w") #'cider-clojuredocs-web)
     (define-key cider-doc-map (kbd "j") #'cider-javadoc)
     (define-key cider-doc-map (kbd "C-j") #'cider-javadoc)
     cider-doc-map)
@@ -83,8 +88,11 @@
   '("Documentation"
     ["CiderDoc" cider-doc]
     ["JavaDoc in browser" cider-javadoc]
-    ["Grimoire" cider-grimoire]
-    ["Grimoire in browser" cider-grimoire-web]
+    "--"
+    ["Clojuredocs" cider-clojuredocs]
+    ["Clojuredocs in browser" cider-clojuredocs-web]
+    ["Refresh ClojureDocs cache" cider-clojuredocs-refresh-cache]
+    "--"
     ["Search symbols" cider-apropos]
     ["Search symbols & select" cider-apropos-select]
     ["Search documentation" cider-apropos-documentation]
@@ -156,8 +164,8 @@
 (defvar cider-docview-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map "q" #'cider-popup-buffer-quit-function)
-    (define-key map "g" #'cider-docview-grimoire)
-    (define-key map "G" #'cider-docview-grimoire-web)
+    (define-key map "g" #'cider-docview-clojuredocs)
+    (define-key map "G" #'cider-docview-clojuredocs-web)
     (define-key map "j" #'cider-docview-javadoc)
     (define-key map "s" #'cider-docview-source)
     (define-key map (kbd "<backtab>") #'backward-button)
@@ -165,8 +173,8 @@
     (easy-menu-define cider-docview-mode-menu map
       "Menu for CIDER's doc mode"
       `("CiderDoc"
-        ["Look up in Grimoire" cider-docview-grimoire]
-        ["Look up in Grimoire (browser)" cider-docview-grimoire-web]
+        ["Look up in Clojuredocs" cider-docview-clojuredocs]
+        ["Look up in Clojuredocs (browser)" cider-docview-clojuredocs-web]
         ["JavaDoc in browser" cider-docview-javadoc]
         ["Jump to source" cider-docview-source]
         "--"
@@ -242,23 +250,23 @@ opposite of what that option dictates."
 
 (defvar cider-buffer-ns)
 
-(declare-function cider-grimoire-lookup "cider-grimoire")
+(declare-function cider-clojuredocs-lookup "cider-clojuredocs")
 
-(defun cider-docview-grimoire ()
-  "Return the grimoire documentation for `cider-docview-symbol'."
+(defun cider-docview-clojuredocs ()
+  "Return the clojuredocs documentation for `cider-docview-symbol'."
   (interactive)
   (if cider-buffer-ns
-      (cider-grimoire-lookup cider-docview-symbol)
-    (error "%s cannot be looked up on Grimoire" cider-docview-symbol)))
+      (cider-clojuredocs-lookup cider-docview-symbol)
+    (error "%s cannot be looked up on ClojureDocs" cider-docview-symbol)))
 
-(declare-function cider-grimoire-web-lookup "cider-grimoire")
+(declare-function cider-clojuredocs-web-lookup "cider-clojuredocs")
 
-(defun cider-docview-grimoire-web ()
-  "Open the grimoire documentation for `cider-docview-symbol' in a web browser."
+(defun cider-docview-clojuredocs-web ()
+  "Open the clojuredocs documentation for `cider-docview-symbol' in a web browser."
   (interactive)
   (if cider-buffer-ns
-      (cider-grimoire-web-lookup cider-docview-symbol)
-    (error "%s cannot be looked up on Grimoire" cider-docview-symbol)))
+      (cider-clojuredocs-web-lookup cider-docview-symbol)
+    (error "%s cannot be looked up on ClojureDocs" cider-docview-symbol)))
 
 (defconst cider-doc-buffer "*cider-doc*")
 
@@ -343,6 +351,7 @@ Preformatted code text blocks are ignored."
   "Align BUFFER tables and dim borders.
 This processes the GFM table markdown extension using `org-table'.
 Tables are marked to be ignored by line wrap."
+  (require 'org-table)
   (with-current-buffer buffer
     (save-excursion
       (let ((border 'cider-docview-table-border-face))
@@ -398,6 +407,7 @@ Tables are marked to be ignored by line wrap."
          (depr    (nrepl-dict-get info "deprecated"))
          (macro   (nrepl-dict-get info "macro"))
          (special (nrepl-dict-get info "special-form"))
+         (builtin (nrepl-dict-get info "built-in")) ;; babashka specific
          (forms   (when-let* ((str (nrepl-dict-get info "forms-str")))
                     (split-string str "\n")))
          (args    (when-let* ((str (nrepl-dict-get info "arglists-str")))
@@ -438,6 +448,8 @@ Tables are marked to be ignored by line wrap."
           (emit "Special Form" 'font-lock-keyword-face))
         (when macro
           (emit "Macro" 'font-lock-variable-name-face))
+        (when builtin
+          (emit "Built-in" 'font-lock-keyword-face))
         (when added
           (emit (concat "Added in " added) 'font-lock-comment-face))
         (when depr
@@ -471,7 +483,7 @@ Tables are marked to be ignored by line wrap."
                               'action (lambda (_)
                                         (cider-browse-spec (format "%s/%s" ns name))))
           (insert "\n\n"))
-        (if cider-docview-file
+        (if (and cider-docview-file (not (string= cider-docview-file "")))
             (progn
               (insert (propertize (if class java-name clj-name)
                                   'font-lock-face 'font-lock-function-name-face)

@@ -6,7 +6,7 @@
 ;; URL: http://github.com/eschulte/jump.el
 ;; Created: 2008-08-21
 ;; Keywords: project, convenience, navigation
-;; Package-Requires: ((findr "0.7") (inflections "2.4"))
+;; Package-Requires: ((findr "0.7") (inflections "2.4") (cl-lib "0.5"))
 
 ;; This file is NOT part of GNU Emacs.
 
@@ -319,10 +319,6 @@ find the current method which defaults to `which-function'."
 	       (jump-to (cdr spec) nil (when create ,make)))
 	      ((consp matches)
 	       (jump-to (cdr spec) matches (when create ,make)))))))))
-
-;; Local Variables:
-;; byte-compile-warnings: (not cl-functions)
-;; End:
 
 (provide 'jump)
 ;;; jump.el ends here

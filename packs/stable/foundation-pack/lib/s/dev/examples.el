@@ -32,7 +32,8 @@
   (defexamples s-word-wrap
     (s-word-wrap 10 "This is too long") => "This is\ntoo long"
     (s-word-wrap 10 "This is way way too long") => "This is\nway way\ntoo long"
-    (s-word-wrap 10 "It-wraps-words-but-does-not-break-them") => "It-wraps-words-but-does-not-break-them")
+    (s-word-wrap 10 "It-wraps-words-but-does-not-break-them") => "It-wraps-words-but-does-not-break-them"
+    (s-word-wrap 100 (propertize "foo bar" 'face 'font-lock-keyword-face)) => (propertize "foo bar" 'face 'font-lock-keyword-face))
 
   (defexamples s-center
     (s-center 5 "a") => "  a  "
@@ -54,7 +55,9 @@
   (defexamples s-truncate
     (s-truncate 6 "This is too long") => "Thi..."
     (s-truncate 16 "This is also too long") => "This is also ..."
-    (s-truncate 16 "But this is not!") => "But this is not!")
+    (s-truncate 16 "But this is not!") => "But this is not!"
+    (s-truncate 6 "Lorem ipsum" "…") => "Lorem…"
+    (s-truncate 9000 "Lorem ipsum" "…") => "Lorem ipsum")
 
   (defexamples s-left
     (s-left 3 "lib/file.js") => "lib"
@@ -109,12 +112,7 @@
     (s-prepend "abc" "def") => "abcdef")
 
   (defexamples s-append
-    (s-append "abc" "def") => "defabc")
-
-  (defexamples s-wrap
-    (s-wrap "[" "]" "foobar") => "[foobar]"
-    (s-wrap "(" "" "foobar") => "(foobar"
-    (s-wrap "" ")" "foobar") => "foobar)"))
+    (s-append "abc" "def") => "defabc"))
 
 (def-example-group "To and from lists"
   (defexamples s-lines
@@ -144,13 +142,16 @@
     (s-matched-positions-all "{{\\(.+?\\)}}" "{{Hello}} World, {{Emacs}}!" 0) => '((0 . 9) (17 . 26))
     (s-matched-positions-all "{{\\(.+?\\)}}" "{{Hello}} World, {{Emacs}}!" 1) => '((2 . 7) (19 . 24))
     (s-matched-positions-all "l"           "{{Hello}} World, {{Emacs}}!" 0) => '((4 . 5) (5 . 6) (13 . 14))
-    (s-matched-positions-all "abc"         "{{Hello}} World, {{Emacs}}!") => nil)
+    (s-matched-positions-all "abc"         "{{Hello}} World, {{Emacs}}!") => nil
+    (s-matched-positions-all "=\\(.+?\\)=" "=Hello= World, =Emacs=!" 0) => '((0 . 7) (15 . 22))
+    (s-matched-positions-all "=\\(.+?\\)=" "=Hello= World, =Emacs=!" 1) => '((1 . 6) (16 . 21)))
 
   (defexamples s-slice-at
     (s-slice-at "-" "abc") => '("abc")
     (s-slice-at "-" "abc-def") => '("abc" "-def")
     (s-slice-at "[\.#]" "abc.def.ghi#id") => '("abc" ".def" ".ghi" "#id")
-    (s-slice-at "-" "abc-def-") => '("abc" "-def" "-"))
+    (s-slice-at "-" "abc-def-") => '("abc" "-def" "-")
+    (s-slice-at "-" "") => '(""))
 
   (defexamples s-split
     (s-split "|" "a|bc|12|3") => '("a" "bc" "12" "3")
@@ -173,7 +174,8 @@
     (s-split-up-to "|" "foo||bar|baz|qux" 10 t) => '("foo" "bar" "baz" "qux")
     (s-split-up-to "|" "foo|bar|baz|" 2) => '("foo" "bar" "baz|")
     (s-split-up-to "|" "foo|bar|baz|" 2 t) => '("foo" "bar" "baz|")
-    (s-split-up-to "|" "foo|bar|baz|qux|" 2) => '("foo" "bar" "baz|qux|"))
+    (s-split-up-to "|" "foo|bar|baz|qux|" 2) => '("foo" "bar" "baz|qux|")
+    (s-split-up-to "|" (propertize "foo" 'face 'font-lock-keyword-face) 1) => (list (propertize "foo" 'face 'font-lock-keyword-face)))
 
   (defexamples s-join
     (s-join "+" '("abc" "def" "ghi")) => "abc+def+ghi"
@@ -308,7 +310,7 @@
     (s-presence "foo") => "foo")
 
   (defexamples s-format
-     ;; One with an alist works
+    ;; One with an alist works
     (s-format
      "help ${name}! I'm ${malady}"
      'aget
@@ -329,6 +331,26 @@
      'gethash
      #s(hash-table test equal data ("name" "nic" "malady" "on fire")))
     => "help nic! I'm on fire"
+
+    ;; Don't have to be string
+    (let ((me (make-hash-table :test #'equal)))
+      (puthash "name" "Nick" me)
+      (puthash "sex" 'male me)
+      (puthash "age" 2 me)
+      (s-format "I'm ${name}, ${sex}, ${age} years old"
+                'gethash
+                me))
+    => "I'm Nick, male, 2 years old"
+
+    (s-format "I'm ${name}, ${sex}, ${age} years old"
+              'aget
+              '((name . "Nick") (sex . male) (age . 2)))
+    => "I'm Nick, male, 2 years old"
+
+    (s-format "I'm $0, $1, $2 years old"
+              'elt
+              '("Nick" male  2))
+    => "I'm Nick, male, 2 years old"
 
     ;; Replacing case has no effect on s-format
     (let ((case-replace t))
@@ -367,7 +389,7 @@
       (s-lex-format "${str1} and ${str2}"))
     => "this and that"
 
-    ;; Have a litteral \ in the replacement
+    ;; Have a literal \ in the replacement
     (let ((foo "Hello\\nWorld"))
       (s-lex-format "${foo}"))
     => "Hello\\nWorld"
@@ -375,8 +397,22 @@
 
   (defexamples s-count-matches
     (s-count-matches "a" "aba") => 2
-    (s-count-matches "a" "aba" 0 2) => 1
-    (s-count-matches "\\w\\{2\\}[0-9]+" "ab1bab2frobinator") => 2)
+    (s-count-matches "a" "aba" 1 3) => 1
+    (s-count-matches "aa" "aaa") => 1
+    (s-count-matches "\\w\\{2\\}[0-9]+" "ab1bab2frobinator") => 2
+    (s-count-matches "a" "aa" 2) => 1
+    (s-count-matches "a" "aaaa" 2 3) => 1)
+
+  (defexamples s-count-matches-all
+    (s-count-matches-all "a" "aba") => 2
+    (s-count-matches-all "a" "aba" 1 3) => 1
+    (s-count-matches-all "aa" "aaa") => 2
+    (s-count-matches-all "\\w\\{2\\}[0-9]+" "ab1bab2frobinator") => 2
+    ;; Make sure we only count matches where the entire match is between start and end.
+    (s-count-matches-all "aaa" "aaaaaaaaa" 1 4) => 1
+
+    ;; s-count-matches-all should be one-indexed.
+    (s-count-matches-all "a" "aa" 2) => 1)
 
   (defexamples s-wrap
     (s-wrap "foo" "\"") => "\"foo\""
@@ -429,4 +465,20 @@
     (s-word-initials "some words") => "sw"
     (s-word-initials "under_scored_words") => "usw"
     (s-word-initials "camelCasedWords") => "cCW"
-    (s-word-initials "dashed-words") => "dw"))
+    (s-word-initials "dashed-words") => "dw")
+
+  (defexamples s-blank-str?
+    (s-blank-str? "  \t \r\s  ") => t
+    (s-blank-str? "    ") => t
+    (s-blank-str? "\t\r") => t
+    (s-blank-str? "\t") => t
+    (s-blank-str? "t") => nil
+    (s-blank-str? "\s") => t
+    (s-blank-str? " ") => t)
+
+  (defexamples s-replace-regexp
+    (s-replace-regexp "[aeiou]" "!" "foo bar baz") => "f!! b!r b!z"
+    (s-replace-regexp "." "a" "foo bar baz") => "aaaaaaaaaaa"
+    (s-replace-regexp "mixedcase" "mixedcase" "ThIs iS MiXeDCaSE" t) => "ThIs iS mixedcase"
+    (s-replace-regexp "\\(h[ae]\\)" "\\1\\1" "hi he ha") => "hi hehe haha"
+    (s-replace-regexp "\\(h[ae]\\)" "\\1\\1" "hi he ha" nil t) => "hi \\1\\1 \\1\\1"))

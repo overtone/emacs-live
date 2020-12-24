@@ -1,10 +1,10 @@
-;;; org-sudoku.el --- Greate and solve SUDOKU games in Org tables
+;;; org-sudoku.el --- Create and solve SUDOKU games in Org tables
 
-;; Copyright (C) 2012-2016 Free Software Foundation, Inc.
+;; Copyright (C) 2012-2020 Free Software Foundation, Inc.
 ;;
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;; Keywords: outlines, hypermedia, calendar, wp, games
-;; Homepage: http://orgmode.org
+;; Homepage: https://orgmode.org
 ;; Version: 0.01
 ;;
 ;; This file is not yet part of GNU Emacs.

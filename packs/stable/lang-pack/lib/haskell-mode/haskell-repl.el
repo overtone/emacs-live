@@ -19,18 +19,18 @@
 
 (require 'cl-lib)
 (require 'haskell-interactive-mode)
+(require 'haskell-collapse)
+(require 'haskell-svg)
 
 (defun haskell-interactive-handle-expr ()
   "Handle an inputted expression at the REPL."
-  (let ((expr (haskell-interactive-mode-input))
-        (at-prompt-line (>= (line-end-position)
-                            haskell-interactive-mode-prompt-start)))
-    (if (and at-prompt-line
-             (string= "" (replace-regexp-in-string " " "" expr)))
+  (let ((expr (haskell-interactive-mode-input)))
+    (if (string= "" (replace-regexp-in-string " " "" expr))
+        ;; Just make a new prompt on space-only input
         (progn
-            (goto-char (point-max))
-            (insert "\n")
-            (haskell-interactive-mode-prompt))
+          (goto-char (point-max))
+          (insert "\n")
+          (haskell-interactive-mode-prompt))
       (when (haskell-interactive-at-prompt)
         (cond
          ;; If already evaluating, then the user is trying to send
@@ -103,8 +103,7 @@
   "Print the result of evaluating the expression."
   (let ((response
          (with-temp-buffer
-           (insert (haskell-interactive-mode-cleanup-response
-                    (cl-caddr state) response))
+           (insert response)
            (haskell-interactive-mode-handle-h)
            (buffer-string))))
     (when haskell-interactive-mode-eval-mode
@@ -118,10 +117,9 @@
     (let ((inhibit-read-only t))
       (delete-region (1+ haskell-interactive-mode-prompt-start) (point))
       (goto-char (point-max))
-      (let ((start (point)))
-        (insert (haskell-fontify-as-mode text
-                                         haskell-interactive-mode-eval-mode))
-        (when haskell-interactive-mode-collapse
-          (haskell-collapse start (point)))))))
+      (insert (haskell-fontify-as-mode (haskell-svg-maybe-render-images text)
+                                       haskell-interactive-mode-eval-mode))
+      (when haskell-interactive-mode-collapse
+        (haskell-hide-toggle)))))
 
 (provide 'haskell-repl)

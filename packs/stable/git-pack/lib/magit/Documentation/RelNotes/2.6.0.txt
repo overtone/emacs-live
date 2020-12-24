@@ -1,16 +1,3 @@
-It's Magit!  A Git Porcelain inside Emacs
-=========================================
-
-Magit is an interface to the version control system Git, implemented
-as an Emacs package.  Magit aspires to be a complete Git porcelain.
-While we cannot (yet) claim that Magit wraps and improves upon each
-and every Git command, it is complete enough to allow even experienced
-Git users to perform almost all of their daily version control tasks
-directly from within Emacs.  While many fine Git clients exist, only
-Magit and Git itself deserve to be called porcelains.
-
-For more information about Magit, see http://magit.vc.
-
 Magit v2.6.0 Release Notes
 ==========================
 
@@ -90,8 +77,8 @@ Fixes since v2.5.0
   `magit-process-ensure-unix-line-ending' to `nil'.
 
 * If the user sets the variable `magit-auto-revert-mode' or the
-  obsolete alias `magit-revert-buffers' to nil anytime during startup,
-  before or after `magit-autorevert' is loaded, then the mode is now
+  obsolete alias `magit-revert-buffers' to nil anytime during startup
+  (before or after `magit-autorevert' is loaded) then the mode is now
   no longer turned on (actually it is explicitly turned off).
 
 * When a revision buffer was limited to a set of files, its header

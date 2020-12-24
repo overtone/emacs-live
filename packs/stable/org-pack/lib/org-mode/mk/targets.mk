@@ -20,6 +20,7 @@ else
   ORGVERSION ?= N/A
 endif
 DATE          = $(shell date +%Y-%m-%d)
+YEAR          = $(shell date +%Y)
 ifneq ($(GITSTATUS),)
   GITVERSION := $(GITVERSION:.dirty=).dirty
 endif
@@ -37,7 +38,7 @@ endif
 CONF_BASE = EMACS DESTDIR ORGCM ORG_MAKE_DOC
 CONF_DEST = lispdir infodir datadir testdir
 CONF_TEST = BTEST_PRE BTEST_POST BTEST_OB_LANGUAGES BTEST_EXTRA BTEST_RE
-CONF_EXEC = CP MKDIR RM RMR FIND SUDO PDFTEX TEXI2PDF TEXI2HTML MAKEINFO INSTALL_INFO
+CONF_EXEC = CP MKDIR RM RMR FIND CHMOD SUDO PDFTEX TEXI2PDF TEXI2HTML MAKEINFO INSTALL_INFO
 CONF_CALL = BATCH BATCHL ELC ELCDIR NOBATCH BTEST MAKE_LOCAL_MK MAKE_ORG_INSTALL MAKE_ORG_VERSION
 config-eol:: EOL = \#
 config-eol:: config-all
@@ -67,7 +68,7 @@ config-cmd config-all::
 	$(foreach var,$(CONF_CALL),$(info $(var)	= $($(var))$(EOL)))
 config config-test config-exe config-all config-version::
 	$(info ========= Org version)
-	$(info make:  Org-mode version $(ORGVERSION) ($(GITVERSION) => $(lispdir)))
+	$(info make:  Org mode version $(ORGVERSION) ($(GITVERSION) => $(lispdir)))
 	@echo ""
 
 oldorg:	compile info	# what the old makefile did when no target was specified
@@ -137,11 +138,11 @@ cleandirs:
 clean:	cleanlisp cleandoc
 
 cleanall: cleandirs cleantest cleanaddcontrib
-	-$(FIND) . \( -name \*~ -o -name \*# -o -name .#\* \) -exec $(RM) {} \;
-	-$(FIND) $(CLEANDIRS) \( -name \*~ -o -name \*.elc \) -exec $(RM) {} \;
+	-$(FIND) . \( -name \*~ -o -name \*# -o -name .#\* \) -exec $(RM) {} +
+	-$(FIND) $(CLEANDIRS) \( -name \*~ -o -name \*.elc \) -exec $(RM) {} +
 
 $(CLEANDIRS:%=clean%):
-	-$(FIND) $(@:clean%=%) \( -name \*~ -o -name \*.elc \) -exec $(RM) {} \;
+	-$(FIND) $(@:clean%=%) \( -name \*~ -o -name \*.elc \) -exec $(RM) {} +
 
 cleanelc:
 	$(MAKE) -C lisp $@
@@ -158,4 +159,10 @@ cleandocs:
 	-$(FIND) doc -name \*~ -exec $(RM) {} \;
 
 cleantest:
-	$(RMR) $(testdir)
+# git-annex creates non-writable directories so that the files within
+# them can't be removed; if rm fails, try to recover by making all
+# directories writable
+	-$(RMR) $(testdir) || { \
+	  $(FIND) $(testdir) -type d -exec $(CHMOD) u+w {} + && \
+	  $(RMR) $(testdir) ; \
+	}

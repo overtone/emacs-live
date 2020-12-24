@@ -2,8 +2,8 @@
 
 * Plain links
 
-- http://orgmode.org
-- [[http://orgmode.org][Org mode website]]
+- https://orgmode.org
+- [[https://orgmode.org][Org mode website]]
 - mailto:bzg@gnu.org
 
 * Links to files

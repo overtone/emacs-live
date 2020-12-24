@@ -4,7 +4,7 @@
 ((emacs-lisp-mode
   (bug-reference-url-format . "https://github.com/clojure-emacs/cider/issues/%s")
   (bug-reference-bug-regexp . "#\\(?2:[[:digit:]]+\\)")
-  (indent-tabs-mode)
+  (indent-tabs-mode . nil)
   (fill-column . 80)
   (sentence-end-double-space . t)
   (emacs-lisp-docstring-fill-column . 75)
@@ -22,7 +22,6 @@
                               (cider--jack-in . 1)
                               (cider--make-result-overlay . 1)
                               ;; need better solution for indenting cl-flet bindings
-                              (multiline-comment-handler . defun) ;; cl-flet
                               (insert-label . defun)              ;; cl-flet
                               (insert-align-label . defun)        ;; cl-flet
                               (insert-rect . defun)               ;; cl-flet

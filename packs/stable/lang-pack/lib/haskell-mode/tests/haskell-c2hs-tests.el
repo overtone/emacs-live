@@ -16,7 +16,7 @@
 (ert-deftest haskell-c2hs-qualified-import-hook ()
   "C2HS qualified import hook"
   (check-properties
-    '("{#import qualified Foo#}")
+    '("{#import qualified Foo #}")
     '(("{#" t haskell-c2hs-hook-pair-face)
       ("import" "w" haskell-c2hs-hook-name-face)
       ("qualified" "w" haskell-c2hs-hook-name-face)
@@ -199,7 +199,7 @@
     '(("{#" t haskell-c2hs-hook-pair-face)
       ("set" "w" haskell-c2hs-hook-name-face)
       ("#}" t haskell-c2hs-hook-pair-face)
-      ("AF_NET" "w" haskell-constructor-face))
+      ("AF_NET" "w_" haskell-constructor-face))
     'haskell-c2hs-mode))
 
 (ert-deftest haskell-c2hs-pointer-hook-1 ()
@@ -284,7 +284,7 @@
 (ert-deftest haskell-c2hs-const-hook ()
   "C2HS const hook"
   (check-properties
-    '("{#const FOO_BAR#}")
+    '("{#const FOO_BAR #}")
     '(("{#" t haskell-c2hs-hook-pair-face)
       ("const" "w" haskell-c2hs-hook-name-face)
       ("#}" t haskell-c2hs-hook-pair-face))

@@ -1,0 +1,8 @@
+# Propertized incorrectly prior to PR
+example:
+  - key1: Correctly propertized
+    key2: |
+      Correctly propertized.
+  - key3: |
+      Correctly propertized
+    key4: Incorrectly propertized as part of preceding yaml-literal-block

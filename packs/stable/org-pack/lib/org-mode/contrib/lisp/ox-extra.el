@@ -37,9 +37,9 @@
 ;; for export.  These blocks should be tagged with #+header: :header
 ;; yes.  For example:
 ;; #+header: :header yes
-;; #+begin_latex
+;; #+begin_export latex
 ;;   ...
-;; #+end_latex
+;; #+end_export
 
 ;; - `ignore-headlines' -- allow a headline (but not its children) to
 ;; be ignored.  Any headline tagged with the 'ignore' tag will be
@@ -56,7 +56,7 @@
 ;;; Code:
 
 (require 'ox)
-(eval-when-compile (require 'cl))
+(require 'cl-lib)
 
 (defun org-latex-header-blocks-filter (backend)
   (when (org-export-derived-backend-p backend 'latex)
@@ -72,8 +72,10 @@
 		       (org-element-property :post-affiliated block)))))))
       (mapc (lambda (pos)
 	      (goto-char (nth 2 pos))
-	      (destructuring-bind
+	      (cl-destructuring-bind
 		  (beg end &rest ignore)
+		  ;; FIXME: `org-edit-src-find-region-and-lang' was
+		  ;; removed in 9c06f8cce (2014-11-11).
 		  (org-edit-src-find-region-and-lang)
 		(let ((contents-lines (split-string
 				       (buffer-substring-no-properties beg end)
@@ -150,7 +152,26 @@ parent."
                 (org-element-contents object)))
         (org-element-extract-element object)))
     info nil)
+  (org-extra--merge-sections data backend info)
   data)
+
+(defun org-extra--merge-sections (data _backend info)
+  (org-element-map data 'headline
+    (lambda (hl)
+      (let ((sections
+             (cl-loop
+              for el in (org-element-map (org-element-contents hl)
+                            '(headline section) #'identity info)
+              until (eq (org-element-type el) 'headline)
+              collect el)))
+        (when (and sections
+                   (> (length sections) 1))
+          (apply #'org-element-adopt-elements
+                 (car sections)
+                 (cl-mapcan (lambda (s) (org-element-contents s))
+                            (cdr sections)))
+          (mapc #'org-element-extract-element (cdr sections)))))
+    info))
 
 (defconst ox-extras
   '((latex-header-blocks org-latex-header-blocks-filter org-export-before-parsing-hook)

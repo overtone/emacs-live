@@ -1,36 +1,42 @@
+<p align="center">
+  <img src="https://raw.github.com/clojure-emacs/cider/master/logo/cider-logo-w640.png" alt="CIDER Logo"/>
+</p>
+
+-----------
 [![License GPL 3][badge-license]](http://www.gnu.org/licenses/gpl-3.0.txt)
 [![MELPA](http://melpa.org/packages/cider-badge.svg)](http://melpa.org/#/cider)
 [![MELPA Stable](http://stable.melpa.org/packages/cider-badge.svg)](http://stable.melpa.org/#/cider)
-[![Build Status](https://travis-ci.org/clojure-emacs/cider.png?branch=master)](https://travis-ci.org/clojure-emacs/cider)
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/clojure-emacs/cider?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![CircleCI](https://circleci.com/gh/clojure-emacs/cider.svg?style=svg)](https://circleci.com/gh/clojure-emacs/cider)
+[![Slack](https://img.shields.io/badge/chat-%23cider-green.svg?style=flat)](http://clojurians.net)
 
-[![Liberapay](https://liberapay.com/assets/widgets/donate.svg)](https://liberapay.com/bbatsov/donate)
+CIDER is the **C**lojure(Script) **I**nteractive **D**evelopment **E**nvironment
+that **R**ocks!
+
+CIDER extends Emacs with support for [interactive
+programming](https://docs.cider.mx/cider/usage/interactive_programming.html)
+in Clojure. The features are centered around `cider-mode`, an Emacs
+minor-mode that complements [clojure-mode][]. While `clojure-mode`
+supports editing Clojure source files, `cider-mode` adds support for
+interacting with a running Clojure process for compilation, code
+completion, debugging, definition and documentation lookup, running
+tests and so on.
+
+----------
 [![OpenCollective](https://opencollective.com/cider/backers/badge.svg)](#open-collective-backers)
 [![OpenCollective](https://opencollective.com/cider/sponsors/badge.svg)](#open-collective-sponsors)
 [![Patreon](https://img.shields.io/badge/patreon-donate-orange.svg)](https://www.patreon.com/bbatsov)
 [![Paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=GRQKNBM6P8VRQ)
 
-<p align="center">
-  <img src="https://raw.github.com/clojure-emacs/cider/master/logo/cider-logo-w640.png" alt="CIDER Logo"/>
-</p>
+Bozhidar (a.k.a. Bug, CIDER's primary author/maintainer) has spent countless hours working on
+CIDER and the [numerous the related projects](https://metaredux.com/posts/2018/11/09/ciders-orchard-the-heart.html). That's a lot of work and not all of it is fun!
 
-CIDER is the **C**lojure(Script) **I**nteractive **D**evelopment **E**nvironment
-that **R**ocks!
-
-CIDER extends Emacs with support for interactive programming in Clojure. The
-features are centered around `cider-mode`, an Emacs minor-mode that complements
-[clojure-mode][]. While `clojure-mode` supports editing Clojure source files,
-`cider-mode` adds support for interacting with a running Clojure process for
-compilation, debugging, definition and documentation lookup, running tests and
-so on.
-
-**Please consider [supporting financially its ongoing development](#funding).**
+**Please consider [supporting financially CIDER's ongoing development](#funding).**
 
 ## Quickstart
 
 The instructions that follow are meant to get you from zero to a running CIDER
 REPL in under 5 minutes.  See the
-[official manual](http://docs.cider.mx) for (way) more
+[user manual](https://docs.cider.mx) for (way) more
 details.
 
 ### Installation
@@ -43,21 +49,22 @@ maintained repos -
 [MELPA Stable](http://stable.melpa.org)
 and [MELPA](http://melpa.org).
 
-You can install CIDER with the following command:
+Provided you've enabled one of them in your Emacs setup, you can
+install CIDER with the following command:
 
-<kbd>M-x</kbd> `package-install` <kbd>[RET]</kbd> `cider` <kbd>[RET]</kbd>
+<kbd>M-x</kbd> `package-install` <kbd>RET</kbd> `cider` <kbd>RET</kbd>
 
 ### Launch an nREPL server and client from Emacs
 
-Simply open in Emacs a file belonging to your `lein` or `boot` project (like
+Simply open in Emacs a file belonging to your `lein`, `tools.deps` or `boot` project (like
 `foo.clj`) and type <kbd>M-x</kbd> `cider-jack-in`. This will start an nREPL
 server with all the project dependencies loaded in and CIDER will automatically
 connect to it.
 
-Alternatively you can use <kbd>C-u M-x</kbd> `cider-jack-in` to specify the name
-of a `lein` or `boot` project, without having to visit any file in it.
+Alternatively you can use <kbd>C-u M-x</kbd> `cider-jack-in` to specify the path to
+a Clojure project, without having to visit any file in it.
 
-In Clojure(Script) buffers the command `cider-jack-in` is bound to
+**Tip:** In Clojure(Script) buffers the command `cider-jack-in` is bound to
 <kbd>C-c C-x (C-)j</kbd>.
 
 ### Connect to a running nREPL server
@@ -76,19 +83,21 @@ $ boot repl -s wait
 ```
 
 Alternatively you can start nREPL either manually or by the facilities provided
-by your project's build tool (Gradle, Maven, etc).
+by your project's build tool (`tools.deps`, Gradle, Maven, etc).
 
 After you get your nREPL server running go back to Emacs.  Typing there <kbd>M-x</kbd>
 `cider-connect` will allow you to connect to the running nREPL server.
 
-In Clojure(Script) buffers the command `cider-connect` is bound to <kbd>C-c M-c</kbd>.
+**Tip:** In Clojure(Script) buffers the command `cider-connect` is bound to
+<kbd>C-c C-x (C-)c (C-)j</kbd> and the command `cider-connect-cljs` is bound to
+<kbd>C-c C-x (C-)c (C-)s</kbd>.
 
 ## Diving Deeper
 
 CIDER packs a ton of functionality and you really want to be familiar with it,
 so you can fully empower your workflow. The best way to get acquainted with all
 available features is to go over the entire
-[CIDER manual](http://docs.cider.mx/).
+[CIDER manual](https://docs.cider.mx/).
 
 If you're into video lessons, you might also check out
 this [intro to CIDER demo](https://www.youtube.com/watch?v=aYA4AAjLfT0) as well.
@@ -106,9 +115,8 @@ group of long-term contributors manage releases, evaluate pull-requests, and
 does a lot of the groundwork on major new features.
 
 * [Bozhidar Batsov](https://github.com/bbatsov) (author & head maintainer)
-* [Artur Malabarba](https://github.com/malabarba)
+* [Vitalie Spinu](https://github.com/vspinu)
 * [Michael Griffiths](https://github.com/cichli)
-* [Jeff Valk](https://github.com/jeffvalk)
 * [Lars Andersen](https://github.com/expez)
 
 ### CIDER Alumni
@@ -120,6 +128,8 @@ core team members. Lovingly known as The Alumni:
 * [Phil Hagelberg](https://github.com/technomancy)
 * [Hugo Duncan](https://github.com/hugoduncan)
 * [Steve Purcell](https://github.com/purcell)
+* [Artur Malabarba](https://github.com/malabarba)
+* [Jeff Valk](https://github.com/jeffvalk)
 
 ## Release policy
 
@@ -148,6 +158,13 @@ the logo in various formats
 The logo is licensed under a
 [Creative Commons Attribution-NonCommercial 4.0 International License](http://creativecommons.org/licenses/by-nc/4.0/deed.en_GB).
 
+## Homepage
+
+CIDER's homepage <https://cider.mx> is in the `gh-pages` branch of this repository and is deployed
+automatically when changes are made to it.
+
+It's just a single `index.html` file and a bit of Bootstrap 4. Contributions to it are very welcome!
+
 ## Funding
 
 While CIDER is free software and will always be, the project would benefit immensely from some funding.
@@ -164,11 +181,9 @@ to become a CIDER sponsor.
 
 You can support the development of CIDER, [clojure-mode][] and [inf-clojure][] via
 [Open Collective](https://opencollective.com/cider),
-[Salt](https://salt.bountysource.com/teams/cider),
-[Patreon](https://www.patreon.com/bbatsov),
-[Liberapay](https://liberapay.com/bbatsov/donate) and PayPal.
-
-[![Paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=GRQKNBM6P8VRQ)
+[GitHub Sponsors](https://github.com/sponsors/bbatsov),
+[Patreon](https://www.patreon.com/bbatsov) and
+[PayPal](https://www.paypal.me/bbatsov).
 
 ### Open Collective Backers
 
@@ -241,14 +256,14 @@ site. [[Become a sponsor](https://opencollective.com/cider#sponsor)]
 
 ## License
 
-Copyright © 2012-2018 Tim King, Phil Hagelberg, Bozhidar Batsov, Artur Malabarba and
+CIDER is distributed under the GNU General Public License, version 3.
+
+Copyright © 2012-2020 Bozhidar Batsov, Artur Malabarba, Tim King, Phil Hagelberg and
 [contributors](https://github.com/clojure-emacs/cider/contributors).
 
-Distributed under the GNU General Public License, version 3
-
 [badge-license]: https://img.shields.io/badge/license-GPL_3-green.svg
-[nREPL]:https://github.com/cemerick/nREPL
-[Sly]: https://github.com/capitaomorte/sly
+[nREPL]:https://github.com/nrepl/nrepl
+[Sly]: https://github.com/joaotavora/sly
 [Geiser]: https://github.com/jaor/geiser
 [clojure-mode]: https://github.com/clojure-emacs/clojure-mode
 [inf-clojure]: https://github.com/clojure-emacs/inf-clojure

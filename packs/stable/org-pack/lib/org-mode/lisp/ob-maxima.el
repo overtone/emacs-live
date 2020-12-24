@@ -1,11 +1,11 @@
-;;; ob-maxima.el --- org-babel functions for maxima evaluation
+;;; ob-maxima.el --- Babel Functions for Maxima      -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2009-2016 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2020 Free Software Foundation, Inc.
 
 ;; Author: Eric S Fraga
 ;;	Eric Schulte
 ;; Keywords: literate programming, reproducible research, maxima
-;; Homepage: http://orgmode.org
+;; Homepage: https://orgmode.org
 
 ;; This file is part of GNU Emacs.
 
@@ -20,16 +20,14 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 
 ;; Org-Babel support for evaluating maxima entries.
 ;;
 ;; This differs from most standard languages in that
-;;
 ;; 1) there is no such thing as a "session" in maxima
-;;
 ;; 2) we are adding the "cmdline" header argument
 
 ;;; Code:
@@ -48,9 +46,13 @@
 
 (defun org-babel-maxima-expand (body params)
   "Expand a block of Maxima code according to its header arguments."
-  (let ((vars (mapcar #'cdr (org-babel-get-header params :var))))
+  (let ((vars (org-babel--get-vars params))
+	(epilogue (cdr (assq :epilogue params)))
+	(prologue (cdr (assq :prologue params))))
     (mapconcat 'identity
 	       (list
+		;; Any code from the specified prologue at the start.
+		prologue
 		;; graphic output
 		(let ((graphic-file (ignore-errors (org-babel-graphical-output-file params))))
 		  (if graphic-file
@@ -62,6 +64,8 @@
 		(mapconcat 'org-babel-maxima-var-to-maxima vars "\n")
 		;; body
 		body
+		;; Any code from the specified epilogue at the end.
+		epilogue
 		"gnuplot_close ()$")
 	       "\n")))
 
@@ -69,9 +73,9 @@
   "Execute a block of Maxima entries with org-babel.
 This function is called by `org-babel-execute-src-block'."
   (message "executing Maxima source code block")
-  (let ((result-params (split-string (or (cdr (assoc :results params)) "")))
+  (let ((result-params (split-string (or (cdr (assq :results params)) "")))
 	(result
-	 (let* ((cmdline (or (cdr (assoc :cmdline params)) ""))
+	 (let* ((cmdline (or (cdr (assq :cmdline params)) ""))
 		(in-file (org-babel-temp-file "maxima-" ".max"))
 		(cmd (format "%s --very-quiet -r 'batchload(%S)$' %s"
 			     org-babel-maxima-command in-file cmdline)))
@@ -98,7 +102,7 @@ This function is called by `org-babel-execute-src-block'."
 	  (org-babel-import-elisp-from-file tmp-file))))))
 
 
-(defun org-babel-prep-session:maxima (session params)
+(defun org-babel-prep-session:maxima (_session _params)
   (error "Maxima does not support sessions"))
 
 (defun org-babel-maxima-var-to-maxima (pair)
@@ -119,9 +123,6 @@ of the same value."
       (concat "[" (mapconcat #'org-babel-maxima-elisp-to-maxima val ", ") "]")
     (format "%s" val)))
 
-
 (provide 'ob-maxima)
-
-
 
 ;;; ob-maxima.el ends here

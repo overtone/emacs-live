@@ -1,6 +1,6 @@
 ;;; multiple-cursors-core.el --- An experiment in multiple cursors for emacs.
 
-;; Copyright (C) 2012 Magnar Sveen
+;; Copyright (C) 2012-2016 Magnar Sveen
 
 ;; Author: Magnar Sveen <magnars@gmail.com>
 ;; Keywords: editing cursors
@@ -33,6 +33,23 @@
 (defface mc/cursor-face
   '((t (:inverse-video t)))
   "The face used for fake cursors"
+  :group 'multiple-cursors)
+
+(defface mc/cursor-bar-face
+  `((t (:height 1 :background ,(face-attribute 'cursor :background))))
+  "The face used for fake cursors if the cursor-type is bar"
+  :group 'multiple-cursors)
+
+(defcustom mc/match-cursor-style t
+  "If non-nil, attempt to match the cursor style that the user
+has selected.  Namely, use vertical bars the user has configured
+Emacs to use that cursor.
+
+If nil, just use standard rectangle cursors for all fake cursors.
+
+In some modes/themes, the bar fake cursors are either not
+rendered or shift text."
+  :type '(boolean)
   :group 'multiple-cursors)
 
 (defface mc/region-face
@@ -98,16 +115,39 @@
        (set-marker ,p nil)
        (set-marker ,s nil))))
 
+(defun mc/cursor-is-bar ()
+  "Return non-nil if the cursor is a bar."
+  (or (eq cursor-type 'bar)
+    (and (listp cursor-type)
+         (eq (car cursor-type) 'bar))))
+
+(defun mc/line-number-at-pos (&optional pos absolute)
+  "Faster implementation of `line-number-at-pos'."
+  (if pos
+      (save-excursion
+        (if absolute
+            (save-restriction
+              (widen)
+              (goto-char pos)
+              (string-to-number (format-mode-line "%l")))
+          (goto-char pos)
+          (string-to-number (format-mode-line "%l"))))
+    (string-to-number (format-mode-line "%l"))))
+
 (defun mc/make-cursor-overlay-at-eol (pos)
   "Create overlay to look like cursor at end of line."
   (let ((overlay (make-overlay pos pos nil nil nil)))
-    (overlay-put overlay 'after-string (propertize " " 'face 'mc/cursor-face))
+    (if (and mc/match-cursor-style (mc/cursor-is-bar))
+	(overlay-put overlay 'before-string (propertize "|" 'face 'mc/cursor-bar-face))
+      (overlay-put overlay 'after-string (propertize " " 'face 'mc/cursor-face)))
     overlay))
 
 (defun mc/make-cursor-overlay-inline (pos)
   "Create overlay to look like cursor inside text."
   (let ((overlay (make-overlay pos (1+ pos) nil nil nil)))
-    (overlay-put overlay 'face 'mc/cursor-face)
+    (if (and mc/match-cursor-style (mc/cursor-is-bar))
+	(overlay-put overlay 'before-string (propertize "|" 'face 'mc/cursor-bar-face))
+      (overlay-put overlay 'face 'mc/cursor-face))
     overlay))
 
 (defun mc/make-cursor-overlay-at-point ()
@@ -133,13 +173,27 @@ highlights the entire width of the window."
                                   yank-undo-function
                                   autopair-action
                                   autopair-wrap-action
-                                  er/history)
+                                  temporary-goal-column
+                                  er/history
+                                  dabbrev--abbrev-char-regexp
+                                  dabbrev--check-other-buffers
+                                  dabbrev--friend-buffer-list
+                                  dabbrev--last-abbrev-location
+                                  dabbrev--last-abbreviation
+                                  dabbrev--last-buffer
+                                  dabbrev--last-buffer-found
+                                  dabbrev--last-direction
+                                  dabbrev--last-expansion
+                                  dabbrev--last-expansion-location
+                                  dabbrev--last-table)
   "A list of vars that need to be tracked on a per-cursor basis.")
 
 (defun mc/store-current-state-in-overlay (o)
   "Store relevant info about point and mark in the given overlay."
   (overlay-put o 'point (set-marker (make-marker) (point)))
-  (overlay-put o 'mark (set-marker (make-marker) (mark)))
+  (overlay-put o 'mark (set-marker (make-marker)
+				   (let ((mark-even-if-inactive t))
+				     (mark))))
   (dolist (var mc/cursor-specific-vars)
     (when (boundp var) (overlay-put o var (symbol-value var))))
   o)
@@ -310,6 +364,16 @@ cursor with updated info."
     (mc/pop-state-from-overlay mc--stored-state-for-undo)
     (setq mc--stored-state-for-undo nil)))
 
+(defcustom mc/always-run-for-all nil
+  "Disables whitelisting and always executes commands for every fake cursor."
+  :type '(boolean)
+  :group 'multiple-cursors)
+
+(defcustom mc/always-repeat-command nil
+  "Disables confirmation for `mc/repeat-command' command."
+  :type '(boolean)
+  :group 'multiple-cursors)
+
 (defun mc/prompt-for-inclusion-in-whitelist (original-command)
   "Asks the user, then adds the command either to the once-list or the all-list."
   (let ((all-p (y-or-n-p (format "Do %S for all cursors?" original-command))))
@@ -396,10 +460,15 @@ the original cursor, to inform about the lack of support."
                   (message "%S is not supported with multiple cursors%s"
                            original-command
                            (get original-command 'mc--unsupported))
+
+                ;; lazy-load the user's list file
+                (mc/load-lists)
+
                 (when (and original-command
                            (not (memq original-command mc--default-cmds-to-run-once))
                            (not (memq original-command mc/cmds-to-run-once))
-                           (or (memq original-command mc--default-cmds-to-run-for-all)
+                           (or mc/always-run-for-all
+                               (memq original-command mc--default-cmds-to-run-for-all)
                                (memq original-command mc/cmds-to-run-for-all)
                                (mc/prompt-for-inclusion-in-whitelist original-command)))
                   (mc/execute-command-for-all-fake-cursors original-command))))))))))
@@ -421,6 +490,17 @@ you should disable multiple-cursors-mode."
       (multiple-cursors-mode 0)
     (deactivate-mark)))
 
+(defun mc/repeat-command ()
+  "Run last command from `command-history' for every fake cursor."
+  (interactive)
+  (when (or mc/always-repeat-command
+            (y-or-n-p (format "[mc] repeat complex command: %s? " (caar command-history))))
+    (mc/execute-command-for-all-fake-cursors
+     (lambda () (interactive)
+       (cl-letf (((symbol-function 'read-from-minibuffer)
+                  (lambda (p &optional i k r h d m) (read i))))
+         (repeat-complex-command 0))))))
+
 (defvar mc/keymap nil
   "Keymap while multiple cursors are active.
 Main goal of the keymap is to rebind C-g and <return> to conclude
@@ -429,6 +509,7 @@ multiple cursors editing.")
   (setq mc/keymap (make-sparse-keymap))
   (define-key mc/keymap (kbd "C-g") 'mc/keyboard-quit)
   (define-key mc/keymap (kbd "<return>") 'multiple-cursors-mode)
+  (define-key mc/keymap (kbd "C-:") 'mc/repeat-command)
   (when (fboundp 'phi-search)
     (define-key mc/keymap (kbd "C-s") 'phi-search))
   (when (fboundp 'phi-search-backward)
@@ -530,14 +611,15 @@ from being executed if in multiple-cursors-mode."
 (unsupported-cmd isearch-backward ". Feel free to add a compatible version.")
 
 ;; Make sure pastes from other programs are added to all kill-rings when yanking
-(defadvice current-kill (before interprogram-paste-for-all-cursors activate)
+(defadvice current-kill (before interprogram-paste-for-all-cursors
+				(n &optional do-not-move) activate)
   (let ((interprogram-paste (and (= n 0)
                                  interprogram-paste-function
                                  (funcall interprogram-paste-function))))
     (when interprogram-paste
       ;; Add interprogram-paste to normal kill ring, just
       ;; like current-kill usually does for itself.
-      ;; We have to do the work for it tho, since the funcall only returns
+      ;; We have to do the work for it though, since the funcall only returns
       ;; something once. It is not a pure function.
       (let ((interprogram-cut-function nil))
         (if (listp interprogram-paste)
@@ -554,9 +636,20 @@ from being executed if in multiple-cursors-mode."
            (overlay-put cursor 'kill-ring kill-ring)
            (overlay-put cursor 'kill-ring-yank-pointer kill-ring-yank-pointer)))))))
 
-(defvar mc/list-file (locate-user-emacs-file ".mc-lists.el")
+(defcustom mc/list-file (locate-user-emacs-file ".mc-lists.el")
   "The position of the file that keeps track of your preferences
-for running commands with multiple cursors.")
+for running commands with multiple cursors."
+  :type 'file
+  :group 'multiple-cursors)
+
+(defvar mc--list-file-loaded nil
+  "Whether the list file has already been loaded.")
+
+(defun mc/load-lists ()
+  "Loads preferences for running commands with multiple cursors from `mc/list-file'"
+  (unless mc--list-file-loaded
+    (load mc/list-file 'noerror 'nomessage)
+    (setq mc--list-file-loaded t)))
 
 (defun mc/dump-list (list-symbol)
   "Insert (setq 'LIST-SYMBOL LIST-VALUE) to current buffer."
@@ -600,6 +693,8 @@ for running commands with multiple cursors.")
                                      mc/mark-next-word-like-this
                                      mc/mark-next-symbol-like-this
                                      mc/mark-previous-like-this
+                                     mc/mark-previous-like-this-word
+                                     mc/mark-previous-like-this-symbol
                                      mc/mark-previous-word-like-this
                                      mc/mark-previous-symbol-like-this
                                      mc/mark-all-like-this
@@ -631,13 +726,16 @@ for running commands with multiple cursors.")
                                      mc/skip-to-previous-like-this
                                      rrm/switch-to-multiple-cursors
                                      mc-hide-unmatched-lines-mode
+                                     mc/repeat-command
                                      hum/keyboard-quit
                                      hum/unhide-invisible-overlays
                                      save-buffer
                                      ido-exit-minibuffer
+                                     ivy-done
                                      exit-minibuffer
                                      minibuffer-complete-and-exit
                                      execute-extended-command
+                                     eval-expression
                                      undo
                                      redo
                                      undo-tree-undo
@@ -671,7 +769,8 @@ for running commands with multiple cursors.")
                                      windmove-left
                                      windmove-right
                                      windmove-up
-                                     windmove-down))
+                                     windmove-down
+                                     repeat-complex-command))
 
 (defvar mc--default-cmds-to-run-for-all nil
   "Default set of commands that should be mirrored by all cursors")
@@ -756,9 +855,9 @@ for running commands with multiple cursors.")
 (defvar mc/cmds-to-run-for-all nil
   "Commands to run for all cursors in multiple-cursors-mode")
 
-(load mc/list-file t) ;; load, but no errors if it does not exist yet please
-
 (provide 'multiple-cursors-core)
+(require 'mc-cycle-cursors)
+(require 'mc-hide-unmatched-lines-mode)
 
 ;; Local Variables:
 ;; coding: utf-8

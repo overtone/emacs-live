@@ -42,6 +42,8 @@
 
 (defvar haskell-navigate-imports-start-point nil)
 
+(defvar haskell-literate) ; defined in haskell-mode.el
+
 ;;;###autoload
 (defun haskell-navigate-imports (&optional return)
   "Cycle the Haskell import lines or return to point (with prefix arg)."
@@ -81,8 +83,11 @@
         (progn (goto-char (point-min))
                (if (haskell-navigate-imports-find-forward-line)
                    (haskell-navigate-imports-go-internal)
-                 (when (search-forward-regexp "^module" nil t 1)
-                   (search-forward "\n\n" nil t 1))))))))
+                 (let ((module (if (eq haskell-literate 'bird)
+                                   "^> ?module"
+                                 "^module")))
+                   (when (search-forward-regexp module nil t 1)
+                     (search-forward "\n\n" nil t 1)))))))))
 
 (defun haskell-navigate-imports-goto-end ()
   "Skip a bunch of consecutive import lines."
@@ -105,8 +110,11 @@
 (defun haskell-navigate-imports-line ()
   "Try to match the current line as a regexp."
   (let ((line (buffer-substring-no-properties (line-beginning-position)
-                                              (line-end-position))))
-    (if (string-match "^import " line)
+                                              (line-end-position)))
+        (import (if (eq haskell-literate 'bird)
+                    "^> ?import "
+                  "^import ")))
+    (if (string-match import line)
         line
       nil)))
 

@@ -45,6 +45,9 @@
   :type 'string
   :group 'ghc-core)
 
+(define-obsolete-variable-alias 'ghc-core-create-options 'ghc-core-program-args
+  "haskell-mode 13.7")
+
 (defcustom ghc-core-program-args
   '("-O2")
   "Additional options to be passed to GHC when generating core output.
@@ -65,9 +68,6 @@ The following `-ddump-simpl` options might be of interest:
 See `M-x manual-entry RET ghc' for more details."
   :type '(repeat (string :tag "Argument"))
   :group 'ghc-core)
-
-(define-obsolete-variable-alias 'ghc-core-create-options 'ghc-core-program-args
-  "haskell-mode 13.7")
 
 (defun ghc-core-clean-region (start end)
   "Remove commonly ignored annotations and namespace prefixes

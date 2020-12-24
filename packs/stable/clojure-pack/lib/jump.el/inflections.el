@@ -47,47 +47,54 @@
 
 (defmacro inflection--string=~ (regex string &rest body)
   "Regex matching similar to the =~ operator found in other languages."
-  (let ((str (gensym)))
+  (let ((str (cl-gensym)))
     `(let ((,str ,string))
-       (when (string-match ,regex ,str)
-         (cl-symbol-macrolet ,(cl-loop for i to 9 collect
-                                       (let ((sym (intern (concat "$" (number-to-string i)))))
-                                         `(,sym (match-string ,i ,str))))
-           (cl-flet (($ (i) (match-string i ,str))
-                     (sub (replacement &optional (i 0) &key fixedcase literal-string)
-                          (replace-match replacement fixedcase literal-string ,str i)))
-             (cl-symbol-macrolet ( ;;before
-                                  ($b (substring ,str 0 (match-beginning 0)))
-                                  ;;match
-                                  ($m (match-string 0 ,str))
-                                  ;;after
-                                  ($a (substring ,str (match-end 0) (length ,str))))
-               ,@body)))))))
+       (save-match-data
+         (when (string-match ,regex ,str)
+           (cl-symbol-macrolet ,(cl-loop for i to 9 collect
+                                         (let ((sym (intern (concat "$" (number-to-string i)))))
+                                           `(,sym (match-string ,i ,str))))
+             (cl-flet (($ (i) (match-string i ,str))
+                       (sub (replacement &optional (i 0) &key fixedcase literal-string)
+                            (replace-match replacement fixedcase literal-string ,str i)))
+               (cl-symbol-macrolet ( ;;before
+                                    ($b (substring ,str 0 (match-beginning 0)))
+                                    ;;match
+                                    ($m (match-string 0 ,str))
+                                    ;;after
+                                    ($a (substring ,str (match-end 0) (length ,str))))
+                 ,@body))))))))
 
 (define-inflectors
+  ;; Rules copied from https://github.com/rails/rails/blob/master/activesupport/lib/active_support/inflections.rb
   (:plural "$" "s")
   (:plural "s$" "s")
   (:plural "\\(ax\\|test\\)is$" "\\1es")
   (:plural "\\(octop\\|vir\\)us$" "\\1i")
+  (:plural "\\(octop\\|vir\\)i$" "\\1i")
   (:plural "\\(alias\\|status\\)$" "\\1es")
   (:plural "\\(bu\\)s$" "\\1ses")
   (:plural "\\(buffal\\|tomat\\)o$" "\\1oes")
   (:plural "\\([ti]\\)um$" "\\1a")
+  (:plural "\\([ti]\\)a$" "\\1a")
   (:plural "sis$" "ses")
   (:plural "\\(?:\\([^f]\\)fe\\|\\([lr]\\)f\\)$" "\\1\\2ves")
   (:plural "\\(hive\\)$" "\\1s")
   (:plural "\\([^aeiouy]\\|qu\\)y$" "\\1ies")
   (:plural "\\(x\\|ch\\|ss\\|sh\\)$" "\\1es")
-  (:plural "\\(matr\\|vert\\|ind\\)ix\\|ex$" "\\1ices")
-  (:plural "\\([m\\|l]\\)ouse$" "\\1ice")
+  (:plural "\\(matr\\|vert\\|ind\\)\\(ix\\|ex\\)$" "\\1ices")
+  (:plural "\\(m\\|l\\)ouse$" "\\1ice")
+  (:plural "\\(m\\|l\\)ice$" "\\1ice")
   (:plural "^\\(ox\\)$" "\\1en")
+  (:plural "^\\(oxen\\)$" "\\1")
   (:plural "\\(quiz\\)$" "\\1zes")
 
   (:singular "s$" "")
+  (:singular "\\(ss\\)$" "\\1")
   (:singular "\\(n\\)ews$" "\\1ews")
   (:singular "\\([ti]\\)a$" "\\1um")
-  (:singular "\\(\\(a\\)naly\\|\\(b\\)a\\|\\(d\\)iagno\\|\\(p\\)arenthe\\|\\(p\\)rogno\\|\\(s\\)ynop\\|\\(t\\)he\\)ses$" "\\1\\2sis")
-  (:singular "\\(^analy\\)ses$" "\\1sis")
+  (:singular "\\(\\(a\\)naly\\|\\(b\\)a\\|\\(d\\)iagno\\|\\(p\\)arenthe\\|\\(p\\)rogno\\|\\(s\\)ynop\\|\\(t\\)he\\)\\(ses\\|sis\\)$" "\\1sis")
+  (:singular "\\(^analy\\)\\(ses\\|sis\\)$" "\\1sis")
   (:singular "\\([^f]\\)ves$" "\\1fe")
   (:singular "\\(hive\\)s$" "\\1")
   (:singular "\\(tive\\)s$" "\\1")
@@ -96,48 +103,48 @@
   (:singular "\\(s\\)eries$" "\\1eries")
   (:singular "\\(m\\)ovies$" "\\1ovie")
   (:singular "\\(x\\|ch\\|ss\\|sh\\)es$" "\\1")
-  (:singular "\\([m\\|l]\\)ice$" "\\1ouse")
-  (:singular "\\(bus\\)es$" "\\1")
+  (:singular "\\(m\\|l\\)ice$" "\\1ouse")
+  (:singular "\\(bus\\)\\(es\\)?$" "\\1")
   (:singular "\\(o\\)es$" "\\1")
   (:singular "\\(shoe\\)s$" "\\1")
-  (:singular "\\(cris\\|ax\\|test\\)es$" "\\1is")
-  (:singular "\\(octop\\|vir\\)i$" "\\1us")
-  (:singular "\\(alias\\|status\\)es$" "\\1")
+  (:singular "\\(cris\\|test\\)\\(is\\|es\\)$" "\\1is")
+  (:singular "^\\(a\\)x[ie]s$" "\\1xis")
+  (:singular "\\(octop\\|vir\\)\\(us\\|i\\)$" "\\1us")
+  (:singular "\\(alias\\|status\\)\\(es\\)?$" "\\1")
   (:singular "^\\(ox\\)en" "\\1")
   (:singular "\\(vert\\|ind\\)ices$" "\\1ex")
   (:singular "\\(matr\\)ices$" "\\1ix")
   (:singular "\\(quiz\\)zes$" "\\1")
+  (:singular "\\(database\\)s$" "\\1")
 
-  (:irregular "stratum" "strate")
-  (:irregular "syllabus" "syllabi")
-  (:irregular "radius" "radii")
-  (:irregular "addendum" "addenda")
-  (:irregular "cactus" "cacti")
-  (:irregular "child" "children")
-  (:irregular "corpus" "corpora")
-  (:irregular "criterion" "criteria")
-  (:irregular "datum" "data")
-  (:irregular "genus" "genera")
-  (:irregular "man" "men")
-  (:irregular "medium" "media")
-  (:irregular "move" "moves")
   (:irregular "person" "people")
   (:irregular "man" "men")
   (:irregular "child" "children")
   (:irregular "sex" "sexes")
   (:irregular "move" "moves")
+  (:irregular "zombie" "zombies")
 
-  (:uncountable "equipment" "information" "rice" "money" "species" "series" "fish" "sheep" "news"))
+  ;; Additional rules that are not in ActiveSupport::Inflections
+  (:irregular "syllabus" "syllabi")
+  (:irregular "radius" "radii")
+  (:irregular "addendum" "addenda")
+  (:irregular "cactus" "cacti")
+  (:irregular "corpus" "corpora")
+  (:irregular "criterion" "criteria")
+  (:irregular "genus" "genera")
+  (:irregular "medium" "media")
+
+  (:uncountable "equipment" "information" "rice" "money" "species" "series" "fish" "sheep" "jeans" "police"))
 
 ;;;###autoload
 (defun inflection-singularize-string (str)
   "Return the singularized version of STR."
   (when (stringp str)
     (or (car (member str inflection-uncountables))
-        (caar (member* (downcase str) inflection-irregulars :key 'cadr :test 'equal))
+        (caar (cl-member (downcase str) inflection-irregulars :key 'cadr :test 'equal))
         (cl-loop for (from to) in inflection-singulars
                  for singular = (inflection--string=~ from str (sub to))
-                 when singular do (return singular))
+                 when singular return singular)
         str)))
 
 ;;;###autoload
@@ -148,10 +155,10 @@
   "Return the pluralized version of STR."
   (when (stringp str)
     (or (car (member str inflection-uncountables))
-        (cadar (member* (downcase str) inflection-irregulars :key 'car :test 'equal))
+        (cl-cadar (cl-member (downcase str) inflection-irregulars :key 'car :test 'equal))
         (cl-loop for (from to) in inflection-plurals
                  for plurals = (inflection--string=~ from str (sub to))
-                 when plurals do (return plurals))
+                 when plurals return plurals)
         str)))
 
 ;;;###autoload

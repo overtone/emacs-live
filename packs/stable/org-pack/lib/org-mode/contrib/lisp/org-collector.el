@@ -1,11 +1,11 @@
 ;;; org-collector --- collect properties into tables
 
-;; Copyright (C) 2008-2016 Free Software Foundation, Inc.
+;; Copyright (C) 2008-2020 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte <schulte dot eric at gmail dot com>
 ;; Keywords: outlines, hypermedia, calendar, wp, experimentation,
 ;;           organization, properties
-;; Homepage: http://orgmode.org
+;; Homepage: https://orgmode.org
 ;; Version: 0.01
 
 ;; This file is not yet part of GNU Emacs.
@@ -111,7 +111,7 @@ a column, or through the generation of an error.")
 
 (defun org-dblock-write:propview (params)
   "collect the column specification from the #+cols line
-preceeding the dblock, then update the contents of the dblock."
+preceding the dblock, then update the contents of the dblock."
   (interactive)
   (condition-case er
       (let ((cols (plist-get params :cols))
@@ -186,7 +186,8 @@ variables and values specified in props"
 	 (header-props
 	  (mapcar (lambda (props)
 		    (mapcar (lambda (pair)
-			      (cons (car pair) (org-babel-read (cdr pair))))
+			      (let ((inhibit-lisp-eval (string= (car pair) "ITEM")))
+				(cons (car pair) (org-babel-read (cdr pair) inhibit-lisp-eval))))
 			    props))
 		  header-props))
 	 ;; collect all property names

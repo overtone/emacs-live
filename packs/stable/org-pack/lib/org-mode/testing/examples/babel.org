@@ -112,21 +112,17 @@
 
 #+name: pascals-triangle
 #+begin_src emacs-lisp :var n=5 :exports both
-  (require 'cl)
-  (defalias 'my-map (if (org-version-check "24.2.50" "cl" :predicate)
-                        'cl-map
-                      'map))
-  (defun pascals-triangle (n)
-    (if (= n 0)
-        (list (list 1))
-      (let* ((prev-triangle (pascals-triangle (- n 1)))
-             (prev-row (car (reverse prev-triangle))))
-        (append prev-triangle
-                (list (my-map 'list #'+
-                              (append prev-row '(0))
-                              (append '(0) prev-row)))))))
-  
-  (pascals-triangle n)
+(defun pascals-triangle (n)
+  (if (= n 0)
+      (list (list 1))
+    (let* ((prev-triangle (pascals-triangle (- n 1)))
+           (prev-row (car (reverse prev-triangle))))
+      (append prev-triangle
+              (list (cl-map 'list #'+
+                            (append prev-row '(0))
+                            (append '(0) prev-row)))))))
+
+(pascals-triangle n)
 #+end_src
 
 * calling code blocks from inside table
@@ -141,7 +137,7 @@
 
 * executing an lob call line
   :PROPERTIES:
-  :results:  silent
+  :header-args: :results  silent
   :ID:       fab7e291-fde6-45fc-bf6e-a485b8bca2f0
   :END:
 
@@ -193,7 +189,6 @@ an = sign.
 
 * inline source block
   :PROPERTIES:
-  :results:  silent
   :ID:       54cb8dc3-298c-4883-a933-029b3c9d4b18
   :END:
 Here is one in the middle src_sh{echo 1} of a line.
@@ -203,8 +198,7 @@ src_sh{echo 3} Here is one at the beginning of a line.
 * exported inline source block
 :PROPERTIES:
 :ID:       cd54fc88-1b6b-45b6-8511-4d8fa7fc8076
-:results:  silent
-:exports:  code
+:header-args: :exports  code
 :END:
 Here is one in the middle src_sh{echo 1} of a line.
 Here is one at the end of a line. src_sh{echo 2}
@@ -232,7 +226,7 @@ Here is one that is also evaluated: src_sh[:exports both]{echo 4}
 * using the =:noweb-ref= header argument
   :PROPERTIES:
   :ID:       54d68d4b-1544-4745-85ab-4f03b3cbd8a0
-  :noweb-sep: ""
+  :header-args: :noweb-sep ""
   :END:
 
 #+begin_src sh :tangle yes :noweb yes :shebang "#!/bin/sh"
@@ -261,7 +255,7 @@ Here is one that is also evaluated: src_sh[:exports both]{echo 4}
 * resolving sub-trees as references
   :PROPERTIES:
   :ID:       2409e8ba-7b5f-4678-8888-e48aa02d8cb4
-  :results:  silent
+  :header-args: :results  silent
   :END:
 
 #+begin_src emacs-lisp :var text=d4faa7b3-072b-4dcf-813c-dd7141c633f3
@@ -284,26 +278,6 @@ this is simple
    :ID:       d4faa7b3-072b-4dcf-813c-dd7141c633f3
    :END:
 has length 14
-
-* org-babel-get-inline-src-block-matches
-  :PROPERTIES:
-  :results:  silent
-  :ID:       0D0983D4-DE33-400A-8A05-A225A567BC74
-  :END:
-src_sh{echo "One"} block at start of line
- One spaced block in  src_sh{ echo "middle" } of line
-src_sh{echo 2} blocks on the src_emacs-lisp{"same"} line
- Inline block with src_sh[:results silent]{ echo "parameters" }.
-
-* org-babel-get-inline-src-block-matches (with empty args)
-  :PROPERTIES:
-  :results:  silent
-  :ID:       d55dada7-de0e-4340-8061-787cccbedee5
-  :END:
-src_sh[]{echo "One"} block at start of line
- One spaced block in  src_sh[]{ echo "middle" } of line
-src_sh[]{echo 2} blocks on the src_emacs-lisp[]{"same"} line
- Inline block with src_sh[:results silent]{ echo "parameters" }.
 
 * exporting a code block with a name
   :PROPERTIES:
@@ -337,7 +311,7 @@ and another
 
 * in order evaluation on export
   :PROPERTIES:
-  :exports: results
+  :header-args: :exports results
   :ID:       96cc7073-97ec-4556-87cf-1f9bffafd317
   :END:
 
@@ -514,3 +488,16 @@ nil
 #+BEGIN_SRC emacs-lisp :output-dir xxx :file foo.bar
 nil
 #+END_SRC
+* detangle
+** false positive
+The =[[= causes a false positive which ~org-babel-detangle~ should handle properly
+#+begin_src emacs-lisp :tangle yes
+(string-match-p "^#[[:digit:]]+$" "#123")
+#+end_src
+** linked content to detangle
+:PROPERTIES:
+:ID:       73115FB0-6565-442B-BB95-50195A499EF4
+:END:
+#+begin_src emacs-lisp :tangle yes :comments link
+  ;; detangle
+#+end_src

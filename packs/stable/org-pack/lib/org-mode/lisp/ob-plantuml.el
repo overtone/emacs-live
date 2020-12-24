@@ -1,10 +1,10 @@
-;;; ob-plantuml.el --- org-babel functions for plantuml evaluation
+;;; ob-plantuml.el --- Babel Functions for Plantuml  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2010-2016 Free Software Foundation, Inc.
+;; Copyright (C) 2010-2020 Free Software Foundation, Inc.
 
 ;; Author: Zhang Weize
 ;; Keywords: literate programming, reproducible research
-;; Homepage: http://orgmode.org
+;; Homepage: https://orgmode.org
 
 ;; This file is part of GNU Emacs.
 
@@ -19,19 +19,19 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 
 ;; Org-Babel support for evaluating plantuml script.
 ;;
 ;; Inspired by Ian Yang's org-export-blocks-format-plantuml
-;; http://www.emacswiki.org/emacs/org-export-blocks-format-plantuml.el
+;; https://www.emacswiki.org/emacs/org-export-blocks-format-plantuml.el
 
 ;;; Requirements:
 
 ;; plantuml     | http://plantuml.sourceforge.net/
-;; plantuml.jar | `org-plantuml-jar-path' should point to the jar file
+;; plantuml.jar | `org-plantuml-jar-path' should point to the jar file (when exec mode is `jar')
 
 ;;; Code:
 (require 'ob)
@@ -46,40 +46,111 @@
   :version "24.1"
   :type 'string)
 
+(defcustom org-plantuml-exec-mode 'jar
+  "Method to use for PlantUML diagram generation.
+`jar' means to use java together with the JAR.
+The JAR can be configured via `org-plantuml-jar-path'.
+
+`plantuml' means to use the PlantUML executable.
+The executable can be configured via `org-plantuml-executable-path'.
+You can also configure extra arguments via `org-plantuml-executable-args'."
+  :group 'org-babel
+  :package-version '(Org . "9.4")
+  :type 'symbol
+  :options '(jar plantuml))
+
+(defcustom org-plantuml-executable-path "plantuml"
+  "File name of the PlantUML executable."
+  :group 'org-babel
+  :package-version '(Org . "9.4")
+  :type 'string)
+
+(defcustom org-plantuml-executable-args (list "-headless")
+  "The arguments passed to plantuml executable when executing PlantUML."
+  :group 'org-babel
+  :package-version '(Org . "9.4")
+  :type '(repeat string))
+
+(defun org-babel-variable-assignments:plantuml (params)
+  "Return a list of PlantUML statements assigning the block's variables.
+PARAMS is a property list of source block parameters, which may
+contain multiple entries for the key `:var'.  `:var' entries in PARAMS
+are expected to be scalar variables."
+  (mapcar
+   (lambda (pair)
+       (format "!define %s %s"
+	       (car pair)
+	       (replace-regexp-in-string "\"" "" (cdr pair))))
+   (org-babel--get-vars params)))
+
+(defun org-babel-plantuml-make-body (body params)
+  "Return PlantUML input string.
+
+BODY is the content of the source block and PARAMS is a property list
+of source block parameters.  This function relies on the
+`org-babel-expand-body:generic' function to extract `:var' entries
+from PARAMS and on the `org-babel-variable-assignments:plantuml'
+function to convert variables to PlantUML assignments.
+
+If BODY does not contain @startXXX ... @endXXX clauses, @startuml
+... @enduml will be added."
+  (let ((full-body
+	 (org-babel-expand-body:generic
+	  body params (org-babel-variable-assignments:plantuml params))))
+    (if (string-prefix-p "@start" body t) full-body
+      (format "@startuml\n%s\n@enduml" full-body))))
+
 (defun org-babel-execute:plantuml (body params)
   "Execute a block of plantuml code with org-babel.
 This function is called by `org-babel-execute-src-block'."
-  (let* ((result-params (split-string (or (cdr (assoc :results params)) "")))
-	 (out-file (or (cdr (assoc :file params))
+  (let* ((out-file (or (cdr (assq :file params))
 		       (error "PlantUML requires a \":file\" header argument")))
-	 (cmdline (cdr (assoc :cmdline params)))
+	 (cmdline (cdr (assq :cmdline params)))
 	 (in-file (org-babel-temp-file "plantuml-"))
-	 (java (or (cdr (assoc :java params)) ""))
-	 (cmd (if (string= "" org-plantuml-jar-path)
-		  (error "`org-plantuml-jar-path' is not set")
-		(concat "java " java " -jar "
-			(shell-quote-argument
-			 (expand-file-name org-plantuml-jar-path))
-			(if (string= (file-name-extension out-file) "svg")
-			    " -tsvg" "")
-			(if (string= (file-name-extension out-file) "eps")
-			    " -teps" "")
-			" -p " cmdline " < "
-			(org-babel-process-file-name in-file)
-			" > "
-			(org-babel-process-file-name out-file)))))
-    (unless (file-exists-p org-plantuml-jar-path)
-      (error "Could not find plantuml.jar at %s" org-plantuml-jar-path))
-    (with-temp-file in-file (insert (concat "@startuml\n" body "\n@enduml")))
+	 (java (or (cdr (assq :java params)) ""))
+	 (executable (cond ((eq org-plantuml-exec-mode 'plantuml) org-plantuml-executable-path)
+			   (t "java")))
+	 (executable-args (cond ((eq org-plantuml-exec-mode 'plantuml) org-plantuml-executable-args)
+				((string= "" org-plantuml-jar-path)
+				 (error "`org-plantuml-jar-path' is not set"))
+				((not (file-exists-p org-plantuml-jar-path))
+				 (error "Could not find plantuml.jar at %s" org-plantuml-jar-path))
+				(t (list java
+					 "-jar"
+					 (shell-quote-argument (expand-file-name org-plantuml-jar-path))))))
+	 (full-body (org-babel-plantuml-make-body body params))
+	 (cmd (mapconcat #'identity
+			 (append
+			  (list executable)
+			  executable-args
+			  (pcase (file-name-extension out-file)
+			    ("png" '("-tpng"))
+			    ("svg" '("-tsvg"))
+			    ("eps" '("-teps"))
+			    ("pdf" '("-tpdf"))
+			    ("tex" '("-tlatex"))
+			    ("vdx" '("-tvdx"))
+			    ("xmi" '("-txmi"))
+			    ("scxml" '("-tscxml"))
+			    ("html" '("-thtml"))
+			    ("txt" '("-ttxt"))
+			    ("utxt" '("-utxt")))
+			  (list
+			   "-p"
+			   cmdline
+			   "<"
+			   (org-babel-process-file-name in-file)
+			   ">"
+			   (org-babel-process-file-name out-file)))
+			 " ")))
+    (with-temp-file in-file (insert full-body))
     (message "%s" cmd) (org-babel-eval cmd "")
     nil)) ;; signal that output has already been written to file
 
-(defun org-babel-prep-session:plantuml (session params)
+(defun org-babel-prep-session:plantuml (_session _params)
   "Return an error because plantuml does not support sessions."
   (error "Plantuml does not support sessions"))
 
 (provide 'ob-plantuml)
-
-
 
 ;;; ob-plantuml.el ends here

@@ -1,6 +1,6 @@
 ;;; cider-resolve.el --- Resolve clojure symbols according to current nREPL connection
 
-;; Copyright © 2015-2018 Bozhidar Batsov, Artur Malabarba and CIDER contributors
+;; Copyright © 2015-2020 Bozhidar Batsov, Artur Malabarba and CIDER contributors
 
 ;; Author: Artur Malabarba <bruce.connor.am@gmail.com>
 
@@ -60,7 +60,7 @@
 ;;                                              (("m" "f")))
 ;;                       "wrap-tracker"   (dict "arglists"
 ;;                                              (("handler"))))
-;;       "refers" (dict "set-descriptor!" "#'clojure.tools.nrepl.middleware/set-descriptor!"))
+;;       "refers" (dict "set-descriptor!" "#'nrepl.middleware/set-descriptor!"))
 
 ;;; Code:
 
@@ -95,8 +95,8 @@ Return nil only if VAR cannot be resolved."
      (cider-resolve--get-in (or var-ns ns) "interns" name)
      (unless var-ns
        ;; If the var had no prefix, it might be referred.
-       (if-let* ((referal (cider-resolve--get-in ns "refers" name)))
-           (cider-resolve-var ns referal)
+       (if-let* ((referral (cider-resolve--get-in ns "refers" name)))
+           (cider-resolve-var ns referral)
          ;; Or it might be from core.
          (unless (equal ns "clojure.core")
            (cider-resolve-var "clojure.core" name)))))))
@@ -107,7 +107,7 @@ This will be clojure.core or cljs.core depending on the return value of the
 function `cider-repl-type'."
   (when-let* ((repl (cider-current-repl)))
     (with-current-buffer repl
-      (cider-resolve--get-in (if (equal cider-repl-type "cljs")
+      (cider-resolve--get-in (if (eq cider-repl-type 'cljs)
                                  "cljs.core"
                                "clojure.core")))))
 

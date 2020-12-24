@@ -1,4 +1,4 @@
-;;; haskell-utils-tests.el --- Tests for Haskell utilities package
+;;; haskell-utils-tests.el --- Tests for Haskell utilities package  -*- lexical-binding: t -*-
 
 ;; Copyright © 2016 Arthur Fayzrakhmanov. All rights reserved.
 

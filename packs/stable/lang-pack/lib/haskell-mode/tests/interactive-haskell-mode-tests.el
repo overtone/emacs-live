@@ -1,4 +1,4 @@
-;;; interactive-haskell-mode-tests.el --- Tests for Haskell Interactive Mode
+;;; interactive-haskell-mode-tests.el --- Tests for Haskell Interactive Mode  -*- lexical-binding: t -*-
 
 ;; Copyright © 2016 Athur Fayzrakhmanov. All rights reserved.
 

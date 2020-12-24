@@ -89,3 +89,45 @@ Feature: Stop referring
     (+ (lib/a 1) (lib/b 2))
     (+ (A 1) (B 2))
     """
+
+  Scenario: With :as after the :refer
+    When I insert:
+    """
+    (ns cljr.core
+      (:require [my.lib :refer [a b] :as lib]))
+
+    (+ (a 1) (b 2))
+    (+ (A 1) (B 2))
+    """
+    And I place the cursor before "my.lib"
+    And I press "C-! sr"
+    Then I should see:
+    """
+    (ns cljr.core
+      (:require [my.lib :as lib]))
+
+    (+ (lib/a 1) (lib/b 2))
+    (+ (A 1) (B 2))
+    """
+
+  Scenario: With string literals, #402
+    When I insert:
+    """
+    (ns cljr.core
+      (:require [my.lib :refer [a foo]]))
+
+    (def x "Hello foo")
+
+    (+ (a 1) (foo 2))
+    """
+    And I place the cursor before "my.lib"
+    And I press "C-! sr"
+    Then I should see:
+    """
+    (ns cljr.core
+      (:require [my.lib]))
+
+    (def x "Hello foo")
+
+    (+ (my.lib/a 1) (my.lib/foo 2))
+    """

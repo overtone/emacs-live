@@ -1,6 +1,6 @@
 ;;; cider-client-tests.el
 
-;; Copyright © 2012-2018 Tim King, Bozhidar Batsov
+;; Copyright © 2012-2020 Tim King, Bozhidar Batsov
 
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Bozhidar Batsov <bozhidar@batsov.com>
@@ -35,7 +35,11 @@
 ;;; cider-client tests
 
 (describe "cider-var-info"
-  (it "returns vars info as an alist"
+  (it "handles gracefully empty input"
+    (expect (cider-var-info nil) :to-equal nil)
+    (expect (cider-var-info "") :to-equal nil))
+
+  (it "returns vars info as an nREPL dict"
     (spy-on 'cider-sync-request:info :and-return-value
             '(dict
               "arglists" "([] [x] [x & ys])"
@@ -49,12 +53,29 @@
               "file" "jar:file:/clojure-1.5.1.jar!/clojure/core.clj"
               "tag" "class java.lang.String"
               "status" ("done")))
-    (spy-on 'cider-ensure-op-supported :and-return-value t)
+    (spy-on 'cider-nrepl-op-supported-p :and-return-value t)
     (spy-on 'cider-nrepl-eval-session :and-return-value nil)
     (spy-on 'cider-current-ns :and-return-value "user")
     (expect (nrepl-dict-get (cider-var-info "str") "doc")
-            :to-equal "stub")
-    (expect (cider-var-info "") :to-equal nil)))
+            :to-equal "stub"))
+
+  (it "fallbacks to eval in the absence of the info middleware"
+    (spy-on 'cider-fallback-eval:info :and-return-value
+            '(dict
+              "arglists" "([] [x] [x & ys])"
+              "ns" "clojure.core"
+              "name" "str"
+              "column" 1
+              "added" "1.0"
+              "static" "true"
+              "doc" "stub"
+              "line" 504
+              "file" "jar:file:/clojure-1.5.1.jar!/clojure/core.clj"
+              "tag" "class java.lang.String"
+              "status" ("done")))
+    (spy-on 'cider-nrepl-op-supported-p :and-return-value nil)
+    (expect (nrepl-dict-get (cider-var-info "str") "doc")
+            :to-equal "stub")))
 
 
 (describe "cider-repl-type-for-buffer"
@@ -63,20 +84,20 @@
     ;; clojure mode
     (with-temp-buffer
       (clojure-mode)
-      (expect (cider-repl-type-for-buffer) :to-equal "clj"))
+      (expect (cider-repl-type-for-buffer) :to-equal 'clj))
     ;; clojurescript mode
     (with-temp-buffer
       (clojurescript-mode)
-      (expect (cider-repl-type-for-buffer) :to-equal "cljs")))
+      (expect (cider-repl-type-for-buffer) :to-equal 'cljs)))
 
   (it "returns the connection type based on `cider-repl-type'"
     ;; clj
-    (setq cider-repl-type "clj")
-    (expect (cider-repl-type-for-buffer) :to-equal "clj")
+    (setq cider-repl-type 'clj)
+    (expect (cider-repl-type-for-buffer) :to-equal 'clj)
 
     ;; cljs
-    (setq cider-repl-type "cljs")
-    (expect (cider-repl-type-for-buffer) :to-equal "cljs"))
+    (setq cider-repl-type 'cljs)
+    (expect (cider-repl-type-for-buffer) :to-equal 'cljs))
 
   (it "returns nil as its default value"
     (setq cider-repl-type nil)
@@ -85,7 +106,7 @@
 (describe "cider-nrepl-send-unhandled-request"
   (it "returns the id of the request sent to nREPL server and ignores the response"
     (spy-on 'process-send-string :and-return-value nil)
-    (with-repl-buffer "cider-nrepl-send-request" "clj" b
+    (with-repl-buffer "cider-nrepl-send-request" 'clj b
       (setq-local nrepl-pending-requests (make-hash-table :test 'equal))
       (setq-local nrepl-completed-requests (make-hash-table :test 'equal))
       (let ((id (cider-nrepl-send-unhandled-request '("op" "t" "extra" "me"))))
@@ -109,10 +130,15 @@
             :to-throw 'user-error)))
 
 (describe "cider-expected-ns"
-  (before-all
+  (before-each
     (spy-on 'cider-connected-p :and-return-value t)
-    (spy-on 'cider-sync-request:classpath :and-return-value
-            '("/a" "/b" "/c" "/c/inner" "/base/clj" "/base/clj-dev")))
+    (spy-on 'cider-classpath-entries :and-return-value
+            '("/a" "/b" "/c" "/c/inner" "/base/clj" "/base/clj-dev"))
+    (spy-on 'file-directory-p :and-return-value t)
+    (spy-on 'file-in-directory-p :and-call-fake (lambda (file dir)
+                                                  (string-prefix-p dir file)))
+    (spy-on 'file-relative-name :and-call-fake (lambda (file dir)
+                                                 (substring file (+ 1 (length dir))))))
 
   (it "returns the namespace matching the given string path"
     (expect (cider-expected-ns "/a/foo/bar/baz_utils.clj") :to-equal

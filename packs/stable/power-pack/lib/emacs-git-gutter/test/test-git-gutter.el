@@ -1,8 +1,9 @@
 ;;; test-git-gutter.el --- Test for git-gutter.el
 
-;; Copyright (C) 2016 by Syohei YOSHIDA
+;; Copyright (C) 2016-2020 Syohei YOSHIDA and Neil Okamoto
 
 ;; Author: Syohei YOSHIDA <syohex@gmail.com>
+;; Maintainer: Neil Okamoto <neil.okamoto+melpa@gmail.com>
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -22,6 +23,7 @@
 ;;; Code:
 
 (require 'ert)
+(require 'vc)
 (require 'git-gutter)
 
 ;; suppress log message
@@ -43,17 +45,31 @@
   (should (= (git-gutter:changes-to-number "") 1))
   (should (= (git-gutter:changes-to-number "123") 123)))
 
+(defun with-temporary-directory (test-fn)
+  "Create a temp directory and execute TEST-FN within."
+  (let (tmpdir)
+    (unwind-protect
+        (progn
+          (setq tmpdir (make-temp-file "git-gutter-test-" t))
+          (let* ((default-directory tmpdir))
+            (funcall test-fn)))
+      (delete-directory tmpdir t))))
+
 (ert-deftest git-gutter:in-git-repository-p ()
-  "Should return nil if default-directory does not exist"
+  "True only if default-directory is a git repo."
 
-  ;; In git repository, but here is '.git'
-  (when (file-directory-p ".git") ;; #36
-    (let ((buf (find-file-noselect ".git/config")))
-      (with-current-buffer buf
-        (should-not (git-gutter:in-git-repository-p)))))
+  (with-temporary-directory
+   (lambda ()
+     ;; not in a git repository
+     (should-not (git-gutter:in-git-repository-p))
 
-  (let ((default-directory (file-name-directory (locate-library "git-gutter"))))
-    (should (git-gutter:in-git-repository-p))))
+     ;; now create the repo and check again
+     (vc-create-repo 'Git)
+     (should (git-gutter:in-git-repository-p))
+     
+     ;; ...but not inside the .git subdirectory itself #36
+     (with-current-buffer (find-file-noselect ".git/config")
+       (should-not (git-gutter:in-git-repository-p))))))
 
 (ert-deftest git-gutter ()
   "Should return nil if buffer does not related with file or file is not existed"
@@ -102,10 +118,12 @@ bar
 
 (ert-deftest git-gutter-mode-success ()
   "Case git-gutter-mode enabled"
-  (with-current-buffer (find-file-noselect "test-git-gutter.el")
-    (git-gutter-mode 1)
-    (should git-gutter-mode))
-  (kill-buffer "test-git-gutter.el"))
+  (with-temporary-directory
+   (lambda ()
+     (vc-create-repo 'Git)
+     (with-current-buffer (find-file-noselect "test.el")
+       (git-gutter-mode 1)
+       (should git-gutter-mode)))))
 
 (ert-deftest git-gutter-mode-failed ()
   "Case git-gutter-mode disabled"
@@ -128,11 +146,12 @@ bar
 
 (ert-deftest global-git-gutter-mode-success ()
   "Case global-git-gutter-mode enabled"
-  (with-current-buffer (find-file-noselect "test-git-gutter.el")
-    (global-git-gutter-mode t)
-    (should git-gutter-mode))
-
-  (kill-buffer "test-git-gutter.el"))
+  (with-temporary-directory
+   (lambda ()
+     (vc-create-repo 'Git)
+     (with-current-buffer (find-file-noselect "test.el")
+       (global-git-gutter-mode 1)
+       (should git-gutter-mode)))))
 
 (ert-deftest global-git-gutter-mode-failed ()
   "Case global-git-gutter-mode disabled"

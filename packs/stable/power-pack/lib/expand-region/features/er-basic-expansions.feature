@@ -54,3 +54,11 @@ Feature: Basic expansions
     And I press "C-@"
     And I press "C-@"
     Then the region should be "document.write('abc')"
+
+  Scenario: Mark current pair
+    Given I turn on emacs-lisp-mode
+    And I insert "((foo)(bar))"
+    When I place the cursor after "oo)"
+    And I press "C-@"
+    Then the region should be "(bar)"
+

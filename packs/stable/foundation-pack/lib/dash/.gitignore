@@ -1,0 +1,8 @@
+# Byte-compiled Elisp
+*.elc
+
+/dash-autoloads.el
+/dash-pkg.el
+
+# ctags, etags.
+TAGS

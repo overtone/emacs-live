@@ -34,7 +34,18 @@ clojure-mode (version 2.1.1)
 * [Squash related commits together][5].
 * Open a [pull request][4] that relates to *only* one subject with a clear title
 and description in grammatically correct, complete sentences.
-* When applicable, attach ERT unit tests.
+* When applicable, attach ERT unit tests. See below for instructions on running the tests.
+
+## Development setup
+
+1. Fork and clone the repository.
+1. Install [Cask][7].
+1. Run `cask install` in the repository folder.
+1. Run tests with `make test`.
+
+**Note:** macOS users should make sure that the `emacs` command resolves the version of Emacs they've installed
+manually (e.g. via `homebrew`), instead of the ancient Emacs 22 that comes bundled with macOS.
+See [this article][8] for more details.
 
 [1]: https://github.com/clojure-emacs/clojure-mode/issues
 [2]: http://gun.io/blog/how-to-github-fork-branch-and-pull-request
@@ -42,3 +53,5 @@ and description in grammatically correct, complete sentences.
 [4]: https://help.github.com/articles/using-pull-requests
 [5]: http://gitready.com/advanced/2009/02/10/squashing-commits-with-rebase.html
 [6]: https://github.com/clojure-emacs/clojure-mode/blob/master/CHANGELOG.md
+[7]: https://github.com/cask/cask
+[8]: https://emacsredux.com/blog/2015/05/09/emacs-on-os-x/

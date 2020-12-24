@@ -20,7 +20,7 @@
 
 ;;;; Comments:
 
-;; Template test file for Org-mode tests.  Many tests are also a howto
+;; Template test file for Org tests.  Many tests are also a howto
 ;; example collection as a user documentation, more or less all those
 ;; using `org-test-table-target-expect'.  See also the doc string of
 ;; `org-test-table-target-expect'.
@@ -106,18 +106,18 @@
   ;; See next ert-deftest how to group rows right.
   (org-test-table-target-expect
    "
-|       2 | replace |
-|       4 | replace |
-|       8 | replace |
+|       2 | header  |
+|       4 | header  |
+|       8 | header  |
 |---------+---------|
 | replace | replace |
 "
    "
-|  2 | replace |
-|  4 | replace |
-|  8 | replace |
-|----+---------|
-| 14 | 28      |
+|  2 | header |
+|  4 | header |
+|  8 | header |
+|----+--------|
+| 14 | 28     |
 "
    2
    ;; Calc formula
@@ -153,19 +153,6 @@
    "#+TBLFM: @>$1 = vsum(@I..@>>) :: $2 = 2 * $1"
    ;; Lisp formula
    "#+TBLFM: @>$1 = '(+ @I..@>>); N :: $2 = '(* 2 $1); N"))
-
-(ert-deftest test-org-table/align ()
-  "Align columns within Org buffer, depends on `org-table-number-regexp'."
-  (org-test-table-target-expect "
-| 0  |  0 |    0 |       0 |       0 |           0 |       0 |    0 |
-| ab | 12 | 12.2 | 2.4e-08 | 2x10^12 | 4.034+-0.02 | 2.7(10) | >3.5 |
-| ab | ab |   ab |      ab |      ab |          ab |      ab |   ab |
-")
-  (org-test-table-target-expect "
-|          0 |           0 |   0 |    0 |    0 |   0 |
-| <-0x0ab.cf | >-36#0vw.yz | nan | uinf | -inf | inf |
-|         ab |          ab |  ab |   ab |   ab |  ab |
-"))
 
 (defconst references/target-normal "
 | 0 | 1 | replace | replace | replace | replace | replace | replace |
@@ -393,6 +380,18 @@ reference (with row).  Mode string N."
 "
      1 calc)))
 
+(ert-deftest test-org-table/mode-string-u ()
+  "Basic: verify that mode string u results in units
+simplification mode applied to Calc formulas."
+  (org-test-table-target-expect
+   "
+| 1.5 A/B | 2.0 B | |
+"
+   "
+| 1.5 A/B | 2.0 B | 3. A |
+"
+   1 "#+TBLFM: $3=$1*$2;u"))
+
 (ert-deftest test-org-table/lisp-return-value ()
   "Basic: Return value of Lisp formulas."
   (org-test-table-target-expect
@@ -585,8 +584,7 @@ reference (with row).  Mode string N."
     "$8 = '(let ((l '(@0$1..@0$4))) "
     "(if l (/ (apply '+ l) (length l)) \"\")); N :: "
     "$9 = '(/ (+ $1..$4) (length '($1..$4))); EN :: "
-    "$10 = '(/ (+ @0$1..@0$4) (length '(@0$1..@0$4))); EN")
-))
+    "$10 = '(/ (+ @0$1..@0$4) (length '(@0$1..@0$4))); EN")))
 
 (ert-deftest test-org-table/copy-field ()
   "Experiments on how to copy one field into another field.
@@ -621,7 +619,7 @@ See also `test-org-table/remote-reference-access'."
 | c   d            | c   d            |
 |                  |                  |
 | 2012-12          | 2012-12          |
-| [2012-12-31 Mon] | <2012-12-31 Mon> |
+| [2012-12-31 Mon] | [2012-12-31 Mon] |
 "
      1 (concat "#+TBLFM: $2 = if(\"$1\" == \"nan\", "
 	       "string(\"\"), string(subvec(\"$1\", 2, vlen(\"$1\")))); E"))
@@ -635,9 +633,128 @@ See also `test-org-table/remote-reference-access'."
 | c   d            | c d              |
 |                  |                  |
 | 2012-12          | 2000             |
-| [2012-12-31 Mon] | <2012-12-31 Mon> |
+| [2012-12-31 Mon] | [2012-12-31 Mon] |
 "
      1 "#+TBLFM: $2 = if(\"$1\" == \"nan\", string(\"\"), $1); E")))
+
+(ert-deftest test-org-table/copy-down ()
+  "Test `org-table-copy-down' specifications."
+  ;; Error when there is nothing to copy in the current field or the
+  ;; field above.
+  (should-error
+   (org-test-with-temp-text "|  |\n| <point> |"
+     (org-table-copy-down 1)))
+  ;; Error when there is nothing to copy in the Nth field.
+  (should-error
+   (org-test-with-temp-text "|    |\n| foo |\n| <point> |"
+     (org-table-copy-down 2)))
+  ;; In an empty field, copy field above.
+  (should
+   (equal "| foo |\n| foo |"
+	  (org-test-with-temp-text "| foo |\n| <point> |"
+	    (org-table-copy-down 1)
+	    (buffer-string))))
+  ;; In a non-empty field, copy it below.
+  (should
+   (equal "| foo |\n| foo |\n"
+	  (org-test-with-temp-text "| <point>foo |"
+	    (org-table-copy-down 1)
+	    (buffer-string))))
+  ;; If field is a number or a timestamp, or is prefixed or suffixed
+  ;; with a number, increment it by one unit.
+  (should
+   (equal "| 1 |\n| 2 |\n"
+	  (org-test-with-temp-text "| <point>1 |"
+	    (let ((org-table-copy-increment t)) (org-table-copy-down 1))
+	    (buffer-string))))
+  (should
+   (string-match-p "<2012-03-30"
+		   (org-test-with-temp-text "| <point><2012-03-29> |"
+		     (let ((org-table-copy-increment t))
+		       (org-table-copy-down 1))
+		     (buffer-string))))
+  (should
+   (equal "| A1 |\n| A2 |\n"
+	  (org-test-with-temp-text "| <point>A1 |"
+	    (let ((org-table-copy-increment t)) (org-table-copy-down 1))
+	    (buffer-string))))
+  (should
+   (equal "| 1A |\n| 2A |\n"
+	  (org-test-with-temp-text "| <point>1A |"
+	    (let ((org-table-copy-increment t)) (org-table-copy-down 1))
+	    (buffer-string))))
+  ;; When `org-table-copy-increment' is nil, or when argument is 0, do
+  ;; not increment.
+  (should
+   (equal "| 1 |\n| 1 |\n"
+	  (org-test-with-temp-text "| <point>1 |"
+	    (let ((org-table-copy-increment nil)) (org-table-copy-down 1))
+	    (buffer-string))))
+  (should
+   (equal "| 1 |\n| 1 |\n"
+	  (org-test-with-temp-text "| <point>1 |"
+	    (let ((org-table-copy-increment t)) (org-table-copy-down 0))
+	    (buffer-string))))
+  ;; When there is a field just above field being incremented, try to
+  ;; use it to guess increment step.
+  (should
+   (equal "| 4 |\n| 3 |\n| 2 |\n"
+	  (org-test-with-temp-text "| 4 |\n| <point>3 |"
+	    (let ((org-table-copy-increment t)) (org-table-copy-down 1))
+	    (buffer-string))))
+  (should
+   (equal "| A0 |\n| A2 |\n| A4 |\n"
+	  (org-test-with-temp-text "| A0 |\n| <point>A2 |"
+	    (let ((org-table-copy-increment t)) (org-table-copy-down 1))
+	    (buffer-string))))
+  ;; Both fields need to have the same type.  In the special case of
+  ;; number-prefixed or suffixed fields, make sure both fields have
+  ;; the same pattern.
+  (should
+   (equal "| A4 |\n|  3 |\n|  4 |\n"
+	  (org-test-with-temp-text "| A4 |\n| <point>3 |"
+	    (let ((org-table-copy-increment t)) (org-table-copy-down 1))
+	    (buffer-string))))
+  (should
+   (equal "| 0A |\n| A2 |\n| A3 |\n"
+	  (org-test-with-temp-text "| 0A |\n| <point>A2 |"
+	    (let ((org-table-copy-increment t)) (org-table-copy-down 1))
+	    (buffer-string))))
+  (should
+   (equal "| A0 |\n| 2A |\n| 3A |\n"
+	  (org-test-with-temp-text "| A0 |\n| <point>2A |"
+	    (let ((org-table-copy-increment t)) (org-table-copy-down 1))
+	    (buffer-string))))
+  ;; Do not search field above past blank fields and horizontal
+  ;; separators.
+  (should
+   (equal "| 4 |\n|---|\n| 3 |\n| 4 |\n"
+	  (org-test-with-temp-text "| 4 |\n|---|\n| <point>3 |"
+	    (let ((org-table-copy-increment t)) (org-table-copy-down 1))
+	    (buffer-string))))
+  (should
+   (equal "| 4 |\n|   |\n| 3 |\n| 4 |\n"
+	  (org-test-with-temp-text "| 4 |\n|   |\n| <point>3 |"
+	    (let ((org-table-copy-increment t)) (org-table-copy-down 1))
+	    (buffer-string))))
+  ;; When `org-table-copy-increment' is a number, use it as the
+  ;; increment step, ignoring any previous field.
+  (should
+   (equal "| 1 |\n| 3 |\n| 6 |\n"
+	  (org-test-with-temp-text "| 1 |\n| <point>3 |"
+	    (let ((org-table-copy-increment 3)) (org-table-copy-down 1))
+	    (buffer-string))))
+  ;; However, if argument is 0, do not increment whatsoever.
+  (should
+   (equal "| 1 |\n| 3 |\n| 3 |\n"
+	  (org-test-with-temp-text "| 1 |\n| <point>3 |"
+	    (let ((org-table-copy-increment t)) (org-table-copy-down 0))
+	    (buffer-string))))
+  (should
+   (equal "| 1 |\n| 3 |\n| 3 |\n"
+	  (org-test-with-temp-text "| 1 |\n| <point>3 |"
+	    (let ((org-table-copy-increment 3)) (org-table-copy-down 0))
+	    (buffer-string)))))
 
 (ert-deftest test-org-table/sub-total ()
   "Grouped rows with sub-total.
@@ -689,7 +806,7 @@ formatter \"%.1f\"."
 
 (ert-deftest test-org-table/org-lookup-all ()
   "Use `org-lookup-all' for several GROUP BY as in SQL and for ranking.
-See also http://orgmode.org/worg/org-tutorials/org-lookups.html ."
+See also URL `https://orgmode.org/worg/org-tutorials/org-lookups.html'."
   (let ((data "
 #+NAME: data
 | Purchase | Product | Shop | Rating |
@@ -743,143 +860,137 @@ See also http://orgmode.org/worg/org-tutorials/org-lookups.html ."
        "$3 = '(+ 1 (length (org-lookup-all $2 '(@I$2..@>$2) nil '<))); N"))))
 
 (ert-deftest test-org-table/org-table-make-reference/mode-string-EL ()
-  (fset 'f 'org-table-make-reference)
   ;; For Lisp formula only
-  (should (equal "0"   (f   "0"      t nil 'literal)))
-  (should (equal "z"   (f   "z"      t nil 'literal)))
-  (should (equal  ""   (f   ""       t nil 'literal)))
-  (should (equal "0 1" (f '("0" "1") t nil 'literal)))
-  (should (equal "z 1" (f '("z" "1") t nil 'literal)))
-  (should (equal  " 1" (f '(""  "1") t nil 'literal)))
-  (should (equal  " "  (f '(""  "" ) t nil 'literal))))
+  (should (equal "0" (org-table-make-reference "0" t nil 'literal)))
+  (should (equal "z" (org-table-make-reference "z" t nil 'literal)))
+  (should (equal "" (org-table-make-reference "" t nil 'literal)))
+  (should (equal "0 1" (org-table-make-reference '("0" "1") t nil 'literal)))
+  (should (equal "z 1" (org-table-make-reference '("z" "1") t nil 'literal)))
+  (should (equal " 1" (org-table-make-reference '("" "1") t nil 'literal)))
+  (should (equal " " (org-table-make-reference '("" "") t nil 'literal))))
 
 (ert-deftest test-org-table/org-table-make-reference/mode-string-E ()
-  (fset 'f 'org-table-make-reference)
   ;; For Lisp formula
-  (should (equal "\"0\""       (f   "0"         t nil t)))
-  (should (equal "\"z\""       (f   "z"         t nil t)))
-  (should (equal  "\"\""       (f   ""          t nil t)))
-  (should (equal "\"0\" \"1\"" (f '("0"    "1") t nil t)))
-  (should (equal "\"z\" \"1\"" (f '("z"    "1") t nil t)))
-  (should (equal  "\"\" \"1\"" (f '(""     "1") t nil t)))
-  (should (equal  "\"\" \"\""  (f '(""     "" ) t nil t)))
+  (should (equal "\"0\"" (org-table-make-reference "0" t nil t)))
+  (should (equal "\"z\"" (org-table-make-reference "z" t nil t)))
+  (should (equal"\"\"" (org-table-make-reference "" t nil t)))
+  (should (equal "\"0\" \"1\"" (org-table-make-reference '("0""1") t nil t)))
+  (should (equal "\"z\" \"1\"" (org-table-make-reference '("z""1") t nil t)))
+  (should (equal"\"\" \"1\"" (org-table-make-reference '("""1") t nil t)))
+  (should (equal"\"\" \"\""(org-table-make-reference '("""" ) t nil t)))
   ;; For Calc formula
-  (should (equal  "(0)"        (f   "0"         t nil nil)))
-  (should (equal  "(z)"        (f   "z"         t nil nil)))
-  (should (equal  "nan"        (f   ""          t nil nil)))
-  (should (equal  "[0,1]"      (f '("0"    "1") t nil nil)))
-  (should (equal  "[z,1]"      (f '("z"    "1") t nil nil)))
-  (should (equal  "[nan,1]"    (f '(""     "1") t nil nil)))
-  (should (equal  "[nan,nan]"  (f '(""     "" ) t nil nil)))
+  (should (equal "(0)" (org-table-make-reference "0" t nil nil)))
+  (should (equal "(z)" (org-table-make-reference "z" t nil nil)))
+  (should (equal "nan" (org-table-make-reference "" t nil nil)))
+  (should (equal "[0,1]" (org-table-make-reference '("0" "1") t nil nil)))
+  (should (equal "[z,1]" (org-table-make-reference '("z" "1") t nil nil)))
+  (should (equal "[nan,1]" (org-table-make-reference '("" "1") t nil nil)))
+  (should (equal "[nan,nan]" (org-table-make-reference '("" "") t nil nil)))
   ;; For Calc formula, special numbers
-  (should (equal  "(nan)"      (f    "nan"      t nil nil)))
-  (should (equal "(uinf)"      (f   "uinf"      t nil nil)))
-  (should (equal "(-inf)"      (f   "-inf"      t nil nil)))
-  (should (equal  "(inf)"      (f    "inf"      t nil nil)))
-  (should (equal  "[nan,1]"    (f '( "nan" "1") t nil nil)))
-  (should (equal "[uinf,1]"    (f '("uinf" "1") t nil nil)))
-  (should (equal "[-inf,1]"    (f '("-inf" "1") t nil nil)))
-  (should (equal  "[inf,1]"    (f '( "inf" "1") t nil nil))))
+  (should (equal "(nan)" (org-table-make-reference "nan" t nil nil)))
+  (should (equal "(uinf)" (org-table-make-reference "uinf" t nil nil)))
+  (should (equal "(-inf)" (org-table-make-reference "-inf" t nil nil)))
+  (should (equal "(inf)" (org-table-make-reference "inf" t nil nil)))
+  (should (equal "[nan,1]" (org-table-make-reference '("nan" "1") t nil nil)))
+  (should (equal "[uinf,1]" (org-table-make-reference '("uinf" "1") t nil nil)))
+  (should (equal "[-inf,1]" (org-table-make-reference '("-inf" "1") t nil nil)))
+  (should (equal "[inf,1]" (org-table-make-reference '("inf" "1") t nil nil))))
 
 (ert-deftest test-org-table/org-table-make-reference/mode-string-EN ()
-  (fset 'f 'org-table-make-reference)
   ;; For Lisp formula
-  (should (equal  "0"    (f   "0"         t t t)))
-  (should (equal  "0"    (f   "z"         t t t)))
-  (should (equal  "0"    (f   ""          t t t)))
-  (should (equal  "0 1"  (f '("0"    "1") t t t)))
-  (should (equal  "0 1"  (f '("z"    "1") t t t)))
-  (should (equal  "0 1"  (f '(""     "1") t t t)))
-  (should (equal  "0 0"  (f '(""     "" ) t t t)))
+  (should (equal "0" (org-table-make-reference "0" t t t)))
+  (should (equal "0" (org-table-make-reference "z" t t t)))
+  (should (equal "0" (org-table-make-reference "" t t t)))
+  (should (equal "0 1" (org-table-make-reference '("0" "1") t t t)))
+  (should (equal "0 1" (org-table-make-reference '("z" "1") t t t)))
+  (should (equal "0 1" (org-table-make-reference '("" "1") t t t)))
+  (should (equal "0 0" (org-table-make-reference '("" "" ) t t t)))
   ;; For Calc formula
-  (should (equal "(0)"   (f   "0"         t t nil)))
-  (should (equal "(0)"   (f   "z"         t t nil)))
-  (should (equal "(0)"   (f   ""          t t nil)))
-  (should (equal "[0,1]" (f '("0"    "1") t t nil)))
-  (should (equal "[0,1]" (f '("z"    "1") t t nil)))
-  (should (equal "[0,1]" (f '(""     "1") t t nil)))
-  (should (equal "[0,0]" (f '(""     "" ) t t nil)))
+  (should (equal "(0)" (org-table-make-reference "0" t t nil)))
+  (should (equal "(0)" (org-table-make-reference "z" t t nil)))
+  (should (equal "(0)" (org-table-make-reference "" t t nil)))
+  (should (equal "[0,1]" (org-table-make-reference '("0" "1") t t nil)))
+  (should (equal "[0,1]" (org-table-make-reference '("z" "1") t t nil)))
+  (should (equal "[0,1]" (org-table-make-reference '("" "1") t t nil)))
+  (should (equal "[0,0]" (org-table-make-reference '("" "" ) t t nil)))
   ;; For Calc formula, special numbers
-  (should (equal "(0)"   (f    "nan"      t t nil)))
-  (should (equal "(0)"   (f   "uinf"      t t nil)))
-  (should (equal "(0)"   (f   "-inf"      t t nil)))
-  (should (equal "(0)"   (f    "inf"      t t nil)))
-  (should (equal "[0,1]" (f '( "nan" "1") t t nil)))
-  (should (equal "[0,1]" (f '("uinf" "1") t t nil)))
-  (should (equal "[0,1]" (f '("-inf" "1") t t nil)))
-  (should (equal "[0,1]" (f '( "inf" "1") t t nil))))
+  (should (equal "(0)" (org-table-make-reference "nan" t t nil)))
+  (should (equal "(0)" (org-table-make-reference "uinf" t t nil)))
+  (should (equal "(0)" (org-table-make-reference "-inf" t t nil)))
+  (should (equal "(0)" (org-table-make-reference "inf" t t nil)))
+  (should (equal "[0,1]" (org-table-make-reference '( "nan" "1") t t nil)))
+  (should (equal "[0,1]" (org-table-make-reference '("uinf" "1") t t nil)))
+  (should (equal "[0,1]" (org-table-make-reference '("-inf" "1") t t nil)))
+  (should (equal "[0,1]" (org-table-make-reference '( "inf" "1") t t nil))))
 
 (ert-deftest test-org-table/org-table-make-reference/mode-string-L ()
-  (fset 'f 'org-table-make-reference)
   ;; For Lisp formula only
-  (should (equal "0"   (f   "0"      nil nil 'literal)))
-  (should (equal "z"   (f   "z"      nil nil 'literal)))
-  (should (equal  ""   (f   ""       nil nil 'literal)))
-  (should (equal "0 1" (f '("0" "1") nil nil 'literal)))
-  (should (equal "z 1" (f '("z" "1") nil nil 'literal)))
-  (should (equal   "1" (f '(""  "1") nil nil 'literal)))
-  (should (equal  ""   (f '(""  "" ) nil nil 'literal))))
+  (should (equal "0" (org-table-make-reference "0" nil nil 'literal)))
+  (should (equal "z" (org-table-make-reference "z" nil nil 'literal)))
+  (should (equal "" (org-table-make-reference "" nil nil 'literal)))
+  (should (equal "0 1" (org-table-make-reference '("0" "1") nil nil 'literal)))
+  (should (equal "z 1" (org-table-make-reference '("z" "1") nil nil 'literal)))
+  (should (equal "1" (org-table-make-reference '("" "1") nil nil 'literal)))
+  (should (equal "" (org-table-make-reference '("" "" ) nil nil 'literal))))
 
 (ert-deftest test-org-table/org-table-make-reference/mode-string-none ()
-  (fset 'f 'org-table-make-reference)
   ;; For Lisp formula
-  (should (equal "\"0\""       (f   "0"         nil nil t)))
-  (should (equal "\"z\""       (f   "z"         nil nil t)))
-  (should (equal   ""          (f   ""          nil nil t)))
-  (should (equal "\"0\" \"1\"" (f '("0"    "1") nil nil t)))
-  (should (equal "\"z\" \"1\"" (f '("z"    "1") nil nil t)))
-  (should (equal       "\"1\"" (f '(""     "1") nil nil t)))
-  (should (equal      ""       (f '(""     "" ) nil nil t)))
+  (should (equal "\"0\"" (org-table-make-reference "0" nil nil t)))
+  (should (equal "\"z\"" (org-table-make-reference "z" nil nil t)))
+  (should (equal "" (org-table-make-reference "" nil nil t)))
+  (should (equal "\"0\" \"1\"" (org-table-make-reference '("0" "1") nil nil t)))
+  (should (equal "\"z\" \"1\"" (org-table-make-reference '("z" "1") nil nil t)))
+  (should (equal "\"1\"" (org-table-make-reference '("" "1") nil nil t)))
+  (should (equal "" (org-table-make-reference '("" "" ) nil nil t)))
   ;; For Calc formula
-  (should (equal  "(0)"        (f   "0"         nil nil nil)))
-  (should (equal  "(z)"        (f   "z"         nil nil nil)))
-  (should (equal  "(0)"        (f   ""          nil nil nil)))
-  (should (equal  "[0,1]"      (f '("0"    "1") nil nil nil)))
-  (should (equal  "[z,1]"      (f '("z"    "1") nil nil nil)))
-  (should (equal    "[1]"      (f '(""     "1") nil nil nil)))
-  (should (equal   "[]"        (f '(""     "" ) nil nil nil)))
+  (should (equal "(0)" (org-table-make-reference "0" nil nil nil)))
+  (should (equal "(z)" (org-table-make-reference "z" nil nil nil)))
+  (should (equal "(0)" (org-table-make-reference "" nil nil nil)))
+  (should (equal "[0,1]" (org-table-make-reference '("0" "1") nil nil nil)))
+  (should (equal "[z,1]" (org-table-make-reference '("z" "1") nil nil nil)))
+  (should (equal "[1]" (org-table-make-reference '("" "1") nil nil nil)))
+  (should (equal "[]" (org-table-make-reference '("" "" ) nil nil nil)))
   ;; For Calc formula, special numbers
-  (should (equal  "(nan)"      (f    "nan"      nil nil nil)))
-  (should (equal "(uinf)"      (f   "uinf"      nil nil nil)))
-  (should (equal "(-inf)"      (f   "-inf"      nil nil nil)))
-  (should (equal  "(inf)"      (f    "inf"      nil nil nil)))
-  (should (equal  "[nan,1]"    (f '( "nan" "1") nil nil nil)))
-  (should (equal "[uinf,1]"    (f '("uinf" "1") nil nil nil)))
-  (should (equal "[-inf,1]"    (f '("-inf" "1") nil nil nil)))
-  (should (equal  "[inf,1]"    (f '( "inf" "1") nil nil nil))))
+  (should (equal "(nan)" (org-table-make-reference "nan" nil nil nil)))
+  (should (equal "(uinf)" (org-table-make-reference "uinf" nil nil nil)))
+  (should (equal "(-inf)" (org-table-make-reference "-inf" nil nil nil)))
+  (should (equal "(inf)" (org-table-make-reference "inf" nil nil nil)))
+  (should (equal "[nan,1]" (org-table-make-reference '( "nan" "1") nil nil nil)))
+  (should (equal "[uinf,1]" (org-table-make-reference '("uinf" "1") nil nil nil)))
+  (should (equal "[-inf,1]" (org-table-make-reference '("-inf" "1") nil nil nil)))
+  (should (equal "[inf,1]" (org-table-make-reference '( "inf" "1") nil nil nil))))
 
 (ert-deftest test-org-table/org-table-make-reference/mode-string-N ()
-  (fset 'f 'org-table-make-reference)
   ;; For Lisp formula
-  (should (equal  "0"    (f   "0"         nil t t)))
-  (should (equal  "0"    (f   "z"         nil t t)))
-  (should (equal  ""     (f   ""          nil t t)))
-  (should (equal  "0 1"  (f '("0"    "1") nil t t)))
-  (should (equal  "0 1"  (f '("z"    "1") nil t t)))
-  (should (equal    "1"  (f '(""     "1") nil t t)))
-  (should (equal   ""    (f '(""     "" ) nil t t)))
+  (should (equal "0" (org-table-make-reference "0" nil t t)))
+  (should (equal "0" (org-table-make-reference "z" nil t t)))
+  (should (equal "" (org-table-make-reference "" nil t t)))
+  (should (equal "0 1" (org-table-make-reference '("0" "1") nil t t)))
+  (should (equal "0 1" (org-table-make-reference '("z" "1") nil t t)))
+  (should (equal "1" (org-table-make-reference '("" "1") nil t t)))
+  (should (equal "" (org-table-make-reference '("" "" ) nil t t)))
   ;; For Calc formula
-  (should (equal "(0)"   (f   "0"         nil t nil)))
-  (should (equal "(0)"   (f   "z"         nil t nil)))
-  (should (equal "(0)"   (f   ""          nil t nil)))
-  (should (equal "[0,1]" (f '("0"    "1") nil t nil)))
-  (should (equal "[0,1]" (f '("z"    "1") nil t nil)))
-  (should (equal   "[1]" (f '(""     "1") nil t nil)))
-  (should (equal  "[]"   (f '(""     "" ) nil t nil)))
+  (should (equal "(0)" (org-table-make-reference "0" nil t nil)))
+  (should (equal "(0)" (org-table-make-reference "z" nil t nil)))
+  (should (equal "(0)" (org-table-make-reference "" nil t nil)))
+  (should (equal "[0,1]" (org-table-make-reference '("0" "1") nil t nil)))
+  (should (equal "[0,1]" (org-table-make-reference '("z" "1") nil t nil)))
+  (should (equal "[1]" (org-table-make-reference '("" "1") nil t nil)))
+  (should (equal "[]" (org-table-make-reference '("" "" ) nil t nil)))
   ;; For Calc formula, special numbers
-  (should (equal "(0)"   (f    "nan"      nil t nil)))
-  (should (equal "(0)"   (f   "uinf"      nil t nil)))
-  (should (equal "(0)"   (f   "-inf"      nil t nil)))
-  (should (equal "(0)"   (f    "inf"      nil t nil)))
-  (should (equal "[0,1]" (f '( "nan" "1") nil t nil)))
-  (should (equal "[0,1]" (f '("uinf" "1") nil t nil)))
-  (should (equal "[0,1]" (f '("-inf" "1") nil t nil)))
-  (should (equal "[0,1]" (f '( "inf" "1") nil t nil))))
+  (should (equal "(0)" (org-table-make-reference "nan" nil t nil)))
+  (should (equal "(0)" (org-table-make-reference "uinf" nil t nil)))
+  (should (equal "(0)" (org-table-make-reference "-inf" nil t nil)))
+  (should (equal "(0)" (org-table-make-reference "inf" nil t nil)))
+  (should (equal "[0,1]" (org-table-make-reference '( "nan" "1") nil t nil)))
+  (should (equal "[0,1]" (org-table-make-reference '("uinf" "1") nil t nil)))
+  (should (equal "[0,1]" (org-table-make-reference '("-inf" "1") nil t nil)))
+  (should (equal "[0,1]" (org-table-make-reference '( "inf" "1") nil t nil))))
 
 (ert-deftest test-org-table/org-table-convert-refs-to-an/1 ()
-  "Simple reference @1$1."
+  "Simple reference @2$1."
   (should
-   (string= "A1" (org-table-convert-refs-to-an "@1$1"))))
+   (string= "A2" (org-table-convert-refs-to-an "@2$1"))))
 
 ;; TODO: Test broken
 ;; (ert-deftest test-org-table/org-table-convert-refs-to-an/2 ()
@@ -893,9 +1004,9 @@ See also http://orgmode.org/worg/org-tutorials/org-lookups.html ."
    (string= "C& = remote(FOO, @@#B&)" (org-table-convert-refs-to-an "$3 = remote(FOO, @@#$2)"))))
 
 (ert-deftest test-org-table/org-table-convert-refs-to-rc/1 ()
-  "Simple reference @1$1."
+  "Simple reference @2$1."
   (should
-   (string= "@1$1" (org-table-convert-refs-to-rc "A1"))))
+   (string= "@2$1" (org-table-convert-refs-to-rc "A2"))))
 
 (ert-deftest test-org-table/org-table-convert-refs-to-rc/2 ()
   "Self reference $0."
@@ -1205,6 +1316,66 @@ See also `test-org-table/copy-field'."
       (should (string= got
 		       expect)))))
 
+
+;;; Tables as Lisp
+
+(ert-deftest test-org-table/to-lisp ()
+  "Test `orgtbl-to-lisp' specifications."
+  ;; 2x2 no header
+  (should
+   (equal '(("a" "b") ("c" "d"))
+	  (org-table-to-lisp "|a|b|\n|c|d|")))
+  ;; 2x2 with 1-line header
+  (should
+   (equal '(("a" "b") hline ("c" "d"))
+	  (org-table-to-lisp "|a|b|\n|-\n|c|d|")))
+  ;; 2x4 with 2-line header
+  (should
+   (equal '(("a" "b") ("A" "B") hline ("c" "d") ("aa" "bb"))
+	  (org-table-to-lisp "|a|b|\n|A|B|\n|-\n|c|d|\n|aa|bb|")))
+  ;; leading hlines do not get stripped
+  (should
+   (equal '(hline ("a" "b") hline ("c" "d"))
+	  (org-table-to-lisp "|-\n|a|b|\n|-\n|c|d|")))
+  (should
+   (equal '(hline ("a" "b") ("c" "d"))
+	  (org-table-to-lisp "|-\n|a|b|\n|c|d|")))
+  (should
+   (equal '(hline hline hline hline ("a" "b") ("c" "d"))
+	  (org-table-to-lisp "|-\n|-\n|-\n|-\n|a|b|\n|c|d|"))))
+
+(ert-deftest test-org-table/collapse-header ()
+  "Test `orgtbl-to-lisp' specifications."
+  ;; 2x2 no header - no collapsing
+  (should
+   (equal '(("a" "b") ("c" "d"))
+	  (org-table-collapse-header (org-table-to-lisp "|a|b|\n|c|d|"))))
+  ;; 2x2 with 1-line header - no collapsing
+  (should
+   (equal '(("a" "b") hline ("c" "d"))
+	  (org-table-collapse-header (org-table-to-lisp "|a|b|\n|-\n|c|d|"))))
+  ;; 2x4 with 2-line header - collapsed
+  (should
+   (equal '(("a A" "b B") hline ("c" "d") ("aa" "bb"))
+	  (org-table-collapse-header (org-table-to-lisp "|a|b|\n|A|B|\n|-\n|c|d|\n|aa|bb|"))))
+  ;; 2x4 with 2-line header, custom glue - collapsed
+  (should
+   (equal '(("a.A" "b.B") hline ("c" "d") ("aa" "bb"))
+	  (org-table-collapse-header (org-table-to-lisp "|a|b|\n|A|B|\n|-\n|c|d|\n|aa|bb|") ".")))
+  ;; 2x4 with 2-line header, threshold 1 - not collapsed
+  (should
+   (equal '(("a" "b") ("A" "B") hline ("c" "d") ("aa" "bb"))
+	  (org-table-collapse-header (org-table-to-lisp "|a|b|\n|A|B|\n|-\n|c|d|\n|aa|bb|") nil 1)))
+  ;; 2x4 with 2-line header, threshold 2 - collapsed
+  (should
+   (equal '(("a A" "b B") hline ("c" "d") ("aa" "bb"))
+	  (org-table-collapse-header (org-table-to-lisp "|a|b|\n|A|B|\n|-\n|c|d|\n|aa|bb|") nil 2)))
+  ;; 2x8 with 6-line header, default threshold 5 - not collapsed
+  (should
+   (equal '(("a" "b") ("A" "B") ("a" "b") ("A" "B") ("a" "b") ("A" "B") hline ("c" "d") ("aa" "bb"))
+	  (org-table-collapse-header (org-table-to-lisp "|a|b|\n|A|B|\n|a|b|\n|A|B|\n|a|b|\n|A|B|\n|-\n|c|d|\n|aa|bb|")))))
+
+
 ;;; Radio Tables
 
 (ert-deftest test-org-table/to-generic ()
@@ -1434,7 +1605,7 @@ See also `test-org-table/copy-field'."
   ;; Test :raw parameter.
   (when (featurep 'ox-latex)
     (should
-     (org-string-match-p
+     (string-match-p
       "/a/"
       (orgtbl-to-generic (org-table-to-lisp "| /a/ | b |")
 			 '(:backend latex :raw t)))))
@@ -1471,11 +1642,15 @@ See also `test-org-table/copy-field'."
 			   '(:environment "tabularx"))))
   ;; Test :booktabs parameter.
   (should
-   (org-string-match-p
+   (string-match-p
     "\\toprule" (orgtbl-to-latex (org-table-to-lisp "| a |") '(:booktabs t))))
+  ;; Handle LaTeX snippets.
+  (should
+   (equal "\\begin{tabular}{l}\n\\(x\\)\\\\\n\\end{tabular}"
+	  (orgtbl-to-latex (org-table-to-lisp "| $x$ |") nil)))
   ;; Test pseudo objects and :raw parameter.
   (should
-   (org-string-match-p
+   (string-match-p
     "\\$x\\$" (orgtbl-to-latex (org-table-to-lisp "| $x$ |") '(:raw t)))))
 
 (ert-deftest test-org-table/to-html ()
@@ -1496,11 +1671,11 @@ See also `test-org-table/copy-field'."
 </table>"))
   ;; Test :attributes parameter.
   (should
-   (org-string-match-p
+   (string-match-p
     "<table>"
     (orgtbl-to-html (org-table-to-lisp "| a |") '(:attributes nil))))
   (should
-   (org-string-match-p
+   (string-match-p
     "<table border=\"2\">"
     (orgtbl-to-html (org-table-to-lisp "| a |") '(:attributes (:border "2"))))))
 
@@ -1572,7 +1747,130 @@ See also `test-org-table/copy-field'."
 	    (buffer-substring-no-properties
 	     (search-forward "# BEGIN RECEIVE ORGTBL table\n")
 	     (progn (search-forward "# END RECEIVE ORGTBL table")
-		    (match-beginning 0)))))))
+		    (match-beginning 0))))))
+  ;; Allow multiple receiver locations.
+  (should
+   (org-test-with-temp-text "
+# BEGIN RECEIVE ORGTBL table
+# END RECEIVE ORGTBL table
+
+#+ORGTBL: SEND table orgtbl-to-orgtbl :hlines nil
+<point>| a |
+
+# BEGIN RECEIVE ORGTBL table
+# END RECEIVE ORGTBL table"
+     (orgtbl-send-table)
+     (goto-char (point-min))
+     (search-forward "| a |" nil t 3))))
+
+
+;;; Align
+
+(ert-deftest test-org-table/align ()
+  "Test `org-table-align' specifications."
+  ;; Regular test.
+  (should
+   (equal "| a |\n"
+	  (org-test-with-temp-text "|   a |"
+	    (org-table-align)
+	    (buffer-string))))
+  ;; Preserve alignment.
+  (should
+   (equal "  | a |\n"
+	  (org-test-with-temp-text "  |   a |"
+	    (org-table-align)
+	    (buffer-string))))
+  ;; Handle horizontal lines.
+  (should
+   (equal "| 123 |\n|-----|\n"
+	  (org-test-with-temp-text "| 123 |\n|-|"
+	    (org-table-align)
+	    (buffer-string))))
+  (should
+   (equal "| a | b |\n|---+---|\n"
+	  (org-test-with-temp-text "| a | b |\n|-+-|"
+	    (org-table-align)
+	    (buffer-string))))
+  ;; Handle empty fields.
+  (should
+   (equal "| a   | bc |\n| bcd |    |\n"
+	  (org-test-with-temp-text "| a | bc |\n| bcd |  |"
+	    (org-table-align)
+	    (buffer-string))))
+  (should
+   (equal "| abc | bc  |\n|     | bcd |\n"
+	  (org-test-with-temp-text "| abc | bc |\n| | bcd |"
+	    (org-table-align)
+	    (buffer-string))))
+  ;; Handle missing fields.
+  (should
+   (equal "| a | b |\n| c |   |\n"
+	  (org-test-with-temp-text "| a | b |\n| c |"
+	    (org-table-align)
+	    (buffer-string))))
+  (should
+   (equal "| a | b |\n|---+---|\n"
+	  (org-test-with-temp-text "| a | b |\n|---|"
+	    (org-table-align)
+	    (buffer-string))))
+  ;; Alignment is done to the right when the ratio of numbers in the
+  ;; column is superior to `org-table-number-fraction'.
+  (should
+   (equal "|   1 |\n|  12 |\n| abc |"
+	  (org-test-with-temp-text "| 1 |\n| 12 |\n| abc |"
+	    (let ((org-table-number-fraction 0.5)) (org-table-align))
+	    (buffer-string))))
+  (should
+   (equal "| 1   |\n| ab  |\n| abc |"
+	  (org-test-with-temp-text "| 1 |\n| ab |\n| abc |"
+	    (let ((org-table-number-fraction 0.5)) (org-table-align))
+	    (buffer-string))))
+  ;; Obey to alignment cookies.
+  (should
+   (equal "| <r> |\n|  ab |\n| abc |"
+	  (org-test-with-temp-text "| <r> |\n| ab |\n| abc |"
+	    (let ((org-table-number-fraction 0.5)) (org-table-align))
+	    (buffer-string))))
+  (should
+   (equal "| <l> |\n| 12  |\n| 123 |"
+	  (org-test-with-temp-text "| <l> |\n| 12 |\n| 123 |"
+	    (let ((org-table-number-fraction 0.5)) (org-table-align))
+	    (buffer-string))))
+  (should
+   (equal "| <c> |\n|  1  |\n| 123 |"
+	  (org-test-with-temp-text "| <c> |\n| 1 |\n| 123 |"
+	    (let ((org-table-number-fraction 0.5)) (org-table-align))
+	    (buffer-string))))
+  ;; Handle gracefully tables with only horizontal rules.
+  (should
+   (org-test-with-temp-text "|-<point>--|"
+     (org-table-align)
+     t))
+  (should
+   (org-test-with-temp-text "|-<point>--|---------|\n|---|---|-----|"
+     (org-table-align)
+     t)))
+
+(ert-deftest test-org-table/align-buffer-tables ()
+  "Align all tables when updating buffer."
+  (let ((before "
+|  a  b  |
+
+|  c  d  |
+")
+	(after "
+| a  b |
+
+| c  d |
+"))
+    (should (equal (org-test-with-temp-text before
+		     (org-table-recalculate-buffer-tables)
+		     (buffer-string))
+		   after))
+    (should (equal (org-test-with-temp-text before
+		     (org-table-iterate-buffer-tables)
+		     (buffer-string))
+		   after))))
 
 
 ;;; Sorting
@@ -1590,28 +1888,33 @@ See also `test-org-table/copy-field'."
 	  (org-test-with-temp-text "| <point>1 | 2 |\n| 5 | 3 |\n| 2 | 4 |\n"
 	    (org-table-sort-lines nil ?N)
 	    (buffer-string))))
-  ;; Sort alphabetically.
-  (should
-   (equal "| a | x |\n| b | 4 |\n| c | 3 |\n"
-	  (org-test-with-temp-text "| <point>a | x |\n| c | 3 |\n| b | 4 |\n"
-	    (org-table-sort-lines nil ?a)
-	    (buffer-string))))
-  (should
-   (equal "| c | 3 |\n| b | 4 |\n| a | x |\n"
-	  (org-test-with-temp-text "| <point>a | x |\n| c | 3 |\n| b | 4 |\n"
-	    (org-table-sort-lines nil ?A)
-	    (buffer-string))))
-  ;; Sort alphabetically with case.
-  (should
-   (equal "| C |\n| a |\n| b |\n"
-	  (org-test-with-temp-text "| <point>a |\n| C |\n| b |\n"
-	    (org-table-sort-lines t ?a)
-	    (buffer-string))))
-  (should
-   (equal "| b |\n| a |\n| C |\n"
-	  (org-test-with-temp-text "| <point>a |\n| C |\n| b |\n"
-	    (org-table-sort-lines nil ?A)
-	    (buffer-string))))
+  ;; Sort alphabetically.  Enforce the C locale for consistent results.
+  (let ((original-string-collate-lessp (symbol-function 'string-collate-lessp)))
+    (cl-letf (((symbol-function 'string-collate-lessp)
+	       (lambda (s1 s2 &optional locale ignore-case)
+		 (funcall original-string-collate-lessp
+			  s1 s2 "C" ignore-case))))
+      (should
+       (equal "| a | x |\n| B | 4 |\n| c | 3 |\n"
+	      (org-test-with-temp-text "| <point>a | x |\n| c | 3 |\n| B | 4 |\n"
+				       (org-table-sort-lines nil ?a)
+				       (buffer-string))))
+      (should
+       (equal "| c | 3 |\n| B | 4 |\n| a | x |\n"
+	      (org-test-with-temp-text "| <point>a | x |\n| c | 3 |\n| B | 4 |\n"
+				       (org-table-sort-lines nil ?A)
+				       (buffer-string))))
+      ;; Sort alphabetically with case.
+      (should
+       (equal "| C |\n| a |\n| b |\n"
+	      (org-test-with-temp-text "| <point>a |\n| C |\n| b |\n"
+				       (org-table-sort-lines t ?a)
+				       (buffer-string))))
+      (should
+       (equal "| C |\n| b |\n| a |\n"
+	      (org-test-with-temp-text "| <point>a |\n| C |\n| b |\n"
+				       (org-table-sort-lines nil ?A)
+				       (buffer-string))))))
   ;; Sort by time (timestamps)
   (should
    (equal
@@ -1629,14 +1932,20 @@ See also `test-org-table/copy-field'."
       (buffer-string))))
   ;; Sort by time (HH:MM values)
   (should
-   (equal "| 1:00 |\n| 14:00 |\n| 17:00 |\n"
-	  (org-test-with-temp-text "| 14:00 |\n| 17:00 |\n| 1:00 |\n"
+   (equal "| 1:00 |\n| 17:00 |\n| 114:00 |\n"
+	  (org-test-with-temp-text "| 114:00 |\n| 17:00 |\n| 1:00 |\n"
 	    (org-table-sort-lines nil ?t)
 	    (buffer-string))))
   (should
-   (equal "| 17:00 |\n| 14:00 |\n| 1:00 |\n"
-	  (org-test-with-temp-text "| 14:00 |\n| 17:00 |\n| 1:00 |\n"
+   (equal "| 114:00 |\n| 17:00 |\n| 1:00 |\n"
+	  (org-test-with-temp-text "| 114:00 |\n| 17:00 |\n| 1:00 |\n"
 	    (org-table-sort-lines nil ?T)
+	    (buffer-string))))
+  ;; Sort by time (durations)
+  (should
+   (equal "| 1d 3:00 |\n| 28:00 |\n"
+	  (org-test-with-temp-text "| 28:00 |\n| 1d 3:00 |\n"
+	    (org-table-sort-lines nil ?t)
 	    (buffer-string))))
   ;; Sort with custom functions.
   (should
@@ -1668,63 +1977,88 @@ See also `test-org-table/copy-field'."
       (org-table-sort-lines nil ?n)
       (buffer-string)))))
 
-
-;;; Field formulas
+
+;;; Formulas
+
+(ert-deftest test-org-table/eval-formula ()
+  "Test `org-table-eval-formula' specifications."
+  ;; Error when not on a table field.
+  (should-error
+   (org-test-with-temp-text "Text"
+     (org-table-eval-formula)))
+  (should-error
+   (org-test-with-temp-text "| a |\n|---|<point>"
+     (org-table-eval-formula)))
+  (should-error
+   (org-test-with-temp-text "| a |\n#+TBLFM:<point>"
+     (org-table-eval-formula)))
+  ;; Handle @<, @>, $< and $>.
+  (should
+   (equal "| 1 |\n| 1 |"
+	  (org-test-with-temp-text "| <point>  |\n| 1 |"
+	    (org-table-eval-formula nil "@>" nil nil t)
+	    (buffer-string))))
+  (should
+   (equal "| 1 |\n| 1 |"
+	  (org-test-with-temp-text "| 1 |\n| <point>  |"
+	    (org-table-eval-formula nil "@<" nil nil t)
+	    (buffer-string))))
+  (should
+   (equal "| 1 | 1 |"
+	  (org-test-with-temp-text "| <point>  | 1 |"
+	    (org-table-eval-formula nil "$>" nil nil t)
+	    (buffer-string))))
+  (should
+   (equal "| 1 | 1 |"
+	  (org-test-with-temp-text "| 1 | <point>  |"
+	    (org-table-eval-formula nil "$<" nil nil t)
+	    (buffer-string)))))
 
 (ert-deftest test-org-table/field-formula-outside-table ()
-  "If `org-table-formula-create-columns' is nil, then a formula
-that references an out-of-bounds column should do nothing. If it
-is t, then new columns should be added as needed"
-
-  (let ((org-table-formula-create-columns nil))
-
-    (should-error
-     (org-test-table-target-expect
-      "
+  "Test `org-table-formula-create-columns' variable."
+  ;; Refuse to create column if variable is nil.
+  (should-error
+   (org-test-with-temp-text "
 | 2 |
 | 4 |
 | 8 |
-"
-      "
-| 2 |
-| 4 |
-| 8 |
-"
-      1
-      "#+TBLFM: @1$2=5")
-     :type (list 'error 'user-error)))
-
-  (let ((org-table-formula-create-columns t))
-
-    ;; make sure field formulas work
-    (org-test-table-target-expect
-     "
-| 2 |
-| 4 |
-| 8 |
-"
-     "
+<point>#+TBLFM: @1$2=5"
+     (let ((org-table-formula-create-columns nil))
+       (org-table-calc-current-TBLFM))
+     (buffer-string))
+   :type (list 'error 'user-error))
+  ;; If the variable is non-nil, field formulas and columns formulas
+  ;; can create tables.
+  (should
+   (equal
+    "
 | 2 | 5 |
 | 4 |   |
 | 8 |   |
-"
-     1
-     "#+TBLFM: @1$2=5")
-
-    ;; and make sure column formulas work too
-    (org-test-table-target-expect
-     "
+#+TBLFM: @1$2=5"
+    (org-test-with-temp-text "
 | 2 |
 | 4 |
 | 8 |
-"
-     "
+<point>#+TBLFM: @1$2=5"
+      (let ((org-table-formula-create-columns t))
+	(org-table-calc-current-TBLFM))
+      (buffer-string))))
+  (should
+   (equal
+    "
 | 2 |   | 15 |
 | 4 |   | 15 |
 | 8 |   | 15 |
-"
-     1
-     "#+TBLFM: $3=15")))
+#+TBLFM: $3=15"
+    (org-test-with-temp-text "
+| 2 |
+| 4 |
+| 8 |
+<point>#+TBLFM: $3=15"
+      (let ((org-table-formula-create-columns t))
+	(org-table-calc-current-TBLFM))
+      (buffer-string)))))
 
 (ert-deftest test-org-table/duration ()
   "Test durations in table formulas."
@@ -1734,6 +2068,13 @@ is t, then new columns should be added as needed"
 		 (org-test-with-temp-text "
        | 2:12 | 1:47 | |
        <point>#+TBLFM: @1$3=$1+$2;T"
+		   (org-table-calc-current-TBLFM)
+		   (buffer-string))))
+  (should
+   (string-match "| 2:12 | 1:47 | 03:59 |"
+		 (org-test-with-temp-text "
+       | 2:12 | 1:47 | |
+       <point>#+TBLFM: @1$3=$1+$2;U"
 		   (org-table-calc-current-TBLFM)
 		   (buffer-string))))
   (should
@@ -1790,7 +2131,7 @@ is t, then new columns should be added as needed"
 (ert-deftest test-org-table/named-field ()
   "Test formula with a named field."
   (should
-   (org-string-match-p
+   (string-match-p
     "| +| +1 +|"
     (org-test-with-temp-text "
 |   |      |
@@ -1799,7 +2140,7 @@ is t, then new columns should be added as needed"
       (org-table-calc-current-TBLFM)
       (buffer-string))))
   (should
-   (org-string-match-p
+   (string-match-p
     "| +| +1 +|"
     (org-test-with-temp-text "
 | _ | name |
@@ -1811,7 +2152,7 @@ is t, then new columns should be added as needed"
 (ert-deftest test-org-table/named-column ()
   "Test formula with a named field."
   (should
-   (org-string-match-p
+   (string-match-p
     "| +| +1 +| +1 +|"
     (org-test-with-temp-text "
 | ! | name |   |
@@ -1820,10 +2161,31 @@ is t, then new columns should be added as needed"
       (org-table-calc-current-TBLFM)
       (buffer-string)))))
 
+(ert-deftest test-org-table/formula-priority ()
+  "Test field formula priority over column formula."
+  ;; Field formulas bind stronger than column formulas.
+  (should
+   (equal
+    "| 1 |  3 |\n| 2 | 99 |\n"
+    (org-test-with-temp-text
+	"| 1 |   |\n| 2 |   |\n<point>#+tblfm: $2=3*$1::@2$2=99"
+      (org-table-calc-current-TBLFM)
+      (buffer-substring-no-properties (point-min) (point)))))
+  ;; When field formula is removed, table formulas is applied again.
+  (should
+   (equal
+    "| 1 | 3 |\n| 2 | 6 |\n"
+    (org-test-with-temp-text
+	"| 1 |   |\n| 2 |   |\n#+tblfm: $2=3*$1<point>::@2$2=99"
+      (org-table-calc-current-TBLFM)
+      (delete-region (point) (line-end-position))
+      (org-table-calc-current-TBLFM)
+      (buffer-substring-no-properties (point-min) (line-beginning-position))))))
+
 (ert-deftest test-org-table/tab-indent ()
   "Test named fields with tab indentation."
   (should
-   (org-string-match-p
+   (string-match-p
     "| # | 111 |"
     (org-test-with-temp-text
 	"
@@ -1836,16 +2198,1173 @@ is t, then new columns should be added as needed"
       (buffer-string)))))
 
 (ert-deftest test-org-table/first-rc ()
-  "Test \"$<\" constructs in formulas."
+  "Test \"$<\" and \"@<\" constructs in formulas."
   (should
-   (org-string-match-p
+   (string-match-p
     "| 1 | 2 |"
     (org-test-with-temp-text
 	"|   | 2 |
 <point>#+TBLFM: $<=1"
       (org-table-calc-current-TBLFM)
+      (buffer-string))))
+  (should
+   (string-match-p
+    "| 2 |\n| 2 |"
+    (org-test-with-temp-text
+	"| 2 |\n|   |
+<point>#+TBLFM: @2$1=@<"
+      (org-table-calc-current-TBLFM)
       (buffer-string)))))
 
+(ert-deftest test-org-table/last-rc ()
+  "Test \"$>\" and \"@>\" constructs in formulas."
+  (should
+   (string-match-p
+    "| 2 | 1 |"
+    (org-test-with-temp-text
+	"| 2 |   |\n<point>#+TBLFM: $>=1"
+      (org-table-calc-current-TBLFM)
+      (buffer-string))))
+  (should
+   (string-match-p
+    "| 2 |\n| 2 |"
+    (org-test-with-temp-text
+	"| 2 |\n|   |\n<point>#+TBLFM: @>$1=@<"
+      (org-table-calc-current-TBLFM)
+      (buffer-string)))))
+
+(ert-deftest test-org-table/time-stamps ()
+  "Test time-stamps handling."
+  ;; Standard test.
+  (should
+   (string-match-p
+    "| 1 |"
+    (org-test-with-temp-text
+	"| <2016-07-07 Sun> | <2016-07-08 Fri> |   |\n<point>#+TBLFM: $3=$2-$1"
+      (org-table-calc-current-TBLFM)
+      (buffer-string))))
+  ;; Handle locale specific time-stamps.
+  (should
+   (string-match-p
+    "| 1 |"
+    (org-test-with-temp-text
+	"| <2016-07-07 Do> | <2016-07-08 Fr> |   |\n<point>#+TBLFM: $3=$2-$1"
+      (org-table-calc-current-TBLFM)
+      (buffer-string)))))
+
+
+(ert-deftest test-org-table/orgtbl-ascii-draw ()
+  "Test `orgtbl-ascii-draw'."
+  ;; First value: Make sure that an integer input value is converted to a
+  ;; float before division. Further values: Show some float input value
+  ;; ranges corresponding to the same bar width.
+  (should
+   (equal
+    (org-test-with-temp-text
+	"
+|    Value | <l>     |
+|----------+---------|
+|       19 | replace |
+|----------+---------|
+| -0.50001 | replace |
+| -0.49999 | replace |
+|  0.49999 | replace |
+|  0.50001 | replace |
+|  1.49999 | replace |
+| 22.50001 | replace |
+| 23.49999 | replace |
+| 23.50001 | replace |
+| 24.49999 | replace |
+| 24.50001 | replace |
+<point>#+TBLFM: $2 = '(orgtbl-ascii-draw $1 0 24 3 \" 12345678\")"
+      (org-table-calc-current-TBLFM)
+      (buffer-string))
+    "
+|    Value | <l>       |
+|----------+-----------|
+|       19 | 883       |
+|----------+-----------|
+| -0.50001 | too small |
+| -0.49999 |           |
+|  0.49999 |           |
+|  0.50001 | 1         |
+|  1.49999 | 1         |
+| 22.50001 | 887       |
+| 23.49999 | 887       |
+| 23.50001 | 888       |
+| 24.49999 | 888       |
+| 24.50001 | too large |
+#+TBLFM: $2 = '(orgtbl-ascii-draw $1 0 24 3 \" 12345678\")"))
+  ;; Draw bars with a bullet. The bullet does not count in the parameter
+  ;; WIDTH of `orgtbl-ascii-draw'.
+  (should
+   (equal
+    (org-test-with-temp-text
+	"
+| -1 | replace |
+|  0 | replace |
+|  1 | replace |
+|  2 | replace |
+|  3 | replace |
+|  4 | replace |
+<point>#+TBLFM: $2 = '(orgtbl-ascii-draw $1 0 3 3 \"$-\")"
+      (org-table-calc-current-TBLFM)
+      (buffer-string))
+    "
+| -1 | too small |
+|  0 | $         |
+|  1 | -$        |
+|  2 | --$       |
+|  3 | ---$      |
+|  4 | too large |
+#+TBLFM: $2 = '(orgtbl-ascii-draw $1 0 3 3 \"$-\")")))
+
+(ert-deftest test-org-table/single-rowgroup ()
+  "Test column formula in a table with a single rowgroup."
+  (should
+   (equal
+    "
+|---+---|
+| 1 | 0 |
+|---+---|
+#+TBLFM: $2=$1-1"
+    (org-test-with-temp-text "
+|---+---|
+| 1 |   |
+|---+---|
+<point>#+TBLFM: $2=$1-1"
+      (org-table-calc-current-TBLFM)
+      (buffer-string))))
+  (should
+   (equal
+    "
+| 1 | 0 |
+#+TBLFM: $2=$1-1"
+    (org-test-with-temp-text "
+| 1 |   |
+<point>#+TBLFM: $2=$1-1"
+      (org-table-calc-current-TBLFM)
+      (buffer-string)))))
+
+
+;;; Navigation
+
+(ert-deftest test-org-table/next-field ()
+  "Test `org-table-next-field' specifications."
+  ;; Regular test.
+  (should
+   (equal
+    "b"
+    (org-test-with-temp-text "| a<point> | b |"
+      (org-table-next-field)
+      (org-trim (org-table-get-field)))))
+  ;; Create new rows as needed.
+  (should
+   (equal
+    "| a |\n|   |\n"
+    (org-test-with-temp-text "| a<point> |"
+      (org-table-next-field)
+      (buffer-string))))
+  ;; Jump over hlines, if `org-table-tab-jumps-over-hlines' is
+  ;; non-nil.
+  (should
+   (equal
+    "b"
+    (org-test-with-temp-text "| a<point> |\n|---|\n| b |"
+      (let ((org-table-tab-jumps-over-hlines t)) (org-table-next-field))
+      (org-trim (org-table-get-field)))))
+  ;; If `org-table-tab-jumps-over-hlines' is nil, however, create
+  ;; a new row before the rule.
+  (should
+   (equal
+    "| a |\n|   |\n|---|\n| b |"
+    (org-test-with-temp-text "| a<point> |\n|---|\n| b |"
+      (let ((org-table-tab-jumps-over-hlines nil)) (org-table-next-field))
+      (buffer-string)))))
+
+(ert-deftest test-org-table/previous-field ()
+  "Test `org-table-previous-field' specifications."
+  ;; Regular tests.
+  (should
+   (eq ?a
+       (org-test-with-temp-text "| a | <point>b |"
+	 (org-table-previous-field)
+	 (char-after))))
+  (should
+   (eq ?a
+       (org-test-with-temp-text "| a |\n| <point>b |"
+	 (org-table-previous-field)
+	 (char-after))))
+  ;; Find previous field across horizontal rules.
+  (should
+   (eq ?a
+       (org-test-with-temp-text "| a |\n|---|\n| <point>b |"
+	 (org-table-previous-field)
+	 (char-after))))
+  ;; When called on a horizontal rule, find previous data field.
+  (should
+   (eq ?b
+       (org-test-with-temp-text "| a | b |\n|---+-<point>--|"
+	 (org-table-previous-field)
+	 (char-after))))
+  ;; Error when at first field.  Make sure to preserve original
+  ;; position.
+  (should-error
+   (org-test-with-temp-text "| <point> a|"
+     (org-table-previous-field)))
+  (should-error
+   (org-test-with-temp-text "|---|\n| <point>a |"
+     (org-table-previous-field)))
+  (should
+   (eq ?a
+       (org-test-with-temp-text "|---|\n| <point>a |"
+	 (ignore-errors (org-table-previous-field))
+	 (char-after)))))
+
+
+;;; Deleting columns
+(ert-deftest test-org-table/delete-column ()
+  "Test `org-table-delete-column'."
+  ;; Error when outside a table.
+  (should-error
+   (org-test-with-temp-text "Paragraph"
+     (org-table-delete-column)))
+  ;; Delete first column.
+  (should
+   (equal "| a |\n"
+	  (org-test-with-temp-text
+	      "| <point>  | a |\n"
+	    (org-table-delete-column)
+	    (buffer-string))))
+  ;; Delete column and check location of point.
+  (should
+   (= 2
+      (org-test-with-temp-text
+	  "| a | <point>b  | c |"
+	(org-table-delete-column)
+	(org-table-current-column))))
+  ;; Delete column when at end of line and after a "|".
+  (should
+   (equal "| a |\n"
+	  (org-test-with-temp-text
+	      "| a | b |<point>\n"
+	    (org-table-delete-column)
+	    (buffer-string))))
+  (should
+   (equal "| a |\n"
+	  (org-test-with-temp-text
+	      "| a | b |   <point>\n"
+	    (org-table-delete-column)
+	    (buffer-string))))
+  ;; Delete two columns starting with the last column.
+  (should
+   (equal "| a |\n"
+	  (org-test-with-temp-text
+	      "| a | b  | c<point> |"
+	    (org-table-delete-column)
+	    (org-table-delete-column)
+	    (buffer-string)))))
+
+
+;;; Inserting rows, inserting columns
+
+(ert-deftest test-org-table/insert-column ()
+  "Test `org-table-insert-column' specifications."
+  ;; Error when outside a table.
+  (should-error
+   (org-test-with-temp-text "Paragraph"
+     (org-table-insert-column)))
+  ;; Insert new column after current one.
+  (should
+   (equal "|   | a |\n"
+	  (org-test-with-temp-text "| a |"
+	    (org-table-insert-column)
+	    (buffer-string))))
+  (should
+   (equal "|   | a | b |\n"
+	  (org-test-with-temp-text "| <point>a | b |"
+	    (org-table-insert-column)
+	    (buffer-string))))
+  ;; Move point into the newly created column.
+  (should
+   (equal "  | a |"
+	  (org-test-with-temp-text "| <point>a |"
+	    (org-table-insert-column)
+	    (buffer-substring-no-properties (point) (line-end-position)))))
+  (should
+   (equal "  | a | b |"
+	  (org-test-with-temp-text "| <point>a | b |"
+	    (org-table-insert-column)
+	    (buffer-substring-no-properties (point) (line-end-position)))))
+  ;; Handle missing vertical bar in the last column.
+  (should
+   (equal "|   | a |\n"
+	  (org-test-with-temp-text "| a"
+	    (org-table-insert-column)
+	    (buffer-string))))
+  (should
+   (equal "  | a |"
+	  (org-test-with-temp-text "| <point>a"
+	    (org-table-insert-column)
+	    (buffer-substring-no-properties (point) (line-end-position)))))
+  ;; Handle column insertion when point is before first column.
+  (should
+   (equal " |   | a |\n"
+	  (org-test-with-temp-text " | a |"
+	    (org-table-insert-column)
+	    (buffer-string))))
+  (should
+   (equal " |   | a | b |\n"
+	  (org-test-with-temp-text " | a | b |"
+	    (org-table-insert-column)
+	    (buffer-string)))))
+
+(ert-deftest test-org-table/insert-column-with-formula ()
+  "Test `org-table-insert-column' with a formula in place."
+  (should
+   (equal "|   | 1 | 1 | 2 |
+#+TBLFM: $4=$2+$3"
+	  (org-test-with-temp-text
+	   "| 1<point> | 1 | 2 |
+#+TBLFM: $3=$1+$2"
+	   (org-table-insert-column)
+	   (buffer-substring-no-properties (point-min) (point-max))))))
+
+
+;;; Moving single cells
+(ert-deftest test-org-table/move-cell-down ()
+  "Test `org-table-move-cell-down' specifications."
+  ;; Error out when cell cannot be moved due to not in table, in the
+  ;; last row of the table, or is on a hline.
+  (should-error
+   (org-test-with-temp-text "not in\na table\n"
+     (org-table-move-cell-down)))
+  (should-error
+   (org-test-with-temp-text "| a |"
+     (org-table-move-cell-down)))
+  (should-error
+   (org-test-with-temp-text "| a |\n"
+     (org-table-move-cell-down)))
+  (should-error
+   (org-test-with-temp-text "| a | <point>b |\n"
+     (org-table-move-cell-down)))
+  (should-error
+   (org-test-with-temp-text "| a | b |\n| <point>c | d |\n"
+     (org-table-move-cell-down)))
+  (should-error
+   (org-test-with-temp-text "| a | b |\n| c | <point>d |\n"
+     (org-table-move-cell-down)))
+  (should-error
+   (org-test-with-temp-text "| <point>a |\n|---|\n"
+     (org-table-move-cell-down)))
+  (should-error
+   (org-test-with-temp-text "|<point>---|\n| a |\n"
+     (org-table-move-cell-down)))
+  ;; Check for correct cell movement
+  (should (equal (concat "| c | b |\n"
+			 "| a | d |\n"
+			 "| e | f |\n")
+		 (org-test-with-temp-text
+		     (concat "| <point>a | b |\n"
+			     "| c | d |\n"
+			     "| e | f |\n")
+		   (org-table-move-cell-down)
+		   (buffer-string))))
+  (should (equal (concat "| a | d |\n"
+			 "| c | b |\n"
+			 "| e | f |\n")
+		 (org-test-with-temp-text
+		     (concat "| a | <point>b |\n"
+			     "| c | d |\n"
+			     "| e | f |\n")
+		   (org-table-move-cell-down)
+		   (buffer-string))))
+  (should (equal (concat "| a | b |\n"
+			 "| e | d |\n"
+			 "| c | f |\n")
+		 (org-test-with-temp-text
+		     (concat "| a | b |\n"
+			     "| <point>c | d |\n"
+			     "| e | f |\n")
+		   (org-table-move-cell-down)
+		   (buffer-string))))
+  (should (equal (concat "| a | d |\n"
+			 "| c | f |\n"
+			 "| e | b |\n")
+		 (org-test-with-temp-text
+		     (concat "| a |<point> b |\n"
+			     "| c | d |\n"
+			     "| e | f |\n")
+		   (org-table-move-cell-down)
+		   (org-table-move-cell-down)
+		   (buffer-string))))
+  ;; Check for correct handling of hlines which should not change
+  ;; position on single cell moves.
+  (should (equal (concat "| c | b |\n"
+			 "|---+---|\n"
+			 "| a | d |\n"
+			 "| e | f |\n")
+		 (org-test-with-temp-text
+		     (concat "| <point>a | b |\n"
+			     "|---+---|\n"
+			     "| c | d |\n"
+			     "| e | f |\n")
+		   (org-table-move-cell-down)
+		   (buffer-string))))
+  (should (equal (concat "| a | d |\n"
+			 "|---+---|\n"
+			 "| c | f |\n"
+			 "| e | b |\n")
+		 (org-test-with-temp-text
+		     (concat "| a | <point>b |\n"
+			     "|---+---|\n"
+			     "| c | d |\n"
+			     "| e | f |\n")
+		   (org-table-move-cell-down)
+		   (org-table-move-cell-down)
+		   (buffer-string))))
+  (should (equal (concat "| a | b |\n"
+			 "|---+---|\n"
+			 "| c | f |\n"
+			 "| e | d |\n")
+		 (org-test-with-temp-text
+		     (concat "| a | b |\n"
+			     "|---+---|\n"
+			     "| c | <point>d |\n"
+			     "| e | f |\n")
+		   (org-table-move-cell-down)
+		   (buffer-string))))
+  ;; Move single cell even without a final newline.
+  (should (equal (concat "| a | d |\n"
+			 "|---+---|\n"
+			 "| c | f |\n"
+			 "| e | b |\n")
+		 (org-test-with-temp-text
+		     (concat "| a | <point>b |\n"
+			     "|---+---|\n"
+			     "| c | d |\n"
+			     "| e | f |")
+		   (org-table-move-cell-down)
+		   (org-table-move-cell-down)
+		   (buffer-string)))))
+
+(ert-deftest test-org-table/move-cell-up ()
+  "Test `org-table-move-cell-up' specifications."
+  ;; Error out when cell cannot be moved due to not in table, in the
+  ;; last row of the table, or is on a hline.
+  (should-error
+   (org-test-with-temp-text "not in\na table\n"
+     (org-table-move-cell-up)))
+  (should-error
+   (org-test-with-temp-text "| a |"
+     (org-table-move-cell-up)))
+  (should-error
+   (org-test-with-temp-text "| a |\n"
+     (org-table-move-cell-up)))
+  (should-error
+   (org-test-with-temp-text "| <point>a | b |\n"
+     (org-table-move-cell-up)))
+  (should-error
+   (org-test-with-temp-text "| a | <point>b |\n| c | d |\n"
+     (org-table-move-cell-up)))
+  (should-error
+   (org-test-with-temp-text "| <point>a |\n|---|\n"
+     (org-table-move-cell-up)))
+  (should-error
+   (org-test-with-temp-text "|<point>---|\n| a |\n"
+     (org-table-move-cell-up)))
+  ;; Check for correct cell movement.
+  (should (equal (concat "| c | b |\n"
+			 "| a | d |\n"
+			 "| e | f |\n")
+		 (org-test-with-temp-text
+		     (concat "| a | b |\n"
+			     "| <point>c | d |\n"
+			     "| e | f |\n")
+		   (org-table-move-cell-up)
+		   (buffer-string))))
+  (should (equal (concat "| a | d |\n"
+			 "| c | b |\n"
+			 "| e | f |\n")
+		 (org-test-with-temp-text
+		     (concat "| a | b |\n"
+			     "| c | <point>d |\n"
+			     "| e | f |\n")
+		   (org-table-move-cell-up)
+		   (buffer-string))))
+  (should (equal (concat "| a | b |\n"
+			 "| e | d |\n"
+			 "| c | f |\n")
+		 (org-test-with-temp-text
+		     (concat "| a | b |\n"
+			     "| c | d |\n"
+			     "| <point>e | f |\n")
+		   (org-table-move-cell-up)
+		   (buffer-string))))
+  (should (equal (concat "| a | f |\n"
+			 "| c | b |\n"
+			 "| e | d |\n")
+		 (org-test-with-temp-text
+		     (concat "| a | b |\n"
+			     "| c | d |\n"
+			     "| e |<point> f |\n")
+		   (org-table-move-cell-up)
+		   (org-table-move-cell-up)
+		   (buffer-string))))
+  ;; Check for correct handling of hlines which should not change
+  ;; position on single cell moves.
+  (should (equal (concat "| c | b |\n"
+			 "|---+---|\n"
+			 "| a | d |\n"
+			 "| e | f |\n")
+		 (org-test-with-temp-text
+		     (concat "| a | b |\n"
+			     "|---+---|\n"
+			     "| <point>c | d |\n"
+			     "| e | f |\n")
+		   (org-table-move-cell-up)
+		   (buffer-string))))
+  (should (equal (concat "| a | f |\n"
+			 "|---+---|\n"
+			 "| c | b |\n"
+			 "| e | d |\n")
+		 (org-test-with-temp-text
+		     (concat "| a | b |\n"
+			     "|---+---|\n"
+			     "| c | d |\n"
+			     "| e | <point>f |\n")
+		   (org-table-move-cell-up)
+		   (org-table-move-cell-up)
+		   (buffer-string))))
+  (should (equal (concat "| a | b |\n"
+			 "|---+---|\n"
+			 "| c | f |\n"
+			 "| e | d |\n")
+		 (org-test-with-temp-text
+		     (concat "| a | b |\n"
+			     "|---+---|\n"
+			     "| c | d |\n"
+			     "| e | <point>f |\n")
+		   (org-table-move-cell-up)
+		   (buffer-string))))
+  ;; Move single cell even without a final newline.
+  (should (equal (concat "| a | f |\n"
+			 "|---+---|\n"
+			 "| c | b |\n"
+			 "| e | d |\n")
+		 (org-test-with-temp-text
+		     (concat "| a | b |\n"
+			     "|---+---|\n"
+			     "| c | d |\n"
+			     "| e | <point>f |")
+		   (org-table-move-cell-up)
+		   (org-table-move-cell-up)
+		   (buffer-string)))))
+
+(ert-deftest test-org-table/move-cell-right ()
+  "Test `org-table-move-cell-right' specifications."
+  ;; Error out when cell cannot be moved due to not in table, in the
+  ;; last col of the table, or is on a hline.
+  (should-error
+   (org-test-with-temp-text "not in\na table\n"
+     (org-table-move-cell-right)))
+  (should-error
+   (org-test-with-temp-text "| a |"
+     (org-table-move-cell-right)))
+  (should-error
+   (org-test-with-temp-text "| a |\n"
+     (org-table-move-cell-right)))
+  (should-error
+   (org-test-with-temp-text "| <point>a |\n| b |\n"
+     (org-table-move-cell-right)))
+  (should-error
+   (org-test-with-temp-text "| a | <point>b |\n| c | d |\n"
+     (org-table-move-cell-right)))
+  (should-error
+   (org-test-with-temp-text "| <point>a |\n|---|\n"
+     (org-table-move-cell-right)))
+  (should-error
+   (org-test-with-temp-text "|<point>---|\n| a |\n"
+     (org-table-move-cell-right)))
+  ;; Check for correct cell movement.
+  (should (equal (concat "| b | a | c |\n"
+			 "| d | e | f |\n")
+		 (org-test-with-temp-text
+		     (concat "| <point>a | b | c |\n"
+			     "| d | e | f |\n")
+		   (org-table-move-cell-right)
+		   (buffer-string))))
+  (should (equal (concat "| b | c | a |\n"
+			 "| d | e | f |\n")
+		 (org-test-with-temp-text
+		     (concat "| <point>a | b | c |\n"
+			     "| d | e | f |\n")
+		   (org-table-move-cell-right)
+		   (org-table-move-cell-right)
+		   (buffer-string))))
+  (should (equal (concat "| a | b | c |\n"
+			 "| e | f | d |\n")
+		 (org-test-with-temp-text
+		     (concat "| a | b | c |\n"
+			     "| <point> d | e | f |\n")
+		   (org-table-move-cell-right)
+		   (org-table-move-cell-right)
+		   (buffer-string))))
+  (should (equal (concat "| a | b | c |\n"
+			 "| d | f | e |\n")
+		 (org-test-with-temp-text
+		     (concat "| a | b | c |\n"
+			     "| d | <point>e | f |\n")
+		   (org-table-move-cell-right)
+		   (buffer-string))))
+  (should (equal (concat "| a | b | c |\n"
+			 "|---+---+---|\n"
+			 "| e | f | d |\n")
+		 (org-test-with-temp-text
+		     (concat "| a | b | c |\n"
+			     "|---+---+---|\n"
+			     "| <point>d | e | f |\n")
+		   (org-table-move-cell-right)
+		   (org-table-move-cell-right)
+		   (buffer-string))))
+  ;; Move single cell even without a final newline.
+  (should (equal (concat "| a | b | c |\n"
+			 "|---+---+---|\n"
+			 "| e | d | f |\n")
+		 (org-test-with-temp-text
+		     (concat "| a | b | c |\n"
+			     "|---+---+---|\n"
+			     "| <point>d | e | f |")
+		   (org-table-move-cell-right)
+		   (buffer-string)))))
+
+(ert-deftest test-org-table/move-cell-left ()
+  "Test `org-table-move-cell-left' specifications."
+  ;; Error out when cell cannot be moved due to not in table, in the
+  ;; last col of the table, or is on a hline.
+  (should-error
+   (org-test-with-temp-text "not in\na table\n"
+     (org-table-move-cell-left)))
+  (should-error
+   (org-test-with-temp-text "| a |"
+     (org-table-move-cell-left)))
+  (should-error
+   (org-test-with-temp-text "| a |\n"
+     (org-table-move-cell-left)))
+  (should-error
+   (org-test-with-temp-text "| <point>a |\n| b |\n"
+     (org-table-move-cell-left)))
+  (should-error
+   (org-test-with-temp-text "| <point>a | b |\n| c | d |\n"
+     (org-table-move-cell-left)))
+  (should-error
+   (org-test-with-temp-text "| <point>a |\n|---|\n"
+     (org-table-move-cell-left)))
+  (should-error
+   (org-test-with-temp-text "|<point>---|\n| a |\n"
+     (org-table-move-cell-left)))
+  ;; Check for correct cell movement.
+  (should (equal (concat "| b | a | c |\n"
+			 "| d | e | f |\n")
+		 (org-test-with-temp-text
+		     (concat "| a | <point>b | c |\n"
+			     "| d | e | f |\n")
+		   (org-table-move-cell-left)
+		   (buffer-string))))
+  (should (equal (concat "| c | a | b |\n"
+			 "| d | e | f |\n")
+		 (org-test-with-temp-text
+		     (concat "| a | b | <point>c |\n"
+			     "| d | e | f |\n")
+		   (org-table-move-cell-left)
+		   (org-table-move-cell-left)
+		   (buffer-string))))
+  (should (equal (concat "| a | b | c |\n"
+			 "| f | d | e |\n")
+		 (org-test-with-temp-text
+		     (concat "| a | b | c |\n"
+			     "| d | e | <point>f |\n")
+		   (org-table-move-cell-left)
+		   (org-table-move-cell-left)
+		   (buffer-string))))
+  (should (equal (concat "| a | b | c |\n"
+			 "| d | f | e |\n")
+		 (org-test-with-temp-text
+		     (concat "| a | b | c |\n"
+			     "| d | e | <point>f |\n")
+		   (org-table-move-cell-left)
+		   (buffer-string))))
+  (should (equal (concat "| a | b | c |\n"
+			 "|---+---+---|\n"
+			 "| f | d | e |\n")
+		 (org-test-with-temp-text
+		     (concat "| a | b | c |\n"
+			     "|---+---+---|\n"
+			     "| d | e | <point>f |\n")
+		   (org-table-move-cell-left)
+		   (org-table-move-cell-left)
+		   (buffer-string))))
+  ;; Move single cell even without a final newline.
+  (should (equal (concat "| a | b | c |\n"
+			 "|---+---+---|\n"
+			 "| e | d | f |\n")
+		 (org-test-with-temp-text
+		     (concat "| a | b | c |\n"
+			     "|---+---+---|\n"
+			     "| d | <point>e | f |")
+		   (org-table-move-cell-left)
+		   (buffer-string)))))
+
+
+;;; Moving rows, moving columns
+
+(ert-deftest test-org-table/move-row-down ()
+  "Test `org-table-move-row-down' specifications."
+  ;; Error out when row cannot be moved, e.g., it is the last row in
+  ;; the table.
+  (should-error
+   (org-test-with-temp-text "| a |"
+     (org-table-move-row-down)))
+  (should-error
+   (org-test-with-temp-text "| a |\n"
+     (org-table-move-row-down)))
+  (should-error
+   (org-test-with-temp-text "| a |\n| <point>b |"
+     (org-table-move-row-down)))
+  ;; Move data lines.
+  (should
+   (equal "| b |\n| a |\n"
+	  (org-test-with-temp-text "| a |\n| b |\n"
+	    (org-table-move-row-down)
+	    (buffer-string))))
+  (should
+   (equal "|---|\n| a |\n"
+	  (org-test-with-temp-text "| a |\n|---|\n"
+	    (org-table-move-row-down)
+	    (buffer-string))))
+  ;; Move hlines.
+  (should
+   (equal "| b |\n|---|\n"
+	  (org-test-with-temp-text "|---|\n| b |\n"
+	    (org-table-move-row-down)
+	    (buffer-string))))
+  (should
+   (equal "|---|\n|---|\n"
+	  (org-test-with-temp-text "|---|\n|---|\n"
+	    (org-table-move-row-down)
+	    (buffer-string))))
+  ;; Move rows even without a final newline.
+  (should
+   (equal "| b |\n| a |\n"
+	  (org-test-with-temp-text "| a |\n| b |"
+	    (org-table-move-row-down)
+	    (buffer-string)))))
+
+(ert-deftest test-org-table/move-row-up ()
+  "Test `org-table-move-row-up' specifications."
+  ;; Error out when row cannot be moved, e.g., it is the first row in
+  ;; the table.
+  (should-error
+   (org-test-with-temp-text "| a |"
+     (org-table-move-row-up)))
+  (should-error
+   (org-test-with-temp-text "| a |\n"
+     (org-table-move-row-up)))
+  ;; Move data lines.
+  (should
+   (equal "| b |\n| a |\n"
+	  (org-test-with-temp-text "| a |\n| <point>b |\n"
+	    (org-table-move-row-up)
+	    (buffer-string))))
+  (should
+   (equal "| b |\n|---|\n"
+	  (org-test-with-temp-text "|---|\n| <point>b |\n"
+	    (org-table-move-row-up)
+	    (buffer-string))))
+  ;; Move hlines.
+  (should
+   (equal "|---|\n| a |\n"
+	  (org-test-with-temp-text "| a |\n|<point>---|\n"
+	    (org-table-move-row-up)
+	    (buffer-string))))
+  (should
+   (equal "|---|\n|---|\n"
+	  (org-test-with-temp-text "|---|\n|<point>---|\n"
+	    (org-table-move-row-up)
+	    (buffer-string))))
+  ;; Move rows even without a final newline.
+  (should
+   (equal "| b |\n| a |\n"
+	  (org-test-with-temp-text "| a |\n| <point>b |"
+	    (org-table-move-row-up)
+	    (buffer-string)))))
+
+
+
+;;; Shrunk columns
+
+(ert-deftest test-org-table/toggle-column-width ()
+  "Test `org-table-toggle-columns-width' specifications."
+  ;; Error when not at a column.
+  (should-error
+   (org-test-with-temp-text "<point>a"
+     (org-table-toggle-column-width)))
+  ;; A shrunk column is overlaid with
+  ;; `org-table-shrunk-column-indicator'.
+  (should
+   (equal org-table-shrunk-column-indicator
+	  (org-test-with-temp-text "| <point>a |"
+	    (org-table-toggle-column-width)
+	    (overlay-get (car (overlays-at (point))) 'display))))
+  (should
+   (equal org-table-shrunk-column-indicator
+	  (org-test-with-temp-text "| a |\n|-<point>--|"
+	    (org-table-toggle-column-width)
+	    (overlay-get (car (overlays-at (point))) 'display))))
+  ;; Shrink every field in the same column.
+  (should
+   (equal org-table-shrunk-column-indicator
+	  (org-test-with-temp-text "| a |\n|-<point>--|"
+	    (org-table-toggle-column-width)
+	    (overlay-get (car (overlays-at (1+ (line-beginning-position 0))))
+			 'display))))
+  ;; When column is already shrunk, expand it, i.e., remove overlays.
+  (should-not
+   (org-test-with-temp-text "| <point>a |"
+     (org-table-toggle-column-width)
+     (org-table-toggle-column-width)
+     (overlays-in (point-min) (point-max))))
+  (should-not
+   (org-test-with-temp-text "| a |\n| <point>b |"
+     (org-table-toggle-column-width)
+     (org-table-toggle-column-width)
+     (overlays-in (point-min) (point-max))))
+  ;; With a column width cookie, limit overlay to the specified number
+  ;; of characters.
+  (should
+   (equal "| abc"
+	  (org-test-with-temp-text "| <3>  |\n| <point>abcd |"
+	    (org-table-toggle-column-width)
+	    (buffer-substring (line-beginning-position)
+			      (overlay-start
+			       (car (overlays-in (line-beginning-position)
+						 (line-end-position))))))))
+  (should
+   (equal "| a  "
+	  (org-test-with-temp-text "| <3>  |\n| <point>a   |"
+	    (org-table-toggle-column-width)
+	    (buffer-substring (line-beginning-position)
+			      (overlay-start
+			       (car (overlays-in (line-beginning-position)
+						 (line-end-position))))))))
+  (should
+   (equal (concat "----" org-table-shrunk-column-indicator)
+	  (org-test-with-temp-text "| <3>  |\n|--<point>----|"
+	    (org-table-toggle-column-width)
+	    (overlay-get
+	     (car (overlays-in (line-beginning-position)
+			       (line-end-position)))
+	     'display))))
+  ;; Width only takes into account visible characters.
+  (should
+   (equal "| [[http"
+	  (org-test-with-temp-text "| <4> |\n| <point>[[http://orgmode.org]] |"
+	    (org-table-toggle-column-width)
+	    (buffer-substring (line-beginning-position)
+			      (overlay-start
+			       (car (overlays-in (line-beginning-position)
+						 (line-end-position))))))))
+  ;; Before the first column or after the last one, ask for columns
+  ;; ranges.
+  (should
+   (catch :exit
+     (org-test-with-temp-text "| a |"
+       (cl-letf (((symbol-function 'read-string)
+		  (lambda (&rest_) (throw :exit t))))
+	 (org-table-toggle-column-width)
+	 nil))))
+  (should
+   (catch :exit
+     (org-test-with-temp-text "| a |<point>"
+       (cl-letf (((symbol-function 'read-string)
+		  (lambda (&rest_) (throw :exit t))))
+	 (org-table-toggle-column-width)
+	 nil))))
+  ;; When optional argument ARG is a string, toggle specified columns.
+  (should
+   (equal org-table-shrunk-column-indicator
+	  (org-test-with-temp-text "| <point>a | b |"
+	    (org-table-toggle-column-width "2")
+	    (overlay-get (car (overlays-at (- (point-max) 2))) 'display))))
+  (should
+   (equal '("b" "c")
+	  (org-test-with-temp-text "| a | b | c | d |"
+	    (org-table-toggle-column-width "2-3")
+	    (sort (mapcar (lambda (o) (overlay-get o 'help-echo))
+			  (overlays-in (point-min) (point-max)))
+		  #'string-lessp))))
+  (should
+   (equal '("b" "c" "d")
+	  (org-test-with-temp-text "| a | b | c | d |"
+	    (org-table-toggle-column-width "2-")
+	    (sort (mapcar (lambda (o) (overlay-get o 'help-echo))
+			  (overlays-in (point-min) (point-max)))
+		  #'string-lessp))))
+  (should
+   (equal '("a" "b")
+	  (org-test-with-temp-text "| a | b | c | d |"
+	    (org-table-toggle-column-width "-2")
+	    (sort (mapcar (lambda (o) (overlay-get o 'help-echo))
+			  (overlays-in (point-min) (point-max)))
+		  #'string-lessp))))
+  (should
+   (equal '("a" "b" "c" "d")
+	  (org-test-with-temp-text "| a | b | c | d |"
+	    (org-table-toggle-column-width "-")
+	    (sort (mapcar (lambda (o) (overlay-get o 'help-echo))
+			  (overlays-in (point-min) (point-max)))
+		  #'string-lessp))))
+  (should
+   (equal '("a" "d")
+	  (org-test-with-temp-text "| a | b | c | d |"
+	    (org-table-toggle-column-width "1-3")
+	    (org-table-toggle-column-width "2-4")
+	    (sort (mapcar (lambda (o) (overlay-get o 'help-echo))
+			  (overlays-in (point-min) (point-max)))
+		  #'string-lessp))))
+  ;; When ARG is (16), remove any column overlay.
+  (should-not
+   (org-test-with-temp-text "| <point>a |"
+     (org-table-toggle-column-width)
+     (org-table-toggle-column-width '(16))
+     (overlays-in (point-min) (point-max))))
+  (should-not
+   (org-test-with-temp-text "| a | b | c | d |"
+     (org-table-toggle-column-width "-")
+     (org-table-toggle-column-width '(16))
+     (overlays-in (point-min) (point-max)))))
+
+(ert-deftest test-org-table/shrunk-columns ()
+  "Test behaviour of shrunk column."
+  ;; Edition automatically expands a shrunk column.
+  (should-not
+   (org-test-with-temp-text "| <point>a |"
+     (org-table-toggle-column-width)
+     (insert "a")
+     (overlays-in (point-min) (point-max))))
+  ;; Other columns are not changed.
+  (should
+   (org-test-with-temp-text "| <point>a | b |"
+     (org-table-toggle-column-width "-")
+     (insert "a")
+     (overlays-in (point-min) (point-max))))
+  ;; Moving a shrunk column doesn't alter its state.
+  (should
+   (equal "a"
+	  (org-test-with-temp-text "| <point>a | b |"
+	    (org-table-toggle-column-width)
+	    (org-table-move-column-right)
+	    (overlay-get (car (overlays-at (point))) 'help-echo))))
+  (should
+   (equal "a"
+	  (org-test-with-temp-text "| <point>a |\n| b |"
+	    (org-table-toggle-column-width)
+	    (org-table-move-row-down)
+	    (overlay-get (car (overlays-at (point))) 'help-echo))))
+  ;; State is preserved upon inserting a column.
+  (should
+   (equal '("a")
+	  (org-test-with-temp-text "| <point>a |"
+	    (org-table-toggle-column-width)
+	    (org-table-insert-column)
+	    (sort (mapcar (lambda (o) (overlay-get o 'help-echo))
+			  (overlays-in (point-min) (point-max)))
+		  #'string-lessp))))
+  ;; State is preserved upon deleting a column.
+  (should
+   (equal '("a" "c")
+	  (org-test-with-temp-text "| a | <point>b | c |"
+	    (org-table-toggle-column-width "-")
+	    (org-table-delete-column)
+	    (sort (mapcar (lambda (o) (overlay-get o 'help-echo))
+			  (overlays-in (point-min) (point-max)))
+		  #'string-lessp))))
+  ;; State is preserved upon deleting a row.
+  (should
+   (equal '("b1" "b2")
+	  (org-test-with-temp-text "| a1 | a2 |\n| b1 | b2 |"
+	    (org-table-toggle-column-width "-")
+	    (org-table-kill-row)
+	    (sort (mapcar (lambda (o) (overlay-get o 'help-echo))
+			  (overlays-in (point-min) (point-max)))
+		  #'string-lessp))))
+  (should
+   (equal '("a1" "a2")
+	  (org-test-with-temp-text "| a1 | a2 |\n| <point>b1 | b2 |"
+	    (org-table-toggle-column-width "-")
+	    (org-table-kill-row)
+	    (sort (mapcar (lambda (o) (overlay-get o 'help-echo))
+			  (overlays-in (point-min) (point-max)))
+		  #'string-lessp))))
+  ;; State is preserved upon inserting a row or hline.
+  (should
+   (equal '("" "a1" "b1")
+	  (org-test-with-temp-text "| a1 | a2 |\n| <point>b1 | b2 |"
+	    (org-table-toggle-column-width)
+	    (org-table-insert-row)
+	    (sort (mapcar (lambda (o) (overlay-get o 'help-echo))
+			  (overlays-in (point-min) (point-max)))
+		  #'string-lessp))))
+  (should
+   (equal '("a1" "b1")
+	  (org-test-with-temp-text "| a1 | a2 |\n| <point>b1 | b2 |"
+	    (org-table-toggle-column-width)
+	    (org-table-insert-hline)
+	    (sort (mapcar (lambda (o) (overlay-get o 'help-echo))
+			  (overlays-in (point-min) (point-max)))
+		  #'string-lessp))))
+  ;; State is preserved upon sorting a column for all the columns but
+  ;; the one being sorted.
+  (should
+   (equal '("a2" "b2")
+	  (org-test-with-temp-text "| <point>a1 | a2 |\n| <point>b1 | b2 |"
+	    (org-table-toggle-column-width "-")
+	    (org-table-sort-lines nil ?A)
+	    (sort (mapcar (lambda (o) (overlay-get o 'help-echo))
+			  (overlays-in (point-min) (point-max)))
+		  #'string-lessp))))
+  ;; State is preserved upon replacing a field non-interactively.
+  (should
+   (equal '("a")
+	  (org-test-with-temp-text "| <point>a |"
+	    (org-table-toggle-column-width)
+	    (org-table-get-field nil "b")
+	    (mapcar (lambda (o) (overlay-get o 'help-echo))
+		    (overlays-in (point-min) (point-max))))))
+  ;; Moving to next field doesn't change shrunk state.
+  (should
+   (equal "a"
+	  (org-test-with-temp-text "| <point>a | b |"
+	    (org-table-toggle-column-width)
+	    (org-table-next-field)
+	    (overlay-get (car (overlays-at (1+ (line-beginning-position))))
+			 'help-echo))))
+  (should
+   (equal "b"
+	  (org-test-with-temp-text "| a | <point>b |"
+	    (org-table-toggle-column-width)
+	    (goto-char 2)
+	    (org-table-next-field)
+	    (overlay-get (car (overlays-at (point))) 'help-echo))))
+  ;; Aligning table doesn't alter shrunk state.
+  (should
+   (equal "a"
+	  (org-test-with-temp-text "| <point>a | b   |"
+	    (org-table-toggle-column-width)
+	    (org-table-align)
+	    (overlay-get (car (overlays-at (1+ (line-beginning-position))))
+			 'help-echo))))
+  (should
+   (equal "b"
+	  (org-test-with-temp-text "|---+-----|\n| a | <point>b   |"
+	    (org-table-toggle-column-width)
+	    (org-table-align)
+	    (overlay-get (car (overlays-at (point)))
+			 'help-echo))))
+  (should
+   (equal
+    '("b")
+    (org-test-with-temp-text "|---+-----|\n| a | <point>b   |"
+      (org-table-toggle-column-width)
+      (org-table-align)
+      (mapcar (lambda (o) (overlay-get o 'help-echo))
+	      (overlays-in (line-beginning-position) (line-end-position))))))
+  ;; Recalculating formulas doesn't change shrunk state.
+  (should
+   (equal "2"
+	  (org-test-with-temp-text "| 1 | <point>0 |\n#+TBLFM: $2=$1+1\n"
+	    (org-table-toggle-column-width)
+	    (org-table-recalculate)
+	    (overlay-get (car (overlays-at (point))) 'help-echo)))))
+
+
+
+;;; Miscellaneous
+
+(ert-deftest test-org-table/current-column ()
+  "Test `org-table-current-column' specifications."
+  (should
+   (= 1 (org-test-with-temp-text "| <point>a |"
+	  (org-table-current-column))))
+  (should
+   (= 1 (org-test-with-temp-text "|-<point>--|"
+	  (org-table-current-column))))
+  (should
+   (= 2 (org-test-with-temp-text "| 1 | <point>2 |"
+	  (org-table-current-column))))
+  (should
+   (= 2 (org-test-with-temp-text "|---+-<point>--|"
+	  (org-table-current-column)))))
+
+(ert-deftest test-org-table/get-field ()
+  "Test `org-table-get-field' specifications."
+  ;; Regular test.
+  (should
+   (equal " a "
+	  (org-test-with-temp-text "| <point>a |" (org-table-get-field))))
+  ;; Get field in open last column.
+  (should
+   (equal " a "
+	  (org-test-with-temp-text "| <point>a " (org-table-get-field))))
+  ;; Get empty field.
+  (should
+   (equal ""
+	  (org-test-with-temp-text "|<point>|" (org-table-get-field))))
+  (should
+   (equal " "
+	  (org-test-with-temp-text "| <point>|" (org-table-get-field))))
+  ;; Outside the table, return the empty string.
+  (should
+   (equal ""
+	  (org-test-with-temp-text "<point>| a |" (org-table-get-field))))
+  (should
+   (equal ""
+	  (org-test-with-temp-text "| a |<point>" (org-table-get-field))))
+  ;; With optional N argument, select a particular column in current
+  ;; row.
+  (should
+   (equal " 3 "
+	  (org-test-with-temp-text "| 1 | 2 | 3 |" (org-table-get-field 3))))
+  (should
+   (equal " 4 "
+	  (org-test-with-temp-text "| 1 | 2 |\n<point>| 3 | 4 |"
+	    (org-table-get-field 2))))
+  ;; REPLACE optional argument is used to replace selected field.
+  (should
+   (equal "| foo |"
+	  (org-test-with-temp-text "| <point>1 |"
+	    (org-table-get-field nil " foo ")
+	    (buffer-string))))
+  (should
+   (equal "| 1 | 2 | foo |"
+	  (org-test-with-temp-text "| 1 | 2 | 3 |"
+	    (org-table-get-field 3 " foo ")
+	    (buffer-string))))
+  (should
+   (equal " 4 "
+	  (org-test-with-temp-text "| 1 | 2 |\n<point>| 3 | 4 |"
+	    (org-table-get-field 2))))
+  ;; An empty REPLACE string clears the field.
+  (should
+   (equal "| |"
+	  (org-test-with-temp-text "| <point>1 |"
+	    (org-table-get-field nil "")
+	    (buffer-string))))
+  ;; When using REPLACE still return old value.
+  (should
+   (equal " 1 "
+	  (org-test-with-temp-text "| <point>1 |"
+	    (org-table-get-field nil " foo ")))))
 
 (provide 'test-org-table)
 

@@ -1,0 +1,33 @@
+#
+# Old behaviour (version 0.0.12)
+#
+# (1) Move to cursor to the beginning of the line containing 'aaa'
+# (2) Press TAB repeatedly
+#
+# (3) The cycle of indentations of the line should include
+#     the 'indented more than the previous line' state
+#
+# Problem: the line is only indented to align with
+#   the dash in then previous line, but not more.
+#
+# Note: in the line containing the dash ('-') there is no space character
+# after the dash, so it is not recognized as start of the sequence entry
+# by yaml-nested-sequence-re
+#
+# Proposed change:
+#
+# Change yaml-bare-scalar-re to recognize the dash-newline sequence.
+#
+# New behaviour:
+#
+#    (1) Pressing TAB on the line containing 'aaa'
+#        now indents the line more than the previous line.
+#
+#    (2) Pressing TAB again indents the line
+#        to align with dash on the previous line.
+#
+#    (3) Pressing TAB again unindents the line.
+#
+-
+  -
+    aaa

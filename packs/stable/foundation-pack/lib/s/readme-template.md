@@ -40,6 +40,12 @@ calculate the Levenshtein distance between two strings.
 
 ## Changelist
 
+### From 1.11.0 to 1.12.0
+
+- Alias all functions ending in `?` (Tianxiang Xiong)
+- Add `s-blank-str?` (Aborn Jiang)
+- Several bugfixes
+
 ### From 1.10.0 to 1.11.0
 
 - Add `s-matched-positions-all` (ono hiroko)

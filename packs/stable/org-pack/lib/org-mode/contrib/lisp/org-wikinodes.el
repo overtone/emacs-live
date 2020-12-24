@@ -1,10 +1,10 @@
 ;;; org-wikinodes.el --- Wiki-like CamelCase links to outline nodes
 
-;; Copyright (C) 2010-2016 Free Software Foundation, Inc.
+;; Copyright (C) 2010-2020 Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;; Keywords: outlines, hypermedia, calendar, wp
-;; Homepage: http://orgmode.org
+;; Homepage: https://orgmode.org
 ;; Version: 7.01trans
 ;;
 ;; This file is not part of GNU Emacs.
@@ -203,7 +203,7 @@ setting of `org-wikinodes-create-targets'."
 	(widen)
 	(goto-char (point-min))
 	(while (re-search-forward re nil t)
-	  (push (org-match-string-no-properties 4) targets))))
+	  (push (match-string-no-properties 4) targets))))
     (nreverse targets)))
 
 (defun org-wikinodes-get-links-for-directory (dir)
@@ -252,7 +252,7 @@ If there is no such wiki target, return nil."
 (defvar target-alist)
 (defvar last-section-target)
 (defvar org-export-target-aliases)
-(defun org-wikinodes-set-wiki-targets-during-export ()
+(defun org-wikinodes-set-wiki-targets-during-export (_)
   (let ((line (buffer-substring (point-at-bol) (point-at-eol)))
 	(case-fold-search nil)
 	wtarget a)
@@ -268,9 +268,8 @@ If there is no such wiki target, return nil."
 		    (car org-export-target-aliases))))
       (push (caar target-alist) (cdr a)))))
 
-(defun org-wikinodes-process-links-for-export ()
+(defun org-wikinodes-process-links-for-export (_)
   "Process Wiki links in the export preprocess buffer.
-
 Try to find target matches in the wiki scope and replace CamelCase words
 with working links."
   (let ((re org-wikinodes-camel-regexp)
@@ -289,7 +288,7 @@ with working links."
 	  (cond
 	   ((org-find-exact-headline-in-buffer link (current-buffer))
 	    ;; Found in current buffer
-	    (insert (format "[[#%s][%s]]" link link)))
+	    (insert (format "[[*%s][%s]]" link link)))
 	   ((eq org-wikinodes-scope 'file)
 	    ;; No match in file, and other files are not allowed
 	    (insert (format "%s" link)))
@@ -305,19 +304,18 @@ with working links."
 (add-hook 'org-ctrl-c-ctrl-c-hook 'org-wikinodes-clear-cache-when-on-target)
 
 ;; Make Wiki haeding create additional link names for headlines
-(add-hook 'org-export-define-heading-targets-headline-hook
+(add-hook 'org-export-before-parsing-hook
 	  'org-wikinodes-set-wiki-targets-during-export)
 
 ;; Turn Wiki links into links the exporter will treat correctly
-(add-hook 'org-export-preprocess-after-radio-targets-hook
+(add-hook 'org-export-before-parsing-hook
 	  'org-wikinodes-process-links-for-export)
 
 ;; Activate CamelCase words as part of Org mode font lock
 
 (defun org-wikinodes-add-to-font-lock-keywords ()
   "Add wikinode CamelCase highlighting to `org-font-lock-extra-keywords'."
-  (let ((m (member '(org-activate-plain-links (0 'org-link t))
-		   org-font-lock-extra-keywords)))
+  (let ((m (member '(org-activate-links) org-font-lock-extra-keywords)))
     (if m (push '(org-wikinodes-activate-links) (cdr m))
       (message "Failed to add wikinodes to `org-font-lock-extra-keywords'."))))
 

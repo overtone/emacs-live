@@ -1,6 +1,6 @@
 ;;; cider-browse-ns.el --- CIDER namespace browser
 
-;; Copyright © 2014-2018 John Andrews, Bozhidar Batsov and CIDER contributors
+;; Copyright © 2014-2020 John Andrews, Bozhidar Batsov and CIDER contributors
 
 ;; Author: John Andrews <john.m.andrews@gmail.com>
 
@@ -87,8 +87,8 @@
 (defun cider-browse-ns--text-face (var-meta)
   "Return font-lock-face for a var.
 VAR-META contains the metadata information used to decide a face.
-Presence of \"arglists-str\" and \"macro\" indicates a macro form.
-Only \"arglists-str\" indicates a function. Otherwise, its a variable.
+Presence of \"arglists\" and \"macro\" indicates a macro form.
+Only \"arglists\" indicates a function. Otherwise, its a variable.
 If the NAMESPACE is not loaded in the REPL, assume TEXT is a fn."
   (cond
    ((not var-meta) 'font-lock-function-name-face)
@@ -187,6 +187,8 @@ Return a list of the type ('ns or 'var) and the value."
                      (or (get-text-property (point) 'cider-browse-ns-current-ns)
                          cider-browse-ns-current-ns)
                      line)))))
+
+(declare-function cider-doc-lookup "cider-doc")
 
 (defun cider-browse-ns-doc-at-point ()
   "Show the documentation for the thing at current point."

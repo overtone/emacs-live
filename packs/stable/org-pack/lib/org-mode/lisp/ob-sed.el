@@ -1,27 +1,24 @@
-;;; ob-sed.el --- org-babel functions for sed scripts
+;;; ob-sed.el --- Babel Functions for Sed Scripts    -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2015-2016 Free Software Foundation, Inc.
+;; Copyright (C) 2015-2020 Free Software Foundation, Inc.
 
 ;; Author: Bjarte Johansen
 ;; Keywords: literate programming, reproducible research
-;; Version: 0.1.0
 
 ;; This file is part of GNU Emacs.
 
-;;; License:
-
-;; This program is free software; you can redistribute it and/or modify
+;; GNU Emacs is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
-;; the Free Software Foundation; either version 3, or (at your option)
-;; any later version.
-;;
-;; This program is distributed in the hope that it will be useful,
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+
+;; GNU Emacs is distributed in the hope that it will be useful,
 ;; but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;; GNU General Public License for more details.
-;;
+
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs. If not, see <http://www.gnu.org/licenses/>.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 
@@ -70,7 +67,8 @@ function is called by `org-babel-execute-src-block'."
          (in-file (cdr (assq :in-file params)))
 	 (code-file (let ((file (org-babel-temp-file "sed-")))
                       (with-temp-file file
-			(insert body)) file))
+			(insert body))
+		      file))
 	 (stdin (let ((stdin (cdr (assq :stdin params))))
 		   (when stdin
 		     (let ((tmp (org-babel-temp-file "sed-stdin-"))
@@ -81,7 +79,7 @@ function is called by `org-babel-execute-src-block'."
          (cmd (mapconcat #'identity
 			 (remq nil
 			       (list org-babel-sed-command
-				     (format "--file=\"%s\"" code-file)
+				     (format "-f \"%s\"" code-file)
 				     cmd-line
 				     in-file))
 			 " ")))
@@ -104,4 +102,5 @@ function is called by `org-babel-execute-src-block'."
       (cdr (assq :rowname-names params)) (cdr (assq :rownames params))))))
 
 (provide 'ob-sed)
+
 ;;; ob-sed.el ends here

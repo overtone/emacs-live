@@ -1,0 +1,7 @@
+# For comparison: this is handled correctly in v0.0.12
+#
+# (1) Move to line containing l4
+# (2) Pressing TAB indents l4 by 2 spaces to starts below ':'
+#
+xy: |
+l4
