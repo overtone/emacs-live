@@ -58,10 +58,6 @@
         path = packs/dev/power-pack/vendor/submodules/logito
         url = git://github.com/sigma/logito.git
         ignore = untracked
-[submodule "packs/dev/foundation-pack/vendor/submodules/popwin"]
-        path = packs/dev/foundation-pack/vendor/submodules/popwin
-        url = git://github.com/m2ym/popwin-el.git
-        ignore = untracked
 [submodule "packs/dev/clojure-pack/vendor/submodules/clojure-mode"]
         path = packs/dev/clojure-pack/vendor/submodules/clojure-mode
         url = git://github.com/clojure-emacs/clojure-mode.git
