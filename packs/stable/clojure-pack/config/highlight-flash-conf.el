@@ -67,7 +67,7 @@
 ;; fix up esf to highlight exactly what emacs evaluates
 (defun live-esf-initialize-elisp ()
   (define-eval-sexp-fu-flash-command eval-last-sexp
-    (eval-sexp-fu-flash (when (ignore-errors (preceding-sexp))
+    (eval-sexp-fu-flash (when (ignore-errors (elisp--preceding-sexp))
                           (with-esf-end-of-sexp
                             (live-bounds-of-preceding-sexp)))))
   (define-eval-sexp-fu-flash-command eval-defun
