@@ -182,9 +182,9 @@
   (if (and (file-exists-p pack-file) (not live-safe-modep))
       (load-file pack-file)))
 ;;
-;; Uncomment next line to use dev packs
+;; Uncomment next command to use dev packs
 ;;
-;;(live-use-dev-packs)
+;; (live-use-dev-packs)
 
 ;; Load all packs - Power Extreme!
 (mapc (lambda (pack-dir)
