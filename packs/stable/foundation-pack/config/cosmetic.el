@@ -29,7 +29,7 @@
   (cond
    ((member (window-system) '(x w32 ns))
     (add-to-list 'default-frame-alist (cons 'font font-string))
-    (set-default-font font-string t t))))
+    (set-frame-font font-string t t))))
 
 (defun live-set-default-darwin-font (font-string)
   "Sets the default font and sets all frames to the same font trying to maintain window resolution. Only changes font if system-type is darwin in a window system."
