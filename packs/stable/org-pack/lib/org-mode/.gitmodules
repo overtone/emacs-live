@@ -1,3 +1,0 @@
-[submodule "testing/jump"]
-	path = testing/jump
-	url = https://github.com/eschulte/jump.el.git

@@ -1,9 +1,0 @@
-;; Keg
-
-(source gnu melpa)
-
-(package
-  (gh
-   (recipe . (gh :fetcher github :repo "sigma/gh.el"))))
-
-(dev-dependency marshal logito pcache mocker undercover)

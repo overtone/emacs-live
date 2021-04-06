@@ -1,3 +1,0 @@
-[submodule "docs/build/html"]
-	path = docs/build/html
-	url = https://github.com/sigma/gh.el.git

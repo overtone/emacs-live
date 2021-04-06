@@ -1,5 +1,0 @@
-name: cider
-title: CIDER
-version: master
-nav:
-- modules/ROOT/nav.adoc

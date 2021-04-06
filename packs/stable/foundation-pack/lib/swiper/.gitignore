@@ -1,6 +1,0 @@
-*.elc
-*~
-/doc/dir
-*.info
-*-autoloads.el
-.dir-locals-2.el
