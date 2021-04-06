@@ -1,40 +1,47 @@
--*- mode: org; fill-column:70 -*-
-
 This is a distribution of Org, a plain text notes and project planning
 tool for Emacs.
 
-Check the [[https://orgmode.org][homepage of Org]] and the [[https://orgmode.org/org.html#Installation][installations instructions]].
+The homepage of Org is at:
+  https://orgmode.org
 
-* Contents of this distribution
+The installations instructions are at:
+  https://orgmode.org/org.html#Installation
 
-- README :: This file.
+This distribution contains:
 
-- COPYING :: The GNU General Public License.
+README
+    This file.
 
-- Makefile :: The makefile to compile and install Org.  For installation
-  instructions, see the manual or [[https://orgmode.org/worg/dev/org-build-system.html][the more detailed procedure on Worg]].
-  
-- mk/ :: Files needed for building Org.
+COPYING
+    The GNU General Public License.
 
-- lisp/ :: Directory with all the Emacs Lisp files that make up Org.
+Makefile
+    The makefile to compile and install Org.  For installation
+    instructions, see the manual or the more detailed procedure
+    on Worg: https://orgmode.org/worg/dev/org-build-system.html
 
-- doc/ :: The documentation files.  org.texi is the source of the
-  documentation, org.html and org.pdf are formatted versions of it.
+mk/
+    Files needed for building Org.
 
-- contrib/ :: A directory with third-party additions for Org.  Some
-  really cool stuff is in there.
+lisp/
+    Directory with all the Emacs Lisp files that make up Org.
 
-- etc/ :: Files needed for the ODT exporter.
+doc/
+    The documentation files.  org.texi is the source of the
+    documentation, org.html and org.pdf are formatted versions of it.
 
-- testing/ :: Testing suite for Org.
+contrib/
+    A directory with third-party additions for Org.  Some really cool
+    stuff is in there.
 
-- request-assign-future.txt :: The form that contributors have to sign
-  and get processed with the FSF before contributed changes can be
-  integrated into the Org core.  All files in this distribution except
-  the contrib/ directory have copyright assigned to the FSF.
+etc/
+    Files needed for the ODT exporter.
 
-* License
+testing/
+    Testing suite for Org.
 
-Org-mode is published under [[https://www.gnu.org/licenses/gpl-3.0.html][the GNU GPLv3 license]] or any later
-version, the same as GNU Emacs.  See the COPYING file in this
-directory.
+request-assign-future.txt
+    The form that contributors have to sign and get processed with
+    the FSF before contributed changes can be integrated into the Org
+    core.  All files in this distribution except the contrib/ directory
+    have copyright assigned to the FSF.

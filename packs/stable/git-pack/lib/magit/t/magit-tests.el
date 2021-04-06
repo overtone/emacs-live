@@ -1,6 +1,6 @@
 ;;; magit-tests.el --- tests for Magit
 
-;; Copyright (C) 2011-2018  The Magit Project Contributors
+;; Copyright (C) 2011-2016  The Magit Project Contributors
 ;;
 ;; License: GPLv3
 
@@ -9,8 +9,6 @@
 (require 'cl-lib)
 (require 'dash)
 (require 'ert)
-(require 'tramp)
-(require 'tramp-sh)
 
 (require 'magit)
 
@@ -63,29 +61,21 @@
                      (expand-file-name "repo/"))))))
 
 (ert-deftest magit-toplevel:tramp ()
-  (cl-letf* ((find-file-visit-truename nil)
-             ;; Override tramp method so that we don't actually
-             ;; require a functioning `sudo'.
-             (sudo-method (cdr (assoc "sudo" tramp-methods)))
-             ((cdr (assq 'tramp-login-program sudo-method))
-              (list (if (file-executable-p "/bin/sh")
-                        "/bin/sh"
-                      shell-file-name)))
-             ((cdr (assq 'tramp-login-args sudo-method)) nil))
+  (let ((find-file-visit-truename nil))
     (magit-with-test-directory
-     (setq default-directory
-           (concat (format "/sudo:%s@localhost:" (user-login-name))
-                   default-directory))
-     (magit-git "init" "repo")
-     (magit-test-magit-toplevel)
-     (should (equal (magit-toplevel   "repo/.git/")
-                    (expand-file-name "repo/")))
-     (should (equal (magit-toplevel   "repo/.git/objects/")
-                    (expand-file-name "repo/")))
-     (should (equal (magit-toplevel   "repo-link/.git/")
-                    (expand-file-name "repo-link/")))
-     (should (equal (magit-toplevel   "repo-link/.git/objects/")
-                    (expand-file-name "repo/"))))))
+      (setq default-directory
+            (concat (format "/sudo:%s@localhost:" (user-login-name))
+                    default-directory))
+      (magit-git "init" "repo")
+      (magit-test-magit-toplevel)
+      (should (equal (magit-toplevel   "repo/.git/")
+                     (expand-file-name "repo/")))
+      (should (equal (magit-toplevel   "repo/.git/objects/")
+                     (expand-file-name "repo/")))
+      (should (equal (magit-toplevel   "repo-link/.git/")
+                     (expand-file-name "repo-link/")))
+      (should (equal (magit-toplevel   "repo-link/.git/objects/")
+                     (expand-file-name "repo/"))))))
 
 (ert-deftest magit-toplevel:submodule ()
   (let ((find-file-visit-truename nil))
@@ -146,37 +136,6 @@
   (should (equal (magit-toplevel   "wrap/subsubdir-link")
                  (expand-file-name "repo/"))))
 
-(defun magit-test-magit-get ()
-  (should (equal (magit-get-all "a.b") '("val1" "val2")))
-  (should (equal (magit-get "a.b") "val2"))
-  (let ((default-directory (expand-file-name "../remote/")))
-    (should (equal (magit-get "a.b") "remote-value")))
-  (should (equal (magit-get "CAM.El.Case.VAR") "value"))
-  (should (equal (magit-get "a.b2") "line1\nline2")))
-
-(ert-deftest magit-get ()
-  (magit-with-test-directory
-   (magit-git "init" "remote")
-   (let ((default-directory (expand-file-name "remote/")))
-     (magit-git "commit" "-m" "init" "--allow-empty")
-     (magit-git "config" "a.b" "remote-value"))
-   (magit-git "init" "super")
-   (setq default-directory (expand-file-name "super/"))
-   ;; Some tricky cases:
-   ;; Multiple config values.
-   (magit-git "config" "a.b" "val1")
-   (magit-git "config" "--add" "a.b" "val2")
-   ;; CamelCase variable names.
-   (magit-git "config" "Cam.El.Case.Var" "value")
-   ;; Values with newlines.
-   (magit-git "config" "a.b2" "line1\nline2")
-   ;; Config variables in submodules.
-   (magit-git "submodule" "add" "../remote" "repo/")
-
-   (magit-test-magit-get)
-   (let ((magit--refresh-cache (list (cons 0 0))))
-     (magit-test-magit-get))))
-
 (ert-deftest magit-get-boolean ()
   (magit-with-test-repository
     (magit-git "config" "a.b" "true")
@@ -184,12 +143,7 @@
     (should     (magit-get-boolean "a" "b"))
     (magit-git "config" "a.b" "false")
     (should-not (magit-get-boolean "a.b"))
-    (should-not (magit-get-boolean "a" "b"))
-    ;; Multiple values, last one wins.
-    (magit-git "config" "--add" "a.b" "true")
-    (should     (magit-get-boolean "a.b"))
-    (let ((magit--refresh-cache (list (cons 0 0))))
-     (should    (magit-get-boolean "a.b")))))
+    (should-not (magit-get-boolean "a" "b"))))
 
 (ert-deftest magit-get-{current|next}-tag ()
   (magit-with-test-repository
@@ -257,36 +211,13 @@
                              nil "Password for 'www.host.com':")
                             "mypasswd\n")))))
 
-(ert-deftest magit-process:password-prompt-observed ()
-  (with-temp-buffer
-    (cl-letf* ((test-proc (start-process
-                           "dummy-proc" (current-buffer)
-                           (concat invocation-directory invocation-name)
-                           "-Q" "--batch" "--eval" "(read-string \"\")"))
-               ((symbol-function 'read-passwd)
-                (lambda (_) "mypasswd"))
-               (sent-strings nil)
-               ((symbol-function 'process-send-string)
-                (lambda (_proc string) (push string sent-strings))))
-      ;; Don't get stuck when we close the buffer.
-      (set-process-query-on-exit-flag test-proc nil)
-      ;; Try some example passphrase prompts, reported by users.
-      (dolist (prompt '("
-Enter passphrase for key '/home/user/.ssh/id_rsa': "
-                        ;; Openssh 8.0 sends carriage return.
-                        "\
-\rEnter passphrase for key '/home/user/.ssh/id_ed25519': "))
-        (magit-process-filter test-proc prompt)
-        (should (equal (pop sent-strings) "mypasswd\n")))
-      (should (null sent-strings)))))
-
 ;;; Status
 
 (defun magit-test-get-section (list file)
   (magit-status-internal default-directory)
-  (--first (equal (oref it value) file)
-           (oref (magit-get-section `(,list (status)))
-                 children)))
+  (--first (equal (magit-section-value it) file)
+           (magit-section-children
+            (magit-get-section `(,list (status))))))
 
 (ert-deftest magit-status:file-sections ()
   (magit-with-test-repository
@@ -325,14 +256,6 @@ Enter passphrase for key '/home/user/.ssh/id_rsa': "
     (should (magit-test-get-section
              '(unpushed . "@{upstream}..")
              (magit-rev-parse "--short" "master")))))
-
-;;; Utils
-
-(ert-deftest magit-utils:add-face-text-property ()
-  (let ((str (concat (propertize "ab" 'font-lock-face 'highlight) "cd")))
-    (magit--add-face-text-property 0 (length str) 'bold nil str)
-    (should (equal (get-text-property 0 'font-lock-face str) '(bold highlight)))
-    (should (equal (get-text-property 2 'font-lock-face str) '(bold)))))
 
 ;;; magit-tests.el ends soon
 (provide 'magit-tests)

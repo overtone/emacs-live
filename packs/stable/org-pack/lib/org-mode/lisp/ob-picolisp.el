@@ -111,11 +111,11 @@ This function is called by `org-babel-execute-src-block'."
           (cond
            ((or (member "code" result-params)
                 (member "pp" result-params))
-            (format "(pretty (out \"%s\" %s))" null-device full-body))
+            (format "(pretty (out \"/dev/null\" %s))" full-body))
            ((and (member "value" result-params) (not session))
-            (format "(print (out \"%s\" %s))" null-device full-body))
+            (format "(print (out \"/dev/null\" %s))" full-body))
            ((member "value" result-params)
-            (format "(out \"%s\" %s)" null-device full-body))
+            (format "(out \"/dev/null\" %s)" full-body))
            (t full-body)))
          (result
           (if (not (string= session-name "none"))
@@ -181,5 +181,7 @@ then create.  Return the initialized session."
           (current-buffer))))))
 
 (provide 'ob-picolisp)
+
+
 
 ;;; ob-picolisp.el ends here

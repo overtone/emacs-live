@@ -119,4 +119,6 @@ This function is called by `org-babel-execute-src-block'."
 
 (provide 'ob-ditaa)
 
+
+
 ;;; ob-ditaa.el ends here

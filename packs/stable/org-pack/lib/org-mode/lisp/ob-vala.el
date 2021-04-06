@@ -26,7 +26,7 @@
 ;;; Commentary:
 
 ;; ob-vala.el provides Babel support for the Vala language
-;; (see https://live.gnome.org/Vala for details)
+;; (see http://live.gnome.org/Vala for details)
 
 ;;; Requirements:
 

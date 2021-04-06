@@ -29,6 +29,7 @@
 (eval-when-compile
   (require 'cl))
 
+;;;###autoload
 (require 'eieio)
 
 (require 'url-http)
@@ -139,14 +140,14 @@
 (defun gh-url-set-response (status req-resp)
   (set-buffer-multibyte t)
   (destructuring-bind (req resp) req-resp
-    (let ((responses-req (clone req))
-          (num (oref req :num-retries)))
-      (oset resp :-req responses-req)
-      (if (or (null num) (zerop num))
-          (gh-url-response-init resp (current-buffer))
-        (condition-case err
-            (gh-url-response-init resp (current-buffer))
-          (error
+    (condition-case err
+        (let ((responses-req (clone req)))
+          (oset resp :-req responses-req)
+          (gh-url-response-init resp (current-buffer)))
+      (error
+       (let ((num (oref req :num-retries)))
+         (if (or (null num) (zerop num))
+             (signal (car err) (cdr err))
            (oset req :num-retries (1- num))
            (gh-url-run-request req resp)))))))
 
@@ -161,8 +162,6 @@
   (let ((url-registered-auth-schemes
          '(("basic" ignore . 4))) ;; don't let default handlers kick in
         (url-privacy-level 'high)
-        (url-user-agent (format "User-Agent: URL/%s\r\n"
-                                url-version))
         (url-request-method (oref req :method))
         (url-request-data (oref req :data))
         (url-request-extra-headers (oref req :headers))

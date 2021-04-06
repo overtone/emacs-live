@@ -367,8 +367,7 @@ A headline is blocked when either
 (defun org-icalendar-use-UTC-date-time-p ()
   "Non-nil when `org-icalendar-date-time-format' requires UTC time."
   (char-equal (elt org-icalendar-date-time-format
-		   (1- (length org-icalendar-date-time-format)))
-	      ?Z))
+		   (1- (length org-icalendar-date-time-format))) ?Z))
 
 (defvar org-agenda-default-appointment-duration) ; From org-agenda.el.
 (defun org-icalendar-convert-timestamp (timestamp keyword &optional end tz)
@@ -764,10 +763,10 @@ Return VTODO component as a string."
 	     "SEQUENCE:1\n"
 	     (format "PRIORITY:%d\n"
 		     (let ((pri (or (org-element-property :priority entry)
-				    org-priority-default)))
-		       (floor (- 9 (* 8. (/ (float (- org-priority-lowest pri))
-					    (- org-priority-lowest
-					       org-priority-highest)))))))
+				    org-default-priority)))
+		       (floor (- 9 (* 8. (/ (float (- org-lowest-priority pri))
+					    (- org-lowest-priority
+					       org-highest-priority)))))))
 	     (format "STATUS:%s\n"
 		     (if (eq (org-element-property :todo-type entry) 'todo)
 			 "NEEDS-ACTION"

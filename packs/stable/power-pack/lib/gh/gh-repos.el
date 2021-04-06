@@ -29,31 +29,47 @@
 (eval-when-compile
   (require 'cl))
 
+;;;###autoload
 (require 'eieio)
 
 (require 'gh-api)
 (require 'gh-auth)
 (require 'gh-common)
 
+;;;###autoload
 (defclass gh-repos-api (gh-api-v3)
   ((repo-cls :allocation :class :initform gh-repos-repo)
    (user-cls :allocation :class :initform gh-user))
   "Repos API")
 
-(gh-defclass gh-repos-repo-stub (gh-object)
+;;;###autoload
+(defclass gh-repos-repo-stub (gh-object)
   ((name :initarg :name)
    (description :initarg :description)
    (homepage :initarg :homepage)
    (private :initarg :private))
   "Class for user-created repository objects")
 
-(gh-defclass gh-repos-repo (gh-ref-object gh-repos-repo-stub)
-  ((clone-url :initarg :clone-url)
+(defmethod gh-object-read-into ((stub gh-repos-repo-stub) data)
+  (call-next-method)
+  (with-slots (name description homepage private)
+      stub
+    (setq name (gh-read data 'name)
+          description (gh-read data 'description)
+          homepage (gh-read data 'homepage)
+          private (gh-read data 'private))))
+
+;;;###autoload
+(defclass gh-repos-repo (gh-repos-repo-stub)
+  ((url :initarg :url)
+   (html-url :initarg :html-url)
+   (clone-url :initarg :clone-url)
    (git-url :initarg :git-url)
    (ssh-url :initarg :ssh-url)
    (svn-url :initarg :svn-url)
    (mirror-url :initarg :mirror-url)
-   (owner :initarg :owner :initform nil :marshal-type gh-user)
+   (owner :initarg :owner :initform nil)
+   (id :initarg :id)
    (full-name :initarg :full-name)
    (language :initarg :language)
    (fork :initarg :fork)
@@ -68,20 +84,84 @@
    (pushed-at :initarg :pushed-at)
    (created-at :initarg :created-at)
    (updated-at :initarg :updated-at)
-   (organisation :initarg :organisation :initform nil :marshal-type gh-user)
-   (parent :initarg :parent :marshal-type gh-repos-repo)
-   (source :initarg :source :marshal-type gh-repos-repo)
+   (organisation :initarg :organisation :initform nil)
+   (parent :initarg :parent)
+   (source :initarg :source)
    (has-issues :initarg :has-issues)
    (has-wiki :initarg :has-wiki)
-   (has-downloads :initarg :has-downloads))
+   (has-downloads :initarg :has-downloads)
+
+   (owner-cls :allocation :class :initform gh-user)
+   (organisation-cls :allocation :class :initform gh-user)
+   (parent-cls :allocation :class :initform gh-repos-repo)
+   (source-cls :allocation :class :initform gh-repos-repo))
   "Class for GitHub repositories")
 
-(gh-defclass gh-repos-ref (gh-object)
+(defmethod gh-object-read-into ((repo gh-repos-repo) data)
+  (call-next-method)
+  (with-slots (url html-url clone-url git-url ssh-url svn-url mirror-url
+                   id owner full-name language fork forks forks-count
+                   watchers watchers-count size master-branch open-issues
+                   pushed-at created-at organisation parent source
+                   has-issues has-wiki has-downloads)
+      repo
+    (setq url (gh-read data 'url)
+          html-url (gh-read data 'html_url)
+          clone-url (gh-read data 'clone_url)
+          git-url (gh-read data 'git_url)
+          ssh-url (gh-read data 'ssh_url)
+          svn-url (gh-read data 'svn_url)
+          mirror-url (gh-read data 'mirror_url)
+          id (gh-read data 'id)
+          owner (gh-object-read (or (oref repo :owner)
+                                    (oref repo owner-cls))
+                                (gh-read data 'owner))
+          full-name (gh-read data 'full_name)
+          language (gh-read data 'language)
+          fork (gh-read data 'fork)
+          forks (gh-read data 'forks)
+          forks-count (gh-read data 'forks_count)
+          watchers (gh-read data 'watchers)
+          watchers-count (gh-read data 'watchers_count)
+          size (gh-read data 'size)
+          master-branch (gh-read data 'master_branch)
+          open-issues (gh-read data 'open_issues)
+          pushed-at (gh-read data 'pushed_at)
+          created-at (gh-read data 'created_at)
+          organisation (gh-object-read (or (oref repo :organisation)
+                                           (oref repo organisation-cls))
+                                       (gh-read data 'organisation))
+          parent (gh-object-read (oref repo parent-cls)
+                                 (gh-read data 'parent))
+          source (gh-object-read (oref repo source-cls)
+                                 (gh-read data 'source))
+          has-issues (gh-read data 'has_issues)
+          has-wiki (gh-read data 'has_wiki)
+          has-downloads (gh-read data 'has_downloads))))
+
+(defclass gh-repos-ref (gh-object)
   ((label :initarg :label)
    (ref :initarg :ref :initform nil)
    (sha :initarg :sha :initform nil)
-   (user :initarg :user :initform nil :marshal-type gh-user)
-   (repo :initarg :repo :initform nil :marshal-type gh-repos-repo)))
+   (user :initarg :user :initform nil)
+   (repo :initarg :repo :initform nil)
+
+   (user-cls :allocation :class :initform gh-user)
+   (repo-cls :allocation :class :initform gh-repos-repo)))
+
+(defmethod gh-object-read-into ((r gh-repos-ref) data)
+  (call-next-method)
+  (with-slots (label ref sha user repo)
+      r
+    (setq label (gh-read data 'label)
+          ref (gh-read data 'ref)
+          sha (gh-read data 'sha)
+          user (gh-object-read (or (oref r :user)
+                                    (oref r user-cls))
+                                (gh-read data 'user))
+          repo (gh-object-read (or (oref r :repo)
+                                   (oref r repo-cls))
+                               (gh-read data 'repo)))))
 
 (defmethod gh-repos-user-list ((api gh-repos-api) &optional username)
   (gh-api-authenticated-request
@@ -138,7 +218,7 @@
 
 (defmethod gh-repos-repo-rename ((api gh-repos-api) repo-stub new-name
                                  &optional user)
-  (let ((new-stub (make-instance 'gh-repos-repo-stub :name new-name)))
+  (let ((new-stub (gh-repos-repo-stub "repo" :name new-name)))
     (gh-api-authenticated-request
      api (gh-object-reader (oref api repo-cls)) "PATCH"
      (format "/repos/%s/%s"
@@ -190,41 +270,7 @@
                          (oref repo :name))))
 
 ;;; TODO gh-repos-repo-branch-commits
-
-;;; Collaborators sub-API
-
-(defmethod gh-repos-collaborators-list ((api gh-repos-api) repo)
-  (gh-api-authenticated-request
-   api (gh-object-list-reader (oref api user-cls)) "GET" (format "/repos/%s/%s/collaborators"
-                         (oref (oref repo :owner) :login)
-                         (oref repo :name))))
-
-(defmethod gh-repos-collaborators-p ((api gh-repos-api) repo user)
-  (eq (oref (gh-api-authenticated-request
-             api nil "GET"
-             (format "/repos/%s/%s/collaborators/%s"
-                     (oref (oref repo :owner) :login)
-                     (oref repo :name)
-                     user))
-            :http-status)
-      204))
-
-(defmethod gh-repos-collaborators-add ((api gh-repos-api) repo user)
-  (gh-api-authenticated-request
-   api nil "PUT"
-   (format "/repos/%s/%s/collaborators/%s"
-           (oref (oref repo :owner) :login)
-           (oref repo :name)
-           user)))
-
-(defmethod gh-repos-collaborators-delete ((api gh-repos-api) repo user)
-  (gh-api-authenticated-request
-   api nil "DELETE"
-   (format "/repos/%s/%s/collaborators/%s"
-           (oref (oref repo :owner) :login)
-           (oref repo :name)
-           user)))
-
+;;; TODO Collaborators sub-API
 ;;; TODO Comments sub-API
 ;;; TODO Commits sub-API
 ;;; TODO Contents sub-API

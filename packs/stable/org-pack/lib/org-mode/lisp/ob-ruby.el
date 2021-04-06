@@ -30,17 +30,16 @@
 ;; - ruby and irb executables :: http://www.ruby-lang.org/
 ;;
 ;; - ruby-mode :: Can be installed through ELPA, or from
-;;   https://github.com/eschulte/rinari/raw/master/util/ruby-mode.el
+;;   http://github.com/eschulte/rinari/raw/master/util/ruby-mode.el
 ;;
 ;; - inf-ruby mode :: Can be installed through ELPA, or from
-;;   https://github.com/eschulte/rinari/raw/master/util/inf-ruby.el
+;;   http://github.com/eschulte/rinari/raw/master/util/inf-ruby.el
 
 ;;; Code:
 (require 'ob)
 (require 'org-macs)
 
-(declare-function run-ruby-or-pop-to-buffer "ext:inf-ruby" (command &optional name buffer))
-(declare-function inf-ruby-buffer "ext:inf-ruby" ())
+(declare-function run-ruby "ext:inf-ruby" (&optional command name))
 (declare-function xmp "ext:rcodetools" (&optional option))
 
 (defvar inf-ruby-default-implementation)
@@ -52,8 +51,7 @@
 (defvar org-babel-default-header-args:ruby '())
 
 (defvar org-babel-ruby-command "ruby"
-  "Name of command to use for executing ruby code.
-It's possible to override it by using a header argument `:ruby'")
+  "Name of command to use for executing ruby code.")
 
 (defcustom org-babel-ruby-hline-to "nil"
   "Replace hlines in incoming tables with this when translating to ruby."
@@ -73,12 +71,9 @@ It's possible to override it by using a header argument `:ruby'")
   "Execute a block of Ruby code with Babel.
 This function is called by `org-babel-execute-src-block'."
   (let* ((session (org-babel-ruby-initiate-session
-		   (cdr (assq :session params)) params))
+		   (cdr (assq :session params))))
          (result-params (cdr (assq :result-params params)))
          (result-type (cdr (assq :result-type params)))
-	 (org-babel-ruby-command
-	  (or (cdr (assq :ruby params))
-	      org-babel-ruby-command))
          (full-body (org-babel-expand-body:generic
 		     body params (org-babel-variable-assignments:ruby params)))
          (result (if (member "xmp" result-params)
@@ -108,8 +103,7 @@ This function is called by `org-babel-execute-src-block'."
       (mapc (lambda (var)
               (insert var) (comint-send-input nil t)
               (org-babel-comint-wait-for-output session)
-              (sit-for .1) (goto-char (point-max)))
-	    var-lines))
+              (sit-for .1) (goto-char (point-max))) var-lines))
     session))
 
 (defun org-babel-load-session:ruby (session body params)
@@ -153,24 +147,17 @@ Emacs-lisp table, otherwise return the results as a string."
                 res)
       res)))
 
-(defun org-babel-ruby-initiate-session (&optional session params)
+(defun org-babel-ruby-initiate-session (&optional session _params)
   "Initiate a ruby session.
 If there is not a current inferior-process-buffer in SESSION
 then create one.  Return the initialized session."
   (unless (string= session "none")
     (require 'inf-ruby)
-    (let* ((command (cdr (or (assq :ruby params)
-			     (assoc inf-ruby-default-implementation
-				    inf-ruby-implementations))))
+    (let* ((cmd (cdr (assoc inf-ruby-default-implementation
+			    inf-ruby-implementations)))
 	   (buffer (get-buffer (format "*%s*" session)))
 	   (session-buffer (or buffer (save-window-excursion
-					(run-ruby-or-pop-to-buffer
-					 (if (functionp command)
-					     (funcall command)
-					   command)
-					 (or session "ruby")
-					 (unless session
-					   (inf-ruby-buffer)))
+					(run-ruby cmd session)
 					(current-buffer)))))
       (if (org-babel-comint-buffer-livep session-buffer)
 	  (progn (sit-for .25) session-buffer)
@@ -275,5 +262,7 @@ return the value of the last statement in BODY, as elisp."
 	 (org-babel-eval-read-file tmp-file))))))
 
 (provide 'ob-ruby)
+
+
 
 ;;; ob-ruby.el ends here

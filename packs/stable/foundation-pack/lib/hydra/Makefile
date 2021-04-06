@@ -1,4 +1,5 @@
 emacs ?= emacs
+# emacs = emacs-24.3
 
 LOAD = -l lv.el -l hydra.el -l hydra-test.el
 

@@ -1,15 +1,10 @@
-![GitHub Workflow Status](https://img.shields.io/github/workflow/status/magnars/dash.el/CI)
-[![MELPA](https://melpa.org/packages/dash-badge.svg)](https://melpa.org/#/dash)
-[![MELPA Stable](https://stable.melpa.org/packages/dash-badge.svg)](https://stable.melpa.org/#/dash)
-
-# <img align="right" src="https://raw.github.com/magnars/dash.el/master/rainbow-dash.png"> dash.el
+# <img align="right" src="https://raw.github.com/magnars/dash.el/master/rainbow-dash.png"> dash.el [![Build Status](https://secure.travis-ci.org/magnars/dash.el.png)](http://travis-ci.org/magnars/dash.el)
 
 A modern list api for Emacs. No 'cl required.
 
 ## Installation
 
-It's available on [GNU ELPA](https://elpa.gnu.org/) and
-[MELPA](https://melpa.org/):
+It's available on [marmalade](http://marmalade-repo.org/) and [Melpa](https://melpa.org/):
 
     M-x package-install dash
 
@@ -24,34 +19,25 @@ If you want the function combinators, then also:
 
 Add this to the big comment block at the top:
 
-    ;; Package-Requires: ((dash "[[ version ]]"))
+    ;; Package-Requires: ((dash "2.12.1"))
 
 To get function combinators:
 
-    ;; Package-Requires: ((dash "[[ version ]]") (dash-functional "1.2.0") (emacs "24"))
+    ;; Package-Requires: ((dash "2.12.1") (dash-functional "1.2.0") (emacs "24"))
 
 ## Upcoming breaking change!
 
 - For backward compatibility reasons `-zip` return a cons-cell instead of a list
   with two elements when called on two lists. This is a clunky API, and in an
   upcoming 3.0 release of Dash it will always return a list. If you rely on the
-  cons-cell return value, use `-zip-pair` instead.  During the 2.x
-  release cycle the new API is available as `-zip-lists`.
+  cons-cell return value, use `-zip-pair` instead.
 
-## Fontification of special variables
+## Syntax highlighting of dash functions
 
-Font lock of special Dash variables (`it`, `acc`, etc.) in Emacs Lisp
-buffers can optionally be enabled with the autoloaded minor mode
-`dash-fontify-mode`.  In older Emacs versions which do not dynamically
-detect macros, the minor mode also fontifies Dash macro calls.
+Font lock of dash functions in emacs lisp buffers is now optional.
+Include this in your emacs settings to get syntax highlighting:
 
-To automatically enable the minor mode in all Emacs Lisp buffers, just
-call its autoloaded global counterpart `global-dash-fontify-mode`,
-either interactively or from your `user-init-file`:
-
-```el
-(global-dash-fontify-mode)
-```
+    (eval-after-load "dash" '(dash-enable-font-lock))
 
 ## Functions
 
@@ -112,69 +98,7 @@ Change `readme-template.md` or `examples-to-docs.el` instead.
 
 ## Changelist
 
-### From 2.16 to 2.17
-
-- Speed up `-uniq` by using hash-tables when possible (@cireu, #305)
-- Fix `-inits` to be non-destructive (@SwiftLawnGnome, #313)
-- Fix indent rules for `-some->` and family (@wbolster, #321)
-- Add `-zip-lists` which always returns list of lists, even for two
-  input lists (see issue #135).
-
-### From 2.15 to 2.16
-
-- Added `--doto`, anaphoric version of `-doto` (#282)
-- Aliased `-cons-pair-p` to `-cons-pair?`(#288)
-- Generalized `-rotate` for |n| greater than the length of the list (@leungbk, #290)
-- Added a mechanism to extend destructuring with custom matchers (@yyoncho, #277)
-
-### From 2.14 to 2.15
-
-This release brings new destructuring features, some new control flow
-functions and performance optimizations.
-
-- Added `-setq` with destructuring binding support similar to `-let` family ([#116](https://github.com/magnars/dash.el/issues/116))
-- Added smarter key destructuring in `-let` and friends where variables are auto-derived from keys ([#111](https://github.com/magnars/dash.el/issues/111))
-- Allow `-let` bindings with place only ([#256](https://github.com/magnars/dash.el/issues/256))
-- Added `-each-r` and `-each-r-while` (@doublep, [#159](https://github.com/magnars/dash.el/issues/159))
-- Added `-common-suffix` (@basil-conto, [#263](https://github.com/magnars/dash.el/issues/263))
-- Improved performance of folds (`-reduce` and friends) (@basil-conto, [#264](https://github.com/magnars/dash.el/issues/264))
-
-### From 2.13 to 2.14
-
-This release retires Emacs 23 support.  We will still try to keep
-things compatible but no future guarantees are made.
-
-- Added edebug support for threading macros (@Wilfred)
-- Added `-unzip`
-- Added gv setters for `-first-item` and `-last-item`
-- Added `-powerset` and `-permutations` (@holomorph)
-- Added `-as->` for threading a named variable (@zck)
-- Added `-partition-after-pred`, `-partition-before-pred`, `-partition-after-item`, `-partition-before-item` (@zck)
-- Fixed a bug in `-any-p` and friends testing for `null` on lists containing `nil` (#239)
-- Fixed infinite loop bug in `-zip` and `-interleave` when called with empty input.
-- Added `-second-item` through to `-fifth-item` as an alternative to `nth` (@Wilfred)
-- Added `-tails` and `-inits`
-- Added `-running-sum` and `-running-product`
-- Added `-reductions[-r][-from]` family of functions (like `-reduce` but collecting intermediate results)
-- Added `-common-prefix` (@basil-conto)
-
-### From 2.12 to 2.13
-
-- `-let` now supports `&alist` in destructuring.
-- Various performance improvements.
-- `-zip` will change in future so it always returns lists. Added
-  `-zip-pair` for users who explicitly want the old behavior.
-- Added lexical binding pragma to dash.el, fixes
-  [#130](https://github.com/magnars/dash.el/issues/130) in Emacs 24+.
-- Added `-select-column` and `-select-columns`.
-- Fixed an issue with `-map-last` and `--remove-last` where they
-  modified their inputs
-  ([#158](https://github.com/magnars/dash.el/issues/158)).
-- Added `-each-indexed` and `--each-indexed`.
-- Added `-take-last` and `-drop-last`.
-- Added `-doto` macro.
-- `-cut <>` is now treated as a function, consistent with SRFI 26
-  ([#185](https://github.com/magnars/dash.el/issues/185))
+- Added lexical binding pragma to dash.el
 
 ### From 2.11 to 2.12
 
@@ -305,21 +229,15 @@ things compatible but no future guarantees are made.
  - [Vasilij Schneidermann](https://github.com/wasamasa) contributed `-some`.
  - [William West](https://github.com/occidens) made `-fixfn` more robust at handling floats.
  - [Cam Saül](https://github.com/camsaul) contributed `-some->`, `-some->>`, and `-some-->`.
- - [Basil L. Contovounesios](https://github.com/basil-conto) contributed `-common-prefix`.
- - [Paul Pogonyshev](https://github.com/doublep) contributed `-each-r` and `-each-r-while`.
 
 Thanks!
 
-New contributors are welcome.  To ensure that dash.el can be distributed with
-GNU ELPA or Emacs, we would request that all contributors assign copyright to
-the Free Software Foundation.  For more on this, see [`(info "(emacs) Copyright
-Assignment")`](https://www.gnu.org/software/emacs/manual/html_node/emacs/Copyright-Assignment.html).
-
 ## License
 
-Copyright (C) 2012-2016 Free Software Foundation, Inc.
+Copyright (C) 2012-2014 Magnar Sveen
 
 Authors: Magnar Sveen <magnars@gmail.com>
+Keywords: lists
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

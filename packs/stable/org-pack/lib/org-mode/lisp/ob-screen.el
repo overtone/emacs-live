@@ -3,7 +3,6 @@
 ;; Copyright (C) 2009-2020 Free Software Foundation, Inc.
 
 ;; Author: Benjamin Andresen
-;; Maintainer: Ken Mankoff
 ;; Keywords: literate programming, interactive shell
 ;; Homepage: https://orgmode.org
 
@@ -41,8 +40,7 @@
 In case you want to use a different screen than one selected by your $PATH")
 
 (defvar org-babel-default-header-args:screen
-  `((:results . "silent") (:session . "default") (:cmd . "sh")
-    (:terminal . "xterm") (:screenrc . ,null-device))
+  '((:results . "silent") (:session . "default") (:cmd . "sh") (:terminal . "xterm"))
   "Default arguments to use when running screen source blocks.")
 
 (defun org-babel-execute:screen (body params)
@@ -61,11 +59,11 @@ In case you want to use a different screen than one selected by your $PATH")
   (let* ((session (cdr (assq :session params)))
          (cmd (cdr (assq :cmd params)))
          (terminal (cdr (assq :terminal params)))
-         (screenrc (cdr (assq :screenrc params)))
          (process-name (concat "org-babel: terminal (" session ")")))
     (apply 'start-process process-name "*Messages*"
            terminal `("-T" ,(concat "org-babel: " session) "-e" ,org-babel-screen-location
-		      "-c" ,screenrc "-mS" ,session ,cmd))
+		      "-c" "/dev/null" "-mS" ,(concat "org-babel-session-" session)
+		      ,cmd))
     ;; XXX: Is there a better way than the following?
     (while (not (org-babel-screen-session-socketname session))
       ;; wait until screen session is available before returning
@@ -99,8 +97,9 @@ In case you want to use a different screen than one selected by your $PATH")
 			 nil
 			 (mapcar
 			  (lambda (x)
-			    (and (string-match-p (regexp-quote session) x)
-				 x))
+			    (when (string-match
+				   (concat "org-babel-session-" session) x)
+			      x))
 			  sockets)))))
     (when match-socket (car (split-string match-socket)))))
 
@@ -109,7 +108,6 @@ In case you want to use a different screen than one selected by your $PATH")
   (let ((tmpfile (org-babel-temp-file "screen-")))
     (with-temp-file tmpfile
       (insert body)
-      (insert "\n")
 
       ;; org-babel has superfluous spaces
       (goto-char (point-min))
@@ -139,5 +137,7 @@ The terminal should shortly flicker."
 		       "DOESN'T work.")))))
 
 (provide 'ob-screen)
+
+
 
 ;;; ob-screen.el ends here

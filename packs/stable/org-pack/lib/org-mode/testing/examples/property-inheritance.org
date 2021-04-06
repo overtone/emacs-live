@@ -1,7 +1,5 @@
-:PROPERTIES:
-:header-args: :var foo=1
-:header-args+: :var bar=2
-:END:
+#+property: header-args :var  foo=1
+#+property: header-args+ :var bar=2
 
 #+begin_src emacs-lisp
   (+ foo bar)

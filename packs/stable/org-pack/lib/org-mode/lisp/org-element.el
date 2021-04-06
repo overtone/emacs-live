@@ -329,9 +329,7 @@ match group 2.
 Don't modify it, set `org-element-affiliated-keywords' instead.")
 
 (defconst org-element-object-restrictions
-  (let* ((minimal-set '(bold code entity italic latex-fragment strike-through
-			     subscript superscript underline verbatim))
-	 (standard-set (remq 'table-cell org-element-all-objects))
+  (let* ((standard-set (remq 'table-cell org-element-all-objects))
 	 (standard-set-no-line-break (remq 'line-break standard-set)))
     `((bold ,@standard-set)
       (footnote-reference ,@standard-set)
@@ -342,20 +340,23 @@ Don't modify it, set `org-element-affiliated-keywords' instead.")
       (keyword ,@(remq 'footnote-reference standard-set))
       ;; Ignore all links in a link description.  Also ignore
       ;; radio-targets and line breaks.
-      (link export-snippet inline-babel-call inline-src-block macro
-	    statistics-cookie ,@minimal-set)
+      (link bold code entity export-snippet inline-babel-call inline-src-block
+	    italic latex-fragment macro statistics-cookie strike-through
+	    subscript superscript underline verbatim)
       (paragraph ,@standard-set)
       ;; Remove any variable object from radio target as it would
       ;; prevent it from being properly recognized.
-      (radio-target ,@minimal-set)
+      (radio-target bold code entity italic latex-fragment strike-through
+		    subscript superscript underline superscript)
       (strike-through ,@standard-set)
       (subscript ,@standard-set)
       (superscript ,@standard-set)
       ;; Ignore inline babel call and inline source block as formulas
       ;; are possible.  Also ignore line breaks and statistics
       ;; cookies.
-      (table-cell export-snippet footnote-reference link macro radio-target
-		  target timestamp ,@minimal-set)
+      (table-cell bold code entity export-snippet footnote-reference italic
+		  latex-fragment link macro radio-target strike-through
+		  subscript superscript target timestamp underline verbatim)
       (table-row table-cell)
       (underline ,@standard-set)
       (verse-block ,@standard-set)))
@@ -364,6 +365,10 @@ Don't modify it, set `org-element-affiliated-keywords' instead.")
 key is an element or object type containing objects and value is
 a list of types that can be contained within an element or object
 of such type.
+
+For example, in a `radio-target' object, one can only find
+entities, latex-fragments, subscript, superscript and text
+markup.
 
 This alist also applies to secondary string.  For example, an
 `headline' type element doesn't directly contain objects, but
@@ -1800,10 +1805,13 @@ Return a list whose CAR is `clock' and CDR is a plist containing
 
 ;;;; Comment
 
-(defun org-element-comment-parser (limit)
+(defun org-element-comment-parser (limit affiliated)
   "Parse a comment.
 
-LIMIT bounds the search.
+LIMIT bounds the search.  AFFILIATED is a list of which CAR is
+the buffer position at the beginning of the first affiliated
+keyword and CDR is a plist of affiliated keywords along with
+their value.
 
 Return a list whose CAR is `comment' and CDR is a plist
 containing `:begin', `:end', `:value', `:post-blank',
@@ -1811,7 +1819,8 @@ containing `:begin', `:end', `:value', `:post-blank',
 
 Assume point is at comment beginning."
   (save-excursion
-    (let* ((begin (point))
+    (let* ((begin (car affiliated))
+	   (post-affiliated (point))
 	   (value (prog2 (looking-at "[ \t]*# ?")
 		      (buffer-substring-no-properties
 		       (match-end 0) (line-end-position))
@@ -1833,11 +1842,13 @@ Assume point is at comment beginning."
 		       (skip-chars-forward " \r\t\n" limit)
 		       (if (eobp) (point) (line-beginning-position)))))
       (list 'comment
-	    (list :begin begin
-		  :end end
-		  :value value
-		  :post-blank (count-lines com-end end)
-		  :post-affiliated begin)))))
+	    (nconc
+	     (list :begin begin
+		   :end end
+		   :value value
+		   :post-blank (count-lines com-end end)
+		   :post-affiliated post-affiliated)
+	     (cdr affiliated))))))
 
 (defun org-element-comment-interpreter (comment _)
   "Interpret COMMENT element as Org syntax.
@@ -2174,9 +2185,9 @@ the buffer position at the beginning of the first affiliated
 keyword and CDR is a plist of affiliated keywords along with
 their value.
 
-Return a list whose CAR is a normalized `keyword' (uppercase) and
-CDR is a plist containing `:key', `:value', `:begin', `:end',
-`:post-blank' and `:post-affiliated' keywords."
+Return a list whose CAR is `keyword' and CDR is a plist
+containing `:key', `:value', `:begin', `:end', `:post-blank' and
+`:post-affiliated' keywords."
   (save-excursion
     ;; An orphaned affiliated keyword is considered as a regular
     ;; keyword.  In this case AFFILIATED is nil, so we take care of
@@ -3205,11 +3216,10 @@ Assume point is at the beginning of the link."
 	(setq post-blank
 	      (progn (goto-char link-end) (skip-chars-forward " \t")))
 	(setq end (point)))
-      ;; Special "file"-type link processing.  Extract opening
+      ;; Special "file" type link processing.  Extract opening
       ;; application and search option, if any.  Also normalize URI.
       (when (string-match "\\`file\\(?:\\+\\(.+\\)\\)?\\'" type)
-	(setq application (match-string 1 type))
-	(setq type "file")
+	(setq application (match-string 1 type) type "file")
 	(when (string-match "::\\(.*\\)\\'" path)
 	  (setq search-option (match-string 1 path))
 	  (setq path (replace-match "" nil nil path)))
@@ -3812,6 +3822,12 @@ Assume point is at the first equal sign marker."
 ;; `org-element--current-element' is the core function of this section.
 ;; It returns the Lisp representation of the element starting at
 ;; point.
+;;
+;; `org-element--current-element' makes use of special modes.  They
+;; are activated for fixed element chaining (e.g., `plain-list' >
+;; `item') or fixed conditional element chaining (e.g., `headline' >
+;; `section').  Special modes are: `first-section', `item',
+;; `node-property', `section' and `table-row'.
 
 (defun org-element--current-element (limit &optional granularity mode structure)
   "Parse the element starting at point.
@@ -3831,9 +3847,8 @@ nil), secondary values will not be parsed, since they only
 contain objects.
 
 Optional argument MODE, when non-nil, can be either
-`first-section', `item', `node-property', `planning',
-`property-drawer', `section', `table-row', or `top-comment'.
-
+`first-section', `section', `planning', `item', `node-property'
+and `table-row'.
 
 If STRUCTURE isn't provided but MODE is set to `item', it will be
 computed.
@@ -3863,22 +3878,15 @@ element it has to parse."
 	(org-element-section-parser
 	 (or (save-excursion (org-with-limited-levels (outline-next-heading)))
 	     limit)))
-       ;; Comments.
-       ((looking-at "^[ \t]*#\\(?: \\|$\\)")
-	(org-element-comment-parser limit))
        ;; Planning.
        ((and (eq mode 'planning)
 	     (eq ?* (char-after (line-beginning-position 0)))
 	     (looking-at org-planning-line-re))
 	(org-element-planning-parser limit))
        ;; Property drawer.
-       ((and (pcase mode
-	       (`planning (eq ?* (char-after (line-beginning-position 0))))
-	       ((or `property-drawer `top-comment)
-		(save-excursion
-		  (beginning-of-line 0)
-		  (not (looking-at "[[:blank:]]*$"))))
-	       (_ nil))
+       ((and (memq mode '(planning property-drawer))
+	     (eq ?* (char-after (line-beginning-position
+				 (if (eq mode 'planning) 0 -1))))
 	     (looking-at org-property-drawer-re))
 	(org-element-property-drawer-parser limit))
        ;; When not at bol, point is at the beginning of an item or
@@ -3887,7 +3895,7 @@ element it has to parse."
        ;; Clock.
        ((looking-at org-clock-line-re) (org-element-clock-parser limit))
        ;; Inlinetask.
-       ((looking-at "^\\*+ ")
+       ((org-at-heading-p)
 	(org-element-inlinetask-parser limit raw-secondary-p))
        ;; From there, elements can have affiliated keywords.
        (t (let ((affiliated (org-element--collect-affiliated-keywords
@@ -3901,7 +3909,7 @@ element it has to parse."
 	     ;; LaTeX Environment.
 	     ((looking-at org-element--latex-begin-environment)
 	      (org-element-latex-environment-parser limit affiliated))
-	     ;; Drawer.
+	     ;; Drawer and Property Drawer.
 	     ((looking-at org-drawer-regexp)
 	      (org-element-drawer-parser limit affiliated))
 	     ;; Fixed Width
@@ -3909,10 +3917,13 @@ element it has to parse."
 	      (org-element-fixed-width-parser limit affiliated))
 	     ;; Inline Comments, Blocks, Babel Calls, Dynamic Blocks and
 	     ;; Keywords.
-	     ((looking-at "[ \t]*#\\+")
+	     ((looking-at "[ \t]*#")
 	      (goto-char (match-end 0))
 	      (cond
-	       ((looking-at "BEGIN_\\(\\S-+\\)")
+	       ((looking-at "\\(?: \\|$\\)")
+		(beginning-of-line)
+		(org-element-comment-parser limit affiliated))
+	       ((looking-at "\\+BEGIN_\\(\\S-+\\)")
 		(beginning-of-line)
 		(funcall (pcase (upcase (match-string 1))
 			   ("CENTER"  #'org-element-center-block-parser)
@@ -3925,13 +3936,13 @@ element it has to parse."
 			   (_         #'org-element-special-block-parser))
 			 limit
 			 affiliated))
-	       ((looking-at "CALL:")
+	       ((looking-at "\\+CALL:")
 		(beginning-of-line)
 		(org-element-babel-call-parser limit affiliated))
-	       ((looking-at "BEGIN:? ")
+	       ((looking-at "\\+BEGIN:? ")
 		(beginning-of-line)
 		(org-element-dynamic-block-parser limit affiliated))
-	       ((looking-at "\\S-+:")
+	       ((looking-at "\\+\\S-+:")
 		(beginning-of-line)
 		(org-element-keyword-parser limit affiliated))
 	       (t
@@ -3951,36 +3962,14 @@ element it has to parse."
 		  ;; There is no strict definition of a table.el
 		  ;; table.  Try to prevent false positive while being
 		  ;; quick.
-		  (let ((rule-regexp
-			 (rx (zero-or-more (any " \t"))
-			     "+"
-			     (one-or-more (one-or-more "-") "+")
-			     (zero-or-more (any " \t"))
-			     eol))
-			(non-table.el-line
-			 (rx bol
-			     (zero-or-more (any " \t"))
-			     (or eol (not (any "+| \t")))))
+		  (let ((rule-regexp "[ \t]*\\+\\(-+\\+\\)+[ \t]*$")
 			(next (line-beginning-position 2)))
-		    ;; Start with a full rule.
-		    (and
-		     (looking-at rule-regexp)
-		     (< next limit)	;no room for a table.el table
-		     (save-excursion
-		       (end-of-line)
-		       (cond
-			;; Must end with a full rule.
-			((not (re-search-forward non-table.el-line limit 'move))
-			 (beginning-of-line)
-			 (looking-at rule-regexp))
-			;; Ignore pseudo-tables with a single
-			;; rule.
-			((= next (line-beginning-position))
-			 nil)
-			;; Must end with a full rule.
-			(t
-			 (forward-line -1)
-			 (looking-at rule-regexp)))))))
+		    (and (looking-at rule-regexp)
+			 (save-excursion
+			   (forward-line)
+			   (re-search-forward "^[ \t]*\\($\\|[^|]\\)" limit t)
+			   (and (> (line-beginning-position) next)
+				(org-match-line rule-regexp))))))
 	      (org-element-table-parser limit affiliated))
 	     ;; List.
 	     ((looking-at (org-item-re))
@@ -4155,9 +4144,7 @@ If STRING is the empty string or nil, return nil."
 	  (dolist (v local-variables)
 	    (ignore-errors
 	      (if (symbolp v) (makunbound v)
-		;; Don't set file name to avoid mishandling hooks (bug#44524)
-		(unless (memq (car v) '(buffer-file-name buffer-file-truename))
-		  (set (make-local-variable (car v)) (cdr v))))))
+		(set (make-local-variable (car v)) (cdr v)))))
 	  ;; Transferring local variables may put the temporary buffer
 	  ;; into a read-only state.  Make sure we can insert STRING.
 	  (let ((inhibit-read-only t)) (insert string))
@@ -4333,41 +4320,34 @@ looking into captions:
 ;; `org-element--object-lex' to find the next object in the current
 ;; container.
 
-(defsubst org-element--next-mode (mode type parent?)
-  "Return next mode according to current one.
-
-MODE is a symbol representing the expectation about the next
-element or object.  Meaningful values are `first-section',
-`item', `node-property', `planning', `property-drawer',
-`section', `table-row', `top-comment', and nil.
-
-TYPE is the type of the current element or object.
-
-If PARENT? is non-nil, assume the next element or object will be
-located inside the current one.  "
-  (if parent?
+(defsubst org-element--next-mode (type parentp)
+  "Return next special mode according to TYPE, or nil.
+TYPE is a symbol representing the type of an element or object
+containing next element if PARENTP is non-nil, or before it
+otherwise.  Modes can be either `first-section', `item',
+`node-property', `planning', `property-drawer', `section',
+`table-row' or nil."
+  (if parentp
       (pcase type
 	(`headline 'section)
-	((and (guard (eq mode 'first-section)) `section) 'top-comment)
 	(`inlinetask 'planning)
 	(`plain-list 'item)
 	(`property-drawer 'node-property)
 	(`section 'planning)
 	(`table 'table-row))
-    (pcase mode
+    (pcase type
       (`item 'item)
       (`node-property 'node-property)
-      ((and `planning (guard (eq type 'planning))) 'property-drawer)
-      (`table-row 'table-row)
-      ((and `top-comment (guard (eq type 'comment))) 'property-drawer))))
+      (`planning 'property-drawer)
+      (`table-row 'table-row))))
 
 (defun org-element--parse-elements
     (beg end mode structure granularity visible-only acc)
   "Parse elements between BEG and END positions.
 
 MODE prioritizes some elements over the others.  It can be set to
-`first-section', `item', `node-property', `planning',
-`property-drawer', `section', `table-row', `top-comment', or nil.
+`first-section', `section', `planning', `item', `node-property'
+or `table-row'.
 
 When value is `item', STRUCTURE will be used as the current list
 structure.
@@ -4414,7 +4394,7 @@ Elements are accumulated into ACC."
 	      (org-element--parse-elements
 	       cbeg (org-element-property :contents-end element)
 	       ;; Possibly switch to a special mode.
-	       (org-element--next-mode mode type t)
+	       (org-element--next-mode type t)
 	       (and (memq type '(item plain-list))
 		    (org-element-property :structure element))
 	       granularity visible-only element))
@@ -4426,7 +4406,7 @@ Elements are accumulated into ACC."
 	       (org-element-restriction type))))
 	    (push (org-element-put-property element :parent acc) elements)
 	    ;; Update mode.
-	    (setq mode (org-element--next-mode mode type nil)))))
+	    (setq mode (org-element--next-mode type nil)))))
       ;; Return result.
       (apply #'org-element-set-contents acc (nreverse elements)))))
 
@@ -4516,21 +4496,15 @@ to an appropriate container (e.g., a paragraph)."
 			     (and (memq 'latex-fragment restriction)
 				  (org-element-latex-fragment-parser)))))
 		      (?\[
-		       (pcase (aref result 1)
-			 ((and ?\[
-			       (guard (memq 'link restriction)))
-			  (org-element-link-parser))
-			 ((and ?f
-			       (guard (memq 'footnote-reference restriction)))
-			  (org-element-footnote-reference-parser))
-			 ((and (or ?% ?/)
-			       (guard (memq 'statistics-cookie restriction)))
-			  (org-element-statistics-cookie-parser))
-			 (_
-			  (or (and (memq 'timestamp restriction)
-				   (org-element-timestamp-parser))
-			      (and (memq 'statistics-cookie restriction)
-				   (org-element-statistics-cookie-parser))))))
+		       (if (eq (aref result 1) ?\[)
+			   (and (memq 'link restriction)
+				(org-element-link-parser))
+			 (or (and (memq 'footnote-reference restriction)
+				  (org-element-footnote-reference-parser))
+			     (and (memq 'timestamp restriction)
+				  (org-element-timestamp-parser))
+			     (and (memq 'statistics-cookie restriction)
+				  (org-element-statistics-cookie-parser)))))
 		      ;; This is probably a plain link.
 		      (_ (and (memq 'link restriction)
 			      (org-element-link-parser)))))))
@@ -4677,18 +4651,19 @@ to interpret.  Return Org syntax as a string."
   "Return ELEMENT's affiliated keywords as Org syntax.
 If there is no affiliated keyword, return the empty string."
   (let ((keyword-to-org
-	 (lambda (key value)
-	   (let (dual)
-	     (when (member key org-element-dual-keywords)
-	       (setq dual (cdr value) value (car value)))
-	     (concat "#+" (downcase key)
-		     (and dual
-			  (format "[%s]" (org-element-interpret-data dual)))
-		     ": "
-		     (if (member key org-element-parsed-keywords)
-			 (org-element-interpret-data value)
-		       value)
-		     "\n")))))
+	 (function
+	  (lambda (key value)
+	    (let (dual)
+	      (when (member key org-element-dual-keywords)
+		(setq dual (cdr value) value (car value)))
+	      (concat "#+" (downcase key)
+		      (and dual
+			   (format "[%s]" (org-element-interpret-data dual)))
+		      ": "
+		      (if (member key org-element-parsed-keywords)
+			  (org-element-interpret-data value)
+			value)
+		      "\n"))))))
     (mapconcat
      (lambda (prop)
        (let ((value (org-element-property prop element))
@@ -4844,12 +4819,10 @@ indentation removed from its contents."
 ;;
 ;; A single public function is provided: `org-element-cache-reset'.
 ;;
-;; Cache is disabled by default for now because it sometimes triggers
-;; freezes, but it can be enabled globally with
+;; Cache is enabled by default, but can be disabled globally with
 ;; `org-element-use-cache'.  `org-element-cache-sync-idle-time',
-;; `org-element-cache-sync-duration' and
-;; `org-element-cache-sync-break' can be tweaked to control caching
-;; behavior.
+;; org-element-cache-sync-duration' and `org-element-cache-sync-break'
+;; can be tweaked to control caching behavior.
 ;;
 ;; Internally, parsed elements are stored in an AVL tree,
 ;; `org-element--cache'.  This tree is updated lazily: whenever
@@ -4917,7 +4890,7 @@ with `org-element--cache-compare'.  This cache is used in
 
 A request is a vector with the following pattern:
 
- [NEXT BEG END OFFSET PARENT PHASE]
+ \[NEXT BEG END OFFSET PARENT PHASE]
 
 Processing a synchronization request consists of three phases:
 
@@ -5475,11 +5448,9 @@ the process stopped before finding the expected result."
         ;; element following headline above, or first element in
         ;; buffer.
         ((not cached)
-         (if (org-with-limited-levels (outline-previous-heading))
-             (progn
-	       (setq mode 'planning)
-	       (forward-line))
-	   (setq mode 'top-comment))
+         (when (org-with-limited-levels (outline-previous-heading))
+           (setq mode 'planning)
+	   (forward-line))
          (skip-chars-forward " \r\t\n")
          (beginning-of-line))
         ;; Cache returned exact match: return it.
@@ -5548,7 +5519,7 @@ the process stopped before finding the expected result."
 	      ;; after it.
 	      ((and (<= elem-end pos) (/= (point-max) elem-end))
 	       (goto-char elem-end)
-	       (setq mode (org-element--next-mode mode type nil)))
+	       (setq mode (org-element--next-mode type nil)))
 	      ;; A non-greater element contains point: return it.
 	      ((not (memq type org-element-greater-elements))
 	       (throw 'exit element))
@@ -5576,7 +5547,7 @@ the process stopped before finding the expected result."
 				    (and (= cend pos) (= (point-max) pos)))))
 		   (goto-char (or next cbeg))
 		   (setq next nil
-			 mode (org-element--next-mode mode type t)
+			 mode (org-element--next-mode type t)
 			 parent element
 			 end cend))))
 	      ;; Otherwise, return ELEMENT as it is the smallest

@@ -21,7 +21,7 @@
 
 ;;; Commentary:
 
-;;
+;; 
 
 ;;; Code:
 
@@ -268,8 +268,10 @@ scoring between S1 and S2. The score must be between 0.0 and
   (setq fuzzy-isearch-failed-count 0))
 
 (defun fuzzy-isearch ()
-  (cond ((or isearch-word isearch-regexp)
-         (isearch-search-fun-default))
+  (cond (isearch-word
+         (if isearch-forward 'word-search-forward 'word-search-backward))
+        (isearch-regexp
+         (if isearch-forward 're-search-forward 're-search-backward))
         ((or fuzzy-isearch
              (eq fuzzy-isearch-enabled 'always)
              (and (eq fuzzy-isearch-enabled 'on-failed)

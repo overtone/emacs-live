@@ -29,81 +29,98 @@
 (eval-when-compile
   (require 'cl))
 
+;;;###autoload
 (require 'eieio)
 
 (require 'gh-api)
 (require 'gh-auth)
 (require 'gh-common)
 
+;;;###autoload
 (defclass gh-gist-api (gh-api-v3)
   ((gist-cls :allocation :class :initform gh-gist-gist))
   "Gist API")
 
-(gh-defclass gh-gist-gist-stub (gh-object)
-  ((files :initarg :files :type list :initform nil :marshal-type (list gh-gist-gist-file))
-   (public :initarg :public :marshal-type bool)
-   (description :initarg :description))
+;;;###autoload
+(defclass gh-gist-gist-stub (gh-object)
+  ((files :initarg :files :type list :initform nil)
+   (public :initarg :public)
+   (description :initarg :description)
+
+   (file-cls :allocation :class :initform gh-gist-gist-file))
   "Class for user-created gist objects")
 
-(gh-defclass gh-gist-history-change (gh-object)
-  ((total :initarg :total)
-   (additions :initarg :additions)
-   (deletions :initarg :deletions)))
+(defmethod gh-object-read-into ((stub gh-gist-gist-stub) data)
+  (call-next-method)
+  (with-slots (files public description)
+      stub
+    (setq files (gh-object-list-read (oref stub file-cls)
+                                     (gh-read data 'files))
+          public (gh-read data 'public)
+          description (gh-read data 'description))))
 
-(gh-defclass gh-gist-history-entry (gh-object)
-  ((user :initarg :user :initform nil :marshal-type gh-user)
-   (version :initarg :version)
-   (committed :initarg :committed :marshal ((alist . committed_at)))
-   (change :initarg :change :marshal ((alist . change_status))
-           :marshal-type gh-gist-history-change)
-   (url :initarg :url)))
-
-(gh-defclass gh-gist-fork-entry (gh-ref-object)
-  ((user :initarg :user :initform nil :marshal-type gh-user)
-   (created :initarg :created :marshal ((alist . created_at)))
-   (updated :initarg :updated :marshal ((alist . updated_at)))))
-
-(gh-defclass gh-gist-gist (gh-ref-object gh-gist-gist-stub)
-  ((date :initarg :date :marshal ((alist . created_at)))
-   (update :initarg :update :marshal ((alist . updated_at)))
-   (push-url :initarg :push-url :marshal ((alist . git_push_url)))
-   (pull-url :initarg :pull-url :marshal ((alist . git_pull_url)))
+;;;###autoload
+(defclass gh-gist-gist (gh-gist-gist-stub)
+  ((date :initarg :date)
+   (update :initarg :update)
+   (push-url :initarg :push-url)
+   (pull-url :initarg :pull-url)
+   (html-url :initarg :html-url)
    (comments :initarg :comments)
-   (user :initarg :user :initform nil :marshal-type gh-user :marshal ((alist . owner)))
-   (history :initarg :history :initform nil :type list :marshal-type (list gh-gist-history-entry))
-   (forks :initarg :forks :initform nil :type list :marshal-type (list gh-gist-fork-entry)))
+   (user :initarg :user :initform nil)
+   (id :initarg :id :type string)
+   (url :initarg :url :type string)
+   (forks :initarg :forks :initform nil)
+
+   (user-cls :allocation :class :initform gh-user))
   "Gist object")
 
-(gh-defclass gh-gist-gist-file (gh-object)
+(defmethod gh-object-read-into ((gist gh-gist-gist) data)
+  (call-next-method)
+  (with-slots (date update push-url pull-url html-url comments user
+                    id url forks)
+      gist
+    (setq date (gh-read data 'created_at)
+          update (gh-read data 'updated_at)
+          push-url (gh-read data 'git_push_url)
+          pull-url (gh-read data 'git_pull_url)
+          html-url (gh-read data 'html_url)
+          comments (gh-read data 'comments)
+          user (gh-object-read (or (oref gist :user)
+                                   (oref gist user-cls))
+                               (gh-read data 'user))
+          id (gh-read data 'id)
+          url (gh-read data 'url)
+          forks (gh-read data 'forks))))
+
+(defclass gh-gist-gist-file (gh-object)
   ((filename :initarg :filename)
    (size :initarg :size)
-   (url :initarg :url :marshal ((alist . raw_url)))
+   (url :initarg :url)
    (content :initarg :content)))
 
-(defmethod constructor :static ((file gh-gist-gist-file) &rest args)
-  (let ((obj (call-next-method)))
-    (when (oref obj :content)
-      (oset obj :content (gh-sanitize-content (oref obj :content))))
-    obj))
+(defmethod gh-object-read-into ((file gh-gist-gist-file) data)
+  (call-next-method)
+  (with-slots (filename size url content)
+      file
+    (setq
+     filename (gh-read data 'filename)
+     size (gh-read data 'size)
+     url (gh-read data 'raw_url)
+     content (gh-read data 'content))))
 
 (defmethod gh-gist-gist-to-obj ((gist gh-gist-gist-stub))
-  (let ((files (mapcar #'gh-gist-gist-file-to-obj (oref gist :files))))
-    `(("description" . ,(oref gist :description))
-      ("public" . ,(oref gist :public))
-      ,@(and files (list (cons "files"  files))))))
+  `(("description" . ,(oref gist :description))
+    ("public" . ,(oref gist :public))
+    ("files" . ,(mapcar 'gh-gist-gist-file-to-obj (oref gist :files)))))
 
 (defmethod gh-gist-gist-has-files ((gist gh-gist-gist-stub))
   (not (memq nil (mapcar (lambda (f)
                            (oref f :content)) (oref gist :files)))))
 
 (defmethod gh-gist-gist-file-to-obj ((file gh-gist-gist-file))
-  (let* ((filename (oref file :filename))
-        (content (oref file :content))
-        (file (if content
-                  `(("filename" . ,filename)
-                    ("content"  . ,content))
-                nil)))
-    (cons filename file)))
+  `(,(oref file :filename) . (("filename" . ,(oref file :filename))
+                              ("content" . ,(oref file :content)))))
 
 (defmethod gh-gist-list ((api gh-gist-api) &optional username)
   (gh-api-authenticated-request

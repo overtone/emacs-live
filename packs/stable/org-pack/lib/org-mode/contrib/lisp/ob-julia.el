@@ -2,7 +2,6 @@
 
 ;; Copyright (C) 2013, 2014 G. Jay Kerns
 ;; Author: G. Jay Kerns, based on ob-R.el by Eric Schulte and Dan Davison
-;; Maintainer: Alberto Ramos
 
 ;; This file is not part of GNU Emacs.
 

@@ -4,7 +4,7 @@
 ;;
 ;; Author: Rasmus Pank Roulund <emacs at pank dot eu>
 ;; Keywords: outlines, hypermedia, calendar, wp
-;; Homepage: https://orgmode.org
+;; Homepage: http://orgmode.org
 ;;
 ;; This file is part of GNU Emacs.
 ;;

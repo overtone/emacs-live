@@ -40,8 +40,6 @@
 (require 'cl-lib)
 (require 'ox)
 
-;;; Function Declarations
-
 (defvar org-export-man-default-packages-alist)
 (defvar org-export-man-packages-alist)
 (defvar orgtbl-exp-regexp)
@@ -601,24 +599,24 @@ CONTENTS is nil.  INFO is a plist holding contextual information."
 ;;; Link
 
 
-(defun org-man-link (link desc info)
+(defun org-man-link (link desc _info)
   "Transcode a LINK object from Org to Man.
 
 DESC is the description part of the link, or the empty string.
 INFO is a plist holding contextual information.  See
 `org-export-data'."
   (let* ((type (org-element-property :type link))
-	 (raw-path (org-element-property :path link))
+         (raw-path (org-element-property :path link))
          ;; Ensure DESC really exists, or set it to nil.
          (desc (and (not (string= desc "")) desc))
-         (path (pcase type
-                 ((or "http" "https" "ftp" "mailto")
-                  (concat type ":" raw-path))
-                 ("file" (org-export-file-uri raw-path))
-                 (_ raw-path))))
+         (path (cond
+                ((member type '("http" "https" "ftp" "mailto"))
+                 (concat type ":" raw-path))
+                ((string= type "file") (org-export-file-uri raw-path))
+                (t raw-path))))
     (cond
      ;; Link type is handled by a special function.
-     ((org-export-custom-protocol-maybe link desc 'man info))
+     ((org-export-custom-protocol-maybe link desc 'man))
      ;; External link with a description part.
      ((and path desc) (format "%s \\fBat\\fP \\fI%s\\fP" path desc))
      ;; External link without a description part.
@@ -1137,5 +1135,9 @@ Return PDF file name or an error if it couldn't be produced."
     output))
 
 (provide 'ox-man)
+
+;; Local variables:
+;; generated-autoload-file: "org-loaddefs.el"
+;; End:
 
 ;;; ox-man.el ends here

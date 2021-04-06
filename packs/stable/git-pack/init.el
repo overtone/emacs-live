@@ -4,5 +4,4 @@
 (require 'gitconfig-mode)
 (require 'gitignore-mode)
 
-(live-load-config-file "transient-conf.el")
 (live-load-config-file "magit-conf.el")

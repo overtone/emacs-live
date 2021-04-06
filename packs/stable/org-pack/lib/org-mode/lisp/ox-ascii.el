@@ -31,8 +31,6 @@
 (require 'ox-publish)
 (require 'cl-lib)
 
-;;; Function Declarations
-
 (declare-function aa2u "ext:ascii-art-to-unicode" ())
 
 ;;; Define Back-End
@@ -956,7 +954,7 @@ channel."
 	((not (org-element-contents link)) nil)
 	;; Do not add a link already handled by custom export
 	;; functions.
-	((org-export-custom-protocol-maybe link anchor 'ascii info) nil)
+	((org-export-custom-protocol-maybe link anchor 'ascii) nil)
 	(t
 	 (concat
 	  (org-ascii--fill-string
@@ -1272,8 +1270,7 @@ CONTENTS is nil.  INFO is a plist holding contextual information."
   (org-ascii--justify-element
    (org-ascii--box-string
     (org-remove-indentation
-     (org-element-property :value fixed-width))
-    info)
+     (org-element-property :value fixed-width)) info)
    fixed-width info))
 
 
@@ -1572,7 +1569,7 @@ DESC is the description part of the link, or the empty string.
 INFO is a plist holding contextual information."
   (let ((type (org-element-property :type link)))
     (cond
-     ((org-export-custom-protocol-maybe link desc 'ascii info))
+     ((org-export-custom-protocol-maybe link desc 'ascii))
      ((string= type "coderef")
       (let ((ref (org-element-property :path link)))
 	(format (org-export-get-coderef-format ref desc)
@@ -1608,11 +1605,13 @@ INFO is a plist holding contextual information."
 	  ;; Don't know what to do.  Signal it.
 	  (_ "???"))))
      (t
-      (let ((path (org-element-property :raw-link link)))
-	(if (not (org-string-nw-p desc)) (format "<%s>" path)
+      (let ((raw-link (concat (org-element-property :type link)
+			      ":"
+			      (org-element-property :path link))))
+	(if (not (org-string-nw-p desc)) (format "<%s>" raw-link)
 	  (concat (format "[%s]" desc)
 		  (and (not (plist-get info :ascii-links-to-notes))
-		       (format " (<%s>)" path)))))))))
+		       (format " (<%s>)" raw-link)))))))))
 
 
 ;;;; Node Properties
@@ -1940,32 +1939,33 @@ CONTENTS is the row contents.  INFO is a plist used as
 a communication channel."
   (when (eq (org-element-property :type table-row) 'standard)
     (let ((build-hline
-	   (lambda (lcorner horiz vert rcorner)
-	     (concat
-	      (apply
-	       'concat
-	       (org-element-map table-row 'table-cell
-		 (lambda (cell)
-		   (let ((width (org-ascii--table-cell-width cell info))
-			 (borders (org-export-table-cell-borders cell info)))
-		     (concat
-		      ;; In order to know if CELL starts the row, do
-		      ;; not compare it with the first cell in the
-		      ;; row as there might be a special column.
-		      ;; Instead, compare it with first exportable
-		      ;; cell, obtained with `org-element-map'.
-		      (when (and (memq 'left borders)
-				 (eq (org-element-map table-row 'table-cell
-				       'identity info t)
-				     cell))
-			lcorner)
-		      (make-string (+ 2 width) (string-to-char horiz))
-		      (cond
-		       ((not (memq 'right borders)) nil)
-		       ((eq (car (last (org-element-contents table-row))) cell)
-			rcorner)
-		       (t vert)))))
-		 info)) "\n")))
+	   (function
+	    (lambda (lcorner horiz vert rcorner)
+	      (concat
+	       (apply
+		'concat
+		(org-element-map table-row 'table-cell
+		  (lambda (cell)
+		    (let ((width (org-ascii--table-cell-width cell info))
+			  (borders (org-export-table-cell-borders cell info)))
+		      (concat
+		       ;; In order to know if CELL starts the row, do
+		       ;; not compare it with the first cell in the
+		       ;; row as there might be a special column.
+		       ;; Instead, compare it with first exportable
+		       ;; cell, obtained with `org-element-map'.
+		       (when (and (memq 'left borders)
+				  (eq (org-element-map table-row 'table-cell
+					'identity info t)
+				      cell))
+			 lcorner)
+		       (make-string (+ 2 width) (string-to-char horiz))
+		       (cond
+			((not (memq 'right borders)) nil)
+			((eq (car (last (org-element-contents table-row))) cell)
+			 rcorner)
+			(t vert)))))
+		  info)) "\n"))))
 	  (utf8p (eq (plist-get info :ascii-charset) 'utf-8))
 	  (borders (org-export-table-cell-borders
 		    (org-element-map table-row 'table-cell 'identity info t)

@@ -1,6 +1,6 @@
 ;;; cider-classpath-tests.el
 
-;; Copyright © 2012-2020 Tim King, Bozhidar Batsov
+;; Copyright © 2012-2016 Tim King, Bozhidar Batsov
 
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Bozhidar Batsov <bozhidar@batsov.com>
@@ -28,22 +28,23 @@
 ;;; Code:
 
 (require 'buttercup)
+(require 'cider)
 (require 'cider-classpath)
 
 (describe "cider-classpath"
   (it "raises user-error when cider is not connected."
     (spy-on 'cider-connected-p :and-return-value nil)
-    (expect (cider-classpath) :to-throw 'user-error))
+    (expect (lambda () (cider-classpath)) :to-throw 'user-error))
 
   (it "raises user-error when the `classpath' op is not supported."
     (spy-on 'cider-ensure-op-supported :and-return-value nil)
-    (expect (cider-classpath) :to-throw 'user-error)))
+    (expect (lambda () (cider-classpath)) :to-throw 'user-error)))
 
 (describe "cider-open-classpath-entry"
   (it "raises user-error when cider is not connected."
     (spy-on 'cider-connected-p :and-return-value nil)
-    (expect (cider-open-classpath-entry) :to-throw 'user-error))
+    (expect (lambda () (cider-open-classpath-entry)) :to-throw 'user-error))
 
   (it "raises user-error when the `classpath' op is not supported."
     (spy-on 'cider-ensure-op-supported :and-return-value nil)
-    (expect (cider-open-classpath-entry) :to-throw 'user-error)))
+    (expect (lambda () (cider-open-classpath-entry)) :to-throw 'user-error)))

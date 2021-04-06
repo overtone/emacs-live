@@ -104,10 +104,9 @@ googlegroups otherwise."
 (defvar elmo-nntp-default-server)
 
 (defconst org-wl-folder-types
-  '(("%" . imap) ("-" . nntp) ("+" . mh) ("." . maildir)
-    ("=" . spool) ("$" . archive) ("&" . pop) ("@" . shimbun)
-    ("rss" . rss) ("[" . search) ("*" . multi) ("/" . filter)
-    ("|" . pipe) ("'" . internal) )
+  '(("%" . imap) ("-" . nntp) ("+" . mh) ("=" . spool)
+    ("$" . archive) ("&" . pop) ("@" . shimbun) ("[" . search)
+    ("*" . multi) ("/" . filter) ("|" . pipe) ("'" . internal))
   "List of folder indicators.  See Wanderlust manual, section 3.")
 
 ;; Install the link type
@@ -256,7 +255,7 @@ ENTITY is a message entity."
 	       (concat "@" (or (cdr server) (car server))))
 	     (if article (concat "#" article) "")))))
 
-(defun org-wl-open (path &rest _)
+(defun org-wl-open (path)
   "Follow the WL message link specified by PATH.
 When called with one prefix, open message in namazu search folder
 with `org-wl-namazu-default-index' as search index.  When called

@@ -1,6 +1,6 @@
 ;;; clojure-mode-convert-collection-test.el --- Clojure Mode: convert collection type  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2016-2020 Benedek Fazekas <benedek.fazekas@gmail.com>
+;; Copyright (C) 2016 Benedek Fazekas <benedek.fazekas@gmail.com>
 
 ;; This file is not part of GNU Emacs.
 
@@ -26,55 +26,49 @@
 ;;; Code:
 
 (require 'clojure-mode)
-(require 'buttercup)
+(require 'ert)
 
-(describe "clojure-convert-collection-to-map"
-  (when-refactoring-it "should convert a list to a map"
-    "(:a 1 :b 2)"
-    "{:a 1 :b 2}"
-    (backward-sexp)
-    (down-list)
-    (clojure-convert-collection-to-map)))
+(def-refactor-test test-convert-collection-list-map
+  "(:a 1 :b 2)"
+  "{:a 1 :b 2}"
+  (backward-sexp)
+  (down-list)
+  (clojure-convert-collection-to-map))
 
-(describe "clojure-convert-collection-to-vector"
-  (when-refactoring-it "should convert a map to a vector"
-    "{:a 1 :b 2}"
-    "[:a 1 :b 2]"
-    (backward-sexp)
-    (down-list)
-    (clojure-convert-collection-to-vector)))
+(def-refactor-test test-convert-collection-map-vector
+  "{:a 1 :b 2}"
+  "[:a 1 :b 2]"
+  (backward-sexp)
+  (down-list)
+  (clojure-convert-collection-to-vector))
 
-(describe "clojure-convert-collection-to-set"
-  (when-refactoring-it "should convert a vector to a set"
-    "[1 2 3]"
-    "#{1 2 3}"
-    (backward-sexp)
-    (down-list)
-    (clojure-convert-collection-to-set)))
+(def-refactor-test test-convert-collection-vector-set
+  "[1 2 3]"
+  "#{1 2 3}"
+  (backward-sexp)
+  (down-list)
+  (clojure-convert-collection-to-set))
 
-(describe "clojure-convert-collection-to-list"
-  (when-refactoring-it "should convert a set to a list"
-    "#{1 2 3}"
-    "(1 2 3)"
-    (backward-sexp)
-    (down-list)
-    (clojure-convert-collection-to-list)))
+(def-refactor-test test-convert-collection-set-list
+  "#{1 2 3}"
+  "(1 2 3)"
+  (backward-sexp)
+  (down-list)
+  (clojure-convert-collection-to-list))
 
-(describe "clojure-convert-collection-to-quoted-list"
-  (when-refactoring-it "should convert a set to a quoted list"
-    "#{1 2 3}"
-    "'(1 2 3)"
-    (backward-sexp)
-    (down-list)
-    (clojure-convert-collection-to-quoted-list)))
+(def-refactor-test test-convert-collection-set-quoted-list
+  "#{1 2 3}"
+  "'(1 2 3)"
+  (backward-sexp)
+  (down-list)
+  (clojure-convert-collection-to-quoted-list))
 
-(describe "clojure-convert-collection-to-set"
-  (when-refactoring-it "should convert a quoted list to a set"
-    "'(1 2 3)"
-    "#{1 2 3}"
-    (backward-sexp)
-    (down-list)
-    (clojure-convert-collection-to-set)))
+(def-refactor-test test-convert-collection-quoted-list-set
+  "'(1 2 3)"
+  "#{1 2 3}"
+  (backward-sexp)
+  (down-list)
+  (clojure-convert-collection-to-set))
 
 (provide 'clojure-mode-convert-collection-test)
 

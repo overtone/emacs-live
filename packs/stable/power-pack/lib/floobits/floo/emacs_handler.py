@@ -1,5 +1,4 @@
 # coding: utf-8
-import os
 import sys
 import hashlib
 from collections import defaultdict
@@ -188,8 +187,7 @@ class EmacsHandler(base.BaseHandler):
     @has_perm('create_buf')
     def _on_create_buf(self, req):
         # TODO: use the view state if it exists instead of uploading the on-disk state
-        path = os.path.realpath(os.path.expanduser(req['full_path']))
-        self.agent.upload(path)
+        self.agent.upload(req['full_path'])
 
     @has_perm('delete_buf')
     def _on_delete_buf(self, req):

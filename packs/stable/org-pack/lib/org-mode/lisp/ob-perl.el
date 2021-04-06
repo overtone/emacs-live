@@ -4,7 +4,6 @@
 
 ;; Authors: Dan Davison
 ;;	 Eric Schulte
-;; Maintainer: Corwin Brust
 ;; Keywords: literate programming, reproducible research
 ;; Homepage: https://orgmode.org
 
@@ -152,5 +151,7 @@ return the value of the last statement in BODY, as elisp."
           (org-babel-import-elisp-from-file tmp-file '(16)))))))
 
 (provide 'ob-perl)
+
+
 
 ;;; ob-perl.el ends here

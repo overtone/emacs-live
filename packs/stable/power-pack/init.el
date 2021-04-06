@@ -4,7 +4,6 @@
 (require 'iy-go-to-char)
 (require 'lively)
 
-(live-load-config-file "marshal.el-conf.el")
 (live-load-config-file "volatile-highlights-conf.el")
 (live-load-config-file "yasnippet-conf.el")
 (live-load-config-file "undo-tree-conf.el")

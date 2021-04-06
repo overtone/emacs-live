@@ -1,8 +1,4 @@
-# Hydra
-
 [![Build Status](https://travis-ci.org/abo-abo/hydra.svg?branch=master)](https://travis-ci.org/abo-abo/hydra)
-[![MELPA](https://melpa.org/packages/hydra-badge.svg)](https://melpa.org/#/hydra)
-[![MELPA Stable](https://stable.melpa.org/packages/hydra-badge.svg)](https://stable.melpa.org/#/hydra)
 
 This is a package for GNU Emacs that can be used to tie related commands into a family of short
 bindings with a common prefix - a Hydra.
@@ -66,7 +62,7 @@ If you want to quickly understand the concept, see [the video demo](https://www.
 
 ## The one with the least amount of code
 
-```elisp
+```cl
 (defhydra hydra-zoom (global-map "<f2>")
   "zoom"
   ("g" text-scale-increase "in")
@@ -95,7 +91,7 @@ Here's the result of pressing <kbd>.</kbd> in the good-old Buffer menu:
 
 The code is large but very simple:
 
-```elisp
+```cl
 (defhydra hydra-buffer-menu (:color pink
                              :hint nil)
   "
@@ -171,26 +167,22 @@ If you name your hydra `hydra-awesome`, the return result of `defhydra` will be 
 
 Here's what `hydra-zoom/body` looks like, if you're interested:
 
-```elisp
-(defun hydra-zoom/body ()
-  "Call the body in the \"hydra-zoom\" hydra.
-
-The heads for the associated hydra are:
+```cl
+(defun hydra-zoom/body nil
+  "Create a hydra with a \"<f2>\" body and the heads:
 
 \"g\":    `text-scale-increase',
 \"l\":    `text-scale-decrease'
 
-The body can be accessed via `hydra-zoom/body', which is bound to \"<f2>\"."
+The body can be accessed via `hydra-zoom/body'."
   (interactive)
-  (require 'hydra)
   (hydra-default-pre)
-  (let ((hydra--ignore nil))
-    (hydra-keyboard-quit)
-    (setq hydra-curr-body-fn
-          'hydra-zoom/body))
-  (hydra-show-hint
-   hydra-zoom/hint
-   'hydra-zoom)
+  (when hydra-is-helpful
+    (if hydra-lv
+        (lv-message
+         (eval hydra-zoom/hint))
+      (message
+       (eval hydra-zoom/hint))))
   (hydra-set-transient-map
    hydra-zoom/keymap
    (lambda nil
@@ -207,7 +199,7 @@ This can be any keymap, for instance, `global-map` or `isearch-mode-map`.
 
 For this example:
 
-```elisp
+```cl
 (defhydra hydra-zoom (global-map "<f2>")
   "zoom"
   ("g" text-scale-increase "in")
@@ -219,7 +211,7 @@ For this example:
 
 And here's the relevant generated code:
 
-```elisp
+```cl
 (unless (keymapp (lookup-key global-map (kbd "<f2>")))
   (define-key global-map (kbd "<f2>") nil))
 (define-key global-map [f2 103]
@@ -233,7 +225,7 @@ As you see, `"<f2>"` is used as a prefix for <kbd>g</kbd> (char value 103) and <
 
 If you don't want to use a map right now, you can skip it like this:
 
-```elisp
+```cl
 (defhydra hydra-zoom (nil nil)
   "zoom"
   ("g" text-scale-increase "in")
@@ -242,7 +234,7 @@ If you don't want to use a map right now, you can skip it like this:
 
 Or even simpler:
 
-```elisp
+```cl
 (defhydra hydra-zoom ()
   "zoom"
   ("g" text-scale-increase "in")
@@ -264,7 +256,7 @@ Below is a list of each key.
 
 You can specify code that will be called before each head, and after the body. For example:
 
-```elisp
+```cl
 (defhydra hydra-vi (:pre (set-cursor-color "#40e0d0")
                     :post (progn
                             (set-cursor-color "#ffffff")
@@ -334,9 +326,6 @@ instead of `define-key` you can use this option.
 The `:bind` key can be overridden by each head. This is useful if you want to have a few heads that
 are not bound outside the hydra.
 
-### `:base-map`
-Use this option if you want to override `hydra-base-map` for the current hydra.
-
 ## `awesome-docstring`
 
 This can be a simple string used to build the final hydra hint.  However, if you start it with a
@@ -363,7 +352,7 @@ If the result of the Elisp expression is a string and you don't want to quote it
 
 Each head looks like this:
 
-```elisp
+```cl
 (head-binding head-command head-hint head-plist)
 ```
 
@@ -396,7 +385,7 @@ The `head-command` can be:
 
 Here's an example of the last option:
 
-```elisp
+```cl
 (defhydra hydra-launcher (:color blue)
    "Launch"
    ("h" man "man")
@@ -410,12 +399,12 @@ Here's an example of the last option:
 ### `head-hint`
 
 In case of a large body docstring, you usually don't want the head hint to show up, since
-you've already documented it in the body docstring.
+you've already documented it the the body docstring.
 You can set the head hint to `nil` to do this.
 
 Example:
 
-```elisp
+```cl
 (defhydra hydra-zoom (global-map "<f2>")
   "
 Press _g_ to zoom in.
@@ -431,7 +420,3 @@ Here's a list of body keys that can be overridden in each head:
 - `:exit`
 - `:color`
 - `:bind`
-- `:column`
-
-Use `:column` feature to have an aligned rectangular docstring without defining it manually.
-See [hydra-examples.el](https://github.com/abo-abo/hydra/blob/05871dd6c8af7b2268bd1a10eb9f8a3e423209cd/hydra-examples.el#L337) for an example code.

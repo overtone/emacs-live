@@ -1,6 +1,6 @@
 ;;; cider-eldoc-tests.el
 
-;; Copyright © 2012-2020 Tim King, Bozhidar Batsov
+;; Copyright © 2012-2016 Tim King, Bozhidar Batsov
 
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Bozhidar Batsov <bozhidar@batsov.com>
@@ -39,7 +39,7 @@
 
 (describe "cider--eldoc-format-class-names"
   :var (class-names)
-  (before-each
+  (before-all
     (setq class-names '("java.lang.String" "java.lang.StringBuffer" "java.lang.CharSequence" "java.lang.StringBuilder")))
 
   (it "returns a formatted class names prefix string"
@@ -71,7 +71,7 @@
 
 (describe "cider-eldoc-format-thing"
   :var (class-names)
-  (before-each
+  (before-all
     (setq class-names '("java.lang.String" "java.lang.StringBuffer" "java.lang.CharSequence" "java.lang.StringBuilder")))
 
   (describe "when ns is given and it exists"
@@ -159,7 +159,7 @@
             :to-equal "map")))
 
 (describe "cider-eldoc-info-in-current-sexp"
-  (before-each
+  (before-all
     (spy-on 'cider-connected-p :and-return-value t)
     (spy-on 'cider-eldoc-info :and-call-fake
             (lambda (thing)
@@ -209,7 +209,7 @@
                 '("eldoc-info" ("clojure.core" "map" (("f") ("f" "coll"))) "thing" "map" "pos" 2)))))
 
   (describe "interop forms"
-    (before-each
+    (before-all
       (spy-on 'cider-connected-p :and-return-value t)
       (spy-on 'cider-eldoc-info :and-call-fake
               (lambda (thing)
@@ -237,7 +237,7 @@
 
 (describe "cider-eldoc-format-sym-doc"
   :var (eldoc-echo-area-use-multiline-p)
-  (before-each
+  (before-all
     (spy-on 'window-width :and-return-value 177))
 
   (it "returns the formated eldoc string"
@@ -300,11 +300,3 @@
         (it "returns tries to display the var with the first line"
           (expect (cider-eldoc-format-sym-doc "kubaru.core/plane" "kubaru.core" "Line 1.\nLine 2.\nLine 3.")
                   :to-equal "kubaru.core/plane: Line 1."))))))
-
-(describe "cider--eldoc-add-datomic-query-inputs-to-arglists"
-  (it "adds the datomic query inputs of the query at point to the arglist"
-    (spy-on 'cider-second-sexp-in-list :and-return-value t)
-    (spy-on 'cider-sync-request:eldoc-datomic-query
-              :and-return-value '(dict "inputs" (("$" "?first-name"))))
-    (expect (cider--eldoc-add-datomic-query-inputs-to-arglists '(("query" "&" "inputs")))
-            :to-equal '(("query" "$" "?first-name")))))

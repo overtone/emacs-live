@@ -92,34 +92,6 @@ always be copied to the register named after that character."
   :group 'expand-region
   :type '(repeat (symbol :tag "Major Mode" unknown)))
 
-;;;###autoload
-(defcustom expand-region-smart-cursor nil
-  "Defines whether the cursor should be placed intelligently after expansion.
-
-If set to t, and the cursor is already at the beginning of the new region,
-keep it there; otherwise, put it at the end of the region.
-
-If set to nil, always place the cursor at the beginning of the region."
-  :group 'expand-region
-  :type '(choice (const :tag "Smart behaviour" t)
-                 (const :tag "Standard behaviour" nil)))
-
-;;;###autoload
-(define-obsolete-variable-alias 'er/enable-subword-mode?
-  'expand-region-subword-enabled "2019-03-23")
-
-;;;###autoload
-(defcustom expand-region-subword-enabled nil
-  "Whether expand-region should use subword expansions."
-  :group 'expand-region
-  :type '(choice (const :tag "Enable subword expansions" t)
-                 (const :tag "Disable subword expansions" nil)))
-
-(defcustom expand-region-show-usage-message t
-  "Whether expand-region should show usage message."
-  :group 'expand-region
-  :type 'boolean)
-
 (provide 'expand-region-custom)
 
 ;;; expand-region-custom.el ends here

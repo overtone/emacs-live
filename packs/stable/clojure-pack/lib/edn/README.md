@@ -3,10 +3,6 @@
 Edn.el is an emacs lisp library for reading and writing the data
 format [edn](https://github.com/edn-format/edn).
 
-## Deprecated
-
-This library is no longer maintained as I consider it replaced by [parseedn](https://github.com/clojure-emacs/parseedn).
-
 ## Installation
 
 I highly recommend installing edn.el through elpa.
@@ -82,7 +78,7 @@ Elisp doesn't have support for bignums without pulling in `calc` or an external 
 
 ## Is it any good?
 
-It was, but bitrot got the better of it.
+Yes!
 
 ## Contribute
 

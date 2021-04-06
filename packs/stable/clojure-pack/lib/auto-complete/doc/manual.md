@@ -1,4 +1,4 @@
-# Auto-Complete - User Manual
+% Auto-Complete - User Manual
 
 # Introduction
 
@@ -15,6 +15,11 @@ extend. Please contact me if you have any questions.
 
 Auto Complete Mode is licensed under the terms of GPLv3. And this
 document is licensed under the term of GFDL.
+
+# Downloads
+
+You can download the latest auto-complete from
+[the official site](http://auto-complete.org/).
 
 # Installation
 
@@ -80,7 +85,7 @@ Inputting characters is basic. Completions will never be shown without
 any character. So when completion will be started, what character
 causes completion to be started? It is a good question but it is
 difficult to answer here. In simple words, completion will be started
-when a character is inserted. See [`ac-trigger-commands`](#ac-trigger-commands) for more
+when a character is inserted. See [`ac-trigger-commands`][] for more
 details.
 
 ![Inputting Characters](ac.png)
@@ -140,7 +145,7 @@ is not bad idea to remember how to select candidates.
 Selecting candidates is not a complex operation. You can select
 candidates forward or backward by cursor key or `M-p` and
 `M-n`. According to settings, a behavior of completion by TAB will be
-changed as a behavior of completion by RET. See [`ac-dwim`](#ac-dwim) for more
+changed as a behavior of completion by RET. See [`ac-dwim`]() for more
 details.
 
 There are other ways to select candidates. `M-1` to select candidate
@@ -153,8 +158,8 @@ There are other ways to select candidates. `M-1` to select candidate
 displaying. Quick help will appear at the side of completion menu, so
 you can easily see that, but there is a problem if there is no space
 to display the help. Quick help will be shown automatically. To use
-quick help, you need to set [`ac-use-quick-help`](#ac-use-quick-help) to `t`. Delay time
-to show quick help is given by [`ac-quick-help-delay`](#ac-quick-help-delay).
+quick help, you need to set [`ac-use-quick-help`][] to `t`. Delay time
+to show quick help is given by [`ac-quick-help-delay`][].
 
 On the other side, buffer help will not be shown without any
 instructions from users. Buffer help literally displays help in a
@@ -208,14 +213,14 @@ original automatic completion.
   * Case that no candidates remains
 
     Attempt to complete with fuzzy matching. See
-    [Completion by Fuzzy Matching](#completion-by-fuzzy-matching) for more details.
+    [Completion by Fuzzy Matching][] for more details.
 
   * Otherwise
 
     Otherwise start completion with/without expanding a whole common
     part and showing completion menu. See also
-    [`ac-show-menu-immediately-on-auto-complete`](#ac-show-menu-immediately-on-auto-complete) and
-    [`ac-expand-on-auto-complete`](#ac-expand-on-auto-complete).
+    [`ac-show-menu-immediately-on-auto-complete`][] and
+    [`ac-expand-on-auto-complete`][].
 
 ## Completion by Fuzzy Matching
 
@@ -268,8 +273,8 @@ key is used with `ac-auto-start` being `nil`.
 (setq ac-auto-start nil)
 ```
 
-As of `ac-auto-start`, see [Not to complete automatically](#not-to-complete-automatically) or
-[`ac-auto-start`](#ac-auto-start) for more details.
+As of `ac-auto-start`, see [Not to complete automatically][] or
+[`ac-auto-start`][] for more details.
 
 ## Candidate Suggestion
 
@@ -306,7 +311,7 @@ top after `find-` as it seems to learn from users' operations.
 Dictionary is a simple list of string. There is three types of
 dictionary: user defined dictionary, major mode dictionary, and
 extension dictionary. You need to add `ac-source-dictionary` to
-`ac-sources` (default). See [Source](#source) for more details.
+`ac-sources` (default). See [Source][] for more details.
 
 ### User Defined Dictionary#
 
@@ -352,7 +357,7 @@ adding to `ac-user-dictionary-files`.
 You can use other dictionaries for every major-modes and extensions. A
 dictionary will loaded from a directory specified with
 `ac-dictionary-directories`. `ac-dictionary-directories` may be the
-following setting if you followed [Installation](#installation) instructions.
+following setting if you followed [Installation][] instructions.
 
 ```emacs-lisp
 (add-to-list 'ac-dictionary-directories "~/.emacs.d/ac-dict")
@@ -381,7 +386,7 @@ changes.
 * How to show
 
 Anybody who knows a little Emacs Lisp can define a source easily. See
-[Extend](#extend) for how to define a source. Here we will explain how to use
+[Extend][] for how to define a source. Here we will explain how to use
 built-in sources.
 
 Usually a source name starts with `ac-source-`. So you can list
@@ -470,7 +475,7 @@ default value of `ac-sources` by registering a hook for
 that adds `ac-source-filename` to the first of `ac-sources` by
 default. So all `auto-complete-mode` enabled buffer will have
 `ac-source-filename` at the first of `ac-sources`. A reason why adding
-to the first is relating to [Omni Completion](#omni-completion). Anyway you don't care
+to the first is relating to [Omni Completion][]. Anyway you don't care
 about it here. So if you want to change `ac-sources` of all buffer,
 you can redefine `ac-common-setup` function to do that.
 
@@ -496,7 +501,7 @@ A source for CSS property.
 
 ### `ac-source-dictionary`
 
-A source for dictionary. See [Completion by Dictionary](#completion-by-dictionary) about
+A source for dictionary. See [Completion by Dictionary][] about
 dictionary.
 
 ### `ac-source-eclim`
@@ -563,7 +568,7 @@ A source for completing Emacs Lisp symbols.
 ### `ac-source-words-in-all-buffer`
 
 A source for completing words in all buffer. Unlikely
-[`ac-source-words-in-same-mode-buffers`](#ac-source-words-in-same-mode-buffers), it doesn't regard
+[`ac-source-words-in-same-mode-buffers`][], it doesn't regard
 major-mode.
 
 ### `ac-source-words-in-buffer`
@@ -625,15 +630,15 @@ completion candidates, because there will be so many candidates
 necessarily. If you feel `auto-complete-mode` is stalling, change
 `ac-auto-start` to a larger number or `nil`.
 
-See [`ac-auto-start`](#ac-auto-start) for more details.
+See [`ac-auto-start`][] for more details.
 
-And consider to use [Trigger Key](#trigger-key).
+And consider to use [Trigger Key][].
 
 ## Not to show completion menu automatically
 
 There is another approach to solve the annoying problem is that not to
 show completion menu automatically. Not to show completion menu
-automatically, set [`ac-auto-show-menu`](#ac-auto-show-menu) to `nil`.
+automatically, set [`ac-auto-show-menu`][] to `nil`.
 
 ```emacs-lisp
 (setq ac-auto-show-menu nil)
@@ -699,7 +704,7 @@ completion menu which is enabled when `ac-use-menu-map` is `t`.
 (define-key ac-menu-map "\C-p" 'ac-previous)
 ```
 
-See [`ac-use-menu-map`](#ac-use-menu-map) and [`ac-menu-map`](#ac-menu-map) for more details.
+See [`ac-use-menu-map`][] and [`ac-menu-map`][] for more details.
 
 ## Not to use quick help
 
@@ -783,7 +788,7 @@ use `set-face-underline`.
 
 ## Change default sources
 
-Read [Source](#source) first if you don't familiar with sources. To change
+Read [Source][] first if you don't familiar with sources. To change
 default of sources, use `setq-default`:
 
 ```emacs-lisp
@@ -820,7 +825,7 @@ like:
 Generally, such commands will be automatically available when sources
 are defined. Assume that a source named `ac-source-foobar` is being
 defined for example, a command called `ac-complete-foobar` will be
-also defined automatically. See also [Builtin Sources](#builtin-sources) for available
+also defined automatically. See also [Builtin Sources][] for available
 commands.
 
 If you want to use multiple sources for a command, you need to define
@@ -911,17 +916,17 @@ Whether or not to stop Flymake on completion.
 
 ## `ac-use-fuzzy`
 
-Whether or not to use [fuzzy matching](#completion-by-fuzzy-matching).
+Whether or not to use [fuzzy matching](#Completion_by_Fuzzy_Matching).
 
 ## `ac-fuzzy-cursor-color`
 
 Change cursor color to specified color when
-[Completion by Fuzzy Matching](#completion-by-fuzzy-matching) is started. `nil` means never
+[Completion by Fuzzy Matching][] is started. `nil` means never
 changed. Available colors can be seen with `M-x list-colors-display`.
 
 ## `ac-use-comphist`
 
-Whether or not to use [Candidate Suggestion](#candidate-suggestion). `nil` means never
+Whether or not to use [Candidate Suggestion][]. `nil` means never
 using it and get performance better maybe.
 
 ## `ac-comphist-threshold`
@@ -931,7 +936,7 @@ whole scores.
 
 ## `ac-comphist-file`
 
-Specify a file stores data of [Candidate Suggestion](#candidate-suggestion).
+Specify a file stores data of [Candidate Suggestion][].
 
 ## `ac-use-quick-help`
 
@@ -983,12 +988,12 @@ automatically. `self-insert-command` is one of default.
 
 ## `ac-trigger-commands-on-completing`
 
-Same as [`ac-trigger-commands`](#ac-trigger-commands) expect this will be used on
+Same as [`ac-trigger-commands`][] expect this will be used on
 completing.
 
 ## `ac-trigger-key`
 
-Specify a [Trigger Key](#trigger-key).
+Specify a [Trigger Key][].
 
 ## `ac-auto-start`
 
@@ -1055,21 +1060,21 @@ general.
 ## `ac-user-dictionary`
 
 Specify a dictionary as a list of string for
-[Completion by Dictionary](#completion-by-dictionary).
+[Completion by Dictionary][].
 
 ## `ac-user-dictionary-files`
 
 Specify a dictionary files as a list of string for
-[Completion by Dictionary](#completion-by-dictionary).
+[Completion by Dictionary][].
 
 ## `ac-dictionary-directories`
 
 Specify a dictionary directories as a list of string for
-[Completion by Dictionary](#completion-by-dictionary).
+[Completion by Dictionary][].
 
 ## `ac-sources`
 
-Specify sources as a list of [Source](#source). This is a buffer local
+Specify sources as a list of [Source][]. This is a buffer local
 variable.
 
 ## `ac-completing-map`
@@ -1079,7 +1084,7 @@ Keymap for completion.
 ## `ac-menu-map`
 
 Keymap for completion on completion menu. See also
-[`ac-use-menu-map`](#ac-use-menu-map).
+[`ac-use-menu-map`][].
 
 ## `ac-mode-map`
 
@@ -1088,7 +1093,7 @@ Keymap for `auto-complete-mode` enabled buffers.
 # Extend
 
 A meaning to extend `auto-complete-mode` is just defining a
-[Source](#source). This section describe how to define a source.
+[Source][]. This section describe how to define a source.
 
 ## Prototype
 
@@ -1105,7 +1110,7 @@ by combining pairs of defined property and its value.
 
 ## Example
 
-The most important property for source is [`candidates`](#candidates)
+The most important property for source is [`candidates`][]
 property. This property describes how to generate completion
 candidates by giving a function, an expression, or a variable. A
 result of evaluation should be a list of strings. Here is an example
@@ -1230,7 +1235,7 @@ functionality.
 
 ## Action
 
-[Completion by RET](#completion-by-ret) will evaluate a function or an expression
+[Completion by RET][] will evaluate a function or an expression
 specified in `action` property. A builtin sources `ac-source-abbrev`
 and `ac-source-yasnippet` use this property.
 
@@ -1269,7 +1274,7 @@ of group 1 or group 0 as a beginning point of completion target string
 by doing `re-search-backward`[^1] with the regexp. If you want to do
 more complicated, use a function or an expression instead. The
 beginning point that is evaluated here will be stored into
-[`ac-point`](#ac-point). In above example, regexp is enough.
+[`ac-point`][]. In above example, regexp is enough.
 
 ```
 ^To: \(.*\)
@@ -1320,7 +1325,7 @@ compatibility, it is difficult to answer which you should use `defvar`
 and `ac-define-source`. Builtin sources are defined with
 `ac-define-sources`, so you can use them alone by binding some key to
 these commands such like `ac-complete-filename`. See also
-[Completion with specific source](#completion-with-specific-sourc).
+[Completion with specific source][].
 
 ### Source Properties
 
@@ -1332,13 +1337,13 @@ completion is started.
 #### `candidates`
 
 Specify a function, an expression, or a variable to calculate
-candidates. Candidates should be a list of string. If [`cache`](#cache-1)
+candidates. Candidates should be a list of string. If [`cache`][]
 property is enabled, this property will be ignored twice or later.
 
 ### `prefix`
 
 Specify a regexp, a function, or an expression to find a point of
-completion target string for [Omni Completion](#omni-completion). This
+completion target string for [Omni Completion][]. This
 source will be ignored when `nil` returned. If a regexp is specified,
 a start point of group 1 or group 2 will be used as a value.
 
@@ -1346,12 +1351,12 @@ a start point of group 1 or group 2 will be used as a value.
 
 Specify a required number of characters of completion target
 string. If nothing is specified, `auto-complete-mode` uses
-[`ac-auto-start`](#ac-auto-start) instead.
+[`ac-auto-start`][] instead.
 
 ### `action`
 
 Specify a function or an expression that is executed on
-[Completion by RET](#completion-by-ret).
+[Completion by RET][].
 
 ### `limit`
 
@@ -1379,7 +1384,7 @@ summarizing the candidate in short string.
 
 ### `cache`
 
-Use [Cache](#cache).
+Use [Cache][].
 
 ### `require`
 
@@ -1389,12 +1394,12 @@ string. `nil` means nothing ignored.
 
 ### `candidate-face`
 
-Specify a face of candidate. It overrides [`ac-candidate-face`](#ac-candidate-face)
+Specify a face of candidate. It overrides [`ac-candidate-face`][]
 partially.
 
 ### `selection-face`
 
-Specify a face of selection. It overrides [`ac-selection-face`](#ac-selection-face)
+Specify a face of selection. It overrides [`ac-selection-face`][]
 partially.
 
 ### `depends`
@@ -1431,7 +1436,7 @@ A string of completion target.
 ### `ac-limit`
 
 A limit of candidates. Its value may be one of
-[`ac-candidate-limit`](#ac-candidate-limit) and [`limit`](#limit) property.
+[`ac-candidate-limit`][] and [`limit`][] property.
 
 ### `ac-candidates`
 
@@ -1450,7 +1455,7 @@ performance.
 
 For a larger number, it reduces a cost of generating completion
 candidates. Or you can remove the cost by setting `nil` and you can
-use when you truly need. See [Not to complete automatically](#not-to-complete-automatically) for
+use when you truly need. See [Not to complete automatically][] for
 more details.
 
 ### `ac-delay` {#trouble-ac-delay}
@@ -1463,8 +1468,8 @@ For a larger number, it reduces a displaying cost of completion menu.
 
 ### `ac-use-comphist` {#trouble-ac-use-comphist}
 
-Setting [`ac-use-comphist`](#ac-use-comphist) to `nil` to disable
-[Candidate Suggestion](#candidate-suggestion), it reduces a cost of suggestion.
+Setting [`ac-use-comphist`][] to `nil` to disable
+[Candidate Suggestion][], it reduces a cost of suggestion.
 
 ### `ac-candidate-limit` {#trouble-ac-candidate-limit}
 

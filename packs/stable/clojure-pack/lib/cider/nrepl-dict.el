@@ -1,7 +1,7 @@
 ;;; nrepl-dict.el --- Dictionary functions for Clojure nREPL -*- lexical-binding: t -*-
 
 ;; Copyright © 2012-2013 Tim King, Phil Hagelberg, Bozhidar Batsov
-;; Copyright © 2013-2020 Bozhidar Batsov, Artur Malabarba and CIDER contributors
+;; Copyright © 2013-2016 Bozhidar Batsov, Artur Malabarba and CIDER contributors
 ;;
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Phil Hagelberg <technomancy@gmail.com>
@@ -27,7 +27,7 @@
 ;;
 ;;; Commentary:
 ;;
-;; Provides functions to interact with and create `nrepl-dict's.  These are
+;; Provides functions to interact with and create `nrepl-dict's. These are
 ;; simply plists with an extra element at the head.
 
 ;;; Code:
@@ -37,12 +37,6 @@
 (defun nrepl-dict (&rest key-vals)
   "Create nREPL dict from KEY-VALS."
   (cons 'dict key-vals))
-
-(defun nrepl-dict-from-hash (hash)
-  "Create nREPL dict from HASH."
-  (let ((dict (nrepl-dict)))
-    (maphash (lambda (k v) (nrepl-dict-put dict k v)) hash)
-    dict))
 
 (defun nrepl-dict-p (object)
   "Return t if OBJECT is an nREPL dict."
@@ -75,7 +69,7 @@ return nil.  If DICT is not an nREPL dict object, an error is thrown."
   "Associate in DICT, KEY to VALUE.
 Return new dict.  Dict is modified by side effects."
   (if (null dict)
-      `(dict ,key ,value)
+      (list 'dict key value)
     (if (not (nrepl-dict-p dict))
         (error "Not an nREPL dict object: %s" dict)
       (setcdr dict (lax-plist-put (cdr dict) key value))
@@ -175,7 +169,7 @@ If NO-JOIN is given, return the first non nil dict."
            dict1)
           ((and (listp dict2) (listp dict1)) (append dict1 dict2))
           ((listp dict1) (append dict1 (list dict2)))
-          (t `(,dict1 ,dict2)))))
+          (t (list dict1 dict2)))))
 
 
 ;;; Dbind

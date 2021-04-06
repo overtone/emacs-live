@@ -27,7 +27,7 @@
 ;; session evaluation is supported.  Requires both coq.el and
 ;; coq-inferior.el, both of which are distributed with Coq.
 ;;
-;; https://coq.inria.fr/
+;; http://coq.inria.fr/
 
 ;;; Code:
 (require 'ob)
@@ -76,5 +76,3 @@ create one.  Return the initialized session."
   (get-buffer org-babel-coq-buffer))
 
 (provide 'ob-coq)
-
-;;; ob-coq.el ends here

@@ -30,8 +30,6 @@
 (require 'ox)
 (require 'ox-publish)
 
-;;; Function Declarations
-
 (defvar org-latex-default-packages-alist)
 (defvar org-latex-packages-alist)
 (defvar orgtbl-exp-regexp)
@@ -738,9 +736,8 @@ environment."
   :safe #'stringp)
 
 (defcustom org-latex-inline-image-rules
-  `(("file" . ,(rx "."
-		   (or "pdf" "jpeg" "jpg" "png" "ps" "eps" "tikz" "pgf" "svg")
-		   eos)))
+  `(("file" . ,(regexp-opt
+		'("pdf" "jpeg" "jpg" "png" "ps" "eps" "tikz" "pgf" "svg"))))
   "Rules characterizing image files that can be inlined into LaTeX.
 
 A rule consists in an association whose key is the type of link
@@ -753,7 +750,8 @@ pdflatex, pdf, jpg and png images are OK.  When processing
 through dvi to Postscript, only ps and eps are allowed.  The
 default we use here encompasses both."
   :group 'org-export-latex
-  :package-version '(Org . "9.4")
+  :version "24.4"
+  :package-version '(Org . "8.0")
   :type '(alist :key-type (string :tag "Type")
 		:value-type (regexp :tag "Path")))
 
@@ -1241,7 +1239,7 @@ calling `org-latex-compile'."
   :package-version '(Org . "8.3")
   :type '(repeat
 	  (cons
-	   (regexp :tag "Regexp")
+	   (string :tag "Regexp")
 	   (string :tag "Message"))))
 
 
@@ -1888,11 +1886,10 @@ CONTENTS is nil.  INFO is a plist holding contextual information."
 		(org-export-get-footnote-definition footnote-reference info)
 		info t)))
       ;; Use \footnotemark if reference is within another footnote
-      ;; reference, footnote definition, table cell, verse block, or
-      ;; item's tag.
+      ;; reference, footnote definition, table cell or item's tag.
       ((or (org-element-lineage footnote-reference
 				'(footnote-reference footnote-definition
-						     table-cell verse-block))
+						     table-cell))
 	   (eq 'item (org-element-type
 		      (org-export-get-parent-element footnote-reference))))
        "\\footnotemark")
@@ -1904,8 +1901,7 @@ CONTENTS is nil.  INFO is a plist holding contextual information."
 		  ;; Only insert a \label if there exist another
 		  ;; reference to def.
 		  (cond ((not label) "")
-			((org-element-map (plist-get info :parse-tree)
-			     'footnote-reference
+			((org-element-map (plist-get info :parse-tree) 'footnote-reference
 			   (lambda (f)
 			     (and (not (eq f footnote-reference))
 				  (equal (org-element-property :label f) label)
@@ -2391,11 +2387,8 @@ used as a communication channel."
 	      (format "[%s]" (plist-get info :latex-default-figure-position)))
 	     (t ""))))
 	 (center
-	  (cond
-	   ;; If link is an image link, do not center.
-	   ((eq 'link (org-element-type (org-export-get-parent link))) nil)
-	   ((plist-member attr :center) (plist-get attr :center))
-	   (t (plist-get info :latex-images-centered))))
+	  (if (plist-member attr :center) (plist-get attr :center)
+	    (plist-get info :latex-images-centered)))
 	 (comment-include (if (plist-get attr :comment-include) "%" ""))
 	 ;; It is possible to specify scale or width and height in
 	 ;; the ATTR_LATEX line, and also via default variables.
@@ -2530,16 +2523,15 @@ INFO is a plist holding contextual information.  See
 	 (imagep (org-export-inline-image-p
 		  link (plist-get info :latex-inline-image-rules)))
 	 (path (org-latex--protect-text
-		(pcase type
-		  ((or "http" "https" "ftp" "mailto" "doi")
-		   (concat type ":" raw-path))
-		  ("file"
-		   (org-export-file-uri raw-path))
-		  (_
-		   raw-path)))))
+		(cond ((member type '("http" "https" "ftp" "mailto" "doi"))
+		       (concat type ":" raw-path))
+		      ((string= type "file")
+		       (org-export-file-uri raw-path))
+		      (t
+		       raw-path)))))
     (cond
      ;; Link type is handled by a special function.
-     ((org-export-custom-protocol-maybe link desc 'latex info))
+     ((org-export-custom-protocol-maybe link desc 'latex))
      ;; Image file.
      (imagep (org-latex--inline-image link info))
      ;; Radio link: Transcode target's contents and use them as link's
@@ -3506,25 +3498,21 @@ channel."
   "Transcode a VERSE-BLOCK element from Org to LaTeX.
 CONTENTS is verse block contents.  INFO is a plist holding
 contextual information."
-  (concat
-   (org-latex--wrap-label
-    verse-block
-    ;; In a verse environment, add a line break to each newline
-    ;; character and change each white space at beginning of a line
-    ;; into a space of 1 em.  Also change each blank line with
-    ;; a vertical space of 1 em.
-    (format "\\begin{verse}\n%s\\end{verse}"
+  (org-latex--wrap-label
+   verse-block
+   ;; In a verse environment, add a line break to each newline
+   ;; character and change each white space at beginning of a line
+   ;; into a space of 1 em.  Also change each blank line with
+   ;; a vertical space of 1 em.
+   (format "\\begin{verse}\n%s\\end{verse}"
+	   (replace-regexp-in-string
+	    "^[ \t]+" (lambda (m) (format "\\hspace*{%dem}" (length m)))
 	    (replace-regexp-in-string
-	     "^[ \t]+" (lambda (m) (format "\\hspace*{%dem}" (length m)))
+	     "^[ \t]*\\\\\\\\$" "\\vspace*{1em}"
 	     (replace-regexp-in-string
-	      "^[ \t]*\\\\\\\\$" "\\vspace*{1em}"
-	      (replace-regexp-in-string
-	       "\\([ \t]*\\\\\\\\\\)?[ \t]*\n" "\\\\\n"
-	       contents nil t) nil t) nil t))
-    info)
-   ;; Insert footnote definitions, if any, after the environment, so
-   ;; the special formatting above is not applied to them.
-   (org-latex--delayed-footnotes-definitions verse-block info)))
+	      "\\([ \t]*\\\\\\\\\\)?[ \t]*\n" "\\\\\n"
+	      contents nil t) nil t) nil t))
+   info))
 
 
 

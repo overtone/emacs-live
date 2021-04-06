@@ -1,6 +1,6 @@
 ;;; cider-apropos.el --- Apropos functionality for Clojure -*- lexical-binding: t -*-
 
-;; Copyright © 2014-2020 Jeff Valk, Bozhidar Batsov and CIDER contributors
+;; Copyright © 2014-2016 Jeff Valk, Bozhidar Batsov and CIDER contributors
 ;;
 ;; Author: Jeff Valk <jv@jeffvalk.com>
 
@@ -25,25 +25,25 @@
 
 ;;; Code:
 
-(require 'cider-doc) ; for cider-doc-lookup
-(require 'cider-find) ; for cider--find-var
+(require 'cider-doc)
 (require 'cider-util)
-(require 'subr-x)
 (require 'cider-compat)
-(require 'cider-connection) ; for cider-ensure-connected
 
 (require 'cider-client)
 (require 'cider-popup)
 (require 'nrepl-dict)
 
+(require 'clojure-mode)
 (require 'apropos)
 (require 'button)
 
 (defconst cider-apropos-buffer "*cider-apropos*")
 
+(push cider-apropos-buffer cider-ancillary-buffers)
+
 (defcustom cider-apropos-actions '(("display-doc" . cider-doc-lookup)
                                    ("find-def" . cider--find-var)
-                                   ("lookup-on-clojuredocs" . cider-clojuredocs-lookup))
+                                   ("lookup-on-grimoire" . cider-grimoire-lookup))
   "Controls the actions to be applied on the symbol found by an apropos search.
 The first action key in the list will be selected as default.  If the list
 contains only one action key, the associated action function will be
@@ -52,15 +52,6 @@ the symbol found by the apropos search as argument."
   :type '(alist :key-type string :value-type function)
   :group 'cider
   :package-version '(cider . "0.13.0"))
-
-(define-button-type 'apropos-special-form
-  'apropos-label "Special form"
-  'apropos-short-label "s"
-  'face 'font-lock-keyword-face
-  'help-echo "mouse-2, RET: Display more help on this special form"
-  'follow-link t
-  'action (lambda (button)
-            (describe-function (button-get button 'apropos-symbol))))
 
 (defun cider-apropos-doc (button)
   "Display documentation for the symbol represented at BUTTON."
@@ -93,18 +84,14 @@ and be case-sensitive (based on CASE-SENSITIVE-P)."
                          'font-lock-face apropos-match-face doc)))
   doc)
 
-(defvar cider-use-tooltips)
 (defun cider-apropos-result (result query docs-p)
   "Emit a RESULT matching QUERY into current buffer, formatted for DOCS-P."
   (nrepl-dbind-response result (name type doc)
     (let* ((label (capitalize (if (string= type "variable") "var" type)))
-           (help (concat "Display doc for this " (downcase label)))
-           (props (list 'apropos-symbol name
-                        'action 'cider-apropos-doc))
-           (props (if cider-use-tooltips
-                      (append props (list 'help-echo help))
-                    props)))
-      (cider-propertize-region props
+           (help (concat "Display doc for this " (downcase label))))
+      (cider-propertize-region (list 'apropos-symbol name
+                                     'action 'cider-apropos-doc
+                                     'help-echo help)
         (insert-text-button name 'type 'apropos-symbol)
         (insert "\n  ")
         (insert-text-button label 'type (intern (concat "apropos-" type)))
@@ -116,10 +103,13 @@ and be case-sensitive (based on CASE-SENSITIVE-P)."
             (fill-region beg (point))))
         (insert "\n")))))
 
+(declare-function cider-mode "cider-mode")
+
 (defun cider-show-apropos (summary results query docs-p)
   "Show SUMMARY and RESULTS for QUERY in a pop-up buffer, formatted for DOCS-P."
-  (with-current-buffer (cider-popup-buffer cider-apropos-buffer 'select 'apropos-mode 'ancillary)
+  (with-current-buffer (cider-popup-buffer cider-apropos-buffer t)
     (let ((inhibit-read-only t))
+      (apropos-mode)
       (if (boundp 'header-line-format)
           (setq-local header-line-format summary)
         (insert summary "\n\n"))
@@ -145,9 +135,9 @@ optionally search doc strings (based on DOCS-P), include private vars
                  (y-or-n-p "Case-sensitive? ")))))
   (cider-ensure-connected)
   (cider-ensure-op-supported "apropos")
-  (if-let* ((summary (cider-apropos-summary
-                      query ns docs-p privates-p case-sensitive-p))
-            (results (cider-sync-request:apropos query ns docs-p privates-p case-sensitive-p)))
+  (if-let ((summary (cider-apropos-summary
+                     query ns docs-p privates-p case-sensitive-p))
+           (results (cider-sync-request:apropos query ns docs-p privates-p case-sensitive-p)))
       (cider-show-apropos summary results query docs-p)
     (message "No apropos matches for %S" query)))
 
@@ -175,6 +165,7 @@ optionally search doc strings (based on DOCS-P), include private vars
 ;;;###autoload
 (defun cider-apropos-select (query &optional ns docs-p privates-p case-sensitive-p)
   "Similar to `cider-apropos', but presents the results in a completing read.
+
 Show all symbols whose names match QUERY, a regular expression.
 QUERY can also be a list of space-separated words (e.g. take while) which
 will be converted to a regular expression (like take.+while) automatically
@@ -191,10 +182,10 @@ optionally search doc strings (based on DOCS-P), include private vars
                  (y-or-n-p "Case-sensitive? ")))))
   (cider-ensure-connected)
   (cider-ensure-op-supported "apropos")
-  (if-let* ((summary (cider-apropos-summary
-                      query ns docs-p privates-p case-sensitive-p))
-            (results (mapcar (lambda (r) (nrepl-dict-get r "name"))
-                             (cider-sync-request:apropos query ns docs-p privates-p case-sensitive-p))))
+  (if-let ((summary (cider-apropos-summary
+                     query ns docs-p privates-p case-sensitive-p))
+           (results (mapcar (lambda (r) (nrepl-dict-get r "name"))
+                            (cider-sync-request:apropos query ns docs-p privates-p case-sensitive-p))))
       (cider-apropos-act-on-symbol (completing-read (concat summary ": ") results))
     (message "No apropos matches for %S" query)))
 

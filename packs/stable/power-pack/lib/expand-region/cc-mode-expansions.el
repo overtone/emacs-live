@@ -71,7 +71,7 @@ either fully inside or fully outside the statement."
 
   (let (beg end)
     ;; Determine boundaries of the outside-pairs region
-    (save-mark-and-excursion
+    (save-excursion
       (c-end-of-statement)
       (er/mark-outside-pairs)
       (setq beg (point)

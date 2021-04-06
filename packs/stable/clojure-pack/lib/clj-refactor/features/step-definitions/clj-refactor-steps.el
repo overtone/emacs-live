@@ -21,30 +21,6 @@
          (with-temp-file (expand-file-name "project.clj" dir-name)
            (insert "(defproject " project-name " \"0.1.0-SNAPSHOT\")"))))
 
-(Given "^I have a \\(clj\\|leiningen\\) project with dependencies \"\\([^\"]+\\)\" in \"\\([^\"]+\\)\"$"
-       (lambda (project-type project-name dir-name)
-         (setq default-directory clj-refactor-root-path)
-
-         ;; delete old directory
-         (when (file-exists-p dir-name)
-           (delete-directory dir-name t))
-
-         ;; create directory structure
-         (mkdir (expand-file-name project-name (expand-file-name "src" dir-name)) t)
-         (mkdir (expand-file-name project-name (expand-file-name "test" dir-name)) t)
-
-         (cond
-
-          ;; add project.clj
-          ((string= project-type "leiningen")
-           (with-temp-file (expand-file-name "project.clj" dir-name)
-             (insert "(defproject " project-name " \"0.1.0-SNAPSHOT\"\n  :dependencies [[org.clojure/clojure \"1.9.0\"]])")))
-
-          ;; add deps.edn
-          ((string= project-type "clj")
-           (with-temp-file (expand-file-name "deps.edn" dir-name)
-             (insert "{:paths [\"src\" \"resources\"]\n :deps {org.clojure/clojure {:mvn/version \"1.9.0\"}}}"))))))
-
 (Given "^I have a clojure-file \"\\([^\"]+\\)\"$"
        (lambda (file-name)
          (setq default-directory clj-refactor-root-path)
@@ -60,6 +36,10 @@
        (lambda ()
          (setq cljr-warn-on-eval nil)))
 
+(Given "^I exit multiple-cursors-mode"
+       (lambda ()
+         (multiple-cursors-mode 0)))
+
 (Given "^I don't use multiple-cursors"
        (lambda ()
          (setq cljr-use-multiple-cursors nil)))
@@ -72,33 +52,33 @@
 
 (Given "^I call the rename callback directly with mock data for foo->baz"
        (lambda ()
-         (cljr--rename-occurrences
-          (list (cljr--plist-to-hash
-                 '(:line-beg 3 :line-end 4 :col-beg 7 :col-end 9
-                             :name "foo"
-                             :file "tmp/src/example/two.clj"
-                             :match ""))
-                (cljr--plist-to-hash
-                 '(:line-beg 5 :line-end 5 :col-beg 15
-                             :col-end 23 :name "foo"
-                             :file "tmp/src/example/one.clj"
-                             :match "")))
-          "baz")))
+         (cljr--rename-occurrences "example.two"
+                                   (list (cljr--plist-to-hash
+                                          '(:line-beg 3 :line-end 4 :col-beg 7 :col-end 9
+                                                      :name "foo"
+                                                      :file "tmp/src/example/two.clj"
+                                                      :match ""))
+                                         (cljr--plist-to-hash
+                                          '(:line-beg 5 :line-end 5 :col-beg 15
+                                                      :col-end 23 :name "foo"
+                                                      :file "tmp/src/example/one.clj"
+                                                      :match "")))
+                                   "baz")))
 
 (Given "^I call the rename callback directly with mock data for star->asterisk"
        (lambda ()
-         (cljr--rename-occurrences
-          (list (cljr--plist-to-hash
-                 '(:line-beg 6 :line-end 7 :col-beg 7
-                             :col-end 10 :name "star*"
-                             :file "tmp/src/example/two.clj"
-                             :match ""))
-                (cljr--plist-to-hash
-                 '(:line-beg 8 :line-end 8 :col-beg 17
-                             :col-end 27 :name "star*"
-                             :file "tmp/src/example/one.clj"
-                             :match "")))
-          "asterisk*")))
+         (cljr--rename-occurrences "example.two"
+                                   (list (cljr--plist-to-hash
+                                          '(:line-beg 6 :line-end 7 :col-beg 7
+                                                      :col-end 10 :name "star*"
+                                                      :file "tmp/src/example/two.clj"
+                                                      :match ""))
+                                         (cljr--plist-to-hash
+                                          '(:line-beg 8 :line-end 8 :col-beg 17
+                                                      :col-end 27 :name "star*"
+                                                      :file "tmp/src/example/one.clj"
+                                                      :match "")))
+                                   "asterisk*")))
 
 (defun cljr--make-seeded-hash-table (&rest keys-and-values)
   (let ((m (make-hash-table :test #'equal))
@@ -146,7 +126,7 @@
 
 (Then "^the file should be named \"\\([^\"]+\\)\"$"
       (lambda (file-name-postfix)
-        (assert (string-suffix-p file-name-postfix (buffer-file-name)) nil "Expected %S to end with %S" (buffer-file-name) file-name-postfix)))
+        (assert (s-ends-with? file-name-postfix (buffer-file-name)) nil "Expected %S to end with %S" (buffer-file-name) file-name-postfix)))
 
 (And "^the cursor is inside the first defn form$"
      (lambda ()
@@ -155,7 +135,7 @@
 
 (Given "^I call the add-stubs function directly with mock data for java.util.List from the middleware"
        (lambda ()
-         (cljr--insert-function-stubs (parseedn-read-str "(
+         (cljr--insert-function-stubs (edn-read "(
 {:parameter-list \"[^int arg]\", :name \"remove\"}
 {:parameter-list \"[^int arg0 ^Object arg1]\", :name \"add\"}
 {:parameter-list \"[^java.util.function.UnaryOperator arg]\", :name \"replaceAll\"}
@@ -187,11 +167,11 @@
 
 (Given "^I call the add-stubs function directly with mock data for clojure.reflect from the middleware"
        (lambda ()
-         (cljr--insert-function-stubs (parseedn-read-str "({:parameter-list \"[this]\", :name \"typename\"})"))))
+         (cljr--insert-function-stubs (edn-read "({:parameter-list \"[this]\", :name \"typename\"})"))))
 
 (Given "I call the cljr--inline-symbol function directly with mockdata to inline my-constant"
        (lambda ()
-         (let ((response (parseedn-read-str "{:occurrences ({:match \"(println my-constant my-constant another-val)))\"
+         (let ((response (edn-read "{:occurrences ({:match \"(println my-constant my-constant another-val)))\"
 :file \"core.clj\"
 :name \"refactor-nrepl.test/my-constant\"
 :col-end 26
@@ -212,12 +192,12 @@
 :file \"core.clj\"
 :match \"(def my-constant 123)\"
 :definition \"123\"}}")))
-           (cljr--inline-symbol (gethash :definition response)
+           (cljr--inline-symbol "fake-ns" (gethash :definition response)
                                 (gethash :occurrences response)))))
 
 (Given "I call the cljr--inline-symbol function directly with mockdata to inline another-val"
        (lambda ()
-         (let ((response (parseedn-read-str "{:definition {:line-beg 4
+         (let ((response (edn-read "{:definition {:line-beg 4
 :line-end 4
 :col-beg 9
 :col-end 21
@@ -232,12 +212,12 @@
 :col-beg 38
 :line-end 5
 :line-beg 5})}")))
-           (cljr--inline-symbol (gethash :definition response)
+           (cljr--inline-symbol "fake-ns" (gethash :definition response)
                                 (gethash :occurrences response)))))
 
 (Given "I call the cljr--inline-symbol function directly with mockdata to inline some-val"
        (lambda ()
-         (let ((response (parseedn-read-str "{:definition {:line-beg 5
+         (let ((response (edn-read "{:definition {:line-beg 5
 :line-end 5
 :col-beg 9
 :col-end 17
@@ -246,12 +226,12 @@
 :match \"some-val 110]\"
 :definition \"110\"}
 :occurrences ()}")))
-           (cljr--inline-symbol (gethash :definition response)
+           (cljr--inline-symbol "fake-ns" (gethash :definition response)
                                 (gethash :occurrences response)))))
 
 (Given "I call the cljr--inline-symbol function directly with mockdata to inline my-inc"
        (lambda ()
-         (let ((response (parseedn-read-str "{:definition {:definition \"(fn [n]\\n  (+ 1 n))\"
+         (let ((response (edn-read "{:definition {:definition \"(fn [n]\\n  (+ 1 n))\"
 :line-beg 1
 :line-end 2
 :col-beg 1
@@ -272,28 +252,7 @@
 :name \"refactor-nrepl.foo/my-inc\"
 :file \"core.clj\"
 :match \"(map my-inc (range 10))\"})}")))
-           (cljr--inline-symbol (gethash :definition response)
-                                (gethash :occurrences response)))))
-
-(Given "I call the cljr--inline-symbol function directly with mockdata to inline trim-lower"
-       (lambda ()
-         (let ((response (parseedn-read-str "{:definition {:definition \"(comp str/lower-case str/trim)\"
-:line-beg 1
-:line-end 1
-:col-beg 2
-:col-end 52
-:name \"refactor-nrepl.foo/trim-lower\"
-:file \"core.clj\"
-:match \"(def trim-lower (comp str/lower-case str/trim))\"}
-:occurrences ({:line-beg 3
-:line-end 3
-:col-beg 2
-:col-end 26
-:name \"refactor-nrepl.foo/trim-lower\"
-:file \"core.clj\"
-:match \"(trim-lower a-string)\"})}")))
-
-           (cljr--inline-symbol (gethash :definition response)
+           (cljr--inline-symbol "fake-ns" (gethash :definition response)
                                 (gethash :occurrences response)))))
 
 (And "I mock out the call to the middleware to find locals$"
@@ -411,7 +370,7 @@
 (Given "The cache of namespace aliases is populated"
        (lambda ()
          (defun cljr--call-middleware-for-namespace-aliases ()
-           (parseedn-read-str "{:clj {t (clojure.test)
+           (edn-read "{:clj {t (clojure.test)
 set (clojure.set)
 pprint (clojure.pprint)
 util (refactor-nrepl.util clojure.tools.analyzer.jvm.utils)
@@ -460,7 +419,7 @@ pprint (cljs.pprint)}}"))))
        (lambda (ns-name)
          (cljr--replace-refer-all-with-alias
           ns-name
-          (parseedn-read-str
+          (edn-read
            "({:line-beg 5 :line-end 5 :col-beg 13 :col-end 30 :file\"one.clj\" :name \"foo\"} {:line-beg 8 :line-end 8 :col-beg 15 :col-end 28 :file \"one.clj\" :name \"star*\"})")
           "two")))
 
@@ -507,20 +466,3 @@ pprint (cljs.pprint)}}"))))
 (And "^I disable cljr-clean-ns$"
      (lambda ()
        (defun cljr-clean-ns ()(interactive))))
-
-(When "^I add dependency artifact \"\\([^ ]+\\)\" with version \"\\([^\"]+\\)\"$"
-  (lambda (artifact version)
-    (setq cljr-hotload-dependencies nil)
-    (cljr--add-project-dependency artifact version)))
-
-(When "^I locate dependency artifact \"\\([^ ]+\\)\"$"
-  (lambda (artifact)
-    (goto-char (point-min))
-    (re-search-forward artifact)
-    (cljr--dependency-at-point)
-    (goto-char
-     (match-beginning 0))))
-
-(And "^I update artifact version to \"\\([^\"]+\\)\"$"
-  (lambda (version)
-    (cljr-update-project-dependency version)))

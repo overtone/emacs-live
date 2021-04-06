@@ -1,12 +1,12 @@
 ;;; org-link-edit.el --- Slurp and barf with Org links  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2015-2020 Kyle Meyer <kyle@kyleam.com>
+;; Copyright (C) 2015-2017 Kyle Meyer <kyle@kyleam.com>
 
 ;; Author:  Kyle Meyer <kyle@kyleam.com>
-;; URL: https://git.kyleam.com/org-link-edit/about
+;; URL: https://gitlab.com/kyleam/org-link-edit
 ;; Keywords: convenience
-;; Version: 1.2.1
-;; Package-Requires: ((cl-lib "0.5") (org "9.3"))
+;; Version: 1.1.1
+;; Package-Requires: ((cl-lib "0.5") (org "8.2.10"))
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
+;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 
@@ -67,7 +67,12 @@
 (require 'cl-lib)
 
 (defun org-link-edit--on-link-p (&optional element)
-  (org-element-lineage (or element (org-element-context)) '(link) t))
+  (let ((el (or element (org-element-context))))
+    ;; Don't use `org-element-lineage' because it isn't available
+    ;; until Org version 8.3.
+    (while (and el (not (memq (car el) '(link))))
+      (setq el (org-element-property :parent el)))
+    (eq (car el) 'link)))
 
 (defun org-link-edit--link-data ()
   "Return list with information about the link at point.
@@ -85,13 +90,13 @@ The list includes
        ;; Use match-{beginning,end} because match-end is consistently
        ;; positioned after ]], while the :end property is positioned
        ;; at the next word on the line, if one is present.
-       ((looking-at org-link-bracket-re)
+       ((looking-at org-bracket-link-regexp)
         (list (match-beginning 0)
               (match-end 0)
               (save-match-data
                 (org-link-unescape (match-string-no-properties 1)))
               (or (match-string-no-properties 2) "")))
-       ((looking-at org-link-plain-re)
+       ((looking-at org-plain-link-re)
         (list (match-beginning 0)
               (match-end 0)
               (match-string-no-properties 0)
@@ -165,7 +170,7 @@ If N is negative, slurp leading blobs instead of trailing blobs."
         (setq desc (concat desc slurped)
               end (+ end (length slurped)))
         (delete-region beg (point))
-        (insert (org-link-make-string link desc))
+        (insert (org-make-link-string link desc))
         (goto-char beg)
         slurped)))))
 
@@ -207,7 +212,7 @@ If N is negative, slurp trailing blobs instead of leading blobs."
         (setq desc (concat slurped desc)
               beg (- beg (length slurped)))
         (delete-region (point) end)
-        (insert (org-link-make-string link desc))
+        (insert (org-make-link-string link desc))
         (goto-char beg)
         slurped)))))
 
@@ -277,7 +282,7 @@ If N is negative, barf leading blobs instead of trailing blobs."
         (unless new-desc (user-error "Not enough blobs in description"))
         (goto-char beg)
         (delete-region beg end)
-        (insert (org-link-make-string link new-desc))
+        (insert (org-make-link-string link new-desc))
         (when (string= new-desc "")
           (setq barfed (concat " " barfed)))
         (insert barfed)
@@ -316,7 +321,7 @@ If N is negative, barf trailing blobs instead of leading blobs."
         (unless new-desc (user-error "Not enough blobs in description"))
         (goto-char beg)
         (delete-region beg end)
-        (insert (org-link-make-string link new-desc))
+        (insert (org-make-link-string link new-desc))
         (when (string= new-desc "")
           (setq barfed (concat barfed " ")))
         (goto-char beg)
@@ -326,12 +331,12 @@ If N is negative, barf trailing blobs instead of leading blobs."
 (defun org-link-edit--next-link-data (&optional previous)
   (save-excursion
     (if (funcall (if previous #'re-search-backward #'re-search-forward)
-                 org-link-any-re nil t)
+                 org-any-link-re nil t)
         (org-link-edit--link-data)
       (user-error "No %s link found" (if previous "previous" "next")))))
 
 ;;;###autoload
-(defun org-link-edit-transport-next-link (&optional previous beg end overwrite)
+(defun org-link-edit-transport-next-link (&optional previous beg end)
   "Move the next link to point.
 
 If the region is active, use the selected text as the link's
@@ -341,16 +346,11 @@ With prefix argument PREVIOUS, move the previous link instead of
 the next link.
 
 Non-interactively, use the text between BEG and END as the
-description, moving the next (or previous) link relative to BEG
-and END.  By default, refuse to overwrite an existing
-description.  If OVERWRITE is `ask', prompt for confirmation
-before overwriting; for any other non-nil value, overwrite
-without asking."
-  (interactive `(,current-prefix-arg
-                 ,@(if (use-region-p)
-                       (list (region-beginning) (region-end))
-                     (list nil nil))
-                 ask))
+description, moving the next (or previous) link relative BEG and
+END."
+  (interactive (cons current-prefix-arg
+                     (and (use-region-p)
+                          (list (region-beginning) (region-end)))))
   (let ((pt (point))
         (desc-bounds (cond
                       ((and beg end)
@@ -374,14 +374,10 @@ without asking."
     (goto-char (or (car desc-bounds) pt))
     (cl-multiple-value-bind (link-beg link-end link orig-desc)
         (org-link-edit--next-link-data previous)
-      (unless (or (not desc-bounds)
-                  (= (length orig-desc) 0)
-                  (if (eq overwrite 'ask)
-                      (y-or-n-p "Overwrite existing description?")
-                    overwrite))
+      (unless (or (not desc-bounds) (= (length orig-desc) 0))
         (user-error "Link already has a description"))
       (delete-region link-beg link-end)
-      (insert (org-link-make-string
+      (insert (org-make-link-string
                link
                (if desc-bounds
                    (delete-and-extract-region (car desc-bounds)

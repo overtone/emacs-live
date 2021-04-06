@@ -6,7 +6,7 @@
 ;; Author: Sebastian Wiesner <swiesner@lunaryorn.com>
 ;; Maintainer: Johan Andersson <johan.rejeep@gmail.com>
 ;;     Sebastian Wiesner <swiesner@lunaryorn.com>
-;; Version: 0.10-cvs
+;; Version: 0.9-cvs
 ;; Package-Requires: ((cl-lib "0.3"))
 ;; Keywords: convenience
 ;; URL: http://github.com/cask/epl
@@ -438,17 +438,16 @@ typically ends with -pkg.el."
 
 
 ;;; Package database access
-(defun epl-package-installed-p (package &optional min-version)
-  "Determine whether a PACKAGE, of MIN-VERSION or newer, is installed.
+(defun epl-package-installed-p (package)
+  "Determine whether a PACKAGE is installed.
 
-PACKAGE is either a package name as symbol, or a package object.
-When a explicit MIN-VERSION is provided it overwrites the version of the PACKAGE object."
+PACKAGE is either a package name as symbol, or a package object."
   (let ((name (if (epl-package-p package)
                   (epl-package-name package)
                 package))
-        (min-version (or min-version (and (epl-package-p package)
-                                          (epl-package-version package)))))
-    (package-installed-p name min-version)))
+        (version (when (epl-package-p package)
+                   (epl-package-version package))))
+    (package-installed-p name version)))
 
 (defun epl--parse-built-in-entry (entry)
   "Parse an ENTRY from the list of built-in packages.
@@ -630,21 +629,7 @@ packages."
 
 ;;; Package operations
 
-(defun epl-install-file (file)
-    "Install a package from FILE, like `package-install-file'."
-    (interactive (advice-eval-interactive-spec
-                  (cadr (interactive-form #'package-install-file))))
-    (apply #'package-install-file (list file))
-    (let ((package (epl-package-from-file file)))
-      (unless (epl-package--package-desc-p package)
-        (epl--kill-autoload-buffer package))))
-
-(defun epl--kill-autoload-buffer (package)
-  "Kill the buffer associated with autoloads for PACKAGE."
-  (let* ((auto-name (format "%s-autoloads.el" (epl-package-name package)))
-         (generated-autoload-file (expand-file-name auto-name (epl-package-directory package)))
-         (buf (find-buffer-visiting generated-autoload-file)))
-    (when buf (kill-buffer buf))))
+(defalias 'epl-install-file 'package-install-file)
 
 (defun epl-package-install (package &optional force)
   "Install a PACKAGE.
@@ -656,8 +641,7 @@ non-nil, install PACKAGE, even if it is already installed."
         (package-install (epl-package-description package))
       ;; The legacy API installs by name.  We have no control over versioning,
       ;; etc.
-      (package-install (epl-package-name package))
-      (epl--kill-autoload-buffer package))))
+      (package-install (epl-package-name package)))))
 
 (defun epl-package-delete (package)
   "Delete a PACKAGE.

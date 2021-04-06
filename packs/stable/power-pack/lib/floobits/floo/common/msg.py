@@ -20,13 +20,6 @@ LOG_LEVELS = {
     'ERROR': 4,
 }
 
-LOG_LEVELS_REVERSE = {
-    1: 'DEBUG',
-    2: 'MSG',
-    3: 'WARN',
-    4: 'ERROR',
-}
-
 LOG_LEVEL = LOG_LEVELS['MSG']
 LOG_FILE = os.path.join(G.BASE_DIR, 'msgs.floobits.log')
 
@@ -72,8 +65,7 @@ def floobits_log(msg):
 
 
 class MSG(object):
-    # Default to LOG_LEVEL MSG
-    def __init__(self, msg, timestamp=None, username=None, level=2):
+    def __init__(self, msg, timestamp=None, username=None, level=LOG_LEVELS['MSG']):
         self.msg = msg
         self.timestamp = timestamp or time.time()
         self.username = username
@@ -97,16 +89,13 @@ class MSG(object):
 
     def __unicode__(self):
         if self.username:
-            msg = '[{time}] {level}: <{user}> {msg}'
+            msg = '[{time}] <{user}> {msg}'
         else:
-            msg = '[{time}] {level}: {msg}'
-
-        level = LOG_LEVELS_REVERSE.get(self.level, 'UNKNOWN').rjust(5)
-
+            msg = '[{time}] {msg}'
         try:
-            return unicode(msg).format(level=level, user=self.username, time=time.ctime(self.timestamp), msg=self.msg)
+            return unicode(msg).format(user=self.username, time=time.ctime(self.timestamp), msg=self.msg)
         except UnicodeEncodeError:
-            return unicode(msg).format(level=level, user=self.username, time=time.ctime(self.timestamp), msg=self.msg.encode(
+            return unicode(msg).format(user=self.username, time=time.ctime(self.timestamp), msg=self.msg.encode(
                 'utf-8'))
 
 

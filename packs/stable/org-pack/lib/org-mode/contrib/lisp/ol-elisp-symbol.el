@@ -2,7 +2,7 @@
 ;;
 ;; Copyright 2007-2020 Free Software Foundation, Inc.
 ;;
-;; Author: Bastien Guerry <bzg@gnu.org>
+;; Author: Bastien Guerry
 ;; Version: 0.2
 ;; Keywords: org, remember, lisp
 ;; URL: http://www.cognition.ens.fr/~guerry/u/org-elisp-symbol.el
@@ -82,8 +82,12 @@
 			 :follow #'org-elisp-symbol-open
 			 :store #'org-elisp-symbol-store-link)
 
-(defun org-elisp-symbol-open (symbol arg)
-  (org-link-open-as-file symbol arg))
+(defun org-elisp-symbol-open (path)
+  "Visit the emacs-lisp elisp-symbol at PATH."
+  (let* ((search (when (string-match "::\\(.+\\)\\'" path)
+		   (match-string 1 path)))
+	 (path (substring path 0 (match-beginning 0))))
+    (org-open-file path t nil search)))
 
 (defun org-elisp-symbol-store-link ()
   "Store a link to an emacs-lisp elisp-symbol."

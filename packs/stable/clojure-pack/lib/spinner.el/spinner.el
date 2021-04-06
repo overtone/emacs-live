@@ -3,8 +3,7 @@
 ;; Copyright (C) 2015 Free Software Foundation, Inc.
 
 ;; Author: Artur Malabarba <emacs@endlessparentheses.com>
-;; Version: 1.7.3
-;; Package-Requires: ((emacs "24.3"))
+;; Version: 1.7.1
 ;; URL: https://github.com/Malabarba/spinner.el
 ;; Keywords: processes mode-line
 
@@ -99,7 +98,7 @@
 
 ;;; Code:
 (eval-when-compile
-  (require 'cl-lib))
+  (require 'cl))
 
 (defconst spinner-types
   '((3-line-clock . ["┤" "┘" "┴" "└" "├" "┌" "┬" "┐"])
@@ -119,7 +118,7 @@
     (box-in-box . ["◰" "◳" "◲" "◱"])
     (box-in-circle . ["◴" "◷" "◶" "◵"])
     (half-circle . ["◐" "◓" "◑" "◒"])
-    (moon . ["🌑" "🌘" "🌗" "🌖" "🌕" "🌔" "🌓" "🌒"]))
+    (moon . ["🌑" "🌘" "🌖" "🌕" "🌔" "🌒"]))
   "Predefined alist of spinners.
 Each car is a symbol identifying the spinner, and each cdr is a
 vector, the spinner itself.")
@@ -177,14 +176,14 @@ own spinner animations."
    ((symbolp type) (cdr (assq type spinner-types)))
    (t (error "Unknown spinner type: %s" type))))
 
-(cl-defstruct (spinner
-               (:copier nil)
-               (:conc-name spinner--)
-               (:constructor make-spinner (&optional type buffer-local frames-per-second delay-before-start)))
+(defstruct (spinner
+            (:copier nil)
+            (:conc-name spinner--)
+            (:constructor make-spinner (&optional type buffer-local frames-per-second delay-before-start)))
   (frames (spinner--type-to-frames type))
   (counter 0)
   (fps (or frames-per-second spinner-frames-per-second))
-  (timer (timer-create))
+  (timer (timer-create) :read-only)
   (active-p nil)
   (buffer (when buffer-local
             (if (bufferp buffer-local)
@@ -235,9 +234,9 @@ stop the SPINNER's timer."
             (and buffer (not (buffer-live-p buffer))))
         (spinner-stop spinner)
       ;; Increment
-      (cl-callf (lambda (x) (if (< x 0)
-                           (1+ x)
-                         (% (1+ x) (length (spinner--frames spinner)))))
+      (callf (lambda (x) (if (< x 0)
+                        (1+ x)
+                      (% (1+ x) (length (spinner--frames spinner)))))
           (spinner--counter spinner))
       ;; Update mode-line.
       (if (buffer-live-p buffer)
@@ -302,8 +301,7 @@ this time, in which case it won't display at all."
       (setq spinner-current (make-spinner type-or-object (current-buffer) fps delay)))
     (setq type-or-object spinner-current)
     ;; Maybe add to mode-line.
-    (unless (and (listp mode-line-process)
-                 (memq 'spinner--mode-line-construct mode-line-process))
+    (unless (memq 'spinner--mode-line-construct mode-line-process)
       (setq mode-line-process
             (list (or mode-line-process "")
                   'spinner--mode-line-construct))))

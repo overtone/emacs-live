@@ -33,8 +33,6 @@
 
 ;;; Code:
 
-(require 'cl-lib)
-
 (defgroup lv nil
   "The other echo area."
   :group 'minibuffer
@@ -42,11 +40,6 @@
 
 (defcustom lv-use-separator nil
   "Whether to draw a line between the LV window and the Echo Area."
-  :group 'lv
-  :type 'boolean)
-
-(defcustom lv-use-padding nil
-  "Whether to use horizontal padding in the LV window."
   :group 'lv
   :type 'boolean)
 
@@ -61,13 +54,6 @@ Only the background color is significant."
 (defvar lv-wnd nil
   "Holds the current LV window.")
 
-(defvar display-line-numbers)
-(defvar display-fill-column-indicator)
-(defvar tab-line-format)
-
-(defvar lv-window-hook nil
-  "Hook to run by `lv-window' when a new window is created.")
-
 (defun lv-window ()
   "Ensure that LV window is live and return it."
   (if (window-live-p lv-wnd)
@@ -78,37 +64,22 @@ Only the background color is significant."
                    (select-window
                     (let ((ignore-window-parameters t))
                       (split-window
-                       (frame-root-window) -1 'below))
-                    'norecord))
-        (if (setq buf (get-buffer " *LV*"))
-            (switch-to-buffer buf 'norecord)
-          (switch-to-buffer " *LV*" 'norecord)
-          (fundamental-mode)
+                       (frame-root-window) -1 'below))))
+        (if (setq buf (get-buffer "*LV*"))
+            (switch-to-buffer buf)
+          (switch-to-buffer "*LV*")
           (set-window-hscroll lv-wnd 0)
           (setq window-size-fixed t)
           (setq mode-line-format nil)
-          (setq header-line-format nil)
-          (setq tab-line-format nil)
           (setq cursor-type nil)
-          (setq display-line-numbers nil)
-          (setq display-fill-column-indicator nil)
           (set-window-dedicated-p lv-wnd t)
-          (set-window-parameter lv-wnd 'no-other-window t)
-          (run-hooks 'lv-window-hook))
-        (select-window ori 'norecord)))))
+          (set-window-parameter lv-wnd 'no-other-window t))
+        (select-window ori)))))
 
 (defvar golden-ratio-mode)
 
 (defvar lv-force-update nil
   "When non-nil, `lv-message' will refresh even for the same string.")
-
-(defun lv--pad-to-center (str width)
-  "Pad STR with spaces on the left to be centered to WIDTH."
-  (let* ((strs (split-string str "\n"))
-         (padding (make-string
-                   (/ (- width (length (car strs))) 2)
-                   ?\ )))
-    (mapconcat (lambda (s) (concat padding s)) strs "\n")))
 
 (defun lv-message (format-string &rest args)
   "Set LV window contents to (`format' FORMAT-STRING ARGS)."
@@ -117,8 +88,6 @@ Only the background color is significant."
          deactivate-mark
          golden-ratio-mode)
     (with-selected-window (lv-window)
-      (when lv-use-padding
-        (setq str (lv--pad-to-center str (window-width))))
       (unless (and (string= (buffer-string) str)
                    (null lv-force-update))
         (delete-region (point-min) (point-max))

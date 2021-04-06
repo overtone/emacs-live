@@ -78,7 +78,7 @@
 			 :store #'org-irc-store-link
 			 :export #'org-irc-export)
 
-(defun org-irc-visit (link _)
+(defun org-irc-visit (link)
   "Parse LINK and dispatch to the correct function based on the client found."
   (let ((link (org-irc-parse-link link)))
     (cond

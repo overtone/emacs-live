@@ -1,8 +1,7 @@
 # History of user-visible changes
 
-## 2020-12-20
+## Next
 
-* Support for logical assignment operators ([#564](https://github.com/mooz/js2-mode/issues/564)).
 * Support for the nullish coalescing operator ([#561](https://github.com/mooz/js2-mode/pull/561)).
 * Emacs 27 now provides improved JSX indentation support, along with
   new JSX highlighting and detection support. Install Emacs 27 and use

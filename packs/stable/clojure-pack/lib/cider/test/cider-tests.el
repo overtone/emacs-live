@@ -1,6 +1,6 @@
 ;;; cider-tests.el
 
-;; Copyright © 2012-2020 Tim King, Bozhidar Batsov
+;; Copyright © 2012-2016 Tim King, Bozhidar Batsov
 
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Bozhidar Batsov <bozhidar@batsov.com>
@@ -32,110 +32,77 @@
 
 (describe "customize-menu"
   (it "opens without error"
-    (let ((inhibit-message t)) (customize-group 'cider))))
+    (customize-group 'cider)))
 
-(describe "cider-figwheel-main-init-form"
-  ;; whitespace checks sprinkled amongst other tests
-  (describe "from options"
-    (it "leaves keywords alone"
-      (let ((cider-figwheel-main-default-options ":dev"))
-        (expect (cider-figwheel-main-init-form) :to-equal "(do (require 'figwheel.main) (figwheel.main/start :dev))")))
-    (it "leaves maps alone"
-      (let ((cider-figwheel-main-default-options "{:a 1 :b 2}"))
-        (expect (cider-figwheel-main-init-form) :to-equal "(do (require 'figwheel.main) (figwheel.main/start {:a 1 :b 2}))")))
-    (it "leaves s-exprs alone"
-      (let ((cider-figwheel-main-default-options "(hashmap :a 1 :b 2)"))
-        (expect (cider-figwheel-main-init-form) :to-equal "(do (require 'figwheel.main) (figwheel.main/start (hashmap :a 1 :b 2)))")))
-    (it "prepends colon to plain names"
-      (let ((cider-figwheel-main-default-options " dev"))
-        (expect (cider-figwheel-main-init-form) :to-equal "(do (require 'figwheel.main) (figwheel.main/start :dev))"))))
+;;; connection browser
 
-  (describe "from minibuffer"
-    (before-each
-      ;; not necessary as of this writing, but it can't hurt
-      (setq-local cider-figwheel-main-default-options nil))
-    (it "leaves keywords alone"
-      (spy-on 'completing-read :and-return-value ":prod")
-      (spy-on 'cider--figwheel-main-get-builds :and-return-value '("dev" "prod"))
-      (expect (cider-figwheel-main-init-form) :to-equal "(do (require 'figwheel.main) (figwheel.main/start :prod))"))
-    (it "leaves maps alone"
-      (spy-on 'completing-read :and-return-value "{:c 3 :d 4}")
-      (spy-on 'cider--figwheel-main-get-builds :and-return-value '("dev" "prod"))
-      (expect (cider-figwheel-main-init-form) :to-equal "(do (require 'figwheel.main) (figwheel.main/start {:c 3 :d 4}))"))
-    (it "leaves s-exprs alone"
-      (spy-on 'completing-read :and-return-value "(keyword \"dev\")")
-      (spy-on 'cider--figwheel-main-get-builds :and-return-value '("dev" "prod"))
-      (expect (cider-figwheel-main-init-form) :to-equal "(do (require 'figwheel.main) (figwheel.main/start (keyword \"dev\")))"))
-    (it "prepends colon to plain names"
-      (spy-on 'completing-read :and-return-value "prod")
-      (spy-on 'cider--figwheel-main-get-builds :and-return-value '("dev" "prod"))
-      (expect (cider-figwheel-main-init-form) :to-equal "(do (require 'figwheel.main) (figwheel.main/start :prod))"))))
+(describe "cider-connections-buffer"
+  (it "lists all the active connections"
+    (with-temp-buffer
+      (rename-buffer "*cider-repl test1*")
+      (let ((b1 (current-buffer)))
+        (setq-local nrepl-endpoint '("localhost" 4005))
+        (setq-local nrepl-project-dir "proj")
+        (with-temp-buffer
+          (rename-buffer "*cider-repl test2*")
+          (let ((b2 (current-buffer)))
+            (setq-local nrepl-endpoint '("123.123.123.123" 4006))
+            (let ((cider-connections (list b1 b2)))
+              (cider-connection-browser)
+              (with-current-buffer "*cider-connections*"
+                (expect (buffer-string) :to-equal "  REPL                           Host             Port    Project          Type
 
-(describe "cider-project-type"
-  (describe "when there is a single project"
-    (it "returns that type"
-      (spy-on 'cider--identify-buildtools-present
-              :and-return-value '(lein))
-      (expect (cider-project-type) :to-equal 'lein)))
+* *cider-repl test1*             localhost         4005   proj             Clojure
+  *cider-repl test2*             123.123.123.123   4006   -                Clojure\n\n")
 
-  (describe "when there are multiple possible project types"
-    (before-each
-      (spy-on 'cider--identify-buildtools-present
-              :and-return-value '(build-tool1 build-tool2))
-      ;; user choice build-tool2
-      (spy-on 'completing-read :and-return-value "build-tool2"))
+                (goto-line 4)         ; somewhere in the second connection listed
+                (cider-connections-make-default)
+                (expect (car cider-connections) :to-equal b2)
+                (message "%s" (cider-connections))
+                (expect (buffer-string) :to-equal "  REPL                           Host             Port    Project          Type
 
-    (it "returns the choice entered by user"
-      (expect (cider-project-type) :to-equal 'build-tool2))
+  *cider-repl test1*             localhost         4005   proj             Clojure
+* *cider-repl test2*             123.123.123.123   4006   -                Clojure\n\n")
+                (goto-line 4)         ; somewhere in the second connection listed
+                (cider-connections-close-connection)
+                (expect cider-connections :to-equal (list b1))
+                (expect (buffer-string) :to-equal "  REPL                           Host             Port    Project          Type
 
-    (it "respects the value of `cider-preferred-build-tool'"
-      (let ((cider-preferred-build-tool 'build-tool1))
-        (expect (cider-project-type) :to-equal 'build-tool1))
-
-      (let ((cider-preferred-build-tool "invalid choice"))
-        (expect (cider-project-type) :to-equal 'build-tool2))
-
-      (let ((cider-preferred-build-tool 'build-tool3))
-        (expect (cider-project-type) :to-equal 'build-tool2))))
-
-  (describe "when there are no choices available"
-    (it "returns the value of `cider-jack-in-default'"
-      (spy-on 'cider--identify-buildtools-present
-              :and-return-value '())
-      (expect (cider-project-type) :to-equal cider-jack-in-default))))
-
-;;; cider-jack-in tests
+* *cider-repl test1*             localhost         4005   proj             Clojure\n\n")
+                (cider-connections-goto-connection)
+                (expect (current-buffer) :to-equal b1)
+                (kill-buffer "*cider-connections*")))))))))
 
 (describe "cider-inject-jack-in-dependencies"
   :var (cider-jack-in-dependencies cider-jack-in-nrepl-middlewares cider-jack-in-lein-plugins cider-jack-in-dependencies-exclusions)
 
   (describe "when there is a single dependency"
     (before-each
-      (setq-local cider-jack-in-dependencies '(("nrepl/nrepl" "0.5.3")))
+      (setq-local cider-jack-in-dependencies '(("org.clojure/tools.nrepl" "0.2.12")))
       (setq-local cider-jack-in-nrepl-middlewares '("cider.nrepl/cider-middleware"))
       (setq-local cider-jack-in-lein-plugins '(("cider/cider-nrepl" "0.10.0-SNAPSHOT")))
       (setq-local cider-jack-in-dependencies-exclusions '()))
 
     (it "can inject dependencies in a lein project"
-      (expect (cider-inject-jack-in-dependencies "" "repl :headless" 'lein)
-              :to-equal "update-in :dependencies conj \\[nrepl/nrepl\\ \\\"0.5.3\\\"\\] -- update-in :plugins conj \\[cider/cider-nrepl\\ \\\"0.10.0-SNAPSHOT\\\"\\] -- repl :headless"))
+      (expect (cider-inject-jack-in-dependencies "repl :headless" "lein")
+              :to-equal"update-in :dependencies conj \\[org.clojure/tools.nrepl\\ \\\"0.2.12\\\"\\] -- update-in :plugins conj \\[cider/cider-nrepl\\ \\\"0.10.0-SNAPSHOT\\\"\\] -- repl :headless"))
 
     (it "can inject dependencies in a lein project with an exclusion"
-      (setq-local cider-jack-in-dependencies-exclusions '(("nrepl/nrepl" ("org.clojure/clojure"))))
-      (expect (cider-inject-jack-in-dependencies "" "repl :headless" 'lein)
-              :to-equal "update-in :dependencies conj \\[nrepl/nrepl\\ \\\"0.5.3\\\"\\ \\:exclusions\\ \\[org.clojure/clojure\\]\\] -- update-in :plugins conj \\[cider/cider-nrepl\\ \\\"0.10.0-SNAPSHOT\\\"\\] -- repl :headless"))
+        (setq-local cider-jack-in-dependencies-exclusions '(("org.clojure/tools.nrepl" ("org.clojure/clojure"))))
+        (expect (cider-inject-jack-in-dependencies "repl :headless" "lein")
+                :to-equal"update-in :dependencies conj \\[org.clojure/tools.nrepl\\ \\\"0.2.12\\\"\\ \\:exclusions\\ \\[org.clojure/clojure\\]\\] -- update-in :plugins conj \\[cider/cider-nrepl\\ \\\"0.10.0-SNAPSHOT\\\"\\] -- repl :headless"))
 
     (it "can inject dependencies in a lein project with multiple exclusions"
-      (setq-local cider-jack-in-dependencies-exclusions '(("nrepl/nrepl" ("org.clojure/clojure" "foo.bar/baz"))))
-      (expect (cider-inject-jack-in-dependencies "" "repl :headless" 'lein)
-              :to-equal "update-in :dependencies conj \\[nrepl/nrepl\\ \\\"0.5.3\\\"\\ \\:exclusions\\ \\[org.clojure/clojure\\ foo.bar/baz\\]\\] -- update-in :plugins conj \\[cider/cider-nrepl\\ \\\"0.10.0-SNAPSHOT\\\"\\] -- repl :headless"))
+        (setq-local cider-jack-in-dependencies-exclusions '(("org.clojure/tools.nrepl" ("org.clojure/clojure" "foo.bar/baz"))))
+        (expect (cider-inject-jack-in-dependencies "repl :headless" "lein")
+                :to-equal"update-in :dependencies conj \\[org.clojure/tools.nrepl\\ \\\"0.2.12\\\"\\ \\:exclusions\\ \\[org.clojure/clojure\\ foo.bar/baz\\]\\] -- update-in :plugins conj \\[cider/cider-nrepl\\ \\\"0.10.0-SNAPSHOT\\\"\\] -- repl :headless"))
 
     (it "can inject dependencies in a boot project"
-      (expect (cider-inject-jack-in-dependencies "" "repl -s wait" 'boot)
-              :to-equal "-i \"(require 'cider.tasks)\" -d nrepl/nrepl\\:0.5.3 -d cider/cider-nrepl\\:0.10.0-SNAPSHOT cider.tasks/add-middleware -m cider.nrepl/cider-middleware repl -s wait"))
+      (expect (cider-inject-jack-in-dependencies "repl -s wait" "boot")
+              :to-equal "-d org.clojure/tools.nrepl\\:0.2.12 -d cider/cider-nrepl\\:0.10.0-SNAPSHOT repl -m cider.nrepl/cider-middleware -s wait"))
 
     (it "can inject dependencies in a gradle project"
-      (expect (cider-inject-jack-in-dependencies "" "--no-daemon clojureRepl" 'gradle)
+      (expect (cider-inject-jack-in-dependencies "--no-daemon clojureRepl" "gradle")
               :to-equal "--no-daemon clojureRepl")))
 
   (describe "when there are multiple dependencies"
@@ -144,82 +111,12 @@
       (setq-local cider-jack-in-nrepl-middlewares '("refactor-nrepl.middleware/wrap-refactor" "cider.nrepl/cider-middleware"))
       (setq-local cider-jack-in-dependencies-exclusions '()))
     (it "can inject dependencies in a lein project"
-      (expect (cider-inject-jack-in-dependencies "" "repl :headless" 'lein)
-              :to-equal "update-in :dependencies conj \\[nrepl/nrepl\\ \\\"0.5.3\\\"\\] -- update-in :plugins conj \\[refactor-nrepl\\ \\\"2.0.0\\\"\\] -- update-in :plugins conj \\[cider/cider-nrepl\\ \\\"0.11.0\\\"\\] -- repl :headless"))
+      (expect (cider-inject-jack-in-dependencies "repl :headless" "lein")
+              :to-equal "update-in :dependencies conj \\[org.clojure/tools.nrepl\\ \\\"0.2.12\\\"\\] -- update-in :plugins conj \\[refactor-nrepl\\ \\\"2.0.0\\\"\\] -- update-in :plugins conj \\[cider/cider-nrepl\\ \\\"0.11.0\\\"\\] -- repl :headless"))
 
     (it "can inject dependencies in a boot project"
-      (expect (cider-inject-jack-in-dependencies "" "repl -s wait" 'boot)
-              :to-equal "-i \"(require 'cider.tasks)\" -d nrepl/nrepl\\:0.5.3 -d refactor-nrepl\\:2.0.0 -d cider/cider-nrepl\\:0.11.0 cider.tasks/add-middleware -m refactor-nrepl.middleware/wrap-refactor -m cider.nrepl/cider-middleware repl -s wait")))
-
-  (describe "when there are global options"
-    (before-each
-      (setq-local cider-jack-in-dependencies '(("nrepl/nrepl" "0.5.3")))
-      (setq-local cider-jack-in-nrepl-middlewares '("cider.nrepl/cider-middleware"))
-      (setq-local cider-jack-in-lein-plugins '(("cider/cider-nrepl" "0.11.0")))
-      (setq-local cider-jack-in-dependencies-exclusions '()))
-    (it "can concat in a lein project"
-      (expect (cider-inject-jack-in-dependencies "-o -U" "repl :headless" 'lein)
-              :to-equal "-o -U update-in :dependencies conj \\[nrepl/nrepl\\ \\\"0.5.3\\\"\\] -- update-in :plugins conj \\[cider/cider-nrepl\\ \\\"0.11.0\\\"\\] -- repl :headless"))
-    (it "can concat in a boot project"
-      (expect (cider-inject-jack-in-dependencies "-C -o" "repl -s wait" 'boot)
-              :to-equal "-C -o -i \"(require 'cider.tasks)\" -d nrepl/nrepl\\:0.5.3 -d cider/cider-nrepl\\:0.11.0 cider.tasks/add-middleware -m cider.nrepl/cider-middleware repl -s wait"))
-    (it "can concat in a gradle project"
-      (expect (cider-inject-jack-in-dependencies "-m" "--no-daemon clojureRepl" 'gradle)
-              :to-equal "-m --no-daemon clojureRepl")))
-
-  (describe "when there are predicates"
-    :var (plugins-predicate middlewares-predicate)
-
-    (before-each
-      (fset 'plugins-predicate (lambda (&rest _) t))
-      (fset 'middlewares-predicate (lambda (&rest _) t))
-      (setq-local cider-jack-in-lein-plugins '(("refactor-nrepl" "2.0.0" :predicate plugins-predicate) ("cider/cider-nrepl" "0.11.0")))
-      (setq-local cider-jack-in-nrepl-middlewares '(("refactor-nrepl.middleware/wrap-refactor" :predicate middlewares-predicate) "cider.nrepl/cider-middleware" ("another/middleware"))))
-    (it "includes plugins whose predicates return true"
-      (expect (cider-jack-in-normalized-lein-plugins)
-              :to-equal '(("refactor-nrepl" "2.0.0") ("cider/cider-nrepl" "0.11.0"))))
-    (it "includes middlewares whose predicates return true"
-      (expect (cider-jack-in-normalized-nrepl-middlewares)
-              :to-equal '("refactor-nrepl.middleware/wrap-refactor" "cider.nrepl/cider-middleware" "another/middleware")))
-    (it "ignores plugins whose predicates return false"
-      (spy-on 'plugins-predicate :and-return-value nil)
-      (expect (cider-jack-in-normalized-lein-plugins)
-              :to-equal '(("cider/cider-nrepl" "0.11.0")))
-      (spy-on 'middlewares-predicate :and-return-value nil)
-      (expect (cider-jack-in-normalized-nrepl-middlewares)
-              :to-equal '("cider.nrepl/cider-middleware" "another/middleware")))
-    (it "calls plugin predicates with the whole list entry"
-      (spy-on 'plugins-predicate)
-      (cider-jack-in-normalized-lein-plugins)
-      (expect 'plugins-predicate
-              :to-have-been-called-with '("refactor-nrepl" "2.0.0" :predicate plugins-predicate)))
-    (it "calls middleware predicates with the whole list entry"
-      (spy-on 'middlewares-predicate)
-      (cider-jack-in-normalized-nrepl-middlewares)
-      (expect 'middlewares-predicate
-              :to-have-been-called-with '("refactor-nrepl.middleware/wrap-refactor" :predicate middlewares-predicate)))
-    (it "only calls plugin predicates for their own entries"
-      (spy-on 'plugins-predicate)
-      (cider-jack-in-normalized-lein-plugins)
-      (expect 'plugins-predicate :to-have-been-called-times 1))
-    (it "only calls middleware predicates for their own entries"
-      (spy-on 'middlewares-predicate)
-      (cider-jack-in-normalized-nrepl-middlewares)
-      (expect 'middlewares-predicate :to-have-been-called-times 1)))
-
-  (describe "when the middleware and plugin lists have been normalized"
-    (before-each
-      (spy-on 'cider-jack-in-normalized-nrepl-middlewares
-              :and-return-value '("refactor-nrepl.middleware/wrap-refactor" "cider.nrepl/cider-middleware"))
-      (spy-on 'cider-jack-in-normalized-lein-plugins
-              :and-return-value '(("refactor-nrepl" "2.0.0") ("cider/cider-nrepl" "0.11.0")))
-      (setq-local cider-jack-in-dependencies-exclusions '()))
-    (it "uses them in a lein project"
-      (expect (cider-inject-jack-in-dependencies "" "repl :headless" 'lein)
-              :to-equal "update-in :dependencies conj \\[nrepl/nrepl\\ \\\"0.5.3\\\"\\] -- update-in :plugins conj \\[refactor-nrepl\\ \\\"2.0.0\\\"\\] -- update-in :plugins conj \\[cider/cider-nrepl\\ \\\"0.11.0\\\"\\] -- repl :headless"))
-    (it "uses them in a boot project"
-      (expect (cider-inject-jack-in-dependencies "" "repl -s wait" 'boot)
-              :to-equal "-i \"(require 'cider.tasks)\" -d nrepl/nrepl\\:0.5.3 -d refactor-nrepl\\:2.0.0 -d cider/cider-nrepl\\:0.11.0 cider.tasks/add-middleware -m refactor-nrepl.middleware/wrap-refactor -m cider.nrepl/cider-middleware repl -s wait"))))
+      (expect (cider-inject-jack-in-dependencies "repl -s wait" "boot")
+              :to-equal "-d org.clojure/tools.nrepl\\:0.2.12 -d refactor-nrepl\\:2.0.0 -d cider/cider-nrepl\\:0.11.0 repl -m refactor-nrepl.middleware/wrap-refactor -m cider.nrepl/cider-middleware -s wait"))))
 
 (describe "cider-jack-in-auto-inject-clojure"
   (it "injects `cider-minimum-clojure-version' when `cider-jack-in-auto-inject-clojure' is set to minimal"
@@ -242,110 +139,38 @@
       (expect (cider-add-clojure-dependencies-maybe nil)
               :to-equal '(("Hello, I love you" "won't you tell me your name"))))))
 
-(describe "cider-normalize-cljs-init-options"
-  (describe "from options"
-    (it "leaves keywords alone"
-      (expect (cider-normalize-cljs-init-options ":dev") :to-equal ":dev"))
-    (it "leaves maps alone"
-      (expect (cider-normalize-cljs-init-options "{:a 1 :b 2}") :to-equal "{:a 1 :b 2}"))
-    (it "leaves s-exprs alone"
-      (expect (cider-normalize-cljs-init-options "(hashmap :a 1 :b 2)") :to-equal "(hashmap :a 1 :b 2)"))
-    (it "leaves vectors alone"
-      (expect (cider-normalize-cljs-init-options "[1 2 3]") :to-equal "[1 2 3]"))
-    (it "prepends colon to plain names"
-      (expect (cider-normalize-cljs-init-options "dev") :to-equal ":dev"))))
+(describe "cider-project-type"
+  (describe "when there is a single project"
+    (it "returns that type"
+      (spy-on 'cider--identify-buildtools-present
+              :and-return-value '("lein"))
+      (expect (cider-project-type) :to-equal "lein")))
 
-(describe "cider--shadow-parse-builds"
-  (it "parses valid input"
-    (expect (cider--shadow-parse-builds
-             (parseedn-read-str "{:builds {:app {} :release {}}}"))
-            :to-have-same-items-as '(:release :app browser-repl node-repl)))
-  (it "returns default options on empty / invalid input"
-    (expect (cider--shadow-parse-builds (parseedn-read-str "{}"))
-            :to-equal '(browser-repl node-repl))
-    (expect (cider--shadow-parse-builds (parseedn-read-str "[oops]"))
-            :to-equal '(browser-repl node-repl))))
+  (describe "when there are multiple possible project types"
+    (before-all
+      (spy-on 'cider--identify-buildtools-present
+              :and-return-value '("build1" "build2"))
+      ;; user choice build2
+      (spy-on 'completing-read :and-return-value "build2"))
 
-(describe "cider--powershell-encode-command"
-  (it "base64 encodes command and parameters"
-    (expect (cider--powershell-encode-command "cmd-params")
-            :to-equal (concat "-encodedCommand "
-                              ;; Eval to reproduce reference string below: (base64-encode-string (encode-coding-string "clojure cmd-params" 'utf-16le) t)
-                              "YwBsAG8AagB1AHIAZQAgAGMAbQBkAC0AcABhAHIAYQBtAHMA")))
-  (it "escapes double quotes by repeating them"
-    (expect (cider--powershell-encode-command "\"cmd-params\"")
-            :to-equal (concat "-encodedCommand "
-                              ;; Eval to reproduce reference string below: (base64-encode-string (encode-coding-string "clojure \"\"cmd-params\"\"" 'utf-16le) t)
-                              "YwBsAG8AagB1AHIAZQAgACIAIgBjAG0AZAAtAHAAYQByAGEAbQBzACIAIgA="))))
+    (it "returns the choice entered by user"
+      (expect (cider-project-type) :to-equal "build2"))
 
-(describe "cider--update-jack-in-cmd"
-  (describe "when 'clojure-cli project type and \"powershell\" command"
-    (it "returns a jack-in command using encodedCommand option"
-      (setq-local cider-clojure-cli-command "powershell")
-      (setq-local cider-inject-dependencies-at-jack-in nil)
-      (setq-local cider-allow-jack-in-without-project t)
-      (setq-local cider-edit-jack-in-command nil)
-      (spy-on 'cider-project-type :and-return-value 'clojure-cli)
-      (spy-on 'cider-jack-in-resolve-command :and-return-value "resolved-powershell")
-      (spy-on 'cider-jack-in-global-options)
-      (spy-on 'cider-jack-in-params :and-return-value "\"cmd-params\"")
-      (expect (plist-get (cider--update-jack-in-cmd nil) :jack-in-cmd)
-              :to-equal (concat "resolved-powershell -encodedCommand "
-                                ;; Eval to reproduce reference string below: (base64-encode-string (encode-coding-string "clojure \"\"cmd-params\"\"" 'utf-16le) t)
-                                "YwBsAG8AagB1AHIAZQAgACIAIgBjAG0AZAAtAHAAYQByAGEAbQBzACIAIgA=")))))
+    (it "respects the value of `cider-preferred-build-tool'"
+      (let ((cider-preferred-build-tool "build1"))
+        (expect (cider-project-type) :to-equal "build1"))
 
-(defmacro with-temp-shadow-config (contents &rest body)
-  "Run BODY with a mocked shadow-cljs.edn project file with the CONTENTS."
-  `(let* ((edn-file "shadow-cljs.edn")
-          (file-path (concat temporary-file-directory edn-file)))
-     (with-temp-file file-path
-       (insert ,contents))
-     (spy-on 'clojure-project-dir :and-return-value temporary-file-directory)
-     ,@body
-     (delete-file file-path)))
+      (let ((cider-preferred-build-tool "invalid choice"))
+        (expect (cider-project-type) :to-equal "build2"))
 
-(describe "cider--shadow-get-builds"
-  (it "handles EDN reader tags"
-    (with-temp-shadow-config
-     "{:builds {:app {} :release {}} :key #shadow/env \"foo\"}"
-     (expect (cider--shadow-get-builds)
-             :to-have-same-items-as '(:release :app browser-repl node-repl))))
+      (let ((cider-preferred-build-tool "build3"))
+        (expect (cider-project-type) :to-equal "build2"))))
 
-  (it "returns default options on empty / invalid input"
-    (with-temp-shadow-config
-     "{}"
-     (expect (cider--shadow-get-builds)
-             :to-have-same-items-as '(browser-repl node-repl)))
-
-    (with-temp-shadow-config
-     "[oops]"
-     (expect (cider--shadow-get-builds)
-             :to-have-same-items-as '(browser-repl node-repl)))))
-
-(describe "cider-shadow-cljs-init-form"
-  (it "watches and selects user-defined builds"
-    (spy-on 'completing-read :and-return-value ":client-build")
-    (expect (cider-shadow-cljs-init-form)
-            :to-equal
-            "(do (require '[shadow.cljs.devtools.api :as shadow]) (shadow/watch :client-build) (shadow/nrepl-select :client-build))"))
-  (describe "starts the built-in build profiles correctly"
-    (it "starts a node-repl"
-      (spy-on 'completing-read :and-return-value ":node-repl")
-      (expect (cider-shadow-cljs-init-form)
-              :to-equal
-              "(do (require '[shadow.cljs.devtools.api :as shadow]) (shadow/node-repl))"))
-    (it "starts a browser-repl"
-      (spy-on 'completing-read :and-return-value ":browser-repl")
-      (expect (cider-shadow-cljs-init-form)
-              :to-equal
-              "(do (require '[shadow.cljs.devtools.api :as shadow]) (shadow/browser-repl))")))
-  (describe "can watch multiple builds"
-    (it "watches 2 builds and selects user-defined builds"
-      (setq-local cider-shadow-default-options "client-build")
-      (setq-local cider-shadow-watched-builds '("client-build" "other-build"))
-      (expect (cider-shadow-cljs-init-form)
-              :to-equal
-              "(do (require '[shadow.cljs.devtools.api :as shadow]) (shadow/watch :client-build) (shadow/watch :other-build) (shadow/nrepl-select :client-build))"))))
+  (describe "when there are no choices available"
+    (it "returns the value of `cider-default-repl-command'"
+      (spy-on 'cider--identify-buildtools-present
+              :and-return-value '())
+      (expect (cider-project-type) :to-equal cider-default-repl-command))))
 
 (provide 'cider-tests)
 

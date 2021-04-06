@@ -39,35 +39,97 @@
 (eval-when-compile
   (require 'cl))
 
+;;;###autoload
 (require 'eieio)
 
 (require 'gh-api)
 (require 'gh-auth)
 (require 'gh-common)
 
-(require 'gh-pulls)
+(defclass gh-pull-comments-api (gh-api-v3)
+  ((pull-comment-cls :allocation :class :initform gh-pull-comments-comment))
+  "GitHub Pull Request Comments API")
 
-(let ((ver "1.0.0"))
-  (define-obsolete-function-alias
-      'gh-pull-comments-api 'gh-pulls-api ver)
-  (define-obsolete-function-alias
-      'gh-pull-comments-comment 'gh-pulls-comment ver)
+(defclass gh-pull-comments-comment (gh-object)
+  ((url :initarg :url)
+   (html-url :initarg :html-url)
+   (id :initarg :id)
+   (body :initarg :body)
+   (user :initarg :user :initform nil)
+   (path :initarg :path)
+   (diff-hunk :initarg :diff-hunk)
+   (position :initarg :position)
+   (original-position :initarg :original-position)
+   (commit-id :initarg :commit-id)
+   (original-commit-id :initarg :original-commit-id)
+   (in-reply-to :initarg :in-reply-to :initform nil)
+   (created-at :initarg :created_at)
+   (updated-at :initarg :updated_at)
+   (user-cls :allocation :class :initform gh-user))
+  "Class for Pull Requests comments")
 
-  (define-obsolete-function-alias
-      'gh-pull-comments-req-to-update 'gh-comment-req-to-update ver)
-  (define-obsolete-function-alias
-      'gh-pull-comments-req-to-create 'gh-pulls-comment-req-to-create)
+(defmethod gh-object-read-into ((comment gh-pull-comments-comment) data)
+  (call-next-method)
+  (with-slots (url html-url id body user path diff-hunk position
+		   original-position commit-id original-commit-id in-reply-to
+		   created-at updated-at)
+      comment
+    (setq url (gh-read data 'url)
+          html-url (gh-read data 'html-url)
+	  id (gh-read data 'id)
+          body (gh-read data 'body)
+          user (gh-object-read  (or (oref comment :user)
+                                    (oref comment user-cls))
+                                (gh-read data 'user))
+	  path (gh-read data 'path)
+	  diff-hunk (gh-read data 'diff_hunk)
+	  position (gh-read data 'position)
+	  original-position (gh-read data 'original_position)
+	  commit-id (gh-read data 'commit_id)
+	  original-commit-id (gh-read data 'original_commit_id)
+	  in-reply-to (gh-read data 'in_reply_to)
+          created-at (gh-read data 'created_at)
+          updated-at (gh-read data 'updated_at))))
 
-  (define-obsolete-function-alias
-      'gh-pull-comments-list 'gh-pulls-comments-list ver)
-  (define-obsolete-function-alias
-      'gh-pull-comments-get 'gh-pulls-comments-get ver)
-  (define-obsolete-function-alias
-      'gh-pull-comments-update 'gh-pulls-comments-update ver)
-  (define-obsolete-function-alias
-      'gh-pull-comments-new 'gh-pulls-comments-new ver)
-  (define-obsolete-function-alias
-      'gh-pull-comments-delete 'gh-pulls-comments-delete ver))
+(defmethod gh-pull-comments-list ((api gh-pull-comments-api) user repo pull-id)
+  (gh-api-authenticated-request
+   api (gh-object-list-reader (oref api pull-comment-cls)) "GET"
+   (format "/repos/%s/%s/pulls/%s/comments" user repo pull-id)))
+
+(defmethod gh-pull-comments-get ((api gh-pull-comments-api) user repo pull-id)
+  (gh-api-authenticated-request
+   api (gh-object-reader (oref api pull-comment-cls)) "GET"
+   (format "/repos/%s/%s/pulls/comments/%s" user repo pull-id)))
+
+(defmethod gh-pull-comments-req-to-create ((req gh-pull-comments-comment))
+  (let ((in-reply-to (oref req in-reply-to))
+	(to-update `(("body" . ,(oref req body)))))
+    (if in-reply-to
+	(nconc to-update `(("in_reply_to" . ,in-reply-to)))
+      (nconc to-update `(("commit_id" . ,(oref req commit-id))
+			 ("path" . ,(oref req path))
+			 ("position" . ,(oref req position)))))
+    to-update))
+
+(defmethod gh-pull-comments-req-to-update ((req gh-pull-comments-comment))
+  `(("body" . ,(oref req body))))
+
+(defmethod gh-pull-comments-update ((api gh-pull-comments-api) user repo comment-id comment)
+  (gh-api-authenticated-request
+   api (gh-object-reader (oref api pull-comment-cls)) "PATCH"
+   (format "/repos/%s/%s/pulls/comments/%s" user repo comment-id)
+   (gh-pull-comments-req-to-update comment)))
+
+(defmethod gh-pull-comments-new ((api gh-pull-comments-api) user repo pull-id comment)
+  (gh-api-authenticated-request
+   api (gh-object-reader (oref api pull-comment-cls)) "POST"
+   (format "/repos/%s/%s/pulls/%s/comments" user repo pull-id)
+   (gh-pull-comments-req-to-create comment)))
+
+(defmethod gh-pull-comments-delete ((api gh-pull-comments-api) user repo comment-id)
+  (gh-api-authenticated-request
+   api nil "DELETE"
+   (format "/repos/%s/%s/pulls/comments/%s" user repo comment-id)))
 
 (provide 'gh-pull-comments)
 ;;; gh-pull-comments.el ends here

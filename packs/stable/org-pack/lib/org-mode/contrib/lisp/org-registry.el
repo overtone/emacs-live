@@ -1,6 +1,6 @@
 ;;; org-registry.el --- a registry for Org links
 ;;
-;; Copyright 2007-2020 Free Software Foundation, Inc.
+;; Copyright 2007-2014 Bastien Guerry
 ;;
 ;; Emacs Lisp Archive Entry
 ;; Filename: org-registry.el

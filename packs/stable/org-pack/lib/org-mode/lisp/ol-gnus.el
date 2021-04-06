@@ -34,8 +34,7 @@
 (require 'gnus-sum)
 (require 'gnus-util)
 (require 'nnheader)
-(or (require 'nnselect nil t)           ; Emacs >= 28
-    (require 'nnir nil t))              ; Emacs < 28
+(require 'nnir)
 (require 'ol)
 
 
@@ -136,15 +135,9 @@ If `org-store-link' was called with a prefix arg the meaning of
 	       (`(nnvirtual . ,_)
 		(save-excursion
 		  (car (nnvirtual-map-article (gnus-summary-article-number)))))
-	       (`(,(or `nnselect `nnir) . ,_)  ; nnir is for Emacs < 28.
+	       (`(nnir . ,_)
 		(save-excursion
-		  (cond
-		   ((fboundp 'nnselect-article-group)
-		    (nnselect-article-group (gnus-summary-article-number)))
-		   ((fboundp 'nnir-article-group)
-		    (nnir-article-group (gnus-summary-article-number)))
-		   (t
-		    (error "No article-group variant bound")))))
+		  (nnir-article-group (gnus-summary-article-number))))
 	       (_ gnus-newsgroup-name)))
 	    (header (if (eq major-mode 'gnus-article-mode)
 			;; When in an article, first move to summary
@@ -217,7 +210,7 @@ If `org-store-link' was called with a prefix arg the meaning of
      (format "nntp+%s:%s" (or (cdr server) (car server)) group)
      article)))
 
-(defun org-gnus-open (path _)
+(defun org-gnus-open (path)
   "Follow the Gnus message or folder link specified by PATH."
   (unless (string-match "\\`\\([^#]+\\)\\(#\\(.*\\)\\)?" path)
     (error "Error in Gnus link %S" path))

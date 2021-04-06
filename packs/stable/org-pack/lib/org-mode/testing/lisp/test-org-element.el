@@ -568,38 +568,42 @@ Some other text
 (ert-deftest test-org-element/comment-parser ()
   "Test `comment' parser."
   ;; Regular comment.
-  (should (eq 'comment
-	      (org-test-with-temp-text "# Comment"
-		(org-element-type (org-element-at-point)))))
+  (should
+   (org-test-with-temp-text "# Comment"
+     (org-element-map (org-element-parse-buffer) 'comment 'identity)))
   ;; Inline comment.
-  (should (eq 'comment
-	      (org-test-with-temp-text "  # Comment"
-		(org-element-type (org-element-at-point)))))
+  (should
+   (org-test-with-temp-text "  # Comment"
+     (org-element-map (org-element-parse-buffer) 'comment 'identity)))
   ;; Preserve indentation.
   (should
-   (equal "No blank\n One blank"
-	  (org-element-property
-	   :value
-	   (org-test-with-temp-text "# No blank\n#  One blank"
-	     (org-element-at-point)))))
+   (equal
+    (org-element-property
+     :value
+     (org-test-with-temp-text "# No blank\n#  One blank"
+       (org-element-map (org-element-parse-buffer) 'comment 'identity nil t)))
+    "No blank\n One blank"))
   ;; Comment with blank lines.
   (should
-   (equal "First part\n\n\nSecond part"
-	  (org-element-property
-	   :value
-	   (org-test-with-temp-text "# First part\n# \n#\n# Second part"
-	     (org-element-at-point)))))
+   (equal
+    (org-element-property
+     :value
+     (org-test-with-temp-text "# First part\n# \n#\n# Second part"
+       (org-element-map (org-element-parse-buffer) 'comment 'identity nil t)))
+    "First part\n\n\nSecond part"))
   ;; Do not mix comments and keywords.
   (should
    (eq 1
        (org-test-with-temp-text "#+keyword: value\n# comment\n#+keyword: value"
 	 (length (org-element-map (org-element-parse-buffer) 'comment
-		   #'identity)))))
+		   'identity)))))
   (should
    (equal "comment"
-	  (org-test-with-temp-text
-	      "#+key: value\n<point># comment\n#+key: value"
-	    (org-element-property :value (org-element-at-point)))))
+	  (org-test-with-temp-text "#+keyword: value\n# comment\n#+keyword: value"
+	    (org-element-property
+	     :value
+	     (org-element-map (org-element-parse-buffer) 'comment
+	       'identity nil t)))))
   ;; Correctly handle non-empty blank lines at the end of buffer.
   (should
    (org-test-with-temp-text "# A\n "
@@ -1921,15 +1925,6 @@ e^{i\\pi}+1=0
 	    (let ((element (org-element-at-point)))
 	      (list (org-element-property :key element)
 		    (org-element-property :value element))))))
-  ;; The insides of property blocks on document level are parsed the
-  ;; same way as headline property blocks.  I.e. the concept of
-  ;; `node-property' apply also for properties in those blocks.
-  (should
-   (equal '("abc" "value")
-	  (org-test-with-temp-text ":PROPERTIES:\n<point>:abc: value\n:END:"
-	    (let ((element (org-element-at-point)))
-	      (list (org-element-property :key element)
-		    (org-element-property :value element))))))
   ;; Value should be trimmed.
   (should
    (equal "value"
@@ -2115,20 +2110,6 @@ Outside list"
    (eq 'property-drawer
        (org-test-with-temp-text
 	   "* H\nDEADLINE: <2014-03-04 tue.>\n<point>:PROPERTIES:\n:prop: value\n:END:"
-	 (org-element-type (org-element-at-point)))))
-  ;; Parse property drawer at the beginning of the document, possibly
-  ;; after some initial comments.
-  (should
-   (eq 'property-drawer
-       (org-test-with-temp-text "<point>:PROPERTIES:\n:prop: value\n:END:"
-	 (org-element-type (org-element-at-point)))))
-  (should
-   (eq 'property-drawer
-       (org-test-with-temp-text "# C\n# C\n<point>:PROPERTIES:\n:prop: value\n:END:"
-	 (org-element-type (org-element-at-point)))))
-  (should-not
-   (eq 'property-drawer
-       (org-test-with-temp-text "\n<point>:PROPERTIES:\n:prop: value\n:END:"
 	 (org-element-type (org-element-at-point)))))
   ;; Allow properties without value and no property at all.
   (should

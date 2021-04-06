@@ -1,6 +1,6 @@
-;;; ivy-ox.el --- org-export settings for Ivy -*- lexical-binding: t -*-
+;;; ivy-ox.el --- org-export settings for Ivy
 
-;; Copyright (C) 2015-2018  Free Software Foundation, Inc.
+;; Copyright (C) 2015  Free Software Foundation, Inc.
 
 ;; Author: Oleh Krehel
 
@@ -17,15 +17,10 @@
 ;; GNU General Public License for more details.
 
 ;; For a full copy of the GNU General Public License
-;; see <https://www.gnu.org/licenses/>.
-
-;;; Commentary:
-
-;;; Code:
+;; see <http://www.gnu.org/licenses/>.
 
 ;;* ox-texinfo
 (require 'ox-texinfo)
-(eval-when-compile (require 'subr-x))
 (org-export-define-backend 'texinfo
   '((bold . org-texinfo-bold)
     (center-block . org-texinfo-center-block)
@@ -184,7 +179,7 @@ contextual information."
 
 (defvar ivy-info-dir (file-name-directory
                       (or load-file-name
-                          buffer-file-name)))
+                          (buffer-file-name))))
 
 (defun info-ivy ()
   (interactive)
@@ -196,5 +191,3 @@ contextual information."
    "Top"))
 
 (provide 'ivy-ox)
-
-;;; ivy-ox.el ends here

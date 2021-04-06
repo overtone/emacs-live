@@ -1,6 +1,5 @@
 [![Melpa Status](http://melpa.org/packages/elisp-slime-nav-badge.svg)](http://melpa.org/#/elisp-slime-nav)
 [![Melpa Stable Status](http://stable.melpa.org/packages/elisp-slime-nav-badge.svg)](http://stable.melpa.org/#/elisp-slime-nav)
-<a href="https://www.patreon.com/sanityinc"><img alt="Support me" src="https://img.shields.io/badge/Support%20Me-%F0%9F%92%97-ff69b4.svg"></a>
 
 # Slime-style navigation for Emacs Lisp
 
@@ -23,7 +22,7 @@ C-d</kbd> by default.
 Ensure `elisp-slime-nav.el` is in a directory on your load-path, and
 add the following to your `~/.emacs` or `~/.emacs.d/init.el`:
 
-```elisp
+``` lisp
 (require 'elisp-slime-nav)
 (dolist (hook '(emacs-lisp-mode-hook ielm-mode-hook))
   (add-hook hook 'elisp-slime-nav-mode))
@@ -34,12 +33,13 @@ add the following to your `~/.emacs` or `~/.emacs.d/init.el`:
 If you're an Emacs 24 user or you have a recent version of
 `package.el` you can install `elisp-slime-nav` from the
 [MELPA](http://melpa.org) repository. The version of
-`elisp-slime-nav` there will always be up-to-date.
+`elisp-slime-nav` there will always be up-to-date. There are also
+packages in Marmalade.
 
 Enable `elisp-slime-nav` in `emacs-lisp-mode` and `ielm` by adding
 code such as the following to your emacs startup file:
 
-```elisp
+``` lisp
 (dolist (hook '(emacs-lisp-mode-hook ielm-mode-hook))
   (add-hook hook 'turn-on-elisp-slime-nav-mode))
 ```

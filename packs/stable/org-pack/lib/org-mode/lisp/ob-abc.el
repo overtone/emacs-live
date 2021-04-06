@@ -3,9 +3,9 @@
 ;; Copyright (C) 2013-2020 Free Software Foundation, Inc.
 
 ;; Author: William Waites
-;; Maintainer: William Waites
 ;; Keywords: literate programming, music
-;; Homepage: https://www.tardis.ed.ac.uk/~wwaites
+;; Homepage: http://www.tardis.ed.ac.uk/wwaites
+;; Version: 0.01
 
 ;; This file is part of GNU Emacs.
 
@@ -87,5 +87,4 @@
   (error "ABC does not support sessions"))
 
 (provide 'ob-abc)
-
 ;;; ob-abc.el ends here

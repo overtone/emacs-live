@@ -1,6 +1,6 @@
 ;;; gitattributes-mode.el --- Major mode for editing .gitattributes files -*- lexical-binding: t -*-
 
-;; Copyright (C) 2013-2018  The Magit Project Contributors
+;; Copyright (C) 2013-2016  The Magit Project Contributors
 
 ;; Author: Rüdiger Sonderfeld <ruediger@c-plusplus.net>
 ;; Maintainer: Jonas Bernoulli <jonas@bernoul.li>
@@ -132,8 +132,6 @@ If NO-STATE is non-nil then do not print state."
     (modify-syntax-entry ?- "_." table)
     (modify-syntax-entry ?! "." table)
     (modify-syntax-entry ?= "." table)
-    (modify-syntax-entry ?# "<" table)
-    (modify-syntax-entry ?\n ">" table)
     table)
   "Syntax table for `gitattributes-mode'.")
 
@@ -155,7 +153,8 @@ If NO-STATE is non-nil then do not print state."
              (gitattributes-mode--highlight-1st-field old-limit)))))))
 
 (defvar gitattributes-mode-font-lock-keywords
-  `(("^\\[attr]" . 'font-lock-function-name-face)
+  `(("^\\s-*#.*" . 'font-lock-comment-face)
+    ("^\\[attr]" . 'font-lock-function-name-face)
     ("\\s-+\\(-\\|!\\)[[:word:]]+" (1 'font-lock-negation-char-face))
     ("\\s-+\\(?:-\\|!\\)?\\(\\sw\\(?:\\sw\\|\\s_\\)*\\)=?"
      (1 'font-lock-variable-name-face))
@@ -209,8 +208,6 @@ If ARG is omitted or nil, move point backward one field."
   :group 'gitattributes-mode
   :syntax-table gitattributes-mode-syntax-table
   (setq font-lock-defaults '(gitattributes-mode-font-lock-keywords))
-  (setq-local comment-start "# ")
-  (setq-local comment-start-skip "#+\\s-*")
   (setq-local eldoc-documentation-function #'gitattributes-mode-eldoc)
   (setq-local forward-sexp-function #'gitattributes-mode-forward-field)
   (when (and gitattributes-mode-enable-eldoc
@@ -223,9 +220,6 @@ If ARG is omitted or nil, move point backward one field."
                    "/git/attributes\\'"))
   (add-to-list 'auto-mode-alist (cons pattern #'gitattributes-mode)))
 
-;;; _
 (provide 'gitattributes-mode)
-;; Local Variables:
-;; indent-tabs-mode: nil
-;; End:
+
 ;;; gitattributes-mode.el ends here

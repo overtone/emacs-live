@@ -41,7 +41,6 @@
 (declare-function org-element-type "org-element" (element))
 (declare-function org-heading-components "org" ())
 (declare-function org-in-commented-heading-p "org" (&optional no-inheritance))
-(declare-function org-in-archived-heading-p "org" (&optional no-inheritance))
 (declare-function outline-previous-heading "outline" ())
 
 (defcustom org-babel-tangle-lang-exts
@@ -167,14 +166,13 @@ evaluating BODY."
 (def-edebug-spec org-babel-with-temp-filebuffer (form body))
 
 ;;;###autoload
-(defun org-babel-tangle-file (file &optional target-file lang-re)
+(defun org-babel-tangle-file (file &optional target-file lang)
   "Extract the bodies of source code blocks in FILE.
 Source code blocks are extracted with `org-babel-tangle'.
 Optional argument TARGET-FILE can be used to specify a default
-export file for all source blocks.  Optional argument LANG-RE can
-be used to limit the exported source code blocks by languages
-matching a regular expression.  Return a list whose CAR is the
-tangled file name."
+export file for all source blocks.  Optional argument LANG can be
+used to limit the exported source code blocks by language.
+Return a list whose CAR is the tangled file name."
   (interactive "fFile to tangle: \nP")
   (let ((visited-p (find-buffer-visiting (expand-file-name file)))
 	to-be-removed)
@@ -182,7 +180,7 @@ tangled file name."
 	(save-window-excursion
 	  (find-file file)
 	  (setq to-be-removed (current-buffer))
-	  (mapcar #'expand-file-name (org-babel-tangle nil target-file lang-re)))
+	  (mapcar #'expand-file-name (org-babel-tangle nil target-file lang)))
       (unless visited-p
 	(kill-buffer to-be-removed)))))
 
@@ -194,7 +192,7 @@ tangled file name."
   (mapc (lambda (el) (copy-file el pub-dir t)) (org-babel-tangle-file filename)))
 
 ;;;###autoload
-(defun org-babel-tangle (&optional arg target-file lang-re)
+(defun org-babel-tangle (&optional arg target-file lang)
   "Write code blocks to source-specific files.
 Extract the bodies of all source code blocks from the current
 file into their own source-specific files.
@@ -202,9 +200,8 @@ With one universal prefix argument, only tangle the block at point.
 When two universal prefix arguments, only tangle blocks for the
 tangle file of the block at point.
 Optional argument TARGET-FILE can be used to specify a default
-export file for all source blocks.  Optional argument LANG-RE can
-be used to limit the exported source code blocks by languages
-matching a regular expression."
+export file for all source blocks.  Optional argument LANG can be
+used to limit the exported source code blocks by language."
   (interactive "P")
   (run-hooks 'org-babel-pre-tangle-hook)
   ;; Possibly Restrict the buffer to the current code block
@@ -289,7 +286,7 @@ matching a regular expression."
 	      specs)))
 	 (if (equal arg '(4))
 	     (org-babel-tangle-single-block 1 t)
-	   (org-babel-tangle-collect-blocks lang-re tangle-file)))
+	   (org-babel-tangle-collect-blocks lang tangle-file)))
 	(message "Tangled %d code block%s from %s" block-counter
 		 (if (= block-counter 1) "" "s")
 		 (file-name-nondirectory
@@ -367,14 +364,13 @@ that the appropriate major-mode is set.  SPEC has the form:
 	       (org-fill-template
 		org-babel-tangle-comment-format-end link-data)))))
 
-(defun org-babel-tangle-collect-blocks (&optional lang-re tangle-file)
+(defun org-babel-tangle-collect-blocks (&optional language tangle-file)
   "Collect source blocks in the current Org file.
 Return an association list of source-code block specifications of
 the form used by `org-babel-spec-to-string' grouped by language.
-Optional argument LANG-RE can be used to limit the collected
-source code blocks by languages matching a regular expression.
-Optional argument TANGLE-FILE can be used to limit the collected
-code blocks by target file."
+Optional argument LANGUAGE can be used to limit the collected
+source code blocks by language.  Optional argument TANGLE-FILE
+can be used to limit the collected code blocks by target file."
   (let ((counter 0) last-heading-pos blocks)
     (org-babel-map-src-blocks (buffer-file-name)
       (let ((current-heading-pos
@@ -383,14 +379,13 @@ code blocks by target file."
 	(if (eq last-heading-pos current-heading-pos) (cl-incf counter)
 	  (setq counter 1)
 	  (setq last-heading-pos current-heading-pos)))
-      (unless (or (org-in-commented-heading-p)
-		  (org-in-archived-heading-p))
+      (unless (org-in-commented-heading-p)
 	(let* ((info (org-babel-get-src-block-info 'light))
 	       (src-lang (nth 0 info))
 	       (src-tfile (cdr (assq :tangle (nth 2 info)))))
 	  (unless (or (string= src-tfile "no")
 		      (and tangle-file (not (equal tangle-file src-tfile)))
-		      (and lang-re (not (string-match-p lang-re src-lang))))
+		      (and language (not (string= language src-lang))))
 	    ;; Add the spec for this block to blocks under its
 	    ;; language.
 	    (let ((by-lang (assoc src-lang blocks))
@@ -476,9 +471,9 @@ non-nil, return the full association list to be used by
 		  file)
 		(if (and org-babel-tangle-use-relative-file-links
 			 (string-match org-link-types-re link)
-			 (string= (match-string 1 link) "file"))
+			 (string= (match-string 0 link) "file"))
 		    (concat "file:"
-			    (file-relative-name (substring link (match-end 0))
+			    (file-relative-name (match-string 1 link)
 						(file-name-directory
 						 (cdr (assq :tangle params)))))
 		  link)
@@ -518,16 +513,14 @@ which enable the original code blocks to be found."
     (goto-char (point-min))
     (let ((counter 0) new-body end)
       (while (re-search-forward org-link-bracket-re nil t)
-        (if (and (match-string 2)
-		 (re-search-forward
-		  (concat " " (regexp-quote (match-string 2)) " ends here") nil t))
-	    (progn (setq end (match-end 0))
-		   (forward-line -1)
-		   (save-excursion
-		     (when (setq new-body (org-babel-tangle-jump-to-org))
-		       (org-babel-update-block-body new-body)))
-		   (setq counter (+ 1 counter)))
-	  (setq end (point)))
+        (when (re-search-forward
+	       (concat " " (regexp-quote (match-string 2)) " ends here"))
+          (setq end (match-end 0))
+          (forward-line -1)
+          (save-excursion
+	    (when (setq new-body (org-babel-tangle-jump-to-org))
+	      (org-babel-update-block-body new-body)))
+          (setq counter (+ 1 counter)))
         (goto-char end))
       (prog1 counter (message "Detangled %d code blocks" counter)))))
 
@@ -548,8 +541,7 @@ which enable the original code blocks to be found."
 			    (save-match-data
 			      (re-search-forward
 			       (concat " " (regexp-quote block-name)
-				       " ends here")
-			       nil t)
+				       " ends here") nil t)
 			      (setq end (line-beginning-position))))))))
 	(unless (and start (< start mid) (< mid end))
 	  (error "Not in tangled code"))

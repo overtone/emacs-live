@@ -137,7 +137,7 @@
 ;;   :END:
 ;;
 ;;;; * TODO
-;;   - Look at org-keyword-properties, org-global-properties and
+;;   - Look at org-file-properties, org-global-properties and
 ;;     org-global-properties-fixed
 ;;   - What about property inheritance and org-property-inherit-p?
 ;;   - Use TYPE_TODO as an way to assign resources
@@ -720,8 +720,9 @@ Return complete project plan as a string in TaskJuggler syntax."
 	      (mapconcat
 	       'org-element-normalize-string
 	       (mapcar
-		(lambda (report)
-		  (replace-regexp-in-string "%title" report-title  report t t))
+		(function
+		 (lambda (report)
+		   (replace-regexp-in-string "%title" report-title  report t t)))
 		org-taskjuggler-default-reports) "")))))))))
 
 (defun org-taskjuggler--build-project (project info)
@@ -840,8 +841,8 @@ a unique id will be associated to it."
          (priority
           (let ((pri (org-element-property :priority task)))
             (and pri
-                 (max 1 (/ (* 1000 (- org-priority-lowest pri))
-                           (- org-priority-lowest org-priority-highest)))))))
+                 (max 1 (/ (* 1000 (- org-lowest-priority pri))
+                           (- org-lowest-priority org-highest-priority)))))))
     (concat
      ;; Opening task.
      (format "task %s \"%s\" {\n"

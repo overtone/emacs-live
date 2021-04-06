@@ -101,14 +101,14 @@ period and marks next symbol."
   (interactive)
   (when (er--point-is-in-comment-p)
     (let ((p (point)))
-      (while (and (er--point-is-in-comment-p) (not (eobp)))
+      (while (er--point-is-in-comment-p)
         (forward-char 1))
-      (skip-chars-backward "\n\r")
+      (skip-chars-backward " \n\t\r")
       (set-mark (point))
       (goto-char p)
       (while (er--point-is-in-comment-p)
         (forward-char -1))
-      (forward-char 1))))
+      (skip-chars-forward " \n\t\r"))))
 
 ;; Quotes
 
@@ -189,8 +189,7 @@ period and marks next symbol."
 (defun er/mark-outside-pairs ()
   "Mark pairs (as defined by the mode), including the pair chars."
   (interactive)
-  (if (and (er/looking-back-on-line "\\s)+\\=")
-           (not (er--looking-at-pair)))
+  (if (er/looking-back-on-line "\\s)+\\=")
       (ignore-errors (backward-list 1))
     (skip-chars-forward er--space-str))
   (when (and (er--point-inside-pairs-p)

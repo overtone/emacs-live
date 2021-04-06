@@ -60,10 +60,7 @@
 		     (template . org-confluence-template)
 		     (timestamp . org-confluence-timestamp)
 		     (underline . org-confluence-underline)
-		     (verbatim . org-confluence-verbatim))
-  :menu-entry
-  '(?f "Export to Confluence"
-       ((?f "As Confluence buffer" org-confluence-export-as-confluence))))
+		     (verbatim . org-confluence-verbatim)))
 
 (defcustom org-confluence-lang-alist
   '(("sh" . "bash"))

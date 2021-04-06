@@ -1,6 +1,6 @@
 ;;; cider-overlays.el --- Managing CIDER overlays  -*- lexical-binding: t; -*-
 
-;; Copyright © 2015-2020 Bozhidar Batsov, Artur Malabarba and CIDER contributors
+;; Copyright © 2015-2016 Bozhidar Batsov, Artur Malabarba and CIDER contributors
 
 ;; Author: Artur Malabarba <bruce.connor.am@gmail.com>
 
@@ -26,7 +26,6 @@
 ;;; Code:
 
 (require 'cider-common)
-(require 'subr-x)
 (require 'cider-compat)
 (require 'cl-lib)
 
@@ -59,26 +58,16 @@ font-locking it."
 
 (defcustom cider-use-overlays 'both
   "Whether to display evaluation results with overlays.
-If t, use overlays determined by `cider-result-overlay-position'.
-If nil, display on the echo area.
-If both, display on both places.
+If t, use overlays.  If nil, display on the echo area.  If both, display on
+both places.
 
 Only applies to evaluation commands.  To configure the debugger overlays,
 see `cider-debug-use-overlays'."
-  :type '(choice (const :tag "Display using overlays" t)
-                 (const :tag "Display in echo area" nil)
+  :type '(choice (const :tag "End of line" t)
+                 (const :tag "Bottom of screen" nil)
                  (const :tag "Both" both))
   :group 'cider
   :package-version '(cider . "0.10.0"))
-
-(defcustom cider-result-overlay-position 'at-eol
-  "Where to display result overlays for inline evaluation and the debugger.
-If 'at-eol, display at the end of the line.
-If 'at-point, display at the end of the respective sexp."
-  :group 'cider
-  :type ''(choice (const :tag "End of line" at-eol)
-                  (const :tag "End of sexp" at-point))
-  :package-version '(cider . "0.23.0"))
 
 (defcustom cider-eval-result-prefix "=> "
   "The prefix displayed in the minibuffer before a result value."
@@ -143,8 +132,7 @@ This function also removes itself from `post-command-hook'."
   "Whether to display evaluation indicators on the left fringe."
   :safe #'booleanp
   :group 'cider
-  :type 'boolean
-  :package-version '(cider . "0.13.0"))
+  :type 'boolean)
 
 (defun cider--make-fringe-overlay (&optional end)
   "Place an eval indicator at the fringe before a sexp.
@@ -153,22 +141,23 @@ END is the position where the sexp ends, and defaults to point."
     (with-current-buffer (if (markerp end)
                              (marker-buffer end)
                            (current-buffer))
-      (save-excursion
+      (save-excursion 
         (if end
             (goto-char end)
           (setq end (point)))
         (clojure-forward-logical-sexp -1)
         ;; Create the green-circle overlay.
         (cider--make-overlay (point) end 'cider-fringe-indicator
-                             'before-string cider--fringe-overlay-good)))))
+                         'before-string cider--fringe-overlay-good)))))
 
 (cl-defun cider--make-result-overlay (value &rest props &key where duration (type 'result)
-                                            (format (concat " " cider-eval-result-prefix "%s "))
-                                            (prepend-face 'cider-result-overlay-face)
-                                            &allow-other-keys)
-  "Place an overlay displaying VALUE at the position determined by WHERE.
+                                        (format (concat " " cider-eval-result-prefix "%s "))
+                                        (prepend-face 'cider-result-overlay-face)
+                                        &allow-other-keys)
+  "Place an overlay displaying VALUE at the end of line.
 VALUE is used as the overlay's after-string property, meaning it is
-displayed at the end of the overlay.
+displayed at the end of the overlay.  The overlay itself is placed from
+beginning to end of current line.
 Return nil if the overlay was not placed or if it might not be visible, and
 return the overlay otherwise.
 
@@ -176,9 +165,10 @@ Return the overlay if it was placed successfully, and nil if it failed.
 
 This function takes some optional keyword arguments:
 
-  If WHERE is a number or a marker, apply the overlay as determined by
-  `cider-result-overlay-position'.  If it is a cons cell, the car and cdr
-  determine the start and end of the overlay.
+  If WHERE is a number or a marker, apply the overlay over
+  the entire line at that place (defaulting to `point').  If
+  it is a cons cell, the car and cdr determine the start and
+  end of the overlay.
   DURATION takes the same possible values as the
   `cider-eval-result-duration' variable.
   TYPE is passed to `cider--make-overlay' (defaults to `result').
@@ -208,9 +198,7 @@ overlay."
                         (point))))
                (end (if (consp where)
                         (cdr where)
-                      (pcase cider-result-overlay-position
-                        ('at-eol (line-end-position))
-                        ('at-point (point)))))
+                      (line-end-position)))
                (display-string (format format value))
                (o nil))
           (remove-overlays beg end 'category type)
@@ -249,9 +237,11 @@ overlay."
                            #'cider--remove-result-overlay-after-command
                            nil 'local)
                (cider--remove-result-overlay-after-command))))
-          (when-let* ((win (get-buffer-window buffer)))
+          (when-let ((win (get-buffer-window buffer)))
             ;; Left edge is visible.
-            (when (and (<= (window-start win) (point) (window-end win))
+            (when (and (<= (window-start win) (point))
+                       ;; In 24.3 `<=' is still a binary perdicate.
+                       (<= (point) (window-end win))
                        ;; Right edge is visible. This is a little conservative
                        ;; if the overlay contains line breaks.
                        (or (< (+ (current-column) (string-width value))

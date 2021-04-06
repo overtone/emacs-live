@@ -1,6 +1,6 @@
 ;;; clojure-mode-extra-font-locking.el --- Extra font-locking for Clojure mode
 
-;; Copyright © 2014-2020 Bozhidar Batsov
+;; Copyright © 2014-2016 Bozhidar Batsov
 ;;
 ;; Author: Bozhidar Batsov <bozhidar@batsov.com>
 ;; URL: http://github.com/clojure-emacs/clojure-mode
@@ -12,12 +12,7 @@
 
 ;;; Commentary:
 
-;; Provides additional font-locking for clojure-mode.  This font-locking
-;; used to be part of clojure-mode up to version 3.0, but it was removed
-;; due to its unreliable nature (the implementation is quite primitive
-;; and font-locks symbols without any regard for what they resolve to).
-;; CIDER provides much more reliable font-locking, that's based on the runtime
-;; state of your Clojure application.
+;; Provides additional font-locking for clojure-mode.
 
 ;;; License:
 
@@ -45,16 +40,16 @@
     "accessor" "aclone"
     "agent" "agent-errors" "aget" "alength" "alias"
     "all-ns" "alter" "alter-meta!" "alter-var-root" "amap"
-    "ancestors" "any?" "apply" "areduce" "array-map" "as->"
+    "ancestors" "apply" "areduce" "array-map" "as->"
     "aset" "aset-boolean" "aset-byte" "aset-char" "aset-double"
     "aset-float" "aset-int" "aset-long" "aset-short" "assert"
     "assoc" "assoc!" "assoc-in" "associative?" "atom"
     "await" "await-for" "await1" "bases" "bean"
     "bigdec" "bigint" "bit-and" "bit-and-not"
     "bit-clear" "bit-flip" "bit-not" "bit-or" "bit-set"
-    "bit-shift-left" "bit-shift-right" "bit-test" "bit-xor" "boolean" "boolean?"
-    "boolean-array" "booleans" "bounded-count" "bound-fn" "bound-fn*"
-    "bound?" "butlast" "byte" "byte-array" "bytes" "bytes?" "cast" "char"
+    "bit-shift-left" "bit-shift-right" "bit-test" "bit-xor" "boolean"
+    "boolean-array" "booleans" "bound-fn" "bound-fn*" "bound?" "butlast"
+    "byte" "byte-array" "bytes" "cast" "char"
     "char-array" "char-escape-string" "char-name-string" "char?" "chars"
     "chunk" "chunk-append" "chunk-buffer" "chunk-cons" "chunk-first"
     "chunk-next" "chunk-rest" "chunked-seq?" "class" "class?"
@@ -67,7 +62,7 @@
     "derive" "descendants" "destructure" "disj" "disj!"
     "dissoc" "dissoc!" "distinct" "distinct?"
     "doc"
-    "double" "double?" "double-array" "doubles" "drop"
+    "double" "double-array" "doubles" "drop"
     "drop-last" "drop-while" "empty" "empty?" "ensure"
     "enumeration-seq" "error-handler" "error-mode" "eval" "even?" "every?"
     "every-pred" "extend" "extend-protocol" "extend-type" "extends?"
@@ -79,9 +74,9 @@
     "future-call" "future-cancel" "future-cancelled?" "future-done?" "future?"
     "gen-interface" "gensym" "get" "get-in"
     "get-method" "get-proxy-class" "get-thread-bindings" "get-validator"
-    "group-by" "halt-when?" "hash" "hash-map" "hash-ordered-coll" "hash-set"
-    "hash-unordered-coll" "ident?" "identical?" "identity" "indexed?" "ifn?" "inc"
-    "init-proxy" "instance?" "inst-ms" "inst?" "int" "int?" "int-array" "integer?"
+    "group-by" "hash" "hash-map" "hash-ordered-coll" "hash-set"
+    "hash-unordered-coll" "identical?" "identity" "ifn?" "inc"
+    "init-proxy" "instance?" "int" "int-array" "integer?"
     "interleave" "intern" "interpose" "into" "into-array"
     "ints" "io!" "isa?" "iterate" "iterator-seq"
     "juxt" "keep" "keep-indexed" "key" "keys" "keyword" "keyword?"
@@ -93,7 +88,6 @@
     "map-indexed" "mapcat" "max" "max-key" "memfn" "memoize"
     "merge" "merge-with" "meta" "method-sig" "methods"
     "min" "min-key" "mix-collection-hash" "mod" "name" "namespace"
-    "nat-int?" "neg-int?"
     "neg?" "newline" "next" "nfirst" "nil?"
     "nnext" "not" "not-any?" "not-empty" "not-every?"
     "not=" "ns-aliases" "ns-imports" "ns-interns"
@@ -101,14 +95,13 @@
     "ns-unalias" "ns-unmap" "nth" "nthnext" "nthrest" "num"
     "number?" "numerator" "object-array" "odd?" "parents" "partial"
     "partition" "partition-all" "partition-by" "pcalls" "peek" "persistent!"
-    "pmap" "pop" "pop!" "pop-thread-bindings" "pos?" "pos-int?" "pr"
+    "pmap" "pop" "pop!" "pop-thread-bindings" "pos?" "pr"
     "pr-str" "prefer-method" "prefers" "primitives-classnames" "print"
     "print-ctor" "print-doc" "print-dup" "print-method" "print-namespace-doc"
     "print-simple" "print-special-doc" "print-str" "printf" "println"
     "println-str" "prn" "prn-str" "promise" "proxy"
     "proxy-call-with-super" "proxy-mappings" "proxy-name" "proxy-super"
-    "push-thread-bindings" "pvalues" "qualified-ident?" "qualified-keyword?"
-    "qualified-symbol?" "quot" "rand" "rand-int" "rand-nth" "range"
+    "push-thread-bindings" "pvalues" "quot" "rand" "rand-int" "rand-nth" "range"
     "ratio?" "rational?" "rationalize" "re-find" "re-groups"
     "re-matcher" "re-matches" "re-pattern" "re-seq" "read"
     "read-line" "read-string" "realized?" "record?" "reduce" "reduce-kv"
@@ -117,20 +110,19 @@
     "release-pending-sends" "rem" "remove" "remove-all-methods"
     "remove-method" "remove-ns" "remove-watch"
     "repeat" "repeatedly" "replace" "replicate"
-    "require" "restart-agent" "reset!" "reset-meta!" "reset-vals!" "resolve" "rest"
+    "require" "restart-agent" "reset!" "reset-meta!" "resolve" "rest"
     "resultset-seq" "reverse" "reversible?" "rseq" "rsubseq"
     "satisfies?" "second" "select-keys" "send" "send-off" "send-via" "seq"
-    "seq?" "seqable?" "seque" "sequence" "sequential?" "set"
+    "seq?" "seque" "sequence" "sequential?" "set"
     "set-agent-send-executor!" "set-agent-send-off-executor!"
     "set-error-handler!" "set-error-mode!" "set-validator!" "set?" "short"
     "short-array" "shorts" "shuffle"
-    "shutdown-agents" "simple-indent?" "simple-keyword?" "simple-symbol?"
-    "slurp" "some" "some->" "some->>" "some-fn" "some?"
+    "shutdown-agents" "slurp" "some" "some->" "some->>" "some-fn" "some?"
     "sort" "sort-by" "sorted-map" "sorted-map-by" "sorted-set" "sorted-set-by"
     "sorted?" "special-form-anchor" "special-symbol?" "specify" "specify!"
     "spit" "split-at" "split-with" "str"
     "stream?" "string?" "struct" "struct-map" "subs"
-    "subseq" "subvec" "supers" "swap!" "swap-vals!" "symbol"
+    "subseq" "subvec" "supers" "swap!" "symbol"
     "symbol?" "sync" "syntax-symbol-anchor" "take" "take-last"
     "take-nth" "take-while" "test" "the-ns" "thread-bound?" "time"
     "to-array" "to-array-2d" "trampoline" "transient" "tree-seq"
@@ -142,8 +134,7 @@
     "unchecked-remainder" "unchecked-remainder-int" "unchecked-short"
     "unchecked-subtract-int" "unchecked-subtract"
     "underive" "unsigned-bit-shift-right" "unquote" "unquote-splicing"
-    "update" "update-in" "update-proxy" "uri?" "use" "uuid?" "val" "vals"
-    "var-get" "var-set"
+    "update" "update-in" "update-proxy" "use" "val" "vals" "var-get" "var-set"
     "var?" "vary-meta" "vec" "vector" "vector?" "vector-of" "while"
     "with-bindings" "with-bindings*" "with-in-str" "with-loading-context"
     "with-meta" "with-out-str" "with-precision"

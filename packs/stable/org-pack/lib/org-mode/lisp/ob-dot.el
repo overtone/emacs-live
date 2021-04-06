@@ -3,7 +3,6 @@
 ;; Copyright (C) 2009-2020 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
-;; Maintainer: Justin Abrahms
 ;; Keywords: literate programming, reproducible research
 ;; Homepage: https://orgmode.org
 
@@ -87,5 +86,7 @@ This function is called by `org-babel-execute-src-block'."
   (error "Dot does not support sessions"))
 
 (provide 'ob-dot)
+
+
 
 ;;; ob-dot.el ends here

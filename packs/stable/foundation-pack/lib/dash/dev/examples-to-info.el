@@ -25,8 +25,6 @@
 (require 'dash-functional)
 (require 'help-fns)
 
-(setq text-quoting-style 'grave)
-
 (defvar functions '())
 
 (defun example-to-string (example)
@@ -159,8 +157,8 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
 
 (defun simplify-quotes ()
   (goto-char (point-min))
-  (while (re-search-forward (rx (or "'nil" "(quote nil)")) nil t)
-    (replace-match "'()" t t))
+  (while (search-forward "(quote nil)" nil t)
+    (replace-match "'()"))
   (goto-char (point-min))
   (while (search-forward "(quote " nil t)
     (forward-char -7)
@@ -169,16 +167,7 @@ FUNCTION may reference an elisp function, alias, macro or a subr."
       (delete-char -1)
       (goto-char p)
       (delete-char 7)
-      (insert "'")))
-  (goto-char (point-min))
-  (while (search-forward "(function " nil t)
-    (forward-char -10)
-    (let ((p (point)))
-      (forward-sexp 1)
-      (delete-char -1)
-      (goto-char p)
-      (delete-char 10)
-      (insert "#'"))))
+      (insert "'"))))
 
 (defun goto-and-remove (s)
   (goto-char (point-min))

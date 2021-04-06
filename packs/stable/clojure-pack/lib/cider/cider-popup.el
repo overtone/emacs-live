@@ -1,6 +1,6 @@
 ;;; cider-popup.el --- Creating and quitting popup buffers  -*- lexical-binding: t; -*-
 
-;; Copyright © 2015-2020  Bozhidar Batsov, Artur Malabarba and CIDER contributors
+;; Copyright © 2015-2016  Bozhidar Batsov, Artur Malabarba and CIDER contributors
 
 ;; Author: Artur Malabarba <bruce.connor.am@gmail.com>
 
@@ -23,7 +23,6 @@
 
 ;;; Code:
 
-(require 'subr-x)
 (require 'cider-compat)
 
 (define-minor-mode cider-popup-buffer-mode
@@ -81,9 +80,7 @@ If prefix argument KILL is non-nil, kill the buffer instead of burying it."
 
 (defvar-local cider-popup-output-marker nil)
 
-(defvar cider-ancillary-buffers nil
-  "A list ancillary buffers created by the various CIDER commands.
-We track them mostly to be able to clean them up on quit.")
+(defvar cider-ancillary-buffers nil)
 
 (defun cider-make-popup-buffer (name &optional mode ancillary)
   "Create a temporary buffer called NAME using major MODE (if specified).
@@ -101,16 +98,12 @@ and automatically removed when killed."
     (when ancillary
       (add-to-list 'cider-ancillary-buffers name)
       (add-hook 'kill-buffer-hook
-                (lambda ()
-                  (setq cider-ancillary-buffers
-                        (remove name cider-ancillary-buffers)))
+                (lambda () (setq cider-ancillary-buffers (remove name cider-ancillary-buffers)))
                 nil 'local))
     (current-buffer)))
 
-(defun cider-emit-into-popup-buffer (buffer value &optional face inhibit-indent)
-  "Emit into BUFFER the provided VALUE optionally using FACE.
-Indent emitted value (usually a sexp) unless INHIBIT-INDENT is specified
-and non-nil."
+(defun cider-emit-into-popup-buffer (buffer value &optional face)
+  "Emit into BUFFER the provided VALUE optionally using FACE."
   ;; Long string output renders Emacs unresponsive and users might intentionally
   ;; kill the frozen popup buffer. Therefore, we don't re-create the buffer and
   ;; silently ignore the output.
@@ -127,8 +120,7 @@ and non-nil."
                   (add-face-text-property 0 (length value-str) face nil value-str)
                 (add-text-properties 0 (length value-str) (list 'face face) value-str)))
             (insert value-str))
-          (unless inhibit-indent
-            (indent-sexp))
+          (indent-sexp)
           (set-marker cider-popup-output-marker (point)))
         (when moving (goto-char cider-popup-output-marker))))))
 

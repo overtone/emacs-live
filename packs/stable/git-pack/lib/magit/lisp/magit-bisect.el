@@ -1,6 +1,6 @@
 ;;; magit-bisect.el --- bisect support for Magit  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2011-2020  The Magit Project Contributors
+;; Copyright (C) 2011-2016  The Magit Project Contributors
 ;;
 ;; You should have received a copy of the AUTHORS.md file which
 ;; lists all contributors.  If not, see http://magit.vc/authors.
@@ -29,14 +29,6 @@
 
 (require 'magit)
 
-;;; Options
-
-(defcustom magit-bisect-show-graph t
-  "Whether to use `--graph' in the log showing commits yet to be bisected."
-  :package-version '(magit . "2.8.0")
-  :group 'magit-status
-  :type 'boolean)
-
 (defface magit-bisect-good
   '((t :foreground "DarkOliveGreen"))
   "Face for good bisect revisions."
@@ -52,62 +44,45 @@
   "Face for bad bisect revisions."
   :group 'magit-faces)
 
-;;; Commands
-
-;;;###autoload (autoload 'magit-bisect "magit-bisect" nil t)
-(transient-define-prefix magit-bisect ()
-  "Narrow in on the commit that introduced a bug."
+;;;###autoload (autoload 'magit-bisect-popup "magit-bisect" nil t)
+(magit-define-popup magit-bisect-popup
+  "Popup console for bisect commands."
+  'magit-commands
   :man-page "git-bisect"
-  [:class transient-subgroups
-   :if-not magit-bisect-in-progress-p
-   ["Arguments"
-    ("-n" "Don't checkout commits"              "--no-checkout")
-    ("-p" "Follow only first parent of a merge" "--first-parent"
-     :if (lambda () (version<= "2.29" (magit-git-version))))]
-   ["Actions"
-    ("B" "Start"        magit-bisect-start)
-    ("s" "Start script" magit-bisect-run)]]
-  ["Actions"
-   :if magit-bisect-in-progress-p
-   ("B" "Bad"          magit-bisect-bad)
-   ("g" "Good"         magit-bisect-good)
-   ("k" "Skip"         magit-bisect-skip)
-   ("r" "Reset"        magit-bisect-reset)
-   ("s" "Run script"   magit-bisect-run)])
+  :actions            '((?B "Start"        magit-bisect-start)
+                        (?s "Start script" magit-bisect-run))
+  :sequence-actions   '((?b "Bad"          magit-bisect-bad)
+                        (?g "Good"         magit-bisect-good)
+                        (?k "Skip"         magit-bisect-skip)
+                        (?r "Reset"        magit-bisect-reset)
+                        (?s "Run script"   magit-bisect-run))
+  :sequence-predicate 'magit-bisect-in-progress-p)
 
 ;;;###autoload
-(defun magit-bisect-start (bad good args)
+(defun magit-bisect-start (bad good)
   "Start a bisect session.
 
 Bisecting a bug means to find the commit that introduced it.
 This command starts such a bisect session by asking for a know
 good and a bad commit.  To move the session forward use the
-other actions from the bisect transient command (\
-\\<magit-status-mode-map>\\[magit-bisect])."
+other actions from the bisect popup (\
+\\<magit-status-mode-map>\\[magit-bisect-popup])."
   (interactive (if (magit-bisect-in-progress-p)
                    (user-error "Already bisecting")
                  (magit-bisect-start-read-args)))
-  (unless (magit-rev-ancestor-p good bad)
-    (user-error
-     "The good revision (%s) has to be an ancestor of the bad one (%s)"
-     good bad))
-  (when (magit-anything-modified-p)
-    (user-error "Cannot bisect with uncommitted changes"))
-  (magit-git-bisect "start" (list args bad good) t))
+  (magit-git-bisect "start" (list bad good) t))
 
 (defun magit-bisect-start-read-args ()
-  (let ((bad (magit-read-branch-or-commit "Start bisect with bad revision")))
-    (list bad
-          (magit-read-other-branch-or-commit "Good revision" bad)
-          (transient-args 'magit-bisect))))
+  (let  ((b (magit-read-branch-or-commit "Start bisect with bad revision")))
+    (list b (magit-read-other-branch-or-commit "Good revision" b))))
 
 ;;;###autoload
 (defun magit-bisect-reset ()
   "After bisecting, cleanup bisection state and return to original `HEAD'."
   (interactive)
-  (magit-confirm 'reset-bisect)
-  (magit-run-git "bisect" "reset")
-  (ignore-errors (delete-file (magit-git-dir "BISECT_CMD_OUTPUT"))))
+  (when (magit-confirm 'reset-bisect)
+    (magit-run-git "bisect" "reset")
+    (ignore-errors (delete-file (magit-git-dir "BISECT_CMD_OUTPUT")))))
 
 ;;;###autoload
 (defun magit-bisect-good ()
@@ -134,7 +109,7 @@ to test.  This command lets Git choose a different one."
   (magit-git-bisect "skip"))
 
 ;;;###autoload
-(defun magit-bisect-run (cmdline &optional bad good args)
+(defun magit-bisect-run (cmdline &optional bad good)
   "Bisect automatically by running commands after each step.
 
 Unlike `git bisect run' this can be used before bisecting has
@@ -144,35 +119,15 @@ bisect run'."
                                 (magit-bisect-start-read-args))))
                  (cons (read-shell-command "Bisect shell command: ") args)))
   (when (and bad good)
-    (magit-bisect-start bad good args))
-  (magit-git-bisect "run" (list shell-file-name shell-command-switch cmdline)))
+    (magit-bisect-start bad good))
+  (magit-git-bisect "run" (list cmdline)))
 
 (defun magit-git-bisect (subcommand &optional args no-assert)
   (unless (or no-assert (magit-bisect-in-progress-p))
     (user-error "Not bisecting"))
-  (message "Bisecting...")
   (magit-with-toplevel
-    (magit-run-git-async "bisect" subcommand args))
-  (set-process-sentinel
-   magit-this-process
-   (lambda (process event)
-     (when (memq (process-status process) '(exit signal))
-       (if (> (process-exit-status process) 0)
-           (magit-process-sentinel process event)
-         (process-put process 'inhibit-refresh t)
-         (magit-process-sentinel process event)
-         (when (buffer-live-p (process-buffer process))
-           (with-current-buffer (process-buffer process)
-             (when-let ((section (get-text-property (point) 'magit-section))
-                        (output (buffer-substring-no-properties
-                                 (oref section content)
-                                 (oref section end))))
-               (with-temp-file (magit-git-dir "BISECT_CMD_OUTPUT")
-                 (insert output)))))
-         (magit-refresh))
-       (message "Bisecting...done")))))
-
-;;; Sections
+    (magit-run-git-with-logfile
+     (magit-git-dir "BISECT_CMD_OUTPUT") "bisect" subcommand args)))
 
 (defun magit-bisect-in-progress-p ()
   (file-exists-p (magit-git-dir "BISECT_LOG")))
@@ -180,21 +135,19 @@ bisect run'."
 (defun magit-insert-bisect-output ()
   "While bisecting, insert section with output from `git bisect'."
   (when (magit-bisect-in-progress-p)
-    (let* ((lines
-            (or (magit-file-lines (magit-git-dir "BISECT_CMD_OUTPUT"))
-                (list "Bisecting: (no saved bisect output)"
-                      "It appears you have invoked `git bisect' from a shell."
-                      "There is nothing wrong with that, we just cannot display"
-                      "anything useful here.  Consult the shell output instead.")))
-           (done-re "^\\([a-z0-9]\\{40\\}\\) is the first bad commit$")
-           (bad-line (or (and (string-match done-re (car lines))
-                              (pop lines))
-                         (--first (string-match done-re it) lines))))
-      (magit-insert-section ((eval (if bad-line 'commit 'bisect-output))
-                             (and bad-line (match-string 1 bad-line)))
+    (let ((lines
+           (or (magit-file-lines (magit-git-dir "BISECT_CMD_OUTPUT"))
+               (list "Bisecting: (no saved bisect output)"
+                     "It appears you have invoked `git bisect' from a shell."
+                     "There is nothing wrong with that, we just cannot display"
+                     "anything useful here.  Consult the shell output instead.")))
+          (done-re "^[a-z0-9]\\{40\\} is the first bad commit$"))
+      (magit-insert-section (bisect-output t)
         (magit-insert-heading
-          (propertize (or bad-line (pop lines))
-                      'font-lock-face 'magit-section-heading))
+          (propertize (or (and (string-match done-re (car lines)) (pop lines))
+                          (--first (string-match done-re it) lines)
+                          (pop lines))
+                      'face 'magit-section-heading))
         (dolist (line lines)
           (insert line "\n"))))
     (insert "\n")))
@@ -206,8 +159,7 @@ bisect run'."
       (magit-insert-heading "Bisect Rest:")
       (magit-git-wash (apply-partially 'magit-log-wash-log 'bisect-vis)
         "bisect" "visualize" "git" "log"
-        "--format=%h%x00%D%x00%s" "--decorate=full"
-        (and magit-bisect-show-graph "--graph")))))
+        "--format=%h%d %s" "--decorate=full"))))
 
 (defun magit-insert-bisect-log ()
   "While bisecting, insert section logging bisect progress."
@@ -226,9 +178,8 @@ bisect run'."
         (save-restriction
           (narrow-to-region beg (point))
           (goto-char (point-min))
-          (magit-insert-section (bisect-item heading t)
-            (insert (propertize heading 'font-lock-face
-                                'magit-section-secondary-heading))
+          (magit-insert-section (bisect-log heading t)
+            (insert (propertize heading 'face 'magit-section-secondary-heading))
             (magit-insert-heading)
             (magit-wash-sequence
              (apply-partially 'magit-log-wash-rev 'bisect-log
@@ -238,9 +189,12 @@ bisect run'."
            "# first bad commit: \\[\\([a-z0-9]\\{40\\}\\)\\] [^\n]+\n" nil t)
       (magit-bind-match-strings (hash) nil
         (magit-delete-match)
-        (magit-insert-section (bisect-item)
+        (magit-insert-section (bisect-log)
           (insert hash " is the first bad commit\n"))))))
 
-;;; _
+;;; magit-bisect.el ends soon
 (provide 'magit-bisect)
+;; Local Variables:
+;; indent-tabs-mode: nil
+;; End:
 ;;; magit-bisect.el ends here
