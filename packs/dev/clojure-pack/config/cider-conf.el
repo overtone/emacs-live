@@ -1,4 +1,8 @@
 (live-add-pack-lib "spinner.el")
+(live-add-pack-lib "parseedn")
+(live-add-pack-lib "a.el")
+(live-add-pack-lib "parseclj")
+(live-add-pack-lib "sesman")
 (live-add-pack-lib "cider")
 (require 'cider)
 (require 'cider-apropos)
