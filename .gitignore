@@ -21,6 +21,7 @@ elim/
 session*
 tramp
 \#*
+.\#*
 tmp/*
 .smex-items
 swank/*
