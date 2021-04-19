@@ -177,7 +177,7 @@
 (global-set-key "\C-cj" 'org-sec-tag-entry)
 
 (defun join (lst sep &optional pre post)
-  (mapconcat (function (lambda (x) (concat pre x post))) lst sep))
+  (mapconcat (lambda (x) (concat pre x post)) lst sep))
 
 (defun org-sec-get-with ()
   (if org-sec-with

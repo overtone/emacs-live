@@ -35,10 +35,19 @@
   :group 'org-link
   :type '(choice (const man) (const woman)))
 
-(defun org-man-open (path)
+(defun org-man-open (path _)
   "Visit the manpage on PATH.
-PATH should be a topic that can be thrown at the man command."
-  (funcall org-man-command path))
+PATH should be a topic that can be thrown at the man command.
+If PATH contains extra ::STRING which will use `occur' to search
+matched strings in man buffer."
+  (string-match "\\(.*?\\)\\(?:::\\(.*\\)\\)?$" path)
+  (let* ((command (match-string 1 path))
+	 (search (match-string 2 path)))
+    (funcall org-man-command command)
+    (when search
+      (with-current-buffer (concat "*Man " command "*")
+	(goto-char (point-min))
+	(search-forward search)))))
 
 (defun org-man-store-link ()
   "Store a link to a README file."
@@ -68,6 +77,7 @@ PATH should be a topic that can be thrown at the man command."
      ((eq format 'latex) (format "\\href{%s}{%s}" path desc))
      ((eq format 'texinfo) (format "@uref{%s,%s}" path desc))
      ((eq format 'ascii) (format "%s (%s)" desc path))
+     ((eq format 'md) (format "[%s](%s)" desc path))
      (t path))))
 
 (provide 'ol-man)

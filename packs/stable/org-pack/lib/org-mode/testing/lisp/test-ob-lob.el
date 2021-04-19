@@ -250,6 +250,34 @@ call_test-newline[:eval yes :results raw]('(1\n2))<point>"
 <point>#+call: bar()"
 	(org-babel-execute-src-block nil (org-babel-lob-get-info))))))
 
+(ert-deftest test-ob-lob/confirm-evaluate ()
+  "Test confirmation when exporting lob calls."
+  ;; With the default `org-confirm-babel-evaluate' of t, the caller is
+  ;; queried one time.
+  (should
+   (= 1
+      (let ((org-export-use-babel t)
+	    (org-confirm-babel-evaluate t)
+	    (confirm-evaluate-calls 0))
+	(cl-letf (((symbol-function 'yes-or-no-p)
+		   (lambda (&rest _ignore)
+		     (cl-incf confirm-evaluate-calls)
+		     t)))
+	  (org-test-with-temp-text
+	      "
+#+name: foo
+#+begin_src emacs-lisp
+  nil
+#+end_src
+
+#+call: foo()"
+	    (let ((string (buffer-string)))
+	      (with-temp-buffer
+		(org-mode)
+		(insert string)
+		(org-babel-exp-process-buffer)
+		confirm-evaluate-calls))))))))
+
 (provide 'test-ob-lob)
 
 ;;; test-ob-lob.el ends here

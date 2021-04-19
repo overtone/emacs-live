@@ -35,7 +35,6 @@
 (eval-when-compile
   (require 'cl))
 
-;;;###autoload
 (require 'eieio)
 
 (require 'gh-api)
@@ -44,63 +43,25 @@
 
 (require 'gh-issues)
 
-(defclass gh-issue-comments-api (gh-api-v3)
-  ((comment-cls :allocation :class :initform gh-issue-comments-comment))
-  "GitHub Issue Comments api")
+(let ((ver "1.0.0"))
+  (define-obsolete-function-alias
+      'gh-issue-comments-api 'gh-issues-api ver)
+  (define-obsolete-function-alias
+      'gh-issue-comments-comment 'gh-issues-comment ver)
 
-(defclass gh-issue-comments-comment (gh-object)
-  ((url :initarg :url)
-   (html-url :initarg :html-url)
-   (body :initarg :body)
-   (user :initarg :user :initform nil)
-   (created-at :initarg :created_at)
-   (updated-at :initarg :updated_at)
+  (define-obsolete-function-alias
+      'gh-issue-comments-req-to-update 'gh-comment-req-to-update ver)
 
-   (user-cls :allocation :class :initform gh-user))
-  "issues comment")
-
-(defmethod gh-object-read-into ((comment gh-issue-comments-comment) data)
-  (call-next-method)
-  (with-slots (url html-url body user created-at updated-at)
-      comment
-    (setq url (gh-read data 'url)
-          html-url (gh-read data 'html-url)
-          body (gh-read data 'body)
-          user (gh-object-read  (or (oref comment :user)
-                                    (oref comment user-cls))
-                                (gh-read data 'user))
-          created-at (gh-read data 'created_at)
-          updated-at (gh-read data 'updated_at))))
-
-(defmethod gh-issue-comments-list ((api gh-issue-comments-api) user repo issue-id)
-  (gh-api-authenticated-request
-   api (gh-object-list-reader (oref api comment-cls)) "GET"
-   (format "/repos/%s/%s/issues/%s/comments" user repo issue-id)))
-
-(defmethod gh-issue-comments-get ((api gh-issue-comments-api) user repo comment-id)
-  (gh-api-authenticated-request
-   api (gh-object-reader (oref api comment-cls)) "GET"
-   (format "/repos/%s/%s/issues/comments/%s" user repo comment-id)))
-
-(defmethod gh-issue-comments-req-to-update ((req gh-issue-comments-comment))
-  `(("body" . ,(oref req body))))
-
-(defmethod gh-issue-comments-update ((api gh-issue-comments-api) user repo comment-id comment)
-  (gh-api-authenticated-request
-   api (gh-object-reader (oref api comment-cls)) "PATCH"
-   (format "/repos/%s/%s/issues/comments/%s" user repo comment-id)
-   (gh-issue-comments-req-to-update comment)))
-
-(defmethod gh-issue-comments-new ((api gh-issue-comments-api) user repo issue-id comment)
-  (gh-api-authenticated-request
-   api (gh-object-reader (oref api comment-cls)) "POST"
-   (format "/repos/%s/%s/issues/%s/comments" user repo issue-id)
-   (gh-issue-comments-req-to-update comment)))
-
-(defmethod gh-issue-comments-delete ((api gh-issue-comments-api) user repo comment-id)
-  (gh-api-authenticated-request
-   api nil "DELETE"
-   (format "/repos/%s/%s/issues/comments/%s" user repo comment-id)))
+  (define-obsolete-function-alias
+      'gh-issue-comments-list 'gh-issues-comments-list ver)
+  (define-obsolete-function-alias
+      'gh-issue-comments-get 'gh-issues-comments-get ver)
+  (define-obsolete-function-alias
+      'gh-issue-comments-update 'gh-issues-comments-update ver)
+  (define-obsolete-function-alias
+      'gh-issue-comments-new 'gh-issues-comments-new ver)
+  (define-obsolete-function-alias
+      'gh-issue-comments-delete 'gh-issues-comments-delete ver))
 
 (provide 'gh-issue-comments)
 ;;; gh-issue-comments.el ends here

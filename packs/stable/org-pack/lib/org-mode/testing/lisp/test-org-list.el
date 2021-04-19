@@ -479,18 +479,82 @@ b. Item 2<point>"
   - Item 3.1
 "))))
 
+(ert-deftest test-org-list/cycle-item-identation ()
+  "Test `org-list-cycle-item-indentation' specifications."
+  ;; Refuse to indent non-empty items.
+  (should-not
+   (org-test-with-temp-text "- item - item2<point>"
+     (org-cycle-item-indentation)))
+  ;; First try to indent item.
+  (should
+   (equal "- item\n  - sub-item\n    - "
+	  (org-test-with-temp-text "- item\n  - sub-item\n  - <point>"
+	    (org-cycle-item-indentation)
+	    (buffer-string))))
+  ;; If first indentation is not possible, outdent item.
+  (should
+   (equal "- item\n- "
+	  (org-test-with-temp-text "- item\n  - <point>"
+	    (org-cycle-item-indentation)
+	    (buffer-string))))
+  ;; Throw an error when item cannot move either way.
+  (should-error
+   (org-test-with-temp-text "- "
+     (org-cycle-item-indentation)))
+  ;; On repeated commands, cycle through all the indented positions,
+  ;; then through all the outdented ones, then move back to initial
+  ;; position.
+  (should
+   (equal '(4 6 0 2)
+	  (org-test-with-temp-text "- i0\n  - i1\n    - s1\n  - <point>"
+	    (let ((indentations nil))
+	      (org-cycle-item-indentation)
+	      (dotimes (_ 3)
+		(let ((last-command 'org-cycle-item-indentation))
+		  (push (current-indentation) indentations)
+		  (org-cycle-item-indentation)))
+	      (reverse (cons (current-indentation) indentations))))))
+  ;; Refuse to indent the first item in a sub-list.  Also refuse to
+  ;; outdent an item with a next sibling.
+  (should-error
+   (org-test-with-temp-text "- item\n  - <point>\n  - sub-item 2"
+     (org-cycle-item-indentation)))
+  ;; When cycling back into initial position, preserve bullet type.
+  (should
+   (equal "1. item\n   - "
+	  (org-test-with-temp-text "1. item\n  - <point>"
+	    (org-cycle-item-indentation)
+	    (let ((last-command 'org-cycle-item-indentation))
+	      (org-cycle-item-indentation))
+	    (buffer-string))))
+  (should
+   (equal "1. item\n   - tag :: "
+	  (org-test-with-temp-text "1. item\n  - tag :: <point>"
+	    (org-cycle-item-indentation)
+	    (let ((last-command 'org-cycle-item-indentation))
+	      (org-cycle-item-indentation))
+	    (buffer-string))))
+  ;; When starting at top level, never outdent.
+  (should
+   (org-test-with-temp-text "- item\n- <point>"
+     (org-cycle-item-indentation)
+     (let ((last-command 'org-cycle-item-indentation))
+       (org-cycle-item-indentation))
+     (buffer-string))))
+
 (ert-deftest test-org-list/move-item-down ()
   "Test `org-move-item-down' specifications."
   ;; Standard test.
-  (org-test-with-temp-text "- item 1\n- item 2"
-    (org-move-item-down)
-    (should (equal (buffer-string)
-		   "- item 2\n- item 1")))
+  (should
+   (equal "- item 2\n- item 1"
+	  (org-test-with-temp-text "- item 1\n- item 2"
+	    (org-move-item-down)
+	    (buffer-string))))
   ;; Keep same column in item.
-  (org-test-with-temp-text "- item 1\n- item 2"
-    (forward-char 4)
-    (org-move-item-down)
-    (should (looking-at "em 1")))
+  (should
+   (org-test-with-temp-text "- it<point>em 1\n- item 2"
+     (org-move-item-down)
+     (looking-at "em 1")))
   ;; Move sub-items.
   (org-test-with-temp-text "- item 1\n  - sub-item 1\n- item 2"
     (org-move-item-down)
@@ -504,28 +568,34 @@ b. Item 2<point>"
       (org-move-item-down)
       (buffer-string))))
   ;; Error when trying to move the last item...
-  (org-test-with-temp-text "- item 1\n- item 2"
-    (forward-line)
-    (should-error (org-move-item-down)))
+  (should-error
+   (org-test-with-temp-text "- item 1\n- item 2"
+     (forward-line)
+     (org-move-item-down)))
   ;; ... unless `org-list-use-circular-motion' is non-nil.  In this
   ;; case, move to the first item.
-  (org-test-with-temp-text "- item 1\n- item 2\n- item 3"
-    (forward-line 2)
-    (let ((org-list-use-circular-motion t)) (org-move-item-down))
-    (should (equal (buffer-string) "- item 3\n- item 1\n- item 2\n")))
+  (should
+   (equal  "- item 3\n- item 1\n- item 2\n"
+	   (org-test-with-temp-text "- item 1\n- item 2\n<point>- item 3"
+	     (let ((org-list-use-circular-motion t)) (org-move-item-down))
+	     (buffer-string))))
   ;; Preserve item visibility.
-  (org-test-with-temp-text "* Headline\n- item 1\n  body 1\n- item 2\n  body 2"
-    (let ((org-cycle-include-plain-lists t))
-      (search-forward "- item 1")
-      (org-cycle)
-      (search-forward "- item 2")
-      (org-cycle))
-    (search-backward "- item 1")
-    (org-move-item-down)
-    (forward-line)
-    (should (org-invisible-p2))
-    (search-backward " body 2")
-    (should (org-invisible-p2)))
+  (should
+   (equal
+    '(outline outline)
+    (org-test-with-temp-text
+	"* Headline\n<point>- item 1\n  body 1\n- item 2\n  body 2"
+      (let ((org-cycle-include-plain-lists t))
+	(org-cycle)
+	(search-forward "- item 2")
+	(org-cycle))
+      (search-backward "- item 1")
+      (org-move-item-down)
+      (forward-line)
+      (list (org-invisible-p2)
+	    (progn
+	      (search-backward " body 2")
+	      (org-invisible-p2))))))
   ;; Preserve children visibility.
   (org-test-with-temp-text "* Headline
 - item 1
@@ -793,6 +863,11 @@ b. Item 2<point>"
 	  (org-test-with-temp-text "1. A<point>\n\n2. \n\n3. B"
 	    (org-insert-item)
 	    (buffer-string))))
+  (should
+   (equal "1. a\n2. \n   b\n3. c"
+	  (org-test-with-temp-text "1. a<point>\n   b\n2. c"
+	    (org-insert-item)
+	    (buffer-string))))
   ;; Preserve list visibility when inserting an item.
   (should
    (equal
@@ -817,7 +892,13 @@ b. Item 2<point>"
    (= 0
       (org-test-with-temp-text "- item\n  - sub-list\n  resume item<point>"
 	(org-insert-item)
-	(current-indentation)))))
+	(current-indentation))))
+  ;; Test splitting with blanks around.
+  (should
+   (equal "- A\n  B\n- C\n  - D\n- [ ] E"
+    (org-test-with-temp-text "- A\n  B <point> C\n  - D\n- [ ] E"
+      (org-insert-item)
+      (buffer-string)))))
 
 (ert-deftest test-org-list/repair ()
   "Test `org-list-repair' specifications."
@@ -950,6 +1031,36 @@ b. Item 2<point>"
 		     (org-update-checkbox-count))
 		   (buffer-string)))))
 
+
+;;; API
+
+(ert-deftest test-org-list/at-radio-list-p ()
+  "Test `org-at-radio-list-p' specifications."
+  (should
+   (org-test-with-temp-text "#+attr_org: :radio t\n<point>- foo"
+     (org-at-radio-list-p)))
+  (should
+   (org-test-with-temp-text "#+attr_org: :radio t\n- foo\n<point>- bar"
+     (org-at-radio-list-p)))
+  (should
+   (org-test-with-temp-text "#+ATTR_ORG: :radio t\n<point>- foo"
+     (org-at-radio-list-p)))
+  (should
+   (org-test-with-temp-text "#+attr_org: :radio bar\n<point>- foo"
+     (org-at-radio-list-p)))
+  (should-not
+   (org-test-with-temp-text "#+attr_org: :radio nil\n<point>- foo"
+     (org-at-radio-list-p)))
+  (should-not
+   (org-test-with-temp-text "<point>- foo"
+     (org-at-radio-list-p)))
+  (should-not
+   (org-test-with-temp-text "#+attr_org: :radio t\n- foo\n  <point>bar"
+     (org-at-radio-list-p)))
+  (should-not
+   (org-test-with-temp-text
+       "#+attr_org: :radio t\n#+begin_example\n<point>- foo\n#+end_example"
+     (org-at-radio-list-p))))
 
 
 ;;; Miscellaneous
@@ -1002,6 +1113,13 @@ b. Item 2<point>"
   (should
    (equal "- H\nText"
 	  (org-test-with-temp-text "* H\n:PROPERTIES:\n:A: 1\n:END:\n\n\nText"
+	    (org-toggle-item nil)
+	    (buffer-string))))
+  ;; When no region is marked and point is on a blank line
+  ;; only operate on current line.
+  (should
+   (equal " \n* H :tag:"
+	  (org-test-with-temp-text "<point> \n* H :tag:"
 	    (org-toggle-item nil)
 	    (buffer-string))))
   ;; When a region is marked and first line is a headline, all

@@ -551,8 +551,6 @@ datatypes) in a Haskell file for the `imenu' package."
     ;; Loop forwards from the beginning of the buffer through the
     ;; starts of the top-level declarations.
     (while (< (point) (point-max))
-      (message "Scanning declarations in %s... (%3d%%)" bufname
-               (/ (- (point) (point-min)) divisor-of-progress))
       ;; Grab the next declaration.
       (setq result (haskell-ds-generic-find-next-decl bird-literate))
       (if result
@@ -580,7 +578,6 @@ datatypes) in a Haskell file for the `imenu' package."
                     (setq index-inst-alist
                           (cl-acons name start-pos index-inst-alist)))))))
     ;; Now sort all the lists, label them, and place them in one list.
-    (message "Sorting declarations in %s..." bufname)
     (when index-type-alist
       (push (cons "Datatypes"
                   (sort index-type-alist 'haskell-ds-imenu-label-cmp))
@@ -604,7 +601,6 @@ datatypes) in a Haskell file for the `imenu' package."
                 index-alist)
         (setq index-alist (append index-alist
                                   (sort index-var-alist 'haskell-ds-imenu-label-cmp)))))
-    (message "Sorting declarations in %s...done" bufname)
     ;; Return the alist.
     index-alist))
 

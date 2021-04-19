@@ -210,7 +210,7 @@ This does two different kinds of triggers:
 	 (pos (plist-get change-plist :position))
 	 (from (plist-get change-plist :from))
 	 (to (plist-get change-plist :to))
-	 (org-log-done nil) ; IMPROTANT!: no logging during automatic trigger!
+	 (org-log-done nil) ; IMPORTANT!: no logging during automatic trigger!
 	 trigger triggers tr p1 p2 kwd id)
     (catch 'return
       (unless (eq type 'todo-state-change)
@@ -367,7 +367,7 @@ this ID property, that entry is also checked."
 	 (pos (plist-get change-plist :position))
 	 (from (plist-get change-plist :from))
 	 (to (plist-get change-plist :to))
-	 (org-log-done nil) ; IMPROTANT!: no logging during automatic trigger
+	 (org-log-done nil) ; IMPORTANT!: no logging during automatic trigger
 	 blocker blockers bl p1 p2
 	 (proceed-p
 	  (catch 'return

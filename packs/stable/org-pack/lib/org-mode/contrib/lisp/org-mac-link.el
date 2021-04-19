@@ -494,7 +494,7 @@ The links are of the form <link>::split::<name>."
 ;; Handle links from together.app
 (org-link-set-parameters "x-together-item" :follow #'org-mac-together-item-open)
 
-(defun org-mac-together-item-open (uid)
+(defun org-mac-together-item-open (uid _)
   "Open UID, which is a reference to an item in Together."
   (shell-command (concat "open -a Together \"x-together-item:" uid "\"")))
 
@@ -553,7 +553,7 @@ The links are of the form <link>::split::<name>."
 ;; Handle links from AddressBook.app
 (org-link-set-parameters "addressbook" :follow #'org-mac-addressbook-item-open)
 
-(defun org-mac-addressbook-item-open (uid)
+(defun org-mac-addressbook-item-open (uid _)
   "Open UID, which is a reference to an item in the addressbook."
   (shell-command (concat "open \"addressbook:" uid "\"")))
 
@@ -588,7 +588,7 @@ The links are of the form <link>::split::<name>."
 
 (org-link-set-parameters "skim" :follow #'org-mac-skim-open)
 
-(defun org-mac-skim-open (uri)
+(defun org-mac-skim-open (uri _)
   "Visit page of pdf in Skim"
   (let* ((page (when (string-match "::\\(.+\\)\\'" uri)
                  (match-string 1 uri)))
@@ -647,7 +647,7 @@ The links are of the form <link>::split::<name>."
 
 (org-link-set-parameters "acrobat" :follow #'org-mac-acrobat-open)
 
-(defun org-mac-acrobat-open (uri)
+(defun org-mac-acrobat-open (uri _)
   "Visit page of pdf in Acrobat"
   (let* ((page (when (string-match "::\\(.+\\)\\'" uri)
                  (match-string 1 uri)))
@@ -697,7 +697,7 @@ The links are of the form <link>::split::<name>."
 
 (org-link-set-parameters "mac-outlook" :follow #'org-mac-outlook-message-open)
 
-(defun org-mac-outlook-message-open (msgid)
+(defun org-mac-outlook-message-open (msgid _)
   "Open a message in Outlook"
   (do-applescript
    (concat
@@ -809,7 +809,7 @@ after heading."
 
 (org-link-set-parameters "mac-evernote" :follow #'org-mac-evernote-note-open)
 
-(defun org-mac-evernote-note-open (noteid)
+(defun org-mac-evernote-note-open (noteid _)
   "Open a note in Evernote"
   (do-applescript
    (concat
@@ -860,7 +860,7 @@ note(s) in Evernote.app and make a link out of it/them."
 
 (org-link-set-parameters "x-devonthink-item" :follow #'org-devonthink-item-open)
 
-(defun org-devonthink-item-open (uid)
+(defun org-devonthink-item-open (uid _)
   "Open UID, which is a reference to an item in DEVONthink Pro Office."
   (shell-command (concat "open \"x-devonthink-item:" uid "\"")))
 
@@ -908,11 +908,11 @@ selected items in DEVONthink Pro Office and make link(s) out of it/them."
 
 (org-link-set-parameters "message" :follow #'org-mac-message-open)
 
-(defun org-mac-message-open (message-id)
+(defun org-mac-message-open (message-id _)
   "Visit the message with MESSAGE-ID.
 This will use the command `open' with the message URL."
   (start-process (concat "open message:" message-id) nil
-                 "open" (concat "message://<" (substring message-id 2) ">")))
+                 "open" (concat "message://%3C" (substring message-id 2) "%3E")))
 
 (defun org-as-get-selected-mail ()
   "AppleScript to create links to selected messages in Mail.app."

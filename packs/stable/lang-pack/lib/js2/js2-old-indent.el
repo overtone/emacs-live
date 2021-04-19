@@ -564,7 +564,7 @@ Currently, JSX indentation supports the following styles:
 
   React.render(
     <div></div>,
-    document.querySelector('.root')
+    document.querySelector(\\='.root\\=')
   );"
   (let ((current-pos (point))
         (current-line (line-number-at-pos))

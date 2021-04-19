@@ -268,7 +268,7 @@ For example, for code
   {rules: {password: {required: function() {}}}}
 
 when NODE is the inner `js2-object-prop-mode',
-it returns `(\"rules\" \"password\")'."
+it returns (\"rules\" \"password\")."
   (let (rlt (n node))
     (while (setq n (js2-imenu-parent-prop-node n))
       (push (js2-prop-node-name (js2-object-prop-node-left n)) rlt))

@@ -199,6 +199,7 @@ otherwise place the point at the beginning of the inserted text."
 	       (goto-char (1+ (match-beginning 0))))
 	   (insert inside-text)
 	   (goto-char (point-min))))
+       (font-lock-ensure (point-min) (point-max))
        ,@body)))
 (def-edebug-spec org-test-with-temp-text (form body))
 

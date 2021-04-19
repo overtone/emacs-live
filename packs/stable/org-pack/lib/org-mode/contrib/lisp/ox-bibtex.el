@@ -154,7 +154,8 @@ to `org-bibtex-citation-p' predicate."
 
 ;;; Follow cite: links
 
-(defun org-bibtex-file nil "Org-mode file of bibtex entries.")
+(defvar org-bibtex-file nil
+  "Org file of BibTeX entries.")
 
 (defun org-bibtex-goto-citation (&optional citation)
   "Visit a citation given its ID."
@@ -162,10 +163,8 @@ to `org-bibtex-citation-p' predicate."
   (let ((citation (or citation (completing-read "Citation: " (obe-citations)))))
     (find-file (or org-bibtex-file
 		   (error "`org-bibtex-file' has not been configured")))
-    (goto-char (point-min))
-    (when (re-search-forward (format "  :CUSTOM_ID: %s" citation) nil t)
-      (outline-previous-visible-heading 1)
-      t)))
+    (let ((position (org-find-property "CUSTOM_ID" citation)))
+      (and position (progn (goto-char position) t)))))
 
 (let ((jump-fn (car (cl-remove-if-not #'fboundp '(ebib org-bibtex-goto-citation)))))
   (org-add-link-type "cite" jump-fn))

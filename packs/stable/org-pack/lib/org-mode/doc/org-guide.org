@@ -114,8 +114,8 @@ the entire show and hide functionalities into a single command,
 :END:
 
 Headlines define the structure of an outline tree.  The headlines in
-Org start with one or more stars, on the left margin[fn:1].  For
-example:
+Org start on the left margin[fn:1] with one or more stars followed by
+a space.  For example:
 
 #+begin_example
 ,* Top level headline
@@ -169,8 +169,8 @@ Org uses just two commands, bound to {{{kbd(TAB)}}} and
 When Emacs first visits an Org file, the global state is set to
 OVERVIEW, i.e., only the top level headlines are visible.  This can be
 configured through the variable ~org-startup-folded~, or on a per-file
-basis by adding a =STARTUP= keyword to =overview=, =content=, or
-=showall=, like this:
+basis by adding a =STARTUP= keyword to =overview=, =content=,
+=showall=, =showeverything= or =show<n>levels= (n = 2..5) like this:
 
 : #+STARTUP: content
 

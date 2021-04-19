@@ -33,7 +33,7 @@ current Emacs instance to be used as editor by adding it to the
 appropriate mode hooks:
 
     (add-hook 'shell-mode-hook  'with-editor-export-editor)
-    (add-hook 'term-mode-hook   'with-editor-export-editor)
+    (add-hook 'term-exec-hook   'with-editor-export-editor)
     (add-hook 'eshell-mode-hook 'with-editor-export-editor)
 
 Some variants of this function exist, these two forms are

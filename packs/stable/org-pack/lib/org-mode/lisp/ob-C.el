@@ -4,6 +4,7 @@
 
 ;; Author: Eric Schulte
 ;;      Thierry Banel
+;; Maintainer: Thierry Banel
 ;; Keywords: literate programming, reproducible research
 ;; Homepage: https://orgmode.org
 
@@ -182,7 +183,7 @@ or `org-babel-execute:C++' or `org-babel-execute:D'."
 		       cmdline)))
 	    "")))
       (when results
-	(setq results (org-trim (org-remove-indentation results)))
+	(setq results (org-remove-indentation results))
 	(org-babel-reassemble-table
 	 (org-babel-result-cond (cdr (assq :result-params params))
 	   (org-babel-read results t)
@@ -232,7 +233,13 @@ its header arguments."
 	       (list
 		;; includes
 		(mapconcat
-		 (lambda (inc) (format "#include %s" inc))
+		 (lambda (inc)
+		   ;; :includes '(<foo> <bar>) gives us a list of
+		   ;; symbols; convert those to strings.
+		   (when (symbolp inc) (setq inc (symbol-name inc)))
+		   (if (string-prefix-p "<" inc)
+		       (format "#include %s" inc)
+		     (format "#include \"%s\"" inc)))
 		 includes "\n")
 		;; defines
 		(mapconcat

@@ -2,7 +2,6 @@ language: nix
 
 env:
   - EMACS_CI=emacs-26-3 TARGET=deploy-manual
-  - EMACS_CI=emacs-26-3 TARGET=check-external
 
 install: |
     sh <(curl https://get.haskellstack.org/)

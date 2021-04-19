@@ -1,8 +1,8 @@
 # git-gutter.el
 
+[![circleci badge][circleci-badge]][circleci-link]
 [![melpa badge][melpa-badge]][melpa-link]
 [![melpa stable badge][melpa-stable-badge]][melpa-stable-link]
-[![circleci badge][circleci-badge]][circleci-link]
 
 ## Introduction
 

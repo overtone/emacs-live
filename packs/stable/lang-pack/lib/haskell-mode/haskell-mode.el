@@ -1205,8 +1205,8 @@ generated."
          (command (haskell-cabal--compose-hasktags-command dir)))
     (if (not command)
         (error "Unable to compose hasktags command")
-      (shell-command command)
-      (haskell-mode-message-line "Tags generated.")
+      (when (zerop (shell-command command))
+        (haskell-mode-message-line "Tags generated."))
       (when and-then-find-this-tag
         (let ((tags-file-name dir))
           (xref-find-definitions and-then-find-this-tag))))))

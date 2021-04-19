@@ -5,7 +5,8 @@
 
 # clj-refactor.el
 
-`clj-refactor` provides refactoring support for Clojure projects.
+`clj-refactor` provides refactoring support for Clojure projects. It complements
+the refactoring functionality you'd find in `clojure-mode` and CIDER.
 
 Here's a small teaser, helping you add a missing libspec:
 
@@ -21,7 +22,7 @@ It's available on [MELPA](http://melpa.org/) and [MELPA Stable](http://stable.me
 
 ## Setup
 
-```el
+```emacs-lisp
 (require 'clj-refactor)
 
 (defun my-clojure-mode-hook ()
@@ -47,8 +48,8 @@ Either in your project's `project.clj` or in the `:user`
 profile found at `~/.lein/profiles.clj`:
 
 ```clojure
-:plugins [[refactor-nrepl "2.2.0"]
-          [cider/cider-nrepl "0.11.0"]]
+:plugins [[refactor-nrepl "2.5.0"]
+          [cider/cider-nrepl "0.24.0"]]
 ```
 
 Check out the much longer
@@ -59,7 +60,24 @@ page in the wiki for a less opinionated approach.
 behavior of various commands.  You can read more about that
 [here](https://github.com/clojure-emacs/clj-refactor.el/wiki#customization).
 
-### In case `refactor-nrepl` used for advanced refactorings
+### Compatibility
+
+clj-refactor | refactor-nrepl | CIDER       | Clojure | Java |
+-------------|----------------|-------------|---------|------|
+2.4.0        |  2.4.0         | 0.17, 0.18  | 1.7+    | 8+   |
+2.5.0        |  2.5.0         | 0.24        | 1.8+    | 8+   |
+
+### Middleware
+
+Most users will not need to worry about this, but if you wish to configure middleware yourself, the name of the middleware is:
+
+> `refactor-nrepl.middleware/wrap-refactor`
+
+Unlike `cider-nrepl` which defines many middleware with a handful of related
+ops, `refactor-repl` defines a single middleware which houses all of the provided nREPL
+ops.
+
+### In case `refactor-nrepl` is used for advanced (AST-based) refactorings
 
 The [analyzer](https://github.com/clojure/tools.analyzer)
 `refactor-nrepl` uses needs to eval the code too in order to be able
@@ -86,8 +104,7 @@ All functions in `clj-refactor` have a two-letter mnemonic
 shortcut. E.g. `rs` for `cljr-rename-symbol`.  Given the prefix choice
 in the example setup you'd call this function by hitting `C-c C-m rs`
 
-See the wiki for a complete [list of available refactorings]
-(https://github.com/clojure-emacs/clj-refactor.el/wiki),
+See the wiki for a complete [list of available refactorings](https://github.com/clojure-emacs/clj-refactor.el/wiki),
 demonstrations and customization points.
 
 If you're having trouble remembering the mnemonic shortcuts, check out
@@ -128,8 +145,8 @@ Thanks to [everyone](https://github.com/clojure-emacs/clj-refactor.el/graphs/con
 
 ## License
 
-Copyright © 2012-2016 Magnar Sveen
-Copyright © 2014-2016 Magnar Sveen, Lars Andersen, Benedek Fazekas
+Copyright © 2012-2014 Magnar Sveen
+Copyright © 2014-2020 Magnar Sveen, Lars Andersen, Benedek Fazekas, Bozhidar Batsov
 
 Author: Magnar Sveen <magnars@gmail.com>
         Lars Andersen <expez@expez.com>

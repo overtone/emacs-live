@@ -483,10 +483,6 @@ e.g. \"title-subject:t\"."
 (defvar org-koma-letter-special-contents nil
   "Holds special content temporarily.")
 
-(make-obsolete-variable 'org-koma-letter-use-title
-                        'org-export-with-title
-                        "25.1" 'set)
-
 
 ;;; Define Back-End
 

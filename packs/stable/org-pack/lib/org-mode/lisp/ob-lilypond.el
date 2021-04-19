@@ -205,7 +205,7 @@ If error in compilation, attempt to mark the error in lilypond org file."
 	  (delete-file org-babel-lilypond-temp-file))
 	(rename-file org-babel-lilypond-tangled-file
 		     org-babel-lilypond-temp-file))
-      (switch-to-buffer-other-window "*lilypond*")
+      (org-switch-to-buffer-other-window "*lilypond*")
       (erase-buffer)
       (org-babel-lilypond-compile-lilyfile org-babel-lilypond-temp-file)
       (goto-char (point-min))
@@ -262,7 +262,7 @@ FILE-NAME is full path to lilypond file."
   "Mark the erroneous lines in the lilypond org buffer.
 FILE-NAME is full path to lilypond file.
 LINE is the erroneous line."
-  (switch-to-buffer-other-window
+  (org-switch-to-buffer-other-window
    (concat (file-name-nondirectory
             (org-babel-lilypond-switch-extension file-name ".org"))))
   (let ((temp (point)))
@@ -391,7 +391,8 @@ If TEST is non-nil, the shell command is returned and is not run."
 (defun org-babel-lilypond-switch-extension (file-name ext)
   "Utility command to swap current FILE-NAME extension with EXT."
   (concat (file-name-sans-extension
-           file-name) ext))
+           file-name)
+	 ext))
 
 (defun org-babel-lilypond-get-header-args (mode)
   "Default arguments to use when evaluating a lilypond source block.

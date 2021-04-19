@@ -1,11 +1,14 @@
 ;;; git-gutter.el --- Port of Sublime Text plugin GitGutter -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2016-2020 Syohei YOSHIDA and Neil Okamoto
+;; Copyright (C) 2016-2020 Syohei YOSHIDA <syohex@gmail.com>
+;; Copyright (C) 2020 Neil Okamoto <neil.okamoto+melpa@gmail.com>
+;; Copyright (C) 2020 Shen, Jen-Chieh <jcs090218@gmail.com>
 
 ;; Author: Syohei YOSHIDA <syohex@gmail.com>
 ;; Maintainer: Neil Okamoto <neil.okamoto+melpa@gmail.com>
+;;             Shen, Jen-Chieh <jcs090218@gmail.com>
 ;; URL: https://github.com/emacsorphanage/git-gutter
-;; Version: 0.90
+;; Version: 0.91
 ;; Package-Requires: ((emacs "24.3"))
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -35,29 +38,29 @@
   :group 'vc)
 
 (defcustom git-gutter:window-width nil
-  "Character width of gutter window. Emacs mistakes width of some characters.
+  "Character width of gutter window.  Emacs mistakes width of some characters.
 It is better to explicitly assign width to this variable, if you use full-width
 character for signs of changes"
   :type 'integer
   :group 'git-gutter)
 
 (defcustom git-gutter:diff-option ""
-  "Option of 'git diff'"
+  "Option of 'git diff'."
   :type 'string
   :group 'git-gutter)
 
 (defcustom git-gutter:subversion-diff-option ""
-  "Option of 'svn diff'"
+  "Option of 'svn diff'."
   :type 'string
   :group 'git-gutter)
 
 (defcustom git-gutter:mercurial-diff-option ""
-  "Option of 'hg diff'"
+  "Option of 'hg diff'."
   :type 'string
   :group 'git-gutter)
 
 (defcustom git-gutter:bazaar-diff-option ""
-  "Option of 'bzr diff'"
+  "Option of 'bzr diff'."
   :type 'string
   :group 'git-gutter)
 
@@ -70,7 +73,7 @@ character for signs of changes"
 
 (defcustom git-gutter:update-windows-commands
   '(kill-buffer ido-kill-buffer)
-  "Each command of this list is executed, gutter information is updated and
+  "Each command of this list is executed, gutter information is updated and \
 gutter information of other windows."
   :type '(list (function :tag "Update command")
                (repeat :inline t (function :tag "Update command")))
@@ -82,7 +85,7 @@ gutter information of other windows."
     find-file-hook
     after-change-major-mode-hook
     text-scale-mode-hook)
-  "hook points of updating gutter"
+  "Hook points of updating gutter."
   :type '(list (hook :tag "HookPoint")
                (repeat :inline t (hook :tag "HookPoint")))
   :group 'git-gutter)
@@ -93,42 +96,42 @@ gutter information of other windows."
   :group 'git-gutter)
 
 (defcustom git-gutter:separator-sign nil
-  "Separator sign"
+  "Separator sign."
   :type 'string
   :group 'git-gutter)
 
 (defcustom git-gutter:modified-sign "="
-  "Modified sign"
+  "Modified sign."
   :type 'string
   :group 'git-gutter)
 
 (defcustom git-gutter:added-sign "+"
-  "Added sign"
+  "Added sign."
   :type 'string
   :group 'git-gutter)
 
 (defcustom git-gutter:deleted-sign "-"
-  "Deleted sign"
+  "Deleted sign."
   :type 'string
   :group 'git-gutter)
 
 (defcustom git-gutter:unchanged-sign nil
-  "Unchanged sign"
+  "Unchanged sign."
   :type 'string
   :group 'git-gutter)
 
 (defcustom git-gutter:hide-gutter nil
-  "Hide gutter if there are no changes"
+  "Hide gutter if there are no changes."
   :type 'boolean
   :group 'git-gutter)
 
 (defcustom git-gutter:lighter " GitGutter"
-  "Minor mode lighter in mode-line"
+  "Minor mode lighter in mode-line."
   :type 'string
   :group 'git-gutter)
 
 (defcustom git-gutter:verbosity 0
-  "Log/message level. 4 means all, 0 nothing."
+  "Log/message level.  4 means all, 0 nothing."
   :type 'integer
   :group 'git-gutter)
 
@@ -169,21 +172,21 @@ gutter information of other windows."
   :group 'git-gutter)
 
 (defvar git-gutter:view-diff-function #'git-gutter:view-diff-infos
-  "Function of viewing changes")
+  "Function of viewing changes.")
 
 (defvar git-gutter:clear-function #'git-gutter:clear-diff-infos
-  "Function of clear changes")
+  "Function of clear changes.")
 
 (defvar git-gutter:init-function 'nil
-  "Function of initialize")
+  "Function of initialize.")
 
 (defcustom git-gutter-mode-on-hook nil
-  "Hook run when git-gutter mode enable"
+  "Hook run when git-gutter mode enable."
   :type 'hook
   :group 'git-gutter)
 
 (defcustom git-gutter-mode-off-hook nil
-  "Hook run when git-gutter mode disable"
+  "Hook run when git-gutter mode disable."
   :type 'hook
   :group 'git-gutter)
 
@@ -193,7 +196,7 @@ gutter information of other windows."
   :group 'git-gutter)
 
 (defcustom git-gutter:ask-p t
-  "Ask whether commit/revert or not"
+  "Ask whether commit/revert or not."
   :type 'boolean
   :group 'git-gutter)
 
@@ -222,7 +225,7 @@ Can be a directory-local variable in your project.")
 (defvar git-gutter:vcs-type nil)
 (defvar git-gutter:revision-history nil)
 (defvar git-gutter:update-timer nil)
-(defvar git-gutter:last-sha1 nil)
+(defvar git-gutter:last-chars-modified-tick nil)
 
 (defvar git-gutter:popup-buffer "*git-gutter:diff*")
 (defvar git-gutter:ignore-commands
@@ -233,7 +236,8 @@ Can be a directory-local variable in your project.")
     helm-confirm-and-exit-minibuffer))
 
 (defmacro git-gutter:awhen (test &rest body)
-  "Anaphoric when."
+  "Anaphoric when.
+Argument TEST is the case before BODY execution."
   (declare (indent 1))
   `(let ((it ,test))
      (when it ,@body)))
@@ -467,8 +471,12 @@ Can be a directory-local variable in your project.")
 
 (defun git-gutter:next-visual-line (arg)
   (let ((line-move-visual t))
-    (with-no-warnings
-      (next-line arg))))
+    (or (ignore-errors
+          ;; next-line raises exception at end of buffer
+          (with-no-warnings
+            (next-line arg))
+          t)
+        (goto-char (point-max)))))
 
 (defun git-gutter:view-for-unchanged ()
   (save-excursion
@@ -1021,13 +1029,19 @@ start revision."
     (with-temp-file tmpfile
       (insert content))))
 
-(defsubst git-gutter:original-file-content (file)
+(defun git-gutter:original-file-content (file vcs)
   (with-temp-buffer
-    (when (zerop (process-file "git" nil t nil "show" (concat ":" file)))
-      (buffer-substring-no-properties (point-min) (point-max)))))
+    (cl-case vcs
+      (git
+       (when (zerop (process-file "git" nil t nil "show" (concat ":" file)))
+         (buffer-substring-no-properties (point-min) (point-max))))
+      ((svn hg bzr)
+       (let ((command (symbol-name vcs)))
+         (when (zerop (process-file command nil t nil "cat" file))
+           (buffer-substring-no-properties (point-min) (point-max))))))))
 
 (defun git-gutter:write-original-content (tmpfile filename)
-  (git-gutter:awhen (git-gutter:original-file-content filename)
+  (git-gutter:awhen (git-gutter:original-file-content filename git-gutter:vcs-type)
     (with-temp-file tmpfile
       (insert it)
       t)))
@@ -1059,24 +1073,36 @@ start revision."
              (delete-file now))))))))
 
 (defun git-gutter:should-update-p ()
-  (let ((sha1 (secure-hash 'sha1 (current-buffer))))
-    (unless (equal sha1 git-gutter:last-sha1)
-      (setq git-gutter:last-sha1 sha1))))
+  (let ((chars-modified-tick (buffer-chars-modified-tick)))
+    (unless (equal chars-modified-tick git-gutter:last-chars-modified-tick)
+      (setq-local git-gutter:last-chars-modified-tick chars-modified-tick))))
 
-(defun git-gutter:git-root ()
+(defun git-gutter:vcs-root (vcs)
   (with-temp-buffer
-    (when (zerop (process-file "git" nil t nil "rev-parse" "--show-toplevel"))
-      (goto-char (point-min))
-      (file-name-as-directory
-       (buffer-substring-no-properties (point) (line-end-position))))))
+    (cl-case vcs
+      (git
+       (when (zerop (process-file "git" nil t nil "rev-parse" "--show-toplevel"))
+         (goto-char (point-min))
+         (file-name-as-directory
+          (buffer-substring-no-properties (point) (line-end-position)))))
+      (svn
+       (when (zerop (process-file "svn" nil t nil "info"))
+         (goto-char (point-min))
+         (when (re-search-forward "^Working Copy Root Path: \(.+\)$" nil t)
+           (file-name-as-directory (match-string-no-properties 1)))))
+      ((hg bzr)
+       (let ((command (symbol-name vcs)))
+         (when (zerop (process-file command nil t nil "root"))
+           (goto-char (point-min))
+           (file-name-as-directory
+            (buffer-substring-no-properties (point) (line-end-position)))))))))
 
 (defun git-gutter:live-update ()
   (git-gutter:awhen (git-gutter:base-file)
     (when (and git-gutter:enabled
-               (buffer-modified-p)
                (git-gutter:should-update-p))
       (let ((file (file-name-nondirectory it))
-            (root (file-truename (git-gutter:git-root)))
+            (root (file-truename (git-gutter:vcs-root git-gutter:vcs-type)))
             (now (make-temp-file "git-gutter-cur"))
             (original (make-temp-file "git-gutter-orig")))
         (if (git-gutter:write-original-content original (file-relative-name it root))

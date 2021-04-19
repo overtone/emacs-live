@@ -2,7 +2,7 @@
 
 ;; Copyright (c) 2012-2013  Sebastian Wiesner
 ;; Copyright (C) 2013-2015  Rüdiger Sonderfeld
-;; Copyright (C) 2012-2016  The Magit Project Contributors
+;; Copyright (C) 2012-2018  The Magit Project Contributors
 
 ;; Author: Sebastian Wiesner <lunaryorn@gmail.com>
 ;;         Rüdiger Sonderfeld <ruediger@c-plusplus.net>
@@ -47,4 +47,4 @@
 
 (provide 'git-modes)
 
-;;; gitignore-mode.el ends here
+;;; git-modes.el ends here

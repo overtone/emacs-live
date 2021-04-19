@@ -13,28 +13,28 @@ commands:
 jobs:
   test-emacs-25:
     docker:
-      - image: silex/emacs:25-dev
+      - image: silex/emacs:25-ci-cask
         entrypoint: bash
     steps:
       - default-steps
 
   test-emacs-26:
     docker:
-      - image: silex/emacs:26-dev
+      - image: silex/emacs:26-ci-cask
         entrypoint: bash
     steps:
       - default-steps
 
   test-emacs-27:
     docker:
-      - image: silex/emacs:27-dev
+      - image: silex/emacs:27-ci-cask
         entrypoint: bash
     steps:
       - default-steps
 
   test-emacs-master:
     docker:
-      - image: silex/emacs:master-dev
+      - image: silex/emacs:master-ci-cask
         entrypoint: bash
     steps:
       - default-steps

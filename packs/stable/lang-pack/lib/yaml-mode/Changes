@@ -1,5 +1,16 @@
+0.0.15 Mon Nov  9 11:22:02 CET 2020
+	* Fix propertization for lists of dicts with literal block (Ben
+	Strutt)
+	* Exclude newline from `yaml-nested-map-re` (Vasilij
+	Schneidermann)
+	* Fix indent after comment line (Adam Hess)
+	* Speed up syntax-propertize-function in files with large JSON
+	strings (Dmitry Gutov)
+	* Fix maintainer email (Vasilij Schneidermann)
+	* Fix typos (Jonas Bernoulli, Damien Cassou)
 0.0.14 Tue Jun 25 19:21:12 CET 2019
-	* Adjust filling in comment to behave as in text modes (Tim Showalter)
+	* Adjust filling in comment to behave as in text modes (Tim
+	Showalter)
 	* Improve block literal fontification (wasamasa)
 	* Support escaped quote in a single quoted string (Väinö Järvelä)
 	* Support double quote in implicit keys (Väinö Järvelä)
@@ -9,7 +20,8 @@
 	leading whitespace (Jonathan Frederickson)
 	* Treat alias nodes as punctuation (Wilfred Hughes)
 0.0.13 Fri Nov 4 22:23:34 CET 2016
-	* Derive from text-mode, adjustments to major mode definition (wasamasa)
+	* Derive from text-mode, adjustments to major mode definition
+	(wasamasa)
 	* Inclusion of longstanding PRs (wasamasa)
 	* Improved comment highlighting (wasamasa)
 	* Add *.raml to auto-mode-alist (Ville Skyttä)

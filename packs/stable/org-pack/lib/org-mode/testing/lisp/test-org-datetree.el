@@ -26,7 +26,7 @@
   ;; When date is missing, create it.
   (should
    (string-match
-    "\\`\\* 2012\n\\*\\* 2012-03 .*\n\\*\\*\\* 2012-03-29 .*\\'"
+    "\\`\\* 2012\n\n\\*\\* 2012-03 .*\n\n\\*\\*\\* 2012-03-29 .*\\'"
     (org-test-with-temp-text ""
       (let ((org-datetree-add-timestamp nil))
 	(org-datetree-find-date-create '(3 29 2012)))
@@ -34,7 +34,7 @@
   ;; Do not create new year node when one exists.
   (should
    (string-match
-    "\\`\\* 2012\n\\*\\* 2012-03 .*\n\\*\\*\\* 2012-03-29 .*\\'"
+    "\\`\\* 2012\n\n\\*\\* 2012-03 .*\n\n\\*\\*\\* 2012-03-29 .*\\'"
     (org-test-with-temp-text "* 2012\n"
       (let ((org-datetree-add-timestamp nil))
 	(org-datetree-find-date-create '(3 29 2012)))
@@ -42,24 +42,24 @@
   ;; Do not create new month node when one exists.
   (should
    (string-match
-    "\\`\\* 2012\n\\*\\* 2012-03 .*\n\\*\\*\\* 2012-03-29 .*\\'"
-    (org-test-with-temp-text "* 2012\n** 2012-03 month"
+    "\\`\\* 2012\n\n\\*\\* 2012-03 .*\n\n\\*\\*\\* 2012-03-29 .*\\'"
+    (org-test-with-temp-text "* 2012\n\n** 2012-03 month"
       (let ((org-datetree-add-timestamp nil))
 	(org-datetree-find-date-create '(3 29 2012)))
       (org-trim (buffer-string)))))
   ;; Do not create new day node when one exists.
   (should
    (string-match
-    "\\`\\* 2012\n\\*\\* 2012-03 .*\n\\*\\*\\* 2012-03-29 .*\\'"
-    (org-test-with-temp-text "* 2012\n** 2012-03 month\n*** 2012-03-29 day"
+    "\\`\\* 2012\n\n\\*\\* 2012-03 .*\n\n\\*\\*\\* 2012-03-29 .*\\'"
+    (org-test-with-temp-text "* 2012\n\n** 2012-03 month\n\n*** 2012-03-29 day"
       (let ((org-datetree-add-timestamp nil))
 	(org-datetree-find-date-create '(3 29 2012)))
       (org-trim (buffer-string)))))
   ;; Sort new entry in right place.
   (should
    (string-match
-    "\\`\\* 2012\n\\*\\* 2012-02 .*\n\\*\\*\\* 2012-02-01 .*\n\n\\*\\* 2012-03 .*\n\\*\\*\\* 2012-03-29 .*\\'"
-    (org-test-with-temp-text "* 2012\n** 2012-03 month\n*** 2012-03-29 day"
+    "\\`\\* 2012\n\n\\*\\* 2012-02 .*\n\n\\*\\*\\* 2012-02-01 .*\n\n\\*\\* 2012-03 .*\n\n\\*\\*\\* 2012-03-29 .*\\'"
+    (org-test-with-temp-text "* 2012\n\n** 2012-03 month\n\n*** 2012-03-29 day"
       (let ((org-datetree-add-timestamp nil))
 	(org-datetree-find-date-create '(3 29 2012))
 	(org-datetree-find-date-create '(2 1 2012)))
@@ -68,14 +68,14 @@
   ;; in entry.  When set to `inactive', insert an inactive one.
   (should
    (string-match
-    "\\`\\* 2012\n\\*\\* 2012-03 .*\n\\*\\*\\* \\(2012-03-29\\) .*\n[ \t]*<\\1.*?>\\'"
+    "\\`\\* 2012\n\n\\*\\* 2012-03 .*\n\n\\*\\*\\* \\(2012-03-29\\) .*\n[ \t]*<\\1.*?>\\'"
     (org-test-with-temp-text "* 2012\n"
       (let ((org-datetree-add-timestamp t))
 	(org-datetree-find-date-create '(3 29 2012)))
       (org-trim (buffer-string)))))
   (should
    (string-match
-    "\\`\\* 2012\n\\*\\* 2012-03 .*\n\\*\\*\\* \\(2012-03-29\\) .*\n[ \t]*\\[\\1.*?\\]\\'"
+    "\\`\\* 2012\n\n\\*\\* 2012-03 .*\n\n\\*\\*\\* \\(2012-03-29\\) .*\n[ \t]*\\[\\1.*?\\]\\'"
     (org-test-with-temp-text "* 2012\n"
       (let ((org-datetree-add-timestamp 'inactive))
 	(org-datetree-find-date-create '(3 29 2012)))
@@ -91,9 +91,9 @@
       (org-trim (buffer-string)))))
   (should
    (string-match
-    "\\*\\* H1.1\n:PROPERTIES:\n:DATE_TREE: t\n:END:\n\\*\\*\\* 2012"
+    "\\*\\* H1.1\n:PROPERTIES:\n:DATE_TREE: t\n:END:\n\n\\*\\*\\* 2012"
     (org-test-with-temp-text
-	"* H1\n** H1.1\n:PROPERTIES:\n:DATE_TREE: t\n:END:\n* H2"
+	"* H1\n\n** H1.1\n:PROPERTIES:\n:DATE_TREE: t\n:END:\n\n* H2"
       (let ((org-datetree-add-timestamp nil))
 	(org-datetree-find-date-create '(3 29 2012)))
       (org-trim (buffer-string)))))
@@ -101,24 +101,35 @@
   (should
    (string-match
     "\\*\\*\\* 2012-03-29"
-    (org-test-with-temp-text "* 2012\n** 2012-03 month\n*** 2012-03-29 day"
+    (org-test-with-temp-text "* 2012\n\n** 2012-03 month\n\n*** 2012-03-29 day"
       (let ((org-datetree-add-timestamp nil))
 	(org-datetree-find-date-create '(3 29 2012)))
       (buffer-substring (point) (line-end-position)))))
   (should
    (string-match
     "\\*\\*\\* 2012-03-29"
-    (org-test-with-temp-text "* 2012\n** 2012-03 month\n*** 2012-03-29 day"
+    (org-test-with-temp-text "* 2012\n\n** 2012-03 month\n\n*** 2012-03-29 day"
       (let ((org-datetree-add-timestamp t))
 	(org-datetree-find-date-create '(3 29 2012)))
       (buffer-substring (point) (line-end-position))))))
+
+(ert-deftest test-org-datetree/find-month-create ()
+  "Test `org-datetree-find-month-create' specifications."
+  ;; When date is missing, create it with the entry under month.
+  (should
+   (string-match
+    "\\`\\* 2012\n\n\\*\\* 2012-03 .*\\'"
+    (org-test-with-temp-text ""
+      (let ((org-datetree-add-timestamp nil))
+	(org-datetree-find-month-create '(3 29 2012)))
+      (org-trim (buffer-string))))))
 
 (ert-deftest test-org-datetree/find-iso-week-create ()
   "Test `org-datetree-find-iso-date-create' specificaiton."
   ;; When date is missing, create it.
   (should
    (string-match
-    "\\`\\* 2015\n\\*\\* 2015-W01\n\\*\\*\\* 2014-12-31 .*\\'"
+    "\\`\\* 2015\n\n\\*\\* 2015-W01\n\n\\*\\*\\* 2014-12-31 .*\\'"
     (org-test-with-temp-text ""
       (let ((org-datetree-add-timestamp nil))
 	(org-datetree-find-iso-week-create '(12 31 2014)))
@@ -126,7 +137,7 @@
   ;; Do not create new year node when one exists.
   (should
    (string-match
-    "\\`\\* 2015\n\\*\\* 2015-W01\n\\*\\*\\* 2014-12-31 .*\\'"
+    "\\`\\* 2015\n\n\\*\\* 2015-W01\n\n\\*\\*\\* 2014-12-31 .*\\'"
     (org-test-with-temp-text "* 2015\n"
       (let ((org-datetree-add-timestamp nil))
 	(org-datetree-find-iso-week-create '(12 31 2014)))
@@ -134,23 +145,23 @@
   ;; Do not create new month node when one exists.
   (should
    (string-match
-    "\\`\\* 2015\n\\*\\* 2015-W01\n\\*\\*\\* 2014-12-31 .*\\'"
-    (org-test-with-temp-text "* 2015\n** 2015-W01"
+    "\\`\\* 2015\n\n\\*\\* 2015-W01\n\n\\*\\*\\* 2014-12-31 .*\\'"
+    (org-test-with-temp-text "* 2015\n\n** 2015-W01"
       (let ((org-datetree-add-timestamp nil))
 	(org-datetree-find-iso-week-create '(12 31 2014)))
       (org-trim (buffer-string)))))
   ;; Do not create new day node when one exists.
   (should
    (string-match
-    "\\`\\* 2015\n\\*\\* 2015-W01\n\\*\\*\\* 2014-12-31 .*\\'"
-    (org-test-with-temp-text "* 2015\n** 2015-W01\n*** 2014-12-31 day"
+    "\\`\\* 2015\n\n\\*\\* 2015-W01\n\n\\*\\*\\* 2014-12-31 .*\\'"
+    (org-test-with-temp-text "* 2015\n\n** 2015-W01\n\n*** 2014-12-31 day"
       (let ((org-datetree-add-timestamp nil))
 	(org-datetree-find-iso-week-create '(12 31 2014)))
       (org-trim (buffer-string)))))
   ;; Sort new entry in right place.
   (should
    (string-match
-    "\\`\\* 2015\n\\*\\* 2015-W01\n\\*\\*\\* 2014-12-31 .*\n\n\\*\\* 2015-W36\n\\*\\*\\* 2015-09-01 .*\\'"
+    "\\`\\* 2015\n\n\\*\\* 2015-W01\n\n\\*\\*\\* 2014-12-31 .*\n\n\\*\\* 2015-W36\n\n\\*\\*\\* 2015-09-01 .*\\'"
     (org-test-with-temp-text "* 2015"
       (let ((org-datetree-add-timestamp nil))
 	(org-datetree-find-iso-week-create '(9 1 2015))
@@ -160,14 +171,14 @@
   ;; in entry.  When set to `inactive', insert an inactive one.
   (should
    (string-match
-    "\\`\\* 2015\n\\*\\* 2015-W01\n\\*\\*\\* \\(2014-12-31\\) .*\n[ \t]*<\\1.*?>\\'"
+    "\\`\\* 2015\n\n\\*\\* 2015-W01\n\n\\*\\*\\* \\(2014-12-31\\) .*\n[ \t]*<\\1.*?>\\'"
     (org-test-with-temp-text "* 2015\n"
       (let ((org-datetree-add-timestamp t))
 	(org-datetree-find-iso-week-create '(12 31 2014)))
       (org-trim (buffer-string)))))
   (should
    (string-match
-    "\\`\\* 2015\n\\*\\* 2015-W01\n\\*\\*\\* \\(2014-12-31\\) .*\n[ \t]*\\[\\1.*?\\]\\'"
+    "\\`\\* 2015\n\n\\*\\* 2015-W01\n\n\\*\\*\\* \\(2014-12-31\\) .*\n[ \t]*\\[\\1.*?\\]\\'"
     (org-test-with-temp-text "* 2015\n"
       (let ((org-datetree-add-timestamp 'inactive))
 	(org-datetree-find-iso-week-create '(12 31 2014)))
@@ -183,9 +194,9 @@
       (org-trim (buffer-string)))))
   (should
    (string-match
-    "\\*\\* H1.1\n:PROPERTIES:\n:WEEK_TREE: t\n:END:\n\\*\\*\\* 2015"
+    "\\*\\* H1.1\n:PROPERTIES:\n:WEEK_TREE: t\n:END:\n\n\\*\\*\\* 2015"
     (org-test-with-temp-text
-	"* H1\n** H1.1\n:PROPERTIES:\n:WEEK_TREE: t\n:END:\n* H2"
+	"* H1\n** H1.1\n:PROPERTIES:\n:WEEK_TREE: t\n:END:\n\n* H2"
       (let ((org-datetree-add-timestamp nil))
 	(org-datetree-find-iso-week-create '(12 31 2014)))
       (org-trim (buffer-string)))))
@@ -193,14 +204,14 @@
   (should
    (string-match
     "\\*\\*\\* 2014-12-31"
-    (org-test-with-temp-text "* 2015\n** 2015-W01\n*** 2014-12-31 day"
+    (org-test-with-temp-text "* 2015\n\n** 2015-W01\n\n*** 2014-12-31 day"
       (let ((org-datetree-add-timestamp nil))
 	(org-datetree-find-iso-week-create '(12 31 2014)))
       (buffer-substring (point) (line-end-position)))))
   (should
    (string-match
     "\\*\\*\\* 2014-12-31"
-    (org-test-with-temp-text "* 2015\n** 2015-W01\n*** 2014-12-31 day"
+    (org-test-with-temp-text "* 2015\n\n** 2015-W01\n\n*** 2014-12-31 day"
       (let ((org-datetree-add-timestamp t))
 	(org-datetree-find-iso-week-create '(12 31 2014)))
       (buffer-substring (point) (line-end-position))))))

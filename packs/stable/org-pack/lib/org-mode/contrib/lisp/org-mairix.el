@@ -139,7 +139,7 @@ the buffer just like 'message-send-and-exit' does."
           (cons (list link desc) org-stored-links)))
   (message-bury (current-buffer)))
 
-(defun org-mairix-open (search)
+(defun org-mairix-open (search _)
   "Function to open mairix link.
 
 We first need to split it into its individual parts, and then
@@ -186,7 +186,7 @@ applications in order to mimic `org-store-link'.  Used by
   :type 'string)
 
 ;; When we resolve some of the issues with `org-store-link' detailed
-;; at <http://thread.gmane.org/gmane.emacs.orgmode/4217/focus=4635>,
+;; at <https://orgmode.org/list/20071105181739.GB13544@atlantic.linksys.moosehall
 ;; we might not need org-mairix-insert-link.
 
 (defun org-mairix-insert-link ()

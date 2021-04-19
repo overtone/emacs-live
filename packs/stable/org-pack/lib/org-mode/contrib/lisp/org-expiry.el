@@ -2,7 +2,7 @@
 ;;
 ;; Copyright 2007-2020 Free Software Foundation, Inc.
 ;;
-;; Author: Bastien Guerry
+;; Author: Bastien Guerry <bzg@gnu.org>
 ;; Version: 0.2
 ;; Keywords: org expiry
 

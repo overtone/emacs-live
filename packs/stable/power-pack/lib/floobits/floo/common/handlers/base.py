@@ -15,6 +15,7 @@ class BaseHandler(event_emitter.EventEmitter):
         # TODO: removeme?
         utils.reload_settings()
         self.req_ids = {}
+        self.cbs = {}
 
     def build_protocol(self, *args):
         self.proto = self.PROTOCOL(*args)
@@ -22,7 +23,7 @@ class BaseHandler(event_emitter.EventEmitter):
         self.proto.on('connect', self.on_connect)
         return self.proto
 
-    def send(self, d):
+    def send(self, d, cb=None):
         """@return the request id"""
         if not d:
             return
@@ -32,6 +33,8 @@ class BaseHandler(event_emitter.EventEmitter):
         if name != "pong":
             self.req_ids[req_id] = name
 
+        if cb:
+            self.cbs[req_id] = cb
         return req_id
 
     def on_data(self, name, data):
@@ -41,7 +44,11 @@ class BaseHandler(event_emitter.EventEmitter):
                 del self.req_ids[req_id]
             except KeyError:
                 msg.warn('No outstanding req_id ', req_id)
-
+            cb = self.cbs.get(req_id)
+            if cb:
+                del self.cbs[req_id]
+                # TODO: squelch exceptions here?
+                cb(data)
         handler = getattr(self, '_on_%s' % name, None)
         if handler:
             return handler(data)
@@ -75,6 +82,7 @@ class BaseHandler(event_emitter.EventEmitter):
         if self.req_ids:
             msg.warn("Unresponded msgs", self.req_ids)
             self.req_ids = {}
+        self.cbs = {}
         reactor.reactor.stop_handler(self)
         if G.AGENT is self:
             G.AGENT = None

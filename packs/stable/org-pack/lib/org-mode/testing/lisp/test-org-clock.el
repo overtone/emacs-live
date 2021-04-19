@@ -577,7 +577,7 @@ CLOCK: [2016-12-28 Wed 13:09]--[2016-12-28 Wed 15:09] =>  2:00"
   ;; If there is no file attached to the document, link directly to
   ;; the headline.
   (should
-   (string-match-p "| +\\[\\[Foo]\\[Foo]] +| 26:00 +|"
+   (string-match-p "| +\\[\\[\\*Foo]\\[Foo]] +| 26:00 +|"
 		   (org-test-with-temp-text
 		       "* Foo
 CLOCK: [2016-12-27 Wed 13:09]--[2016-12-28 Wed 15:09] => 26:00"
@@ -585,7 +585,7 @@ CLOCK: [2016-12-27 Wed 13:09]--[2016-12-28 Wed 15:09] => 26:00"
   ;; Otherwise, link to the headline in the current file.
   (should
    (string-match-p
-    "| \\[\\[file:filename::Foo]\\[Foo]] +| 26:00 +|"
+    "| \\[\\[file:filename::\\*Foo]\\[Foo]] +| 26:00 +|"
     (org-test-with-temp-text
 	(org-test-with-temp-text-in-file
 	    "* Foo
@@ -600,28 +600,28 @@ CLOCK: [2016-12-27 Wed 13:09]--[2016-12-28 Wed 15:09] => 26:00"
   ;; headline.
   (should
    (string-match-p
-    "| \\[\\[Foo]\\[Foo]] +| 26:00 +|"
+    "| \\[\\[\\*Foo]\\[Foo]] +| 26:00 +|"
     (org-test-with-temp-text
 	"* TODO Foo
 CLOCK: [2016-12-27 Wed 13:09]--[2016-12-28 Wed 15:09] => 26:00"
       (test-org-clock-clocktable-contents ":link t :lang en"))))
   (should
    (string-match-p
-    "| \\[\\[Foo]\\[Foo]] +| 26:00 +|"
+    "| \\[\\[\\*Foo]\\[Foo]] +| 26:00 +|"
     (org-test-with-temp-text
 	"* [#A] Foo
 CLOCK: [2016-12-27 Wed 13:09]--[2016-12-28 Wed 15:09] => 26:00"
       (test-org-clock-clocktable-contents ":link t :lang en"))))
   (should
    (string-match-p
-    "| \\[\\[Foo]\\[Foo]] +| 26:00 +|"
+    "| \\[\\[\\*Foo]\\[Foo]] +| 26:00 +|"
     (org-test-with-temp-text
 	"* COMMENT Foo
 CLOCK: [2016-12-27 Wed 13:09]--[2016-12-28 Wed 15:09] => 26:00"
       (test-org-clock-clocktable-contents ":link t"))))
   (should
    (string-match-p
-    "| \\[\\[Foo]\\[Foo]] +| 26:00 +|"
+    "| \\[\\[\\*Foo]\\[Foo]] +| 26:00 +|"
     (org-test-with-temp-text
 	"* Foo :tag:
 CLOCK: [2016-12-27 Wed 13:09]--[2016-12-28 Wed 15:09] => 26:00"
@@ -629,14 +629,14 @@ CLOCK: [2016-12-27 Wed 13:09]--[2016-12-28 Wed 15:09] => 26:00"
   ;; Remove statistics cookie from headline description.
   (should
    (string-match-p
-    "| \\[\\[Foo]\\[Foo]] +| 26:00 +|"
+    "| \\[\\[\\*Foo]\\[Foo]] +| 26:00 +|"
     (org-test-with-temp-text
 	"* Foo [50%]
 CLOCK: [2016-12-27 Wed 13:09]--[2016-12-28 Wed 15:09] => 26:00"
       (test-org-clock-clocktable-contents ":link t :lang en"))))
   (should
    (string-match-p
-    "| \\[\\[Foo]\\[Foo]] +| 26:00 +|"
+    "| \\[\\[\\*Foo]\\[Foo]] +| 26:00 +|"
     (org-test-with-temp-text
 	"* Foo [1/2]
 CLOCK: [2016-12-27 Wed 13:09]--[2016-12-28 Wed 15:09] => 26:00"
@@ -645,14 +645,14 @@ CLOCK: [2016-12-27 Wed 13:09]--[2016-12-28 Wed 15:09] => 26:00"
   ;; links if there is no description.
   (should
    (string-match-p
-    "| \\[\\[Foo \\\\\\[\\\\\\[https://orgmode\\.org\\\\]\\\\\\[Org mode\\\\]\\\\]]\\[Foo Org mode]] +| 26:00 +|"
+    "| \\[\\[\\*Foo \\\\\\[\\\\\\[https://orgmode\\.org\\\\]\\\\\\[Org mode\\\\]\\\\]]\\[Foo Org mode]] +| 26:00 +|"
     (org-test-with-temp-text
 	"* Foo [[https://orgmode.org][Org mode]]
 CLOCK: [2016-12-27 Wed 13:09]--[2016-12-28 Wed 15:09] => 26:00"
       (test-org-clock-clocktable-contents ":link t :lang en"))))
   (should
    (string-match-p
-    "| \\[\\[Foo \\\\\\[\\\\\\[https://orgmode\\.org\\\\]\\\\]]\\[Foo https://orgmode\\.org]] +| 26:00 +|"
+    "| \\[\\[\\*Foo \\\\\\[\\\\\\[https://orgmode\\.org\\\\]\\\\]]\\[Foo https://orgmode\\.org]] +| 26:00 +|"
     (org-test-with-temp-text
 	"* Foo [[https://orgmode.org]]
 CLOCK: [2016-12-27 Wed 13:09]--[2016-12-28 Wed 15:09] => 26:00"
@@ -1053,6 +1053,39 @@ CLOCK: [2014-04-03 Thu 08:00]--[2014-04-03 Thu 16:00] =>  8:00"
       (let ((system-time-locale "en_US"))
         (test-org-clock-clocktable-contents
 	    ":step month :mstart 4 :block 2014 :stepskip0 t")))))
+  ;; Test ":step semimonth".
+  (should
+   (string-match-p
+    "
+.*?\\[2014-03-01 .*
+.*
+.*
+|.*?| \\*8:00\\* |
+.*
+| Foo +| 8:00 +|
+
+.*?\\[2014-03-16 .*
+.*
+.*
+|.*?| \\*2:00\\* |
+.*
+| Foo +| 2:00 +|
+
+.*?\\[2014-04-01 .*
+.*
+.*
+|.*?| \\*7:00\\* |
+.*
+| Foo +| 7:00 +|
+"
+    (org-test-with-temp-text
+     "* Foo
+CLOCK: [2014-03-04 Tue 08:00]--[2014-03-04 Tue 16:00] =>  8:00
+CLOCK: [2014-03-24 Mon 08:00]--[2014-03-24 Mon 10:00] =>  2:00
+CLOCK: [2014-04-03 Thu 08:00]--[2014-04-03 Thu 15:00] =>  7:00"
+     (let ((system-time-locale "en_US"))
+       (test-org-clock-clocktable-contents
+	":step semimonth :block 2014 :stepskip0 t")))))
   ;; Test ":step year".
   (should
    (string-match-p

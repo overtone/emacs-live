@@ -1248,7 +1248,7 @@ INFO is a plist holding contextual information.  See
                 ((string= type "file") (org-export-file-uri raw-path))
                 (t raw-path))))
     (cond
-     ((org-export-custom-protocol-maybe link desc 'groff))
+     ((org-export-custom-protocol-maybe link desc 'groff info))
      ;; Image file.
      (imagep (org-groff-link--inline-image link info))
      ;; import groff files

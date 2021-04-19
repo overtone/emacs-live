@@ -111,13 +111,14 @@
 	(buf (get-buffer org-agenda-buffer-name))
         org-agenda-files)
     (when buf (kill-buffer buf))
-    (org-test-with-temp-text "<2017-03-17 Fri>"
-      (org-follow-timestamp-link))	;creates a sticky agenda
-    (org-test-agenda--kill-all-agendas)
-    (org-agenda-list)
-    (should (= 1 (length (org-test-agenda--agenda-buffers))))
-    (should (string= "*Org Agenda*"
-		     (buffer-name (car (org-test-agenda--agenda-buffers))))))
+    (dolist (fn '(org-agenda-list org-todo-list))
+      (org-test-with-temp-text "<2017-03-17 Fri>"
+			       (org-follow-timestamp-link)) ;creates a sticky agenda
+      (org-test-agenda--kill-all-agendas)
+      (funcall fn)
+      (should (= 1 (length (org-test-agenda--agenda-buffers))))
+      (should (string= "*Org Agenda*"
+		       (buffer-name (car (org-test-agenda--agenda-buffers)))))))
   (org-test-agenda--kill-all-agendas))
 
 (ert-deftest test-org-agenda/sticky-agenda-name-after-reload ()

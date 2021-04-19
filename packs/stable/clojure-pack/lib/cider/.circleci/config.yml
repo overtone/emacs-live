@@ -1,0 +1,73 @@
+version: 2.1
+
+# Default actions to perform on each Emacs version
+commands:
+  setup:
+    steps:
+      - checkout
+      - run:
+          name: Install Eldev
+          command: curl -fsSL https://raw.github.com/doublep/eldev/master/webinstall/circle-eldev > x.sh && source ./x.sh
+  test:
+    steps:
+      - run:
+          name: Run regression tests
+          command: eldev -dtT -p test
+  lint:
+    steps:
+      - run:
+          name: Run Elisp-lint
+          command: eldev lint
+      - run:
+          name: Byte-compile `.el' files
+          command: eldev -dtT compile --warnings-as-errors
+
+jobs:
+  test-emacs-25:
+    docker:
+      - image: silex/emacs:25-dev
+        entrypoint: bash
+    steps:
+      - setup
+      - test
+
+  test-emacs-26:
+    docker:
+      - image: silex/emacs:26-dev
+        entrypoint: bash
+    steps:
+      - setup
+      - test
+
+  test-emacs-27:
+    docker:
+      - image: silex/emacs:27-dev
+        entrypoint: bash
+    steps:
+      - setup
+      - test
+
+  test-emacs-master:
+    docker:
+      - image: silex/emacs:master-dev
+        entrypoint: bash
+    steps:
+      - setup
+      - test
+
+  test-lint:
+    docker:
+      - image: silex/emacs:27-dev
+    steps:
+      - setup
+      - lint
+
+workflows:
+  version: 2
+  ci-test-matrix:
+    jobs:
+      - test-emacs-25
+      - test-emacs-26
+      - test-emacs-27
+      - test-emacs-master
+      - test-lint

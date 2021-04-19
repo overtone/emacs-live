@@ -1,11 +1,12 @@
 [![License GPL 3][badge-license]][copying]
 [![MELPA][melpa-badge]][melpa-package]
 [![MELPA Stable][melpa-stable-badge]][melpa-stable-package]
-[![travis][badge-travis]][travis]
+[![circleci][badge-circleci]][circleci]
 
 # Clojure Mode
 
-Provides Emacs font-lock, indentation, navigation and refactoring for the
+`clojure-mode` is an Emacs major mode that provides font-lock (syntax
+highlighting), indentation, navigation and refactoring support for the
 [Clojure(Script) programming language](http://clojure.org).
 
 This document assumes you're familiar with Emacs.  More thorough walkthroughs,
@@ -33,6 +34,9 @@ specific `clojure-mode` release.**
   - [Threading macros](#threading-macros-related-features)
   - [Cycling things](#cycling-things)
   - [Convert collection](#convert-collection)
+  - [Let expression](#let-expression)
+  - [Rename ns alias](#rename-ns-alias)
+  - [Add arity to a function](#add-arity-to-a-function)
 - [Related packages](#related-packages)
 - [REPL Interaction](#repl-interaction)
   - [Basic REPL](#basic-repl)
@@ -71,7 +75,6 @@ The `clojure-mode` package actually bundles together several major modes:
 * `clojure-mode` is a major mode for editing Clojure code
 * `clojurescript-mode` is a major mode for editing ClojureScript code
 * `clojurec-mode` is a major mode for editing `.cljc` source files
-* `clojurex-mode` is a major mode for editing `.cljx` source files
 
 All the major modes derive from `clojure-mode` and provide more or less the same
 functionality.  Differences can be found mostly in the font-locking -
@@ -90,6 +93,8 @@ well.
 
 ## Configuration
 
+In the spirit of Emacs, pretty much everything you can think of in `clojure-mode` is configurable.
+
 To see a list of available configuration options do `M-x customize-group RET clojure`.
 
 ### Indentation options
@@ -98,12 +103,19 @@ The default indentation rules in `clojure-mode` are derived from the
 [community Clojure Style Guide](https://github.com/bbatsov/clojure-style-guide).
 Please, refer to the guide for the general Clojure indentation rules.
 
+#### Indentation of docstrings
+
+By default multi-line docstrings are indented with 2 spaces, as this is a
+somewhat common standard in the Clojure community. You can however adjust this
+by modifying `clojure-docstring-fill-prefix-width`. Set it to 0 if you don't
+want multi-line docstrings to be indented at all (which is pretty common in most lisps).
+
 #### Indentation of function forms
 
 The indentation of function forms is configured by the variable
 `clojure-indent-style`. It takes three possible values:
 
-- `:always-align` (the default)
+- `always-align` (the default)
 
 ```clj
 (some-function
@@ -115,7 +127,7 @@ The indentation of function forms is configured by the variable
                2)
 ```
 
-- `:always-indent`
+- `always-indent`
 
 ```clj
 (some-function
@@ -127,7 +139,7 @@ The indentation of function forms is configured by the variable
   2)
 ```
 
-- `:align-arguments`
+- `align-arguments`
 
 ```clj
 (some-function
@@ -138,6 +150,9 @@ The indentation of function forms is configured by the variable
                1
                2)
 ```
+
+**Note:** Prior to clojure-mode 5.10 the configuration options for `clojure-indent-style` used to be
+keywords, but now they are symbols. Keywords will still be supported at least until clojure-mode 6.
 
 #### Indentation of macro forms
 
@@ -198,8 +213,21 @@ indent specifications. Here are a few examples:
 
 These follow the same rules as the `:style/indent` metadata specified by [cider-nrepl][].
 For instructions on how to write these specifications, see
-[this document](http://cider.readthedocs.org/en/latest/indent_spec/).
+[this document](https://docs.cider.mx/cider/indent_spec.html).
 The only difference is that you're allowed to use lists instead of vectors.
+
+### Indentation of Comments
+
+`clojure-mode` differentiates between comments like `;`, `;;`, etc.
+By default `clojure-mode` treats `;` as inline comments and *always* indents those.
+You can change this behaviour like this:
+
+```emacs-lisp
+(add-hook 'clojure-mode-hook (lambda () (setq-local comment-column 0)))
+```
+
+You might also want to change `comment-add` to 0 in that way, so that Emacs comment
+functions (e.g. `comment-region`) would use `;` by default instead of `;;`.
 
 ### Vertical alignment
 
@@ -232,47 +260,95 @@ to `clojure-mode`.
 
 ### Threading macros related features
 
-* Thread another expression.
+`clojure-thread`: Thread another form into the surrounding thread. Both `->>`
+and `->` variants are supported.
 
-Thread another form into the surrounding thread. Both `->>` and `->` variants
-are supported. See demonstration on the
-[clj-refactor.el wiki](https://github.com/clojure-emacs/clj-refactor.el/wiki/cljr-thread).
+<img width="512" src="/doc/clojure-thread.gif">
 
-* Unwind a threaded expression.
+`clojure-unwind`: Unwind a threaded expression. Supports both `->>` and `->`.
 
-Supports both `->>` and `->`. See demonstration on the
-[clj-refactor.el wiki](https://github.com/clojure-emacs/clj-refactor.el/wiki/cljr-unwind-thread).
+<img width="512" src="/doc/clojure-unwind.gif">
 
-* Wrap in thread first (`->`) and fully thread.
+`clojure-thread-first-all`: Introduce the thread first macro (`->`) and rewrite
+the entire form. With a prefix argument do not thread the last form.
 
-Introduce the thread first macro and rewrite the entire form. With a prefix
-argument do not thread the last form. See demonstration on the
-[clj-refactor.el wiki](https://github.com/clojure-emacs/clj-refactor.el/wiki/cljr-thread-first-all).
+<img width="512" src="/doc/clojure-thread-first-all.gif">
 
-* Wrap in thread last (`->>`) and fully thread.
+`clojure-thread-last-all`: Introduce the thread last macro and rewrite the
+entire form. With a prefix argument do not thread the last form.
 
-Introduce the thread last macro and rewrite the entire form. With a prefix
-argument do not thread the last form. See demonstration on the
-[clj-refactor.el wiki](https://github.com/clojure-emacs/clj-refactor.el/wiki/cljr-thread-last-all).
+<img width="512" src="/doc/clojure-thread-last-all.gif">
 
-* Fully unwind a threaded expression.
+`clojure-unwind-all`: Fully unwind a threaded expression removing the threading
+macro.
 
-Unwind and remove the threading macro. See demonstration on the
-[clj-refactor.el wiki](https://github.com/clojure-emacs/clj-refactor.el/wiki/cljr-unwind-all).
+<img width="512" src="/doc/clojure-unwind-all.gif">
 
 ### Cycling things
 
-* Cycle privacy
+`clojure-cycle-privacy`: Cycle privacy of `def`s or `defn`s. Use metadata
+explicitly with setting `clojure-use-metadata-for-privacy` to `t` for `defn`s
+too.
 
-Cycle privacy of `def`s or `defn`s. Use metadata explicitly with setting `clojure-use-metadata-for-privacy` to `t` for `defn`s too. See demonstration on the [clj-refactor.el wiki](https://github.com/clojure-emacs/clj-refactor.el/wiki/cljr-cycle-privacy).
+<img width="512" src="/doc/clojure-cycle-privacy.gif">
 
-* Cycle if/if-not
+`clojure-cycle-not`: Add or remove a `not` form around the current form.
 
-Find the closest if or if-not up the syntax tree and toggle it. Also transpose the "else" and "then" branches, keeping the semantics the same as before. See demonstration on the [clj-refactor.el wiki](https://github.com/clojure-emacs/clj-refactor.el/wiki/cljr-cycle-if).
+<img width="512" src="/doc/clojure-cycle-not.gif">
+
+`clojure-cycle-when`: Find the closest `when` or `when-not` up the syntax tree
+and toggle it.
+
+<img width="512" src="/doc/clojure-cycle-when.gif">
+
+`clojure-cycle-if`: Find the closest `if` or `if-not` up the syntax tree and
+toggle it. Also transpose the `else` and `then` branches, keeping the semantics
+the same as before.
+
+<img width="512" src="/doc/clojure-cycle-if.gif">
 
 ### Convert collection
 
 Convert any given collection at point to list, quoted list, map, vector or set.
+
+### Let expression
+
+`clojure-introduce-let`: Introduce a new `let` form. Put the current form into
+its binding form with a name provided by the user as a bound name. If called
+with a numeric prefix put the let form Nth level up in the form hierarchy.
+
+<img width="512" src="/doc/clojure-introduce-let.gif">
+
+`clojure-move-to-let`: Move the current form to the closest `let`'s binding
+form. Replace all occurrences of the form in the body of the let.
+
+<img width="512" src="/doc/clojure-move-to-let.gif">
+
+`clojure-let-forward-slurp-sexp`: Slurp the next form after the `let` into the
+`let`. Replace all occurrences of the bound forms in the form added to the `let`
+form. If called with a prefix argument slurp the next n forms.
+
+<img width="512" src="/doc/clojure-let-forward-slurp-sexp.gif">
+
+`clojure-let-backward-slurp-sexp`: Slurp the form before the `let` into the
+`let`. Replace all occurrences of the bound forms in the form added to the `let`
+form. If called with a prefix argument slurp the previous n forms.
+
+<img width="512" src="/doc/clojure-let-backward-slurp-sexp.gif">
+
+`paredit-convolute-sexp` is advised to replace occurrences of bound forms with their bound names when convolute is used on a let form.
+
+### Rename ns alias
+
+`clojure-rename-ns-alias`: Rename an alias inside a namespace declaration.
+
+<img width="512" src="/doc/clojure-rename-ns-alias.gif">
+
+### Add arity to a function
+
+`clojure-add-arity`: Add a new arity to an existing single-arity or multi-arity function.
+
+<img width="512" src="/doc/clojure-add-arity.gif">
 
 ## Related packages
 
@@ -351,8 +427,8 @@ enable it like this:
 
 ## REPL Interaction
 
-One of the fundamental aspects of Lisps in general and Clojure in
-particular is the notion of interactive programming - building your
+One of the fundamental aspects of Lisps in general, and Clojure in
+particular, is the notion of interactive programming - building your
 programs by continuously changing the state of the running Lisp
 program (as opposed to doing something more traditional like making a
 change and re-running the program afterwards to see the changes in
@@ -365,7 +441,9 @@ running Clojure process and evaluating code interactively.
 
 ### Basic REPL
 
-Install [inf-clojure][] for basic interaction with a REPL process.
+[inf-clojure][] provides basic interaction with a Clojure REPL process.
+It's very similar in nature and supported functionality to `inferior-lisp-mode`
+for Common Lisp.
 
 ### CIDER
 
@@ -380,7 +458,7 @@ An extensive changelog is available [here](CHANGELOG.md).
 
 ## License
 
-Copyright © 2007-2016 Jeffrey Chu, Lennart Staflin, Phil Hagelberg, Bozhidar
+Copyright © 2007-2020 Jeffrey Chu, Lennart Staflin, Phil Hagelberg, Bozhidar
 Batsov, Artur Malabarba and [contributors][].
 
 Distributed under the GNU General Public License; type <kbd>C-h C-c</kbd> to view it.
@@ -391,8 +469,8 @@ Distributed under the GNU General Public License; type <kbd>C-h C-c</kbd> to vie
 [melpa-package]: http://melpa.org/#/clojure-mode
 [melpa-stable-package]: http://stable.melpa.org/#/clojure-mode
 [COPYING]: http://www.gnu.org/copyleft/gpl.html
-[badge-travis]: https://travis-ci.org/clojure-emacs/clojure-mode.svg?branch=master
-[travis]: https://travis-ci.org/clojure-emacs/clojure-mode
+[badge-circleci]: https://circleci.com/gh/clojure-emacs/clojure-mode.svg?style=svg
+[circleci]: https://circleci.com/gh/clojure-emacs/clojure-mode
 [CIDER]: https://github.com/clojure-emacs/cider
 [cider-nrepl]: https://github.com/clojure-emacs/cider-nrepl
 [inf-clojure]: https://github.com/clojure-emacs/inf-clojure
