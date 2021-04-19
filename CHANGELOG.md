@@ -1,5 +1,23 @@
 # Emacs Live Changelog
 
+## 1.0-BETA-31 (Mon 19th April 2021)
+* Update for Emacs 27 compatability
+* update cider
+* stop using popwin in foundation-pack
+* removed hydra from clojure-pack
+* change jfosco to josephfosco in installer
+* completely removed popwin (not compatible and unsupported)
+* update to cl-lib
+* Huge thanks to @jfosco for putting pretty much all of the work into this release.
+
+## 1.0-BETA-30 (Mon 26th Aug 2020)
+
+## 1.0-BETA-28 (Thurs 22nd June 2016)
+
+## 1.0-BETA-27 (Thurs 14th July 2015)
+
+## 1.0-BETA-26 (Thurs 10th Dec 2014)
+
 ## 1.0-BETA-25 (Thurs 4th Sept 2014)
 * Update many, many dependencies (As usual)
 * Move to CIDER 0.7.0
