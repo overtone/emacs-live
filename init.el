@@ -49,7 +49,7 @@
 ;;
 ;;    emacs --debug-init
 ;;
-;; Please feel free to raise an issue on the Gihub tracker:
+;; Please feel free to raise an issue on the GitHub tracker:
 ;;
 ;;    https://github.com/overtone/emacs-live/issues
 ;;
