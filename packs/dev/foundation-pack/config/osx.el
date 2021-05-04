@@ -6,7 +6,9 @@
 ;; Make cut and paste work with the OS X clipboard
 
 (defun live-copy-from-osx ()
-  (shell-command-to-string "pbpaste"))
+  (let ((tramp-mode nil)
+        (default-directory "~"))
+       (shell-command-to-string "pbpaste")))
 
 (defun live-paste-to-osx (text &optional push)
   (let ((process-connection-type nil))
