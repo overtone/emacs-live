@@ -107,7 +107,7 @@ To see which files have been preserved:
 
     ls -allh $old_config
 
-To revert back to your old Emacs configs simply:
+To revert to your old Emacs configs simply:
 
     rm -rf ~/.emacs.d
     mv $old_config/.emacs* ~/
