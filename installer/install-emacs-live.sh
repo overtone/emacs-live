@@ -45,7 +45,7 @@ mkdir $tmp_dir
 $HTTP_CLIENT $tmp_dir/intro.txt https://raw.github.com/overtone/emacs-live/master/installer/intro.txt
 $HTTP_CLIENT $tmp_dir/outro.txt https://raw.github.com/overtone/emacs-live/master/installer/outro.txt
 
-# Print outro and ask for user confirmation to continue
+# Print intro and ask for user confirmation to continue
 echo ""
 echo ""
 echo $(tput setaf 4)
