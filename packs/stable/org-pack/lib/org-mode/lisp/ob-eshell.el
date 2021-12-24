@@ -3,6 +3,7 @@
 ;; Copyright (C) 2018-2020 Free Software Foundation, Inc.
 
 ;; Author: stardiviner <numbchild@gmail.com>
+;; Maintainer: stardiviner <numbchild@gmail.com>
 ;; Keywords: literate programming, reproducible research
 ;; Homepage: https://orgmode.org
 

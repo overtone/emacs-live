@@ -22,6 +22,7 @@
  (transient-mark-mode 1)
  (cua-mode 0)
  (setq er--show-expansion-message t)
+ (setq expand-region-smart-cursor nil)
  (setq set-mark-default-inactive nil)
  (deactivate-mark))
 

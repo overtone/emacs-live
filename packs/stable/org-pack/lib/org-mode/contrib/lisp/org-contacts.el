@@ -3,6 +3,7 @@
 ;; Copyright (C) 2010-2014 Julien Danjou <julien@danjou.info>
 
 ;; Author: Julien Danjou <julien@danjou.info>
+;; Maintainer: stardiviner <numbchild@gmail.com>
 ;; Keywords: outlines, hypermedia, calendar
 ;;
 ;; This file is NOT part of GNU Emacs.
@@ -1145,6 +1146,83 @@ are effectively trimmed).  If nil, all zero-length substrings are retained."
             (setq proplist (cons (org-trim linkstring) proplist)))
         (setq proplist (cons bufferstring proplist))))
     (cdr (reverse proplist))))
+
+;;; Add an Org link type `org-contact:' for easy jump to or searching org-contacts headline.
+;;; link spec: [[org-contact:query][desc]]
+(org-link-set-parameters "org-contact"
+			 :follow 'org-contacts-link-open
+			 :complete 'org-contacts-link-complete
+			 :store 'org-contacts-link-store
+			 :face 'org-contacts-link-face)
+
+(defun org-contacts-link-store ()
+  "Store the contact in `org-contacts-files' with a link."
+  (when (and (eq major-mode 'org-mode)
+	     (member (buffer-file-name) (mapcar 'expand-file-name org-contacts-files)))
+    (if org-id-link-to-org-use-id
+	(org-id-store-link)
+      (let ((headline-str (substring-no-properties (org-get-heading t t t t))))
+	(org-store-link-props
+	 :type "org-contact"
+	 :link headline-str
+	 :description headline-str)))))
+
+(defun org-contacts--all-contacts ()
+  "Return an alist (name . (file . position)) of all contacts in `org-contacts-files'."
+  (car (mapcar
+	(lambda (file)
+	  (unless (buffer-live-p (get-buffer (file-name-nondirectory file)))
+	    (find-file file))
+	  (with-current-buffer (get-buffer (file-name-nondirectory file))
+	    (org-map-entries
+	     (lambda ()
+	       (let ((name (substring-no-properties (org-get-heading t t t t)))
+		     (file (buffer-file-name))
+		     (position (point)))
+		 `(:name ,name :file ,file :position ,position))))))
+	org-contacts-files)))
+
+(defun org-contacts-link-open (path)
+  "Open contacts: link type with jumping or searching."
+  (let ((query path))
+    (cond
+     ((string-match "/.*/" query)
+      (let* ((f (car org-contacts-files))
+	     (buf (get-buffer (file-name-nondirectory f))))
+	(unless (buffer-live-p buf) (find-file f))
+	(with-current-buffer buf
+	  (string-match "/\\(.*\\)/" query)
+	  (occur (match-string 1 query)))))
+     (t
+      (let* ((f (car org-contacts-files))
+	     (buf (get-buffer (file-name-nondirectory f))))
+	(unless (buffer-live-p buf) (find-file f))
+	(with-current-buffer buf
+	  (goto-char (marker-position (org-find-exact-headline-in-buffer query)))))
+      ;; FIXME
+      ;; (let* ((contact-entry (plist-get (org-contacts--all-contacts) query))
+      ;; 	     (contact-name (plist-get contact-entry :name))
+      ;; 	     (file (plist-get contact-entry :file))
+      ;; 	     (position (plist-get contact-entry :position))
+      ;; 	     (buf (get-buffer (file-name-nondirectory file))))
+      ;; 	(unless (buffer-live-p buf) (find-file file))
+      ;; 	(with-current-buffer buf (goto-char position)))
+      ))))
+
+(defun org-contacts-link-complete (&optional arg)
+  "Create a org-contacts link using completion."
+  (let ((name (completing-read "org-contact Name: "
+			       (mapcar
+				(lambda (plist) (plist-get plist :name))
+				(org-contacts--all-contacts)))))
+    (concat "org-contact:" name)))
+
+(defun org-contacts-link-face (path)
+  "Different face color for different org-contacts link query."
+  (cond
+   ((string-match "/.*/" path)
+    '(:background "sky blue" :overline t :slant 'italic))
+   (t '(:inherit 'org-link))))
 
 (provide 'org-contacts)
 

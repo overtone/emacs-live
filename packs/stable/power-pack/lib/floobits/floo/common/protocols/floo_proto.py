@@ -45,7 +45,7 @@ def sock_debug(*args, **kwargs):
 
 class FlooProtocol(base.BaseProtocol):
     ''' Base FD Interface'''
-    MAX_RETRIES = 12
+    MAX_RETRIES = 13
     INITIAL_RECONNECT_DELAY = 500
 
     def __init__(self, host, port, secure=True):
@@ -62,7 +62,7 @@ class FlooProtocol(base.BaseProtocol):
         self._retries = self.MAX_RETRIES
         self._empty_reads = 0
         self._reconnect_timeout = None
-        self._cert_path = os.path.join(G.BASE_DIR, 'startssl-ca.pem')
+        self._cert_path = os.path.join(G.BASE_DIR, 'floobits.pem')
         self.req_id = 0
 
         self._host = host
@@ -76,6 +76,10 @@ class FlooProtocol(base.BaseProtocol):
             self._host = '127.0.0.1'
             self._port = None
             self._secure = False
+
+    @property
+    def retry_count(self):
+        return self.MAX_RETRIES - self._retries
 
     def start_proxy(self, host, port):
         if G.PROXY_PORT:
@@ -199,6 +203,8 @@ class FlooProtocol(base.BaseProtocol):
             with open(self._cert_path, 'wb') as cert_fd:
                 cert_fd.write(cert.CA_CERT.encode('utf-8'))
         conn_msg = '%s:%s: Connecting...' % (self.host, self.port)
+        if self.retry_count != 0:
+            conn_msg += ' (attempt %s) ' % (self.retry_count + 1)
         if self.port != self._port or self.host != self._host:
             conn_msg += ' (proxying through %s:%s)' % (self._host, self._port)
         if host != self._host:
@@ -339,7 +345,7 @@ class FlooProtocol(base.BaseProtocol):
             return
 
         # Only use proxy.floobits.com if we're trying to connect to floobits.com
-        G.OUTBOUND_FILTERING = self.host == 'floobits.com' and self._retries % 4 == 0
+        G.OUTBOUND_FILTERING = self.host == 'floobits.com' and self._retries % 3 == 0
         self._retries -= 1
 
     def reset_retries(self):

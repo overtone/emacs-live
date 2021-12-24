@@ -1,6 +1,6 @@
 ;;; git-rebase.el --- Edit Git rebase files  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2010-2016  The Magit Project Contributors
+;; Copyright (C) 2010-2020  The Magit Project Contributors
 ;;
 ;; You should have received a copy of the AUTHORS.md file which
 ;; lists all contributors.  If not, see http://magit.vc/authors.
@@ -53,11 +53,22 @@
 ;;   e        Edit the commit at point.
 ;;   s        Squash the commit at point, into the one above.
 ;;   f        Like "s" but don't also edit the commit message.
+;;   b        Break for editing at this point in the sequence.
 ;;   x        Add a script to be run with the commit at point
 ;;            being checked out.
+;;   z        Add noop action at point.
 ;;
-;;   RET      Show the commit at point in another buffer.
+;;   SPC      Show the commit at point in another buffer.
+;;   RET      Show the commit at point in another buffer and
+;;            select its window.
 ;;   C-/      Undo last change.
+;;
+;;   Commands for --rebase-merges:
+;;   l        Associate label with current HEAD in sequence.
+;;   MM       Merge specified revisions into HEAD.
+;;   Mt       Toggle whether the merge will invoke an editor
+;;            before committing.
+;;   t        Reset HEAD to the specified label.
 
 ;; You should probably also read the `git-rebase' manpage.
 
@@ -70,7 +81,10 @@
 (require 'magit)
 
 (and (require 'async-bytecomp nil t)
-     (memq 'magit (bound-and-true-p async-bytecomp-allowed-packages))
+     (let ((pkgs (bound-and-true-p async-bytecomp-allowed-packages)))
+       (if (consp pkgs)
+           (cl-intersection '(all magit) pkgs)
+         (memq pkgs '(all t))))
      (fboundp 'async-bytecomp-package-mode)
      (async-bytecomp-package-mode 1))
 
@@ -81,6 +95,7 @@
 
 (defgroup git-rebase nil
   "Edit Git rebase sequences."
+  :link '(info-link "(magit)Editing Rebase Sequences")
   :group 'tools)
 
 (defcustom git-rebase-auto-advance t
@@ -105,10 +120,12 @@
   :group 'faces
   :group 'git-rebase)
 
-(defface git-rebase-hash
-  '((((class color) (background light)) :foreground "grey60")
-    (((class color) (background  dark)) :foreground "grey40"))
+(defface git-rebase-hash '((t (:inherit magit-hash)))
   "Face for commit hashes."
+  :group 'git-rebase-faces)
+
+(defface git-rebase-label '((t (:inherit magit-refname)))
+  "Face for labels in label, merge, and reset lines."
   :group 'git-rebase-faces)
 
 (defface git-rebase-description nil
@@ -117,40 +134,59 @@
 
 (defface git-rebase-killed-action
   '((t (:inherit font-lock-comment-face :strike-through t)))
-  "Face for commented action and exec lines."
+  "Face for commented commit action lines."
   :group 'git-rebase-faces)
+
+(defface git-rebase-comment-hash
+  '((t (:inherit git-rebase-hash :weight bold)))
+  "Face for commit hashes in commit message comments."
+  :group 'git-rebase-faces)
+
+(defface git-rebase-comment-heading
+  '((t :inherit font-lock-keyword-face))
+  "Face for headings in rebase message comments."
+  :group 'git-commit-faces)
 
 ;;; Keymaps
 
 (defvar git-rebase-mode-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map special-mode-map)
-    (define-key map (kbd "q")    'undefined)
-    (define-key map [remap undo] 'git-rebase-undo)
-    (define-key map (kbd "RET") 'git-rebase-show-commit)
-    (define-key map (kbd "SPC") 'magit-diff-show-or-scroll-up)
-    (define-key map (kbd "x")   'git-rebase-exec)
-    (define-key map (kbd "c")   'git-rebase-pick)
-    (define-key map (kbd "r")   'git-rebase-reword)
-    (define-key map (kbd "w")   'git-rebase-reword)
-    (define-key map (kbd "e")   'git-rebase-edit)
-    (define-key map (kbd "s")   'git-rebase-squash)
-    (define-key map (kbd "f")   'git-rebase-fixup)
-    (define-key map (kbd "y")   'git-rebase-insert)
-    (define-key map (kbd "k")   'git-rebase-kill-line)
+    (define-key map (kbd "C-m") 'git-rebase-show-commit)
+    (define-key map (kbd   "p") 'git-rebase-backward-line)
+    (define-key map (kbd   "n") 'forward-line)
+    (define-key map (kbd "M-p") 'git-rebase-move-line-up)
+    (define-key map (kbd "M-n") 'git-rebase-move-line-down)
+    (define-key map (kbd   "c") 'git-rebase-pick)
+    (define-key map (kbd   "k") 'git-rebase-kill-line)
     (define-key map (kbd "C-k") 'git-rebase-kill-line)
-    (define-key map (kbd "p")   'git-rebase-backward-line)
-    (define-key map (kbd "n")   'forward-line)
-    (define-key map (kbd "M-p")      'git-rebase-move-line-up)
-    (define-key map (kbd "M-n")      'git-rebase-move-line-down)
-    (define-key map (kbd "M-<up>")   'git-rebase-move-line-up)
-    (define-key map (kbd "M-<down>") 'git-rebase-move-line-down)
-    (define-key map (kbd "C-x C-t")  'git-rebase-move-line-up)
+    (define-key map (kbd "b") 'git-rebase-break)
+    (define-key map (kbd "e") 'git-rebase-edit)
+    (define-key map (kbd "l") 'git-rebase-label)
+    (define-key map (kbd "MM") 'git-rebase-merge)
+    (define-key map (kbd "Mt") 'git-rebase-merge-toggle-editmsg)
+    (define-key map (kbd "m") 'git-rebase-edit)
+    (define-key map (kbd "f") 'git-rebase-fixup)
+    (define-key map (kbd "q") 'undefined)
+    (define-key map (kbd "r") 'git-rebase-reword)
+    (define-key map (kbd "w") 'git-rebase-reword)
+    (define-key map (kbd "s") 'git-rebase-squash)
+    (define-key map (kbd "t") 'git-rebase-reset)
+    (define-key map (kbd "x") 'git-rebase-exec)
+    (define-key map (kbd "y") 'git-rebase-insert)
+    (define-key map (kbd "z") 'git-rebase-noop)
+    (define-key map (kbd "SPC")     'git-rebase-show-or-scroll-up)
+    (define-key map (kbd "DEL")     'git-rebase-show-or-scroll-down)
+    (define-key map (kbd "C-x C-t") 'git-rebase-move-line-up)
+    (define-key map [M-up]          'git-rebase-move-line-up)
+    (define-key map [M-down]        'git-rebase-move-line-down)
+    (define-key map [remap undo]    'git-rebase-undo)
     map)
   "Keymap for Git-Rebase mode.")
 
-(put 'git-rebase-reword :advertised-binding "r")
+(put 'git-rebase-reword       :advertised-binding (kbd "r"))
 (put 'git-rebase-move-line-up :advertised-binding (kbd "M-p"))
+(put 'git-rebase-kill-line    :advertised-binding (kbd "k"))
 
 (easy-menu-define git-rebase-mode-menu git-rebase-mode-map
   "Git-Rebase mode menu"
@@ -161,6 +197,7 @@
     ["Squash" git-rebase-squash t]
     ["Fixup" git-rebase-fixup t]
     ["Kill" git-rebase-kill-line t]
+    ["Noop" git-rebase-noop t]
     ["Execute" git-rebase-exec t]
     ["Move Down" git-rebase-move-line-down t]
     ["Move Up" git-rebase-move-line-up t]
@@ -169,72 +206,191 @@
     ["Finish" with-editor-finish t]))
 
 (defvar git-rebase-command-descriptions
-  '((with-editor-finish        . "tell Git to make it happen")
-    (with-editor-cancel        . "tell Git that you changed your mind, i.e. abort")
-    (previous-line             . "move point to previous line")
-    (next-line                 . "move point to next line")
-    (git-rebase-move-line-up   . "move the commit at point up")
-    (git-rebase-move-line-down . "move the commit at point down")
-    (git-rebase-show-commit    . "show the commit at point in another buffer")
-    (undo                      . "undo last change")
-    (git-rebase-kill-line      . "drop the commit at point")))
+  '((with-editor-finish           . "tell Git to make it happen")
+    (with-editor-cancel           . "tell Git that you changed your mind, i.e. abort")
+    (git-rebase-backward-line     . "move point to previous line")
+    (forward-line                 . "move point to next line")
+    (git-rebase-move-line-up      . "move the commit at point up")
+    (git-rebase-move-line-down    . "move the commit at point down")
+    (git-rebase-show-or-scroll-up . "show the commit at point in another buffer")
+    (git-rebase-show-commit
+     . "show the commit at point in another buffer and select its window")
+    (undo                         . "undo last change")
+    (git-rebase-kill-line         . "drop the commit at point")
+    (git-rebase-insert            . "insert a line for an arbitrary commit")
+    (git-rebase-noop              . "add noop action at point")))
 
 ;;; Commands
 
 (defun git-rebase-pick ()
-  "Use commit on current line."
+  "Use commit on current line.
+If the region is active, act on all lines touched by the region."
   (interactive)
   (git-rebase-set-action "pick"))
 
 (defun git-rebase-reword ()
-  "Edit message of commit on current line."
+  "Edit message of commit on current line.
+If the region is active, act on all lines touched by the region."
   (interactive)
   (git-rebase-set-action "reword"))
 
 (defun git-rebase-edit ()
-  "Stop at the commit on the current line."
+  "Stop at the commit on the current line.
+If the region is active, act on all lines touched by the region."
   (interactive)
   (git-rebase-set-action "edit"))
 
 (defun git-rebase-squash ()
-  "Meld commit on current line into previous commit, edit message."
+  "Meld commit on current line into previous commit, edit message.
+If the region is active, act on all lines touched by the region."
   (interactive)
   (git-rebase-set-action "squash"))
 
 (defun git-rebase-fixup ()
-  "Meld commit on current line into previous commit, discard its message."
+  "Meld commit on current line into previous commit, discard its message.
+If the region is active, act on all lines touched by the region."
   (interactive)
   (git-rebase-set-action "fixup"))
 
-(defconst git-rebase-line
-  "^\\(#?\\(?:[fprse]\\|pick\\|reword\\|edit\\|squash\\|fixup\\|exec\\)\\) \
-\\(?:\\([^ \n]+\\) \\(.*\\)\\)?")
+(defvar-local git-rebase-comment-re nil)
+
+(defvar git-rebase-short-options
+  '((?b . "break")
+    (?e . "edit")
+    (?f . "fixup")
+    (?l . "label")
+    (?m . "merge")
+    (?p . "pick")
+    (?r . "reword")
+    (?s . "squash")
+    (?t . "reset")
+    (?x . "exec"))
+  "Alist mapping single key of an action to the full name.")
+
+(defclass git-rebase-action ()
+  (;; action-type: commit, exec, bare, label, merge
+   (action-type    :initarg :action-type    :initform nil)
+   ;; Examples for each action type:
+   ;; | action | action options | target  | trailer |
+   ;; |--------+----------------+---------+---------|
+   ;; | pick   |                | hash    | subject |
+   ;; | exec   |                | command |         |
+   ;; | noop   |                |         |         |
+   ;; | reset  |                | name    | subject |
+   ;; | merge  | -C hash        | name    | subject |
+   (action         :initarg :action         :initform nil)
+   (action-options :initarg :action-options :initform nil)
+   (target         :initarg :target         :initform nil)
+   (trailer        :initarg :trailer        :initform nil)
+   (comment-p      :initarg :comment-p      :initform nil)))
+
+(defvar git-rebase-line-regexps
+  `((commit . ,(concat
+                (regexp-opt '("e" "edit"
+                              "f" "fixup"
+                              "p" "pick"
+                              "r" "reword"
+                              "s" "squash")
+                            "\\(?1:")
+                " \\(?3:[^ \n]+\\) ?\\(?4:.*\\)"))
+    (exec . "\\(?1:x\\|exec\\) \\(?3:.*\\)")
+    (bare . ,(concat (regexp-opt '("b" "break" "noop") "\\(?1:")
+                     " *$"))
+    (label . ,(concat (regexp-opt '("l" "label"
+                                    "t" "reset")
+                                  "\\(?1:")
+                      " \\(?3:[^ \n]+\\) ?\\(?4:.*\\)"))
+    (merge . ,(concat "\\(?1:m\\|merge\\) "
+                      "\\(?:\\(?2:-[cC] [^ \n]+\\) \\)?"
+                      "\\(?3:[^ \n]+\\)"
+                      " ?\\(?4:.*\\)"))))
+
+;;;###autoload
+(defun git-rebase-current-line ()
+  "Parse current line into a `git-rebase-action' instance.
+If the current line isn't recognized as a rebase line, an
+instance with all nil values is returned."
+  (save-excursion
+    (goto-char (line-beginning-position))
+    (if-let ((re-start (concat "^\\(?5:" (regexp-quote comment-start)
+                               "\\)? *"))
+             (type (seq-some (lambda (arg)
+                               (let ((case-fold-search nil))
+                                 (and (looking-at (concat re-start (cdr arg)))
+                                      (car arg))))
+                             git-rebase-line-regexps)))
+        (git-rebase-action
+         :action-type    type
+         :action         (when-let ((action (match-string-no-properties 1)))
+                           (or (cdr (assoc action git-rebase-short-options))
+                               action))
+         :action-options (match-string-no-properties 2)
+         :target         (match-string-no-properties 3)
+         :trailer        (match-string-no-properties 4)
+         :comment-p      (and (match-string 5) t))
+      ;; Use default empty class rather than nil to ease handling.
+      (git-rebase-action))))
 
 (defun git-rebase-set-action (action)
-  (goto-char (line-beginning-position))
-  (if (and (looking-at git-rebase-line)
-           (not (string-match-p "\\(e\\|exec\\)$" (match-string 1))))
-      (let ((inhibit-read-only t))
-        (replace-match action t t nil 1)
-        (when git-rebase-auto-advance
-          (forward-line)))
-    (ding)))
+  "Set action of commit line to ACTION.
+If the region is active, operate on all lines that it touches.
+Otherwise, operate on the current line.  As a special case, an
+ACTION of nil comments the rebase line, regardless of its action
+type."
+  (pcase (git-rebase-region-bounds t)
+    (`(,beg ,end)
+     (let ((end-marker (copy-marker end))
+           (pt-below-p (and mark-active (< (mark) (point)))))
+       (set-marker-insertion-type end-marker t)
+       (goto-char beg)
+       (while (< (point) end-marker)
+         (with-slots (action-type target trailer comment-p)
+             (git-rebase-current-line)
+           (cond
+            ((and action (eq action-type 'commit))
+             (let ((inhibit-read-only t))
+               (magit-delete-line)
+               (insert (concat action " " target " " trailer "\n"))))
+            ((and action-type (not (or action comment-p)))
+             (let ((inhibit-read-only t))
+               (insert comment-start " "))
+             (forward-line))
+            (t
+             ;; In the case of --rebase-merges, commit lines may have
+             ;; other lines with other action types, empty lines, and
+             ;; "Branch" comments interspersed.  Move along.
+             (forward-line)))))
+       (goto-char
+        (if git-rebase-auto-advance
+            end-marker
+          (if pt-below-p (1- end-marker) beg)))
+       (goto-char (line-beginning-position))))
+    (_ (ding))))
 
 (defun git-rebase-line-p (&optional pos)
   (save-excursion
     (when pos (goto-char pos))
-    (goto-char (line-beginning-position))
-    (looking-at-p git-rebase-line)))
+    (and (oref (git-rebase-current-line) action-type)
+         t)))
 
-(defun git-rebase-region-bounds ()
-  (when (use-region-p)
+(defun git-rebase-region-bounds (&optional fallback)
+  "Return region bounds if both ends touch rebase lines.
+Each bound is extended to include the entire line touched by the
+point or mark.  If the region isn't active and FALLBACK is
+non-nil, return the beginning and end of the current rebase line,
+if any."
+  (cond
+   ((use-region-p)
     (let ((beg (save-excursion (goto-char (region-beginning))
                                (line-beginning-position)))
           (end (save-excursion (goto-char (region-end))
                                (line-end-position))))
       (when (and (git-rebase-line-p beg)
                  (git-rebase-line-p end))
-        (list beg (1+ end))))))
+        (list beg (1+ end)))))
+   ((and fallback (git-rebase-line-p))
+    (list (line-beginning-position)
+          (1+ (line-end-position))))))
 
 (defun git-rebase-move-line-down (n)
   "Move the current commit (or command) N lines down.
@@ -242,18 +398,28 @@ If N is negative, move the commit up instead.  With an active
 region, move all the lines that the region touches, not just the
 current line."
   (interactive "p")
-  (-let* (((beg end) (or (git-rebase-region-bounds)
-                         (list (line-beginning-position)
-                               (1+ (line-end-position)))))
-          (pt-offset (- (point) beg))
-          (mark-offset (and mark-active (- (mark) beg))))
+  (pcase-let* ((`(,beg ,end)
+                (or (git-rebase-region-bounds)
+                    (list (line-beginning-position)
+                          (1+ (line-end-position)))))
+               (pt-offset (- (point) beg))
+               (mark-offset (and mark-active (- (mark) beg))))
     (save-restriction
       (narrow-to-region
        (point-min)
-       (1+ (save-excursion
-             (goto-char (point-min))
-             (while (re-search-forward git-rebase-line nil t))
-             (point))))
+       (1-
+        (if git-rebase-show-instructions
+            (save-excursion
+              (goto-char (point-min))
+              (while (or (git-rebase-line-p)
+                         ;; The output for --rebase-merges has empty
+                         ;; lines and "Branch" comments interspersed.
+                         (looking-at-p "^$")
+                         (looking-at-p (concat git-rebase-comment-re
+                                               " Branch")))
+                (forward-line))
+              (line-beginning-position))
+          (point-max))))
       (if (or (and (< n 0) (= beg (point-min)))
               (and (> n 0) (= end (point-max)))
               (> end (point-max)))
@@ -295,15 +461,10 @@ current line."
   (funcall (default-value 'redisplay-unhighlight-region-function) rol))
 
 (defun git-rebase-kill-line ()
-  "Kill the current action line."
+  "Kill the current action line.
+If the region is active, act on all lines touched by the region."
   (interactive)
-  (goto-char (line-beginning-position))
-  (when (and (looking-at git-rebase-line)
-             (not (eq (char-after) ?#)))
-    (let ((inhibit-read-only t))
-      (insert ?#))
-    (when git-rebase-auto-advance
-      (forward-line))))
+  (git-rebase-set-action nil))
 
 (defun git-rebase-insert (rev)
   "Read an arbitrary commit and insert it below current line."
@@ -314,34 +475,164 @@ current line."
         (insert "pick " it ?\n))
     (user-error "Unknown revision")))
 
+(defun git-rebase-set-noncommit-action (action value-fn arg)
+  (goto-char (line-beginning-position))
+  (pcase-let* ((inhibit-read-only t)
+               (`(,initial ,trailer ,comment-p)
+                (and (not arg)
+                     (with-slots ((ln-action action)
+                                  target trailer comment-p)
+                         (git-rebase-current-line)
+                       (and (equal ln-action action)
+                            (list target trailer comment-p)))))
+               (value (funcall value-fn initial)))
+    (pcase (list value initial comment-p)
+      (`("" nil ,_)
+       (ding))
+      (`(""  ,_ ,_)
+       (magit-delete-line))
+      (_
+       (if initial
+           (magit-delete-line)
+         (forward-line))
+       (insert (concat action " " value
+                       (and (equal value initial)
+                            trailer
+                            (concat " " trailer))
+                       "\n"))
+       (unless git-rebase-auto-advance
+         (forward-line -1))))))
+
 (defun git-rebase-exec (arg)
-  "Insert a shell command to be run after the proceeding commit.
+  "Insert a shell command to be run after the current commit.
 
 If there already is such a command on the current line, then edit
 that instead.  With a prefix argument insert a new command even
 when there already is one on the current line.  With empty input
 remove the command on the current line, if any."
   (interactive "P")
-  (let ((inhibit-read-only t) initial command)
-    (unless arg
-      (goto-char (line-beginning-position))
-      (when (looking-at "^#?\\(e\\|exec\\) \\(.*\\)")
-        (setq initial (match-string-no-properties 2))))
-    (setq command (read-shell-command "Execute: " initial))
-    (pcase (list command initial)
-      (`("" nil) (ding))
-      (`(""  ,_)
-       (delete-region (match-beginning 0) (1+ (match-end 0))))
-      (`(,_ nil)
-       (forward-line)
-       (insert (concat "exec " command "\n"))
-       (unless git-rebase-auto-advance
-         (forward-line -1)))
-      (_
-       (replace-match (concat "exec " command) t t)
-       (if git-rebase-auto-advance
-           (forward-line)
-         (goto-char (line-beginning-position)))))))
+  (git-rebase-set-noncommit-action
+   "exec"
+   (lambda (initial) (read-shell-command "Execute: " initial))
+   arg))
+
+(defun git-rebase-label (arg)
+  "Add a label after the current commit.
+If there already is a label on the current line, then edit that
+instead.  With a prefix argument, insert a new label even when
+there is already a label on the current line.  With empty input,
+remove the label on the current line, if any."
+  (interactive "P")
+  (git-rebase-set-noncommit-action
+   "label"
+   (lambda (initial)
+     (read-from-minibuffer
+      "Label: " initial magit-minibuffer-local-ns-map))
+   arg))
+
+(defun git-rebase-buffer-labels ()
+  (let (labels)
+    (save-excursion
+      (goto-char (point-min))
+      (while (re-search-forward "^\\(?:l\\|label\\) \\([^ \n]+\\)" nil t)
+        (push (match-string-no-properties 1) labels)))
+    (nreverse labels)))
+
+(defun git-rebase-reset (arg)
+  "Reset the current HEAD to a label.
+If there already is a reset command on the current line, then
+edit that instead.  With a prefix argument, insert a new reset
+line even when point is already on a reset line.  With empty
+input, remove the reset command on the current line, if any."
+  (interactive "P")
+  (git-rebase-set-noncommit-action
+   "reset"
+   (lambda (initial)
+     (or (magit-completing-read "Label" (git-rebase-buffer-labels)
+                                nil t initial)
+         ""))
+   arg))
+
+(defun git-rebase-merge (arg)
+  "Add a merge command after the current commit.
+If there is already a merge command on the current line, then
+replace that command instead.  With a prefix argument, insert a
+new merge command even when there is already one on the current
+line.  With empty input, remove the merge command on the current
+line, if any."
+  (interactive "P")
+  (git-rebase-set-noncommit-action
+   "merge"
+   (lambda (_)
+     (or (magit-completing-read "Merge" (git-rebase-buffer-labels))
+         ""))
+   arg))
+
+(defun git-rebase-merge-toggle-editmsg ()
+  "Toggle whether an editor is invoked when performing the merge at point.
+When a merge command uses a lower-case -c, the message for the
+specified commit will be opened in an editor before creating the
+commit.  For an upper-case -C, the message will be used as is."
+  (interactive)
+  (with-slots (action-type target action-options trailer)
+      (git-rebase-current-line)
+    (if (eq action-type 'merge)
+        (let ((inhibit-read-only t))
+          (magit-delete-line)
+          (insert
+           (format "merge %s %s %s\n"
+                   (replace-regexp-in-string
+                    "-[cC]" (lambda (c)
+                              (if (equal c "-c") "-C" "-c"))
+                    action-options t t)
+                   target
+                   trailer)))
+      (ding))))
+
+(defun git-rebase-set-bare-action (action arg)
+  (goto-char (line-beginning-position))
+  (with-slots ((ln-action action) comment-p)
+      (git-rebase-current-line)
+    (let ((same-action-p (equal action ln-action))
+          (inhibit-read-only t))
+      (when (or arg
+                (not ln-action)
+                (not same-action-p)
+                (and same-action-p comment-p))
+        (unless (or arg (not same-action-p))
+          (magit-delete-line))
+        (insert action ?\n)
+        (unless git-rebase-auto-advance
+          (forward-line -1))))))
+
+(defun git-rebase-noop (&optional arg)
+  "Add noop action at point.
+
+If the current line already contains a noop action, leave it
+unchanged.  If there is a commented noop action present, remove
+the comment.  Otherwise add a new noop action.  With a prefix
+argument insert a new noop action regardless of what is already
+present on the current line.
+
+A noop action can be used to make git perform a rebase even if
+no commits are selected.  Without the noop action present, git
+would see an empty file and therefore do nothing."
+  (interactive "P")
+  (git-rebase-set-bare-action "noop" arg))
+
+(defun git-rebase-break (&optional arg)
+  "Add break action at point.
+
+If there is a commented break action present, remove the comment.
+If the current line already contains a break action, add another
+break action only if a prefix argument is given.
+
+A break action can be used to interrupt the rebase at the
+specified point.  It is particularly useful for pausing before
+the first commit in the sequence.  For other cases, the
+equivalent behavior can be achieved with `git-rebase-edit'."
+  (interactive "P")
+  (git-rebase-set-bare-action "break" arg))
 
 (defun git-rebase-undo (&optional arg)
   "Undo some previous changes.
@@ -350,21 +641,50 @@ Like `undo' but works in read-only buffers."
   (let ((inhibit-read-only t))
     (undo arg)))
 
+(defun git-rebase--show-commit (&optional scroll)
+  (let ((disable-magit-save-buffers t))
+    (save-excursion
+      (goto-char (line-beginning-position))
+      (--if-let (with-slots (action-type target) (git-rebase-current-line)
+                  (and (eq action-type 'commit)
+                       target))
+          (pcase scroll
+            (`up   (magit-diff-show-or-scroll-up))
+            (`down (magit-diff-show-or-scroll-down))
+            (_     (apply #'magit-show-commit it
+                          (magit-diff-arguments 'magit-revision-mode))))
+        (ding)))))
+
 (defun git-rebase-show-commit ()
   "Show the commit on the current line if any."
   (interactive)
-  (save-excursion
-    (goto-char (line-beginning-position))
-    (--if-let (and (looking-at git-rebase-line)
-                   (match-string 2))
-        (apply #'magit-show-commit it (magit-diff-arguments))
-      (ding))))
+  (git-rebase--show-commit))
+
+(defun git-rebase-show-or-scroll-up ()
+  "Update the commit buffer for commit on current line.
+
+Either show the commit at point in the appropriate buffer, or if
+that buffer is already being displayed in the current frame and
+contains information about that commit, then instead scroll the
+buffer up."
+  (interactive)
+  (git-rebase--show-commit 'up))
+
+(defun git-rebase-show-or-scroll-down ()
+  "Update the commit buffer for commit on current line.
+
+Either show the commit at point in the appropriate buffer, or if
+that buffer is already being displayed in the current frame and
+contains information about that commit, then instead scroll the
+buffer down."
+  (interactive)
+  (git-rebase--show-commit 'down))
 
 (defun git-rebase-backward-line (&optional n)
   "Move N lines backward (forward if N is negative).
 Like `forward-line' but go into the opposite direction."
   (interactive "p")
-  (forward-line (- n)))
+  (forward-line (- (or n 1))))
 
 ;;; Mode
 
@@ -377,11 +697,15 @@ Rebase files are generated when you run 'git rebase -i' or run
 the rebase.  See the documentation for git-rebase (e.g., by
 running 'man git-rebase' at the command line) for details."
   :group 'git-rebase
-  (setq font-lock-defaults '(git-rebase-mode-font-lock-keywords t t))
+  (setq comment-start (or (magit-get "core.commentChar") "#"))
+  (setq git-rebase-comment-re (concat "^" (regexp-quote comment-start)))
+  (setq font-lock-defaults (list (git-rebase-mode-font-lock-keywords) t t))
   (unless git-rebase-show-instructions
     (let ((inhibit-read-only t))
-      (flush-lines "^\\($\\|#\\)")))
-  (with-editor-mode 1)
+      (flush-lines git-rebase-comment-re)))
+  (unless with-editor-mode
+    ;; Maybe already enabled when using `shell-command' or an Emacs shell.
+    (with-editor-mode 1))
   (when git-rebase-confirm-cancel
     (add-hook 'with-editor-cancel-query-functions
               'git-rebase-cancel-confirm nil t))
@@ -389,11 +713,17 @@ running 'man git-rebase' at the command line) for details."
   (setq-local redisplay-unhighlight-region-function 'git-rebase-unhighlight-region)
   (add-hook 'with-editor-pre-cancel-hook  'git-rebase-autostash-save  nil t)
   (add-hook 'with-editor-post-cancel-hook 'git-rebase-autostash-apply nil t)
+  (setq imenu-prev-index-position-function
+        #'magit-imenu--rebase-prev-index-position-function)
+  (setq imenu-extract-index-name-function
+        #'magit-imenu--rebase-extract-index-name-function)
   (when (boundp 'save-place)
     (setq save-place nil)))
 
 (defun git-rebase-cancel-confirm (force)
-  (or (not (buffer-modified-p)) force (y-or-n-p "Abort this rebase? ")))
+  (or (not (buffer-modified-p))
+      force
+      (magit-confirm 'abort-rebase "Abort this rebase" nil 'noabort)))
 
 (defun git-rebase-autostash-save ()
   (--when-let (magit-file-line (magit-git-dir "rebase-merge/autostash"))
@@ -403,17 +733,47 @@ running 'man git-rebase' at the command line) for details."
   (--when-let (cdr (assq 'stash with-editor-cancel-alist))
     (magit-stash-apply it)))
 
-(defconst git-rebase-mode-font-lock-keywords
-  `(("^\\([efprs]\\|pick\\|reword\\|edit\\|squash\\|fixup\\) \\([^ \n]+\\) \\(.*\\)"
+(defun git-rebase-match-comment-line (limit)
+  (re-search-forward (concat git-rebase-comment-re ".*") limit t))
+
+(defun git-rebase-mode-font-lock-keywords ()
+  "Font lock keywords for Git-Rebase mode."
+  `((,(concat "^" (cdr (assq 'commit git-rebase-line-regexps)))
+     (1 'font-lock-keyword-face)
+     (3 'git-rebase-hash)
+     (4 'git-rebase-description))
+    (,(concat "^" (cdr (assq 'exec git-rebase-line-regexps)))
+     (1 'font-lock-keyword-face)
+     (3 'git-rebase-description))
+    (,(concat "^" (cdr (assq 'bare git-rebase-line-regexps)))
+     (1 'font-lock-keyword-face))
+    (,(concat "^" (cdr (assq 'label git-rebase-line-regexps)))
+     (1 'font-lock-keyword-face)
+     (3 'git-rebase-label)
+     (4 'font-lock-comment-face))
+    ("^\\(m\\(?:erge\\)?\\) -[Cc] \\([^ \n]+\\) \\([^ \n]+\\)\\( #.*\\)?"
      (1 'font-lock-keyword-face)
      (2 'git-rebase-hash)
-     (3 'git-rebase-description))
-    ("^\\(exec\\) \\(.*\\)"
+     (3 'git-rebase-label)
+     (4 'font-lock-comment-face))
+    ("^\\(m\\(?:erge\\)?\\) \\([^ \n]+\\)"
      (1 'font-lock-keyword-face)
-     (2 'git-rebase-description))
-    ("^#.*"       0 'font-lock-comment-face)
-    ("^#[^ \n].*" 0 'git-rebase-killed-action t))
-  "Font lock keywords for Git-Rebase mode.")
+     (2 'git-rebase-label))
+    (,(concat git-rebase-comment-re " *"
+              (cdr (assq 'commit git-rebase-line-regexps)))
+     0 'git-rebase-killed-action t)
+    (git-rebase-match-comment-line 0 'font-lock-comment-face)
+    ("\\[[^[]*\\]"
+     0 'magit-keyword t)
+    ("\\(?:fixup!\\|squash!\\)"
+     0 'magit-keyword-squash t)
+    (,(format "^%s Rebase \\([^ ]*\\) onto \\([^ ]*\\)" comment-start)
+     (1 'git-rebase-comment-hash t)
+     (2 'git-rebase-comment-hash t))
+    (,(format "^%s \\(Commands:\\)" comment-start)
+     (1 'git-rebase-comment-heading t))
+    (,(format "^%s Branch \\(.*\\)" comment-start)
+     (1 'git-rebase-label t))))
 
 (defun git-rebase-mode-show-keybindings ()
   "Modify the \"Commands:\" section of the comment Git generates
@@ -424,12 +784,19 @@ By default, this is the same except for the \"pick\" command."
     (save-excursion
       (goto-char (point-min))
       (when (and git-rebase-show-instructions
-                 (re-search-forward "^# Commands:\n" nil t))
-        (--each git-rebase-command-descriptions
-          (insert (format "# %-8s %s\n"
-                          (substitute-command-keys (format "\\[%s]" (car it)))
-                          (cdr it))))
-        (while (re-search-forward "^#\\(  ?\\)\\([^,],\\) \\([^ ]+\\) = " nil t)
+                 (re-search-forward
+                  (concat git-rebase-comment-re "\\s-+p, pick")
+                  nil t))
+        (goto-char (line-beginning-position))
+        (pcase-dolist (`(,cmd . ,desc) git-rebase-command-descriptions)
+          (insert (format "%s %-8s %s\n"
+                          comment-start
+                          (substitute-command-keys (format "\\[%s]" cmd))
+                          desc)))
+        (while (re-search-forward (concat git-rebase-comment-re
+                                          "\\(  ?\\)\\([^\n,],\\) "
+                                          "\\([^\n ]+\\) ")
+                                  nil t)
           (let ((cmd (intern (concat "git-rebase-" (match-string 3)))))
             (if (not (fboundp cmd))
                 (delete-region (line-beginning-position) (1+ (line-end-position)))
@@ -437,8 +804,9 @@ By default, this is the same except for the \"pick\" command."
               (replace-match
                (format "%-8s"
                        (mapconcat #'key-description
-                                  (--filter (not (eq (elt it 0) 'menu-bar))
-                                            (reverse (where-is-internal cmd)))
+                                  (--remove (eq (elt it 0) 'menu-bar)
+                                            (reverse (where-is-internal
+                                                      cmd git-rebase-mode-map)))
                                   ", "))
                t t nil 2))))))))
 
@@ -461,8 +829,8 @@ By default, this is the same except for the \"pick\" command."
 (eval-after-load 'recentf
   '(add-to-list 'recentf-exclude git-rebase-filename-regexp))
 
+(add-to-list 'with-editor-file-name-history-exclude git-rebase-filename-regexp)
+
+;;; _
 (provide 'git-rebase)
-;; Local Variables:
-;; indent-tabs-mode: nil
-;; End:
 ;;; git-rebase.el ends here

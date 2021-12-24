@@ -86,7 +86,7 @@ Should accept a notmuch search string as the sole argument."
       (org-link-add-props :link link :description desc)
       link)))
 
-(defun org-notmuch-open (path)
+(defun org-notmuch-open (path _)
   "Follow a notmuch message link specified by PATH."
   (funcall org-notmuch-open-function path))
 
@@ -113,7 +113,7 @@ Can link to more than one message, if so all matching messages are shown."
 			    :description desc)
       link)))
 
-(defun org-notmuch-search-open (path)
+(defun org-notmuch-search-open (path _)
   "Follow a notmuch message link specified by PATH."
   (message "%s" path)
   (org-notmuch-search-follow-link path))
@@ -139,7 +139,7 @@ Can link to more than one message, if so all matching messages are shown."
 			    :description desc)
       link)))
 
-(defun org-notmuch-tree-open (path)
+(defun org-notmuch-tree-open (path _)
   "Follow a notmuch message link specified by PATH."
   (message "%s" path)
   (org-notmuch-tree-follow-link path))

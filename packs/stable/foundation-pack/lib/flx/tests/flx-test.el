@@ -31,8 +31,6 @@
 
 ;;; Code:
 
-(eval-when-compile (require 'cl))
-
 (require 'ert)
 (require 'async)
 (require 'flx)
@@ -311,7 +309,7 @@ In this case, the match with more contiguous characters is better."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (ert-deftest flx-entire-match-3 ()
-  "when entire string is match, it shoud overpower acronym matches"
+  "when entire string is match, it should overpower acronym matches"
   (let* ((query "rss")
          (higher (flx-score "rss" query (flx-make-filename-cache)))
          (lower (flx-score "rff-sff-sff" query (flx-make-filename-cache))))

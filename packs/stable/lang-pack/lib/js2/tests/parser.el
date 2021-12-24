@@ -107,6 +107,9 @@ the test."
 (js2-deftest-parse variable-assignment
   "a = 1;")
 
+(js2-deftest-parse variable-logical-assignment
+  "b ||= /bar/;")
+
 (js2-deftest-parse empty-object-literal
   "b = {};")
 

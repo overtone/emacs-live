@@ -1,6 +1,7 @@
 ;;; haskell-customize.el --- Customization settings -*- lexical-binding: t -*-
 
 ;; Copyright (c) 2014 Chris Done. All rights reserved.
+;;               2020 Marc Berkowitz <mberkowitz@github.com>
 
 ;; This file is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -49,25 +50,27 @@ Used for locating additional package data files.")
 
 (defcustom haskell-process-type
   'auto
-  "The inferior Haskell process type to use.
+  "The inferior Haskell process type to use: ghci, stack, cabal, or auto.
 
 When set to 'auto (the default), the directory contents and
 available programs will be used to make a best guess at the
-process type:
+process type and the project directory.
 
-If the project directory or one of its parents contains a
-\"cabal.sandbox.config\" file, then cabal-repl will be used.
+Emacs looks in the current directory and then in its parents for
+a file \"cabal.sandbox.config\" or \"cabal.project\". its
+location is the project directory, and \"cabal\" will be used.
 
-If there's a \"stack.yaml\" file and the \"stack\" executable can
-be located, then stack-ghci will be used.
+Otherwise if a file \"stack.yaml\" is found, its location is the
+project directory, and stack will be used
+Otherwise if a file \"*.cabal\" is found, its location is the
+project directory, and cabal will be used.
+If none of the above apply, ghc will be used.
 
-Otherwise if there's a *.cabal file, cabal-repl will be used.
-
-If none of the above apply, ghci will be used."
+(The value cabal-new-repl is obsolete, equivalent to cabal-repl)."
   :type '(choice (const auto)
                  (const ghci)
-                 (const cabal-repl)
                  (const stack-ghci)
+                 (const cabal-repl)
                  (const cabal-new-repl))
   :group 'haskell-interactive)
 
@@ -161,18 +164,6 @@ pass additional flags to `ghc'."
   :group 'haskell-interactive
   :type '(repeat (string :tag "Argument")))
 
-(defcustom haskell-process-args-cabal-new-repl
-  '("--ghc-option=-ferror-spans")
-  "Additional arguments for `cabal new-repl' invocation.
-Note: The settings in `haskell-process-path-ghci' and
-`haskell-process-args-ghci' are not automatically reused as
-`cabal new-repl' currently invokes `ghc --interactive'. Use
-`--with-ghc=<path-to-executable>' if you want to use a different
-interactive GHC frontend; use `--ghc-option=<ghc-argument>' to
-pass additional flags to `ghc'."
-  :group 'haskell-interactive
-  :type '(repeat (string :tag "Argument")))
-
 (defcustom haskell-process-args-stack-ghci
   '("--ghci-options=-ferror-spans" "--no-build" "--no-load")
   "Additional arguments for `stack ghci' invocation."
@@ -221,18 +212,6 @@ Flycheck users might like to disable this."
   nil
   "Suggest to add import statements using Hoogle as a backend."
   :type 'boolean
-  :group 'haskell-interactive)
-
-(defcustom haskell-process-suggest-hayoo-imports
-  nil
-  "Suggest to add import statements using Hayoo as a backend."
-  :type 'boolean
-  :group 'haskell-interactive)
-
-(defcustom haskell-process-hayoo-query-url
-  "http://hayoo.fh-wedel.de/json/?query=%s"
-  "Query url for json hayoo results."
-  :type 'string
   :group 'haskell-interactive)
 
 (defcustom haskell-process-suggest-haskell-docs-imports
@@ -429,42 +408,53 @@ imports."
   "The path which is considered as project root, this is determined by the
 presence of a *.cabal file or stack.yaml file or something similar.")
 
+(defun haskell-build-type ()
+  "Looks for cabal and stack spec files. 
+   When found, returns a pair (TAG . DIR) 
+   where TAG is 'cabal-project, 'cabal-sandbox. 'cabal, or 'stack; 
+   and DIR is the directory containing cabal or stack file.
+   When none found, DIR is nil, and TAG is 'ghc"
+  ;; REVIEW maybe just 'cabal is enough.
+  (let ((cabal-project (locate-dominating-file default-directory "cabal.project"))
+        (cabal-sandbox (locate-dominating-file default-directory "cabal.sandbox.config"))
+        (stack         (locate-dominating-file default-directory "stack.yaml"))
+        (cabal         (locate-dominating-file
+                        default-directory
+                        (lambda (d)
+                          (cl-find-if
+                           (lambda (f) (string-match-p ".\\.cabal\\'" f))
+                           (directory-files d))))))
+    (cond
+     ((and cabal-project (executable-find "cabal"))
+      (cons 'cabal-project cabal-project))
+     ((and cabal-sandbox (executable-find "cabal"))
+      (cons 'cabal-sandbox cabal-sandbox))
+     ((and stack (executable-find "stack"))
+      (cons 'stack stack))
+     ((and cabal (executable-find "cabal"))
+      (cons 'cabal cabal))
+     ((executable-find "ghc") (cons 'ghc nil))
+     (t (error "Could not find any installation of GHC.")))))
+
 (defun haskell-process-type ()
   "Return `haskell-process-type', or a guess if that variable is 'auto.
-This function also sets the `inferior-haskell-root-dir'"
-  (let ((cabal-sandbox (locate-dominating-file default-directory
-                                               "cabal.sandbox.config"))
-        (stack         (locate-dominating-file default-directory
-                                               "stack.yaml"))
-        (cabal         (locate-dominating-file default-directory
-                                               (lambda (d)
-                                                 (cl-find-if
-                                                  (lambda (f)
-                                                    (string-match-p ".\\.cabal\\'" f))
-                                                  (directory-files d))))))
-    (if (eq 'auto haskell-process-type)
-        (cond
-         ;; User has explicitly initialized this project with cabal
-         ((and cabal-sandbox
-               (executable-find "cabal"))
-          (setq inferior-haskell-root-dir cabal-sandbox)
-          'cabal-repl)
-         ((and stack
-               (executable-find "stack"))
-          (setq inferior-haskell-root-dir stack)
-          'stack-ghci)
-         ((and cabal
-               (executable-find "cabal"))
-          (setq inferior-haskell-root-dir cabal)
-          'cabal-repl)
-         ((executable-find "ghc")
-          (setq inferior-haskell-root-dir default-directory)
-          'ghci)
-         ((executable-find "stack")
-          (setq inferior-haskell-root-dir default-directory)
-          'stack-ghci)
-         (t
-          (error "Could not find any installation of GHC.")))
-      haskell-process-type)))
+   Converts the obsolete 'cabal-new-repl to its equivalent 'cabal-repl.
+   May also set `inferior-haskell-root-dir'"
+  (cond
+   ((eq 'cabal-new-repl haskell-process-type)
+    (warn "haskell-process-type has obsolete value 'cabal-new-repl, changing it to 'cabal-repl")
+    (setq haskell-process-type 'cabal-repl) ;to avoid repeating the same warning
+    'cabal-repl)
+   ((eq 'auto haskell-process-type)
+    (let* ((r (haskell-build-type))
+           (tag (car r))
+           (dir (cdr r)))
+      (setq inferior-haskell-root-dir (or dir default-directory))
+      (cdr (assq tag '((cabal-project . cabal-repl)
+                       (cabal-sandbox . cabal-repl)
+                       (cabal . cabal-repl)
+                       (stack . stack-ghci)
+                       (ghc . ghci))))))
+   (t haskell-process-type)))
 
 (provide 'haskell-customize)

@@ -1,0 +1,6 @@
+.DS_Store
+settings.py
+*.pyc
+.sublime-project
+shared
+*.elc

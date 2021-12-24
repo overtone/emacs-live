@@ -1,6 +1,7 @@
 ;;; haskell-compile.el --- Haskell/GHC compilation sub-mode -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2013  Herbert Valerio Riedel
+;;               2020  Marc Berkowitz <mberkowitz@github.com>
 
 ;; Author: Herbert Valerio Riedel <hvr@gnu.org>
 
@@ -28,6 +29,7 @@
 
 (require 'compile)
 (require 'haskell-cabal)
+(require 'haskell-customize)
 (require 'ansi-color)
 (eval-when-compile (require 'subr-x))
 
@@ -67,7 +69,7 @@ For legacy compat, `%s' is replaced by the stack package top folder."
 
 (defcustom haskell-compile-command
   "ghc -Wall -ferror-spans -fforce-recomp -c %s"
-  "Default build command to use for `haskell-cabal-build' when no cabal file is detected.
+  "Default build command to use for `haskell-cabal-build' when no cabal or stack file is detected.
 The `%s' placeholder is replaced by the current buffer's filename."
   :group 'haskell-compile
   :type 'string)
@@ -78,12 +80,14 @@ The `%s' placeholder is replaced by the current buffer's filename."
   :group 'haskell-compile
   :type 'boolean)
 
-(defcustom haskell-compile-ignore-cabal nil
-  "Ignore cabal build definitions files for this buffer when detecting the build tool."
-  :group 'haskell-compile
-  :type 'boolean)
-(make-variable-buffer-local 'haskell-compile-ignore-cabal)
-(put 'haskell-compile-ignore-cabal 'safe-local-variable #'booleanp)
+(defcustom haskell-compiler-type
+  'auto
+  "Controls whether to use cabal, stack, or ghc to compile.
+   Auto (the default) means infer from the presence of a cabal or stack spec file,
+   following same rules as haskell-process-type."
+    :type '(choice (const auto) (const ghc) (const stack) (const cabal))
+    :group 'haskell-compile)
+(make-variable-buffer-local 'haskell-compiler-type)
 
 (defconst haskell-compilation-error-regexp-alist
   `((,(concat
@@ -144,10 +148,7 @@ messages pointing to additional source locations."
 ;;;###autoload
 (defun haskell-compile (&optional edit-command)
   "Run a compile command for the current Haskell buffer.
-
-Locates stack or cabal definitions and, if found, invokes the
-default build command for that build tool. Cabal is preferred
-but may be ignored with `haskell-compile-ignore-cabal'.
+Obeys haskell-compiler-type to choose the appropriate build command.
 
 If prefix argument EDIT-COMMAND is non-nil (and not a negative
 prefix `-'), prompt for a custom compile command.
@@ -169,35 +170,59 @@ base directory for build tools, or the current buffer for
   (interactive "P")
   (save-some-buffers (not compilation-ask-about-save)
                      compilation-save-buffers-predicate)
-  (let ((cabaldir (and
-                   (not haskell-compile-ignore-cabal)
-                   (or (haskell-cabal-find-dir)
-                       (locate-dominating-file default-directory "cabal.project")
-                       (locate-dominating-file default-directory "cabal.project.local")))))
-    (if cabaldir
-        (haskell--compile cabaldir edit-command
-                          'haskell--compile-cabal-last
-                          haskell-compile-cabal-build-command
-                          haskell-compile-cabal-build-alt-command)
-      (let ((stackdir (and haskell-compile-ignore-cabal
-                           (locate-dominating-file default-directory "stack.yaml"))))
-        (if stackdir
-            (haskell--compile stackdir edit-command
-                              'haskell--compile-stack-last
-                              haskell-compile-stack-build-command
-                              haskell-compile-stack-build-alt-command)
-          (let ((srcfile (buffer-file-name)))
-            (haskell--compile srcfile edit-command
-                              'haskell--compile-ghc-last
-                              haskell-compile-command
-                              haskell-compile-command)))))))
+  (let (htype dir)                      
+    ;;test haskell-compiler-type to set htype and dir
+    (cond
+     ((eq haskell-compiler-type 'cabal)
+      (setq htype 'cabal)
+      (setq dir (haskell-cabal-find-dir)))
+     ((eq haskell-compiler-type 'stack)
+      (setq htype 'stack)
+      (setq dir (locate-dominating-file default-directory "stack.yaml")))
+     ((eq haskell-compiler-type 'ghc)
+      (setq htype 'ghc)
+      (setq dir (buffer-file-name)))
+     ((eq haskell-compiler-type 'auto)
+      (let ((r (haskell-build-type)))
+        (setq htype (car r))
+        (setq dir   (cdr r))))
+     (t (error "Invalid haskell-compiler-type")))
+    ;; now test htype and compile
+    (cond
+     ((or (eq htype 'cabal) (eq htype 'cabal-project)) ; run cabal
+      (let ((command     haskell-compile-cabal-build-command)
+            (alt-command haskell-compile-cabal-build-alt-command))
+        (when (eq htype 'cabal-project) ;no default target
+          (setq command (concat command " all")
+                alt-command (concat alt-command " all")))
+        (haskell--compile dir edit-command
+           'haskell--compile-cabal-last
+           command alt-command)))
+     ((eq htype 'stack)
+      (haskell--compile dir edit-command
+        'haskell--compile-stack-last
+        haskell-compile-stack-build-command
+        haskell-compile-stack-build-alt-command))
+     ((eq htype 'ghc)
+      (haskell--compile dir edit-command
+        'haskell--compile-ghc-last
+        haskell-compile-command
+        haskell-compile-command)))))
 
+;; Save commands for reuse, but only when in same context.
+;; Hence save a pair (COMMAND . DIR); or nil.
 (defvar haskell--compile-stack-last nil)
 (defvar haskell--compile-cabal-last nil)
 (defvar haskell--compile-ghc-last nil)
 
+;; called only by (haskell-compile):
 (defun haskell--compile (dir-or-file edit last-sym fallback alt)
-  (let* ((default (or (symbol-value last-sym) fallback))
+  (let* ((dir-or-file (or dir-or-file default-directory))
+         (last-pair (symbol-value last-sym))
+         (last-command (car last-pair))
+         (last-dir (cdr last-pair))
+         (default (or (and last-dir (eq last-dir dir-or-file) last-command)
+                      fallback))
          (template (cond
                     ((null edit) default)
                     ((eq edit '-) alt)
@@ -210,7 +235,7 @@ base directory for build tools, or the current buffer for
                    (file-name-base (directory-file-name dir-or-file))
                  (file-name-nondirectory dir-or-file))))
     (unless (eq edit'-)
-      (set last-sym template))
+      (set last-sym (cons template dir-or-file)))
     (let ((default-directory dir))
       (compilation-start
        command

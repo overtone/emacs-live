@@ -22,8 +22,7 @@ Emacs 24.1+ and `cl-lib` (either built-in or installed from GNU ELPA).
 React and JSX
 ======
 
-The currently recommended solution is to install Emacs 27 (still in
-development, you can [build from
+The currently recommended solution is to install Emacs 27 (you can [build from
 source](http://git.savannah.gnu.org/cgit/emacs.git/tree/INSTALL.REPO)
 or e.g. install a snapshot from a
 [PPA](https://launchpad.net/~ubuntu-elisp/+archive/ubuntu/ppa)) and

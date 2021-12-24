@@ -95,7 +95,7 @@
 	(org-add-link-props :link link :description desc)
 	link))))
 
-(defun org-vm-open (path)
+(defun org-vm-open (path _)
   "Follow a VM message link specified by PATH."
   (let (folder article)
     (if (not (string-match "\\`\\([^#]+\\)\\(#\\(.*\\)\\)?" path))
@@ -127,7 +127,7 @@
     (when article
       (org-vm-select-message (org-link-add-angle-brackets article)))))
 
-(defun org-vm-imap-open (path)
+(defun org-vm-imap-open (path _)
   "Follow a VM link to an IMAP folder."
   (require 'vm-imap)
   (when (string-match "\\([^:]+\\):\\([^#]+\\)#?\\(.+\\)?" path)

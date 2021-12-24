@@ -25,6 +25,8 @@
 
 ;;; Code:
 
+(require 'subr-x)
+
 ;; TODO
 ;; (ert-deftest ob-tangle/noweb-on-tangle ()
 ;;   "Noweb header arguments tangle correctly.
@@ -85,7 +87,7 @@
     (regexp-quote "# [[https://orgmode.org][Org mode]]")
     (org-test-with-temp-text-in-file
         "[[https://orgmode.org][Org mode]]
-#+header: :comments org :tangle \"test-ob-tangle.sh\"
+#+header: :comments org :results output :tangle \"test-ob-tangle.sh\"
 #+begin_src sh
 echo 1
 #+end_src"
@@ -120,26 +122,64 @@ echo 1
                   (search-forward "[H:2]]" nil t))))
        (delete-file "test-ob-tangle.el")))))
 
+(ert-deftest ob-tangle/comment-links-relative-file ()
+  "Test relative file name handling when commenting with links."
+  (should
+   (org-test-with-temp-text-in-file
+       "* H
+#+header: :tangle \"test-ob-tangle.el\" :comments link
+#+begin_src emacs-lisp
+1
+#+end_src"
+     (unwind-protect
+	 (let ((org-babel-tangle-use-relative-file-links t))
+	   (org-babel-tangle)
+	   (with-temp-buffer
+	     (insert-file-contents "test-ob-tangle.el")
+	     (buffer-string)
+	     (goto-char (point-min))
+	     (search-forward
+	      (concat "[file:" (file-name-nondirectory file))
+	      nil t)))
+       (delete-file "test-ob-tangle.el"))))
+  (should
+   (org-test-with-temp-text-in-file
+       "* H
+#+header: :tangle \"test-ob-tangle.el\" :comments link
+#+begin_src emacs-lisp
+1
+#+end_src"
+     (unwind-protect
+	 (let ((org-babel-tangle-use-relative-file-links nil))
+	   (org-babel-tangle)
+	   (with-temp-buffer
+	     (insert-file-contents "test-ob-tangle.el")
+	     (buffer-string)
+	     (goto-char (point-min))
+	     (search-forward (concat "[file:" file) nil t)))
+       (delete-file "test-ob-tangle.el")))))
+
 (ert-deftest ob-tangle/jump-to-org ()
   "Test `org-babel-tangle-jump-to-org' specifications."
   ;; Standard test.
-  (should
-   (equal
-    "* H\n#+begin_src emacs-lisp\n1\n#+end_src"
-    (org-test-with-temp-text-in-file
-        "* H\n#+begin_src emacs-lisp\n1\n#+end_src"
-      (let ((file (buffer-file-name)))
-        (org-test-with-temp-text
-            (format ";; [[file:%s][H:1]]\n<point>1\n;; H:1 ends here\n"
-                    (file-name-nondirectory file))
-          (org-babel-tangle-jump-to-org)
-          (buffer-string))))))
-  ;; Multiple blocks in the same section.
-  (should
-   (equal
-    "2"
-    (org-test-with-temp-text-in-file
-        "* H
+  (let ((org-file-apps '((t . emacs))))
+    (should
+     (equal
+      "* H\n#+begin_src emacs-lisp\n1\n#+end_src"
+      (org-test-with-temp-text-in-file
+          "* H\n#+begin_src emacs-lisp\n1\n#+end_src"
+	(let ((file (buffer-file-name)))
+          (org-test-with-temp-text
+              (format ";; [[file:%s][H:1]]\n<point>1\n;; H:1 ends here\n"
+                      (file-name-nondirectory file))
+            (org-babel-tangle-jump-to-org)
+            (buffer-string))))))
+    ;; Multiple blocks in the same section.
+    (should
+     (equal
+      "2"
+      (org-test-with-temp-text-in-file
+          "* H
 
 first block
 
@@ -153,49 +193,49 @@ another block
 2
 #+end_src
 "
-      (let ((file (buffer-file-name)))
-        (org-test-with-temp-text
-            (format ";; [[file:%s][H:2]]\n<point>2\n;; H:2 ends here\n"
-                    (file-name-nondirectory file))
-          (org-babel-tangle-jump-to-org)
-          (buffer-substring (line-beginning-position)
-                            (line-end-position)))))))
-  ;; Preserve position within the source code.
-  (should
-   (equal
-    "1)"
-    (org-test-with-temp-text-in-file
-        "* H\n#+begin_src emacs-lisp\n(+ 1 1)\n#+end_src"
-      (let ((file (buffer-file-name)))
-        (org-test-with-temp-text
-            (format ";; [[file:%s][H:1]]\n(+ 1 <point>1)\n;; H:1 ends here\n"
-                    (file-name-nondirectory file))
-          (org-babel-tangle-jump-to-org)
-          (buffer-substring-no-properties (point) (line-end-position)))))))
-  ;; Blocks before first heading.
-  (should
-   (equal
-    "Buffer start\n#+begin_src emacs-lisp\n1\n#+end_src\n* H"
-    (org-test-with-temp-text-in-file
-        "Buffer start\n#+begin_src emacs-lisp\n1\n#+end_src\n* H"
-      (let ((file (buffer-file-name)))
-        (org-test-with-temp-text
-            (format ";; [[file:%s][H:1]]\n<point>1\n;; H:1 ends here\n"
-                    (file-name-nondirectory file))
-          (org-babel-tangle-jump-to-org)
-          (buffer-string))))))
-  ;; Special case: buffer starts with a source block.
-  (should
-   (equal
-    "#+begin_src emacs-lisp\n1\n#+end_src\n* H"
-    (org-test-with-temp-text-in-file
-        "#+begin_src emacs-lisp\n1\n#+end_src\n* H"
-      (let ((file (buffer-file-name)))
-        (org-test-with-temp-text
-            (format ";; [[file:%s][H:1]]\n<point>1\n;; H:1 ends here\n"
-                    (file-name-nondirectory file))
-          (org-babel-tangle-jump-to-org)
-          (buffer-string)))))))
+	(let ((file (buffer-file-name)))
+          (org-test-with-temp-text
+              (format ";; [[file:%s][H:2]]\n<point>2\n;; H:2 ends here\n"
+                      (file-name-nondirectory file))
+            (org-babel-tangle-jump-to-org)
+            (buffer-substring (line-beginning-position)
+                              (line-end-position)))))))
+    ;; Preserve position within the source code.
+    (should
+     (equal
+      "1)"
+      (org-test-with-temp-text-in-file
+          "* H\n#+begin_src emacs-lisp\n(+ 1 1)\n#+end_src"
+	(let ((file (buffer-file-name)))
+          (org-test-with-temp-text
+              (format ";; [[file:%s][H:1]]\n(+ 1 <point>1)\n;; H:1 ends here\n"
+                      (file-name-nondirectory file))
+            (org-babel-tangle-jump-to-org)
+            (buffer-substring-no-properties (point) (line-end-position)))))))
+    ;; Blocks before first heading.
+    (should
+     (equal
+      "Buffer start\n#+begin_src emacs-lisp\n1\n#+end_src\n* H"
+      (org-test-with-temp-text-in-file
+          "Buffer start\n#+begin_src emacs-lisp\n1\n#+end_src\n* H"
+	(let ((file (buffer-file-name)))
+          (org-test-with-temp-text
+              (format ";; [[file:%s][H:1]]\n<point>1\n;; H:1 ends here\n"
+                      (file-name-nondirectory file))
+            (org-babel-tangle-jump-to-org)
+            (buffer-string))))))
+    ;; Special case: buffer starts with a source block.
+    (should
+     (equal
+      "#+begin_src emacs-lisp\n1\n#+end_src\n* H"
+      (org-test-with-temp-text-in-file
+          "#+begin_src emacs-lisp\n1\n#+end_src\n* H"
+	(let ((file (buffer-file-name)))
+          (org-test-with-temp-text
+              (format ";; [[file:%s][H:1]]\n<point>1\n;; H:1 ends here\n"
+                      (file-name-nondirectory file))
+            (org-babel-tangle-jump-to-org)
+            (buffer-string))))))))
 
 (ert-deftest ob-tangle/nested-block ()
   "Test tangling of org file with nested block."
@@ -379,6 +419,52 @@ another block
 		    (insert-file-contents file)
 		    (org-split-string (buffer-string))))
 	      (delete-file file))))))
+
+(ert-deftest ob-tangle/multiple-noweb-in-line ()
+  "Test handling of multiple noweb references in a single line."
+  (should
+   (equal '("1" "2" "1")
+	  (let ((file (make-temp-file "org-tangle-")))
+	    (unwind-protect
+		(progn
+		  (org-test-with-temp-text-in-file
+		      (format "
+#+name: block1
+#+begin_src elisp
+1
+#+end_src
+
+#+name: block2
+#+begin_src elisp
+2
+#+end_src
+
+#+name: block3
+#+begin_src elisp :noweb yes :tangle %s
+<<block1>> <<block2>> <<block1>>
+#+end_src"
+			      file)
+		    (let ((org-babel-noweb-error-all-langs nil)
+			  (org-babel-noweb-error-langs nil))
+		      (org-babel-tangle)))
+		  (with-temp-buffer
+		    (insert-file-contents file)
+		    (org-split-string (buffer-string))))
+	      (delete-file file))))))
+
+(ert-deftest ob-tangle/detangle-false-positive ()
+  "Test handling of false positive link during detangle."
+  (let (buffer)
+    (unwind-protect
+	(org-test-in-example-file (expand-file-name "babel.el" org-test-example-dir)
+	  (org-babel-detangle)
+	  (org-test-at-id "73115FB0-6565-442B-BB95-50195A499EF4"
+	    (setq buffer (current-buffer))
+	    (org-babel-next-src-block)
+	    (should (equal (string-trim (org-element-property
+					 :value (org-element-at-point)))
+			   ";; detangle changes"))))
+      (kill-buffer buffer))))
 
 (provide 'test-ob-tangle)
 

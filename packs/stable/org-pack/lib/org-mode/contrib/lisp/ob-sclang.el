@@ -81,7 +81,7 @@
 	;; TODO: temporary can't find way to let sclang output to stdout for org-babel.
         (:output . "none")))
 
-(eval-after-load "org"
+(eval-after-load 'org
   '(progn
      (add-to-list 'org-src-lang-modes '("sclang" . sclang))))
 

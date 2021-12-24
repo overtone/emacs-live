@@ -75,6 +75,21 @@
       (buffer-string))
     t)))
 
+(ert-deftest test-org-pcomplete/src-block ()
+  "Test Babel source block header arguments completion."
+  (should
+   (string-prefix-p
+    "#+begin_src emacs-lisp"
+    (org-test-with-temp-text "#+begin_src emac<point>"
+      (pcomplete)
+      (buffer-string))))
+  (should
+   (string-prefix-p
+    "#+begin_src emacs-lisp :session"
+    (org-test-with-temp-text "#+begin_src emacs-lisp :sess<point>"
+      (pcomplete)
+      (buffer-string)))))
+
 (ert-deftest test-org-pcomplete/link ()
   "Test link completion"
   (should

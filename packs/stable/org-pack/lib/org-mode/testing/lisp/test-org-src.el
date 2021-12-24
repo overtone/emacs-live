@@ -58,6 +58,17 @@
     (goto-char (point-max))
     (should-error (org-edit-special))))
 
+(ert-deftest test-org-src/undo ()
+  "Undo-ing an edit buffer should not go back to empty state."
+  (org-test-with-temp-text "
+#+begin_src emacs-lisp<point>
+  (message hello)
+#+end_src
+"
+    (org-edit-special)
+    (should-error (undo))
+    (org-edit-src-exit)))
+
 (ert-deftest test-org-src/empty-block ()
   "Editing empty block."
   (org-test-with-temp-text

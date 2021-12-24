@@ -3,13 +3,13 @@
 ;; Filename: floobits.el
 ;; Description: Real-time collaborative editing.
 ;;
-;; Copyright 2013-2016 Floobits, Inc.
+;; Copyright 2013-2017 Floobits, Inc.
 ;;
 ;; Author: Matt Kaniaris
 ;;      Geoff Greer
 ;; Keywords: comm, tools
 ;; Package-Requires: ((json "1.2") (highlight "0"))
-;; Package-Version: 1.7.2
+;; Package-Version: 1.9.3
 ;; URL: http://github.com/Floobits/floobits-emacs
 ;; Version: 24.0
 ;;
@@ -62,14 +62,45 @@
   :type 'string
   :group 'floobits)
 
+(defcustom floobits-username-colors
+  (list "#00ff00"
+        "#000000"
+        "#0000ff"
+        "#00008b"
+        "#ff00ff"
+        "#808080"
+        "#008000"
+        "#adff2f"
+        "#4b0082"
+        "#ff00ff" ; duplicate?
+        "#191970"
+        "#800000"
+        "#ffa500"
+        "#ff4500"
+        "#800080"
+        "#ff0000"
+        "#008080"
+        "#ffff00")
+  "Colors for highlighting usernames and their cursors.
+The defaults are consistent with the colors used on the floobits.com interface."
+  :type '(repeat color)
+  :group 'floobits)
+
+(defun floobits--username-color (username)
+  "Return color which should be used for displaying USERNAME."
+  (let* ((hash (cl-reduce #'+ (md5 username)))
+         (idx  (mod hash (length floobits-username-colors))))
+    (nth idx floobits-username-colors)))
+
 (defvar floobits-plugin-dir (file-name-directory load-file-name))
 (add-to-list 'load-path floobits-plugin-dir)
-(require 'highlight)
+(or (require 'highlight nil t)
+    (require 'highlight "external/highlight"))
 
 ;; TODO: figure out why we increased max-specpdl-size
 (setq max-specpdl-size 1500)
 
-(defconst floobits-version "1.7.2" "Floobits Plugin Version")
+(defconst floobits-version "1.9.3" "Floobits Plugin Version")
 
 (defvar floobits-debug nil)
 (defvar floobits-agent-host "127.0.0.1")
@@ -571,22 +602,22 @@ A process is considered alive if its status is `run', `open',
   (find-file (floobits--get-item req 'full_path))
   (goto-char (+ 1 (floobits--get-item req 'offset))))
 
-(defun floobits-highlight-apply-f (f highlights)
+(defun floobits-highlight-apply-f (f highlights username)
   ;; convert to list :(
   (mapc
    (lambda(x)
      (let ((start (max 1 (min (buffer-size buffer) (+ (elt x 0) 1))))
            (end (+ (elt x 1) 2)))
-       (funcall f start end)))
+       (funcall f start end `((background-color . ,(floobits--username-color username))))))
    highlights))
 
-(defun floobits-apply-highlight (user_id buffer ranges)
+(defun floobits-apply-highlight (username user_id buffer ranges)
   (let* ((key (list user_id (buffer-file-name buffer)))
          (previous-ranges (gethash key floobits-user-highlights)))
     (floobits-debug-message "%s key %s" key previous-ranges)
     (when previous-ranges
-      (floobits-highlight-apply-f 'hlt-unhighlight-region previous-ranges))
-    (floobits-highlight-apply-f 'hlt-highlight-region ranges)
+      (floobits-highlight-apply-f 'hlt-unhighlight-region previous-ranges username))
+    (floobits-highlight-apply-f 'hlt-highlight-region ranges username)
     (puthash key ranges floobits-user-highlights)))
 
 (defun floobits-event-highlight (req)
@@ -599,21 +630,24 @@ A process is considered alive if its status is `run', `open',
          (path (floobits--get-item req 'full_path))
          (buffer (get-file-buffer path))
          (following (floobits--get-item req 'following))
-         (should-jump (or (floobits--get-item req 'ping) (and
-                                                          (and floobits-follow-mode (or (not floobits-follow-users)
-                                                                                        (member username floobits-follow-users))) (not following))))
+         (should-jump (or (floobits--get-item req 'ping)
+                          (and floobits-follow-mode
+                               (or (not floobits-follow-users)
+                                   (member username floobits-follow-users))
+                               (not following))))
          (buffer (or buffer (and should-jump (find-file path)))))
 
     (floobits--when-buf buffer
-      (floobits-apply-highlight user_id buffer ranges)
+      (floobits-apply-highlight username user_id buffer ranges)
       (goto-char pos)
       (bookmark-set (format "floobits-%s-%s" username user_id)))
 
     (when should-jump
-      (unless (window-minibuffer-p (get-buffer-window))
-        (switch-to-buffer buffer)
-        (save-restriction
-          (widen)
+      (floobits--when-buf buffer
+        (with-selected-window
+            (display-buffer buffer
+                            '((display-buffer-reuse-window
+                               display-buffer-use-some-window)))
           (unless (pos-visible-in-window-p pos)
             (condition-case err
                 (scroll-up (- (line-number-at-pos pos) (line-number-at-pos)))

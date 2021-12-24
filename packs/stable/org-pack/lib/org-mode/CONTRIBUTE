@@ -1,0 +1,86 @@
+-*- mode: org; fill-column:70 -*-
+
+The text below explains the rules for participating in Org mode
+development.
+
+* Main contribution rules
+
+1. The master git repository is hosted publicly at [[https://orgmode.org][orgmode.org]].
+
+   Anyone can get a clone of the current repository state using the
+   command
+
+   : git clone https://code.orgmode.org/bzg/org-mode.git
+
+   Having a clone is sufficient to start hacking and to produce
+   patches that can easily and consistently be applied to the main
+   repository.
+
+2. People who are interested in participating to the Org mode
+   development can do so by sending patches to this address:
+
+   : emacs-orgmode@gnu.org
+
+3. An interested developer can also request push access to the central
+   repository by creating an account on code.orgmode.org and by
+   sending her/his user info to the maintainer.
+
+   After you have been added as a user with push privileges, clone the
+   repository through ssh using
+
+   : git clone git@code.orgmode.org:bzg/org-mode.git
+
+   By requesting push access, you acknowledge that you have read and
+   agreed with the following rules:
+
+   - Org mode is part of GNU Emacs.  Therefore, we need to be very
+     conscious about changes moving into the Org mode core.  These can
+     originate only from people who have signed the appropriate papers
+     with the Free Software Foundation.  The files to which this
+     applies are:
+
+     - all *.el files in the lisp directory of the repository
+     - org.texi, orgcard.tex in the doc directory
+     - the corresponding ChangeLog files
+
+   - Before making any significant changes, please explain and discuss
+     them on the mailing list [[mailto:emacs-orgmode@gnu.org][emacs-orgmode@gnu.org]].  
+
+     This does obviously not apply to people who are maintaining their
+     own contributions to Org mode. Please, just use the new mechanism
+     to make sure all changes end up in the right place.
+
+     We value a nice tone in our discussions: please check and respect
+     the [[https://www.gnu.org/philosophy/kind-communication.en.html][GNU Kind Communications Guidelines]].
+
+   - Org mode no longer uses ChangeLog entries to document changes.
+     Instead, special commit messages are used, as described in the
+     `CONTRIBUTE' file in the main Emacs repository.
+
+   - Among other things, Org mode is widely appreciated because of its
+     simplicity, cleanness and consistency.  We should try hard to
+     preserve this and ask everyone to keep this in mind when
+     proposing changes.
+
+* The contrib/ directory
+
+The git repository contains a =contrib/= directory.  This directory is
+the playing field for any developer, also people who have not (yet)
+signed the papers with the FSF.  You are free to add files to this
+directory, implementing extensions, new link types etc.
+
+Also non-Lisp extensions like scripts to process Org files in different
+ways are welcome in this directory.  You should provide documentation
+with your extensions, at least in the form of commentary in the file,
+better on worg.  Please discuss your extensions on
+[[mailto:emacs-orgmode@gnu.org][emacs-orgmode@gnu.org]].
+
+After files have been tested in =contrib/= and found to be generally
+useful, we may decide to clarify copyright questions and then move the
+file into the Org mode core.  This means they will be moved up to the
+root directory and will also eventually be added to GNU Emacs git
+repository.  The final decision about this rests with the maintainer.
+
+* Org maintenance
+
+Org maintenance is explained on Worg: see [[https://orgmode.org/worg/org-maintenance.html][org-maintenance]].

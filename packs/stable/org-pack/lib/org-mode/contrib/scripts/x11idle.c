@@ -1,4 +1,9 @@
+/* This header file is provided by the libxss-dev package on Debian,
+ * by the libXss-devel rpm on openSUSE, and the libXScrnSaver-devel
+ * rpm on Fedora.
+ */
 #include <X11/extensions/scrnsaver.h>
+
 #include <stdio.h>
 
 /* Based on code from
@@ -7,7 +12,7 @@
  * compile with 'gcc -l Xss x11idle.c -o x11idle' and copy x11idle into your
  * path
  */
-main() {
+int main() {
     XScreenSaverInfo *info = XScreenSaverAllocInfo();
     //open the display specified by the DISPLAY environment variable
     Display *display = XOpenDisplay(0);

@@ -155,6 +155,25 @@
               "* H1\n:PROPERTIES:\n:UNNUMBERED: t\n:END:\n** H2"
             (let ((org-num-skip-unnumbered t)) (org-num-mode 1))
             (mapcar (lambda (o) (overlay-get o 'after-string))
+                    (overlays-in (point-min) (point-max))))))
+  ;; Do not choke on empty headlines.
+  (should
+   (equal '("1 ")
+          (org-test-with-temp-text "* "
+            (let ((org-num-skip-commented t)) (org-num-mode 1))
+            (mapcar (lambda (o) (overlay-get o 'after-string))
+                    (overlays-in (point-min) (point-max))))))
+  (should
+   (equal '("1 ")
+          (org-test-with-temp-text "* "
+            (let ((org-num-skip-unnumbered t)) (org-num-mode 1))
+            (mapcar (lambda (o) (overlay-get o 'after-string))
+                    (overlays-in (point-min) (point-max))))))
+  (should
+   (equal '("1 ")
+          (org-test-with-temp-text "* "
+            (let ((org-num-skip-footnotes t)) (org-num-mode 1))
+            (mapcar (lambda (o) (overlay-get o 'after-string))
                     (overlays-in (point-min) (point-max)))))))
 
 (ert-deftest test-org-num/update ()

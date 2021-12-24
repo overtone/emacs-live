@@ -73,7 +73,7 @@
 ;; bare git link
 (org-link-set-parameters "gitbare" :follow #'org-gitbare-open)
 
-(defun org-gitbare-open (str)
+(defun org-gitbare-open (str _)
   (let* ((strlist (org-git-split-string str))
          (gitdir (nth 0 strlist))
          (object (nth 1 strlist)))
@@ -96,7 +96,7 @@
 ;; user friendly link
 (org-link-set-parameters "git" :follow #'org-git-open :store #'org-git-store-link)
 
-(defun org-git-open (str)
+(defun org-git-open (str _)
   (let* ((strlist (org-git-split-string str))
          (filepath (nth 0 strlist))
          (commit (nth 1 strlist))

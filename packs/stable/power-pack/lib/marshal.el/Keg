@@ -1,0 +1,9 @@
+;; Keg
+
+(source gnu melpa)
+
+(package
+  (marshal
+   (recipe . (marshal :fetcher github :repo "sigma/marshal.el"))))
+
+(dev-dependency undercover)

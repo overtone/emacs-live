@@ -14,7 +14,7 @@ the use of a directory separator in the repository name.
 Example:
 
 ```lisp
-(let ((repo (pcache-repository "plop")))
+(let ((repo (pcache-repository 'plop)))
   (pcache-put repo 'foo 42) ; store value 42 with key 'foo
   (pcache-get repo 'foo) ; => 42
 )
@@ -26,7 +26,7 @@ Keys can be pretty much any Lisp object, and are compared for equality using
 Optionally, cache entries can expire:
 
 ```lisp
-(let ((repo (pcache-repository "plop")))
+(let ((repo (pcache-repository 'plop)))
   (pcache-put repo 'foo 42 1) ; store value 42 with key 'foo for 1 second
   (sleep-for 1)
   (pcache-get repo 'foo) ; => nil

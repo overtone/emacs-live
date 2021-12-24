@@ -28,7 +28,7 @@
 ;; These expansions aren't loaded by default, so you'll have to explicitly
 ;; ask for them in your init file with:
 ;;
-;;     (eval-after-load "sgml-mode" '(require 'jsp-expansions))
+;;     (eval-after-load 'sgml-mode '(require 'jsp-expansions))
 ;;
 ;; Feel free to contribute any other expansions for JSP at
 ;;

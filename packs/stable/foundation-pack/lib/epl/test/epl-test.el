@@ -200,6 +200,42 @@ package.el tends to have such unfortunate side effects."
        (epl-package-delete package)
        (should-not (epl-package-installed-p package))))))
 
+(ert-deftest epl-package-installed-p/min-version ()
+  (epl-test/with-sandbox
+   (let ((package-file (epl-test-resource-file-name "versioned-package.el"))
+         (new-package-file (epl-test-resource-file-name "versioned-package-new.el")))
+     (epl-install-file package-file)
+     (let ((package (car (epl-find-installed-packages 'versioned-package))))
+       (should (epl-package-installed-p package))
+       (should (epl-package-installed-p package (version-to-list "8.2.10")))
+       (should (epl-package-installed-p package (version-to-list "8.2.9")))
+       (should (epl-package-installed-p package (version-to-list "8.2")))
+       (should (epl-package-installed-p package (version-to-list "8")))
+       (should-not (epl-package-installed-p package (version-to-list "8.2.11")))
+       (should-not (epl-package-installed-p package (version-to-list "8.3.10")))
+       (should-not (epl-package-installed-p package (version-to-list "9.1.6")))
+       (should-not (epl-package-installed-p package (version-to-list "999999")))))))
+
+(ert-deftest epl-package-installed-p/min-version-upgrade ()
+  (epl-test/with-sandbox
+   (let ((package-file (epl-test-resource-file-name "versioned-package.el"))
+         (new-package-file (epl-test-resource-file-name "versioned-package-new.el")))
+     (epl-install-file package-file)
+     (let ((package (car (epl-find-installed-packages 'versioned-package))))
+       (should (epl-package-installed-p package))
+       (should-not (epl-package-installed-p package (version-to-list "9.1.6")))
+     (epl-install-file new-package-file)
+     (let ((package (car (epl-find-installed-packages 'versioned-package))))
+       (should (epl-package-installed-p package))
+       (should (epl-package-installed-p package (version-to-list "8.2.10")))
+       (should (epl-package-installed-p package (version-to-list "8.2.9")))
+       (should (epl-package-installed-p package (version-to-list "8.2")))
+       (should (epl-package-installed-p package (version-to-list "8")))
+       (should (epl-package-installed-p package (version-to-list "8.2.11")))
+       (should (epl-package-installed-p package (version-to-list "8.3.10")))
+       (should (epl-package-installed-p package (version-to-list "9.1.6")))
+       (should-not (epl-package-installed-p package (version-to-list "999999"))))))))
+
 (provide 'epl-test)
 
 ;;; epl-test.el ends here

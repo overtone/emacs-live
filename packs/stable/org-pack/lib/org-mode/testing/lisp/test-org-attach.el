@@ -30,80 +30,81 @@
 
 (ert-deftest test-org-attach/dir ()
   "Test `org-attach-get' specifications."
-  (should (equal "Text in fileA\n"
-		 (org-test-in-example-file org-test-attachments-file
-		   (goto-char 157) ;; First attachment link
-		   (org-open-at-point)
-		   (buffer-string))))
-  (should-not (equal "Text in fileB\n"
-		     (org-test-in-example-file org-test-attachments-file
-		       (goto-char 219) ;; Second attachment link
-		       (let ((org-attach-use-inheritance nil))
-			 (org-open-at-point)
-			 (buffer-string)))))
-  (should (equal "Text in fileB\n"
-		 (org-test-in-example-file org-test-attachments-file
-		   (goto-char 219) ;; Second attachment link
-		   (let ((org-attach-use-inheritance t))
+  (let ((org-file-apps '((t . emacs))))
+    (should (equal "Text in fileA\n"
+		   (org-test-in-example-file org-test-attachments-file
+		     (goto-char 157) ;; First attachment link
 		     (org-open-at-point)
-		     (buffer-string)))))
-  (should-not (equal "att1"
-		     (org-test-in-example-file org-test-attachments-file
-		       (goto-char 179) ;; H1.1
-		       (let ((org-attach-use-inheritance nil))
-			 (org-attach-dir)))))
-  (should (equal "att1"
-		 (org-test-in-example-file org-test-attachments-file
-		   (goto-char 179) ;; H1.1
-		   (let ((org-attach-use-inheritance t))
-		     (org-attach-dir)))))
-  (should (equal '("fileC" "fileD")
-		 (org-test-in-example-file org-test-attachments-file
-		   (goto-char 239) ;; H1.2
-		   (org-attach-file-list (org-attach-dir)))))
-  (should (equal '("fileC" "fileD")
-		 (org-test-in-example-file org-test-attachments-file
-		   (goto-char 239) ;; H1.2
-		   (org-attach-file-list (org-attach-dir)))))
-  (should (equal '("fileE")
-		 (org-test-in-example-file org-test-attachments-file
-		   (goto-char 289) ;; H2
-		   (let ((org-attach-id-dir "data/"))
-		     (org-attach-file-list (org-attach-dir))))))
-  (should (equal "peek-a-boo\n"
-		 (org-test-in-example-file org-test-attachments-file
-		   (goto-char 289) ;; H2
-		   (let ((org-attach-id-dir "data/"))
-		     (org-attach-open-in-emacs)
-		     (buffer-string)))))
-  (should (equal  '("fileA" "fileB")
-		  (org-test-in-example-file org-test-attachments-file
-		    (goto-char 336) ;; H3
-		    (org-attach-file-list (org-attach-dir)))))
-  ;; Test for folder not initialized in the filesystem
-  (should-not (org-test-in-example-file org-test-attachments-file
-		(goto-char 401) ;; H3.1
-		(let ((org-attach-use-inheritance nil)
-		      (org-attach-id-dir "data/"))
-		  (org-attach-dir))))
-  ;; Not yet initialized folder should be found if no-fs-check is
-  ;; non-nil
-  (should (equal "data/ab/cd12345"
-		 (org-test-in-example-file org-test-attachments-file
-		   (goto-char 401) ;; H3.1
-		   (let ((org-attach-use-inheritance nil)
-			 (org-attach-id-dir "data/"))
-		     (file-relative-name (org-attach-dir nil t))))))
-  (should (equal '("fileA" "fileB")
-		 (org-test-in-example-file org-test-attachments-file
-		   (goto-char 401) ;; H3.1
-		   (let ((org-attach-use-inheritance t))
-		     ;; This is where it gets a bit sketchy...! DIR always has
-		     ;; priority over ID, even if ID is declared "higher up" in the
-		     ;; tree.  This can potentially be revised.  But it is also
-		     ;; pretty clean.  DIR is always higher in priority than ID right
-		     ;; now, no matter the depth in the tree.
-		     (org-attach-file-list (org-attach-dir)))))))
+		     (buffer-string))))
+    (should-not (equal "Text in fileB\n"
+		       (org-test-in-example-file org-test-attachments-file
+			 (goto-char 219) ;; Second attachment link
+			 (let ((org-attach-use-inheritance nil))
+			   (org-open-at-point)
+			   (buffer-string)))))
+    (should (equal "Text in fileB\n"
+		   (org-test-in-example-file org-test-attachments-file
+		     (goto-char 219) ;; Second attachment link
+		     (let ((org-attach-use-inheritance t))
+		       (org-open-at-point)
+		       (buffer-string)))))
+    (should-not (equal "att1"
+		       (org-test-in-example-file org-test-attachments-file
+			 (goto-char 179) ;; H1.1
+			 (let ((org-attach-use-inheritance nil))
+			   (org-attach-dir)))))
+    (should (equal "att1"
+		   (org-test-in-example-file org-test-attachments-file
+		     (goto-char 179) ;; H1.1
+		     (let ((org-attach-use-inheritance t))
+		       (org-attach-dir)))))
+    (should (equal '("fileC" "fileD")
+		   (org-test-in-example-file org-test-attachments-file
+		     (goto-char 239) ;; H1.2
+		     (org-attach-file-list (org-attach-dir)))))
+    (should (equal '("fileC" "fileD")
+		   (org-test-in-example-file org-test-attachments-file
+		     (goto-char 239) ;; H1.2
+		     (org-attach-file-list (org-attach-dir)))))
+    (should (equal '("fileE")
+		   (org-test-in-example-file org-test-attachments-file
+		     (goto-char 289) ;; H2
+		     (let ((org-attach-id-dir "data/"))
+		       (org-attach-file-list (org-attach-dir))))))
+    (should (equal "peek-a-boo\n"
+		   (org-test-in-example-file org-test-attachments-file
+		     (goto-char 289) ;; H2
+		     (let ((org-attach-id-dir "data/"))
+		       (org-attach-open-in-emacs)
+		       (buffer-string)))))
+    (should (equal  '("fileA" "fileB")
+		    (org-test-in-example-file org-test-attachments-file
+		      (goto-char 336) ;; H3
+		      (org-attach-file-list (org-attach-dir)))))
+    ;; Test for folder not initialized in the filesystem
+    (should-not (org-test-in-example-file org-test-attachments-file
+		  (goto-char 401) ;; H3.1
+		  (let ((org-attach-use-inheritance nil)
+			(org-attach-id-dir "data/"))
+		    (org-attach-dir))))
+    ;; Not yet initialized folder should be found if no-fs-check is
+    ;; non-nil
+    (should (equal "data/ab/cd12345"
+		   (org-test-in-example-file org-test-attachments-file
+		     (goto-char 401) ;; H3.1
+		     (let ((org-attach-use-inheritance nil)
+			   (org-attach-id-dir "data/"))
+		       (file-relative-name (org-attach-dir nil t))))))
+    (should (equal '("fileA" "fileB")
+		   (org-test-in-example-file org-test-attachments-file
+		     (goto-char 401) ;; H3.1
+		     (let ((org-attach-use-inheritance t))
+		       ;; This is where it gets a bit sketchy...! DIR always has
+		       ;; priority over ID, even if ID is declared "higher up" in the
+		       ;; tree.  This can potentially be revised.  But it is also
+		       ;; pretty clean.  DIR is always higher in priority than ID right
+		       ;; now, no matter the depth in the tree.
+		       (org-attach-file-list (org-attach-dir))))))))
 
 (ert-deftest test-org-attach/dired-attach-to-next-best-subtree/1 ()
   "Attach file at point in dired to subtree."

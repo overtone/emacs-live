@@ -121,7 +121,15 @@
   (should (equal "0.5min"
 		 (let ((org-duration-format
 			'(("h" . nil) ("min" . nil) (special . 1))))
-		   (org-duration-from-minutes 0.5)))))
+		   (org-duration-from-minutes 0.5))))
+  ;; Handle compact form.
+  (should (equal "0h50min"
+		 (let ((org-duration-format '(("h" . t) ("min" . t) compact)))
+		   (org-duration-from-minutes 50))))
+  (should (equal "1d0:10"
+		 (let ((org-duration-format
+			'(("d" . nil) (special . h:mm) compact)))
+		   (org-duration-from-minutes (+ (* 24 60) 10))))))
 
 (ert-deftest test-org-duration/p ()
   "Test `org-duration-p' specifications."
@@ -130,7 +138,9 @@
   (should (org-duration-p "123:12"))
   (should (org-duration-p "1:23:45"))
   (should (org-duration-p "3d 3h 4min"))
+  (should (org-duration-p "3d3h4min"))
   (should (org-duration-p "3d 13:35"))
+  (should (org-duration-p "3d13:35"))
   (should (org-duration-p "2.35h"))
   ;; Handle custom units, but return nil for unknown units.
   (should-not (org-duration-p "1minute"))
@@ -146,7 +156,7 @@
   (should-not (org-duration-p "3::12"))
   (should-not (org-duration-p "3:2"))
   (should-not (org-duration-p "3:12:4"))
-  ;; Return nil in mixed mode if H:MM:SS part is not last.
+  ;; Return nil in mixed mode if H:MM:SS part is not the last one.
   (should-not (org-duration-p "3d 13:35 13h")))
 
 (ert-deftest test-org-duration/h:mm-only-p ()

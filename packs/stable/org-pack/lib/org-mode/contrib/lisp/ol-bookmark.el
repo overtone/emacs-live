@@ -52,7 +52,7 @@ Otherwise prompt the user for the right bookmark to use."
 			 :follow #'org-bookmark-open
 			 :store #'org-bookmark-store-link)
 
-(defun org-bookmark-open (bookmark)
+(defun org-bookmark-open (bookmark _)
   "Visit the bookmark BOOKMARK."
   (bookmark-jump bookmark))
 

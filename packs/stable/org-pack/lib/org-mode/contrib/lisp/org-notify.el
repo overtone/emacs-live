@@ -57,7 +57,7 @@
 
 ;;; Code:
 
-(eval-when-compile (require 'cl))
+(eval-when-compile (require 'cl-lib))
 (require 'org-element)
 
 (declare-function appt-delete-window    "appt"          ())
@@ -72,6 +72,11 @@
 (defcustom org-notify-audible t
   "Non-nil means beep to indicate notification."
   :type 'boolean
+  :group 'org-notify)
+
+(defcustom org-notify-max-notifications-per-run 3
+  "Maximum number of notifications per run of `org-notify-process'."
+  :type 'integer
   :group 'org-notify)
 
 (defconst org-notify-actions
@@ -155,36 +160,40 @@ PERIOD."
       (message "Warning: notification for \"%s\" behind schedule!" heading))
   t)
 
-(defun org-notify-process ()
+(cl-defun org-notify-process ()
   "Process the todo-list, and possibly notify user about upcoming or
 forgotten tasks."
-  (cl-macrolet ((prm (k) `(plist-get prms ,k))  (td (k) `(plist-get todo ,k)))
-    (dolist (todo (org-notify-todo-list))
-      (let* ((deadline (td :deadline))  (heading (td :heading))
-             (uid (td :uid))            (last-run-sym
-                                         (intern (concat ":last-run-" uid))))
-        (dolist (prms (plist-get org-notify-map (td :notify)))
-          (when (< deadline (org-notify-string->seconds (prm :time)))
-            (let ((period (org-notify-string->seconds (prm :period)))
-                  (last-run (prm last-run-sym))  (now (float-time))
-                  (actions (prm :actions))       diff  plist)
-              (when (or (not last-run)
-                        (and period (< period (setq diff (- now last-run)))
-                             (org-notify-maybe-too-late diff period heading)))
-                (setq prms (plist-put prms last-run-sym now)
-                      plist (append todo prms))
-                (if (if (plist-member prms :audible)
-                        (prm :audible)
-                      org-notify-audible)
-                    (ding))
-                (unless (listp actions)
-                  (setq actions (list actions)))
-                (dolist (action actions)
-                  (funcall (if (fboundp action) action
-                             (intern (concat "org-notify-action"
-                                             (symbol-name action))))
-                           plist))))
-            (return)))))))
+  (let ((notification-cnt 0))
+    (cl-macrolet ((prm (k) `(plist-get prms ,k))  (td (k) `(plist-get todo ,k)))
+      (dolist (todo (org-notify-todo-list))
+	(let* ((deadline (td :deadline))  (heading (td :heading))
+               (uid (td :uid))            (last-run-sym
+                                           (intern (concat ":last-run-" uid))))
+          (cl-dolist (prms (plist-get org-notify-map (td :notify)))
+            (when (< deadline (org-notify-string->seconds (prm :time)))
+              (let ((period (org-notify-string->seconds (prm :period)))
+                    (last-run (prm last-run-sym))  (now (float-time))
+                    (actions (prm :actions))       diff  plist)
+		(when (or (not last-run)
+                          (and period (< period (setq diff (- now last-run)))
+                               (org-notify-maybe-too-late diff period heading)))
+                  (setq prms (plist-put prms last-run-sym now)
+			plist (append todo prms))
+                  (if (if (plist-member prms :audible)
+                          (prm :audible)
+			org-notify-audible)
+                      (ding))
+                  (unless (listp actions)
+                    (setq actions (list actions)))
+		  (cl-incf notification-cnt)
+                  (dolist (action actions)
+                    (funcall (if (fboundp action) action
+                               (intern (concat "org-notify-action"
+                                               (symbol-name action))))
+			     plist))
+		  (when (>= notification-cnt org-notify-max-notifications-per-run)
+		    (cl-return-from org-notify-process)))
+		(cl-return)))))))))
 
 (defun org-notify-add (name &rest params)
   "Add a new notification type.

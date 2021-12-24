@@ -102,9 +102,6 @@ return x
 	    (org-babel-execute-src-block)))))
 
 (ert-deftest test-ob-python/session-multiline ()
-  ;; FIXME workaround to prevent starting prompt leaking into output
-  (run-python)
-  (sleep-for 0 10)
   (should
    (equal "20"
 	  (org-test-with-temp-text "#+begin_src python :session :results output
@@ -137,6 +134,78 @@ if True:
 	      ;; >>> 2
 	      (org-babel-execute-maybe)
 	      (org-babel-execute-src-block)))))
+
+(ert-deftest test-ob-python/if-else-block ()
+  (should
+   (equal "success" (org-test-with-temp-text "#+begin_src python :session :results value
+value = 'failure'
+if False:
+    pass
+else:
+    value = 'success'
+value
+#+end_src"
+	      (org-babel-execute-src-block)))))
+
+(ert-deftest test-ob-python/indent-block-with-blank-lines ()
+  (should
+   (equal 20
+	  (org-test-with-temp-text "#+begin_src python :session :results value
+  foo = 0
+  for i in range(10):
+      foo += 1
+
+      foo += 1
+
+  foo
+#+end_src"
+	    (org-babel-execute-src-block)))))
+
+(ert-deftest test-ob-python/assign-underscore ()
+  (should
+   (equal "success"
+	  (org-test-with-temp-text "#+begin_src python :session :results value
+_ = 'failure'
+'success'
+#+end_src"
+	    (org-babel-execute-src-block)))))
+
+(ert-deftest test-ob-python/multiline-var ()
+  (should
+   (equal "a\nb\nc"
+	  (org-test-with-temp-text "#+begin_src python :var text=\"a\\nb\\nc\"
+return text
+#+end_src"
+	    (org-babel-execute-src-block)))))
+
+(ert-deftest test-ob-python/multiline-str ()
+  (should
+   (equal "a\nb\nc"
+	  (org-test-with-temp-text "#+begin_src python
+text=\"a\\nb\\nc\"
+return text
+#+end_src"
+	    (org-babel-execute-src-block)))))
+
+(ert-deftest test-ob-python/header-var-assignment ()
+  (should
+   (equal "success"
+	  (org-test-with-temp-text "#+begin_src python :var text=\"failure\"
+text
+text=\"success\"
+return text
+#+end_src"
+	    (org-babel-execute-src-block)))))
+
+(ert-deftest test-ob-python/session-value-sleep ()
+  (should
+   (equal "success"
+	  (org-test-with-temp-text "#+begin_src python :session :results value
+import time
+time.sleep(.1)
+'success'
+#+end_src"
+	    (org-babel-execute-src-block)))))
 
 (provide 'test-ob-python)
 

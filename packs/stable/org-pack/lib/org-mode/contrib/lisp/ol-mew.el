@@ -191,7 +191,7 @@ with \"t\" key."
 	(let ((folder-or-path (mew-summary-folder-name)))
 	  (mew-folder-path-to-folder folder-or-path t))))))
 
-(defun org-mew-open (path)
+(defun org-mew-open (path _)
   "Follow the Mew message link specified by PATH."
   (let (folder message-id)
     (cond ((string-match "\\`\\(+.*\\)+\\+\\([0-9]+\\)\\'" path) ; for Bastien's

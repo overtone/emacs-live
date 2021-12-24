@@ -3,6 +3,7 @@
 ;; Copyright (C) 2013-2020 Free Software Foundation, Inc.
 
 ;; Author: Miro Bezjak
+;; Maintainer: Palak Mathur
 ;; Keywords: literate programming, reproducible research
 ;; Homepage: https://orgmode.org
 
@@ -65,7 +66,6 @@ This function is called by `org-babel-execute-src-block'."
       (cdr (assq :rowname-names params)) (cdr (assq :rownames params))))))
 
 (defvar org-babel-groovy-wrapper-method
-
   "class Runner extends Script {
     def out = new PrintWriter(new ByteArrayOutputStream())
     def run() { %s }
@@ -73,7 +73,6 @@ This function is called by `org-babel-execute-src-block'."
 
 println(new Runner().run())
 ")
-
 
 (defun org-babel-groovy-evaluate
     (session body &optional result-type result-params)
@@ -110,7 +109,5 @@ supported in Groovy."
   nil)
 
 (provide 'ob-groovy)
-
-
 
 ;;; ob-groovy.el ends here

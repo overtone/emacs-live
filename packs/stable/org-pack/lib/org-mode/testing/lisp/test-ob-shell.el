@@ -52,55 +52,59 @@ ob-comint.el, which was not previously tested."
   "No arrays for generic"
   (org-test-at-id "0ba56632-8dc1-405c-a083-c204bae477cf"
     (org-babel-next-src-block)
-    (should (equal "one two three" (org-babel-execute-src-block)))))
+    (should (equal "one two three" (org-trim (org-babel-execute-src-block))))))
 
 (ert-deftest ob-shell/bash-uses-arrays ()
   "Bash arrays"
   (org-test-at-id "0ba56632-8dc1-405c-a083-c204bae477cf"
     (org-babel-next-src-block 2)
-    (should (equal "one" (org-babel-execute-src-block)))))
+    (should (equal "one" (org-trim (org-babel-execute-src-block))))))
 
 (ert-deftest ob-shell/generic-uses-no-assoc-arrays ()
   "No associative arrays for generic"
   (should
    (equal "first one second two third three"
-	  (org-test-at-id "bec1a5b0-4619-4450-a8c0-2a746b44bf8d"
-	    (org-babel-next-src-block)
-	    (org-babel-execute-src-block))))
+	  (org-test-at-id
+	   "bec1a5b0-4619-4450-a8c0-2a746b44bf8d"
+	   (org-babel-next-src-block)
+	   (org-trim (org-babel-execute-src-block)))))
   (should
    (equal "bread 2 kg spaghetti 20 cm milk 50 dl"
-	  (org-test-at-id "82320a48-3409-49d7-85c9-5de1c6d3ff87"
-	    (org-babel-next-src-block)
-	    (org-babel-execute-src-block)))))
+	  (org-test-at-id
+	   "82320a48-3409-49d7-85c9-5de1c6d3ff87"
+	   (org-babel-next-src-block)
+	   (org-trim (org-babel-execute-src-block))))))
 
 (ert-deftest ob-shell/bash-uses-assoc-arrays ()
   "Bash associative arrays"
   (should
    (equal "two"
-	  (org-test-at-id "bec1a5b0-4619-4450-a8c0-2a746b44bf8d"
-	    (org-babel-next-src-block 2)
-	    (org-babel-execute-src-block))))
+	  (org-test-at-id
+	   "bec1a5b0-4619-4450-a8c0-2a746b44bf8d"
+	   (org-babel-next-src-block 2)
+	   (org-trim (org-babel-execute-src-block)))))
   ;; Bash associative arrays as strings for the row.
   (should
    (equal "20 cm"
-	  (org-test-at-id "82320a48-3409-49d7-85c9-5de1c6d3ff87"
-	    (org-babel-next-src-block 2)
-	    (org-babel-execute-src-block)))))
+	  (org-test-at-id
+	   "82320a48-3409-49d7-85c9-5de1c6d3ff87"
+	   (org-babel-next-src-block 2)
+	   (org-trim (org-babel-execute-src-block))))))
 
 (ert-deftest ob-shell/simple-list ()
   "Test list variables in shell."
   ;; With bash, a list is turned into an array.
   (should
-   (= 2
-      (org-test-with-temp-text
-	  "#+BEGIN_SRC bash :var l='(1 2)\necho ${l[1]}\n#+END_SRC"
-	(org-babel-execute-src-block))))
+   (equal "2"
+	  (org-test-with-temp-text
+	   "#+BEGIN_SRC bash :results output :var l='(1 2)\necho ${l[1]}\n#+END_SRC"
+	   (org-trim (org-babel-execute-src-block)))))
   ;; On sh, it is a string containing all values.
   (should
    (equal "1 2"
 	  (org-test-with-temp-text
-	      "#+BEGIN_SRC sh :var l='(1 2)\necho ${l}\n#+END_SRC"
-	    (org-babel-execute-src-block)))))
+	   "#+BEGIN_SRC sh :results output :var l='(1 2)\necho ${l}\n#+END_SRC"
+	   (org-trim (org-babel-execute-src-block))))))
 
 (provide 'test-ob-shell)
 

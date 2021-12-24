@@ -198,9 +198,15 @@ class FlooUI(event_emitter.EventEmitter):
                 msg.error("Something went really wrong.")
                 return
 
-        res = api.get_workspace(host, owner, workspace)
-        if res.code == 404:
-            msg.error("The workspace https://%s/%s/%s does not exist" % (host, owner, workspace))
+        try:
+            res = api.get_workspace(host, owner, workspace)
+            if res.code == 404:
+                msg.error("The workspace https://%s/%s/%s does not exist" % (host, owner, workspace))
+                return
+        except Exception as e:
+            message = 'Error getting workspace https://%s/%s/%s: %s' % (host, owner, workspace, str_e(e))
+            msg.error(message)
+            editor.error_message(message)
             return
 
         if self.agent:

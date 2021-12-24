@@ -1,0 +1,10 @@
+*~
+.elpaignore
+.gitignore
+.mailmap
+Makefile
+default.mk
+docs/Makefile
+docs/htmlxref.cnf
+docs/transient.texi
+lisp/Makefile

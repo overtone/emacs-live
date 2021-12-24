@@ -1,12 +1,12 @@
-;;; elisp-slime-nav.el --- Make M-. and M-, work in elisp like they do in slime
+;;; elisp-slime-nav.el --- Make M-. and M-, work in elisp like they do in slime  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2016  Steve Purcell
+;; Copyright (C) 2016-2020  Steve Purcell
 
 ;; Author: Steve Purcell <steve@sanityinc.com>
-;; Keywords: navigation slime elisp emacs-lisp
+;; Keywords: languages navigation slime elisp emacs-lisp
 ;; URL: https://github.com/purcell/elisp-slime-nav
 ;; Package-Version: 0
-;; Package-Requires: ((cl-lib "0.2"))
+;; Package-Requires: ((emacs "24.1") (cl-lib "0.2"))
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -62,9 +62,8 @@
   nil " SliNav" elisp-slime-nav-mode-map)
 
 ;;;###autoload
-(defun turn-on-elisp-slime-nav-mode ()
-  "Explicitly enable `elisp-slime-nav-mode'."
-  (elisp-slime-nav-mode 1))
+(define-obsolete-function-alias 'turn-on-elisp-slime-nav-mode 'elisp-slime-nav-mode
+  "2020-01-30")
 
 (defun elisp-slime-nav--all-navigable-symbol-names ()
   "Return a list of strings for the symbols to which navigation is possible."

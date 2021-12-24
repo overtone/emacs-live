@@ -36,7 +36,7 @@
     ))
 
 ;;;###autoload
-(eval-after-load "org"
+(eval-after-load 'org
   '(add-to-list 'org-src-lang-modes '("redis" . redis)))
 
 (provide 'ob-redis)

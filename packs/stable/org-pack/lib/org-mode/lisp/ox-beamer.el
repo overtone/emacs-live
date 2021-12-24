@@ -379,12 +379,11 @@ used as a communication channel."
 	   :parent 'latex
 	   :transcoders
 	   (let ((protected-output
-		  (function
-		   (lambda (object contents info)
-		     (let ((code (org-export-with-backend
-				  'beamer object contents info)))
-		       (if (org-string-nw-p code) (concat "\\protect" code)
-			 code))))))
+		  (lambda (object contents info)
+		    (let ((code (org-export-with-backend
+				 'beamer object contents info)))
+		      (if (org-string-nw-p code) (concat "\\protect" code)
+			code)))))
 	     (mapcar #'(lambda (type) (cons type protected-output))
 		     '(bold footnote-reference italic strike-through timestamp
 			    underline))))
@@ -731,7 +730,7 @@ channel."
   "Transcode a LINK object into Beamer code.
 CONTENTS is the description part of the link.  INFO is a plist
 used as a communication channel."
-  (or (org-export-custom-protocol-maybe link contents 'beamer)
+  (or (org-export-custom-protocol-maybe link contents 'beamer info)
       ;; Fall-back to LaTeX export.  However, prefer "\hyperlink" over
       ;; "\hyperref" since the former handles overlay specifications.
       (let ((latex-link (org-export-with-backend 'latex link contents info)))
@@ -812,17 +811,16 @@ holding export options."
      (org-latex-make-preamble info)
      ;; Insert themes.
      (let ((format-theme
-	    (function
-	     (lambda (prop command)
-	       (let ((theme (plist-get info prop)))
-		 (when theme
-		   (concat command
-			   (if (not (string-match "\\[.*\\]" theme))
-			       (format "{%s}\n" theme)
-			     (format "%s{%s}\n"
-				     (match-string 0 theme)
-				     (org-trim
-				      (replace-match "" nil nil theme)))))))))))
+	    (lambda (prop command)
+	      (let ((theme (plist-get info prop)))
+		(when theme
+		  (concat command
+			  (if (not (string-match "\\[.*\\]" theme))
+			      (format "{%s}\n" theme)
+			    (format "%s{%s}\n"
+				    (match-string 0 theme)
+				    (org-trim
+				     (replace-match "" nil nil theme))))))))))
        (mapconcat (lambda (args) (apply format-theme args))
 		  '((:beamer-theme "\\usetheme")
 		    (:beamer-color-theme "\\usecolortheme")

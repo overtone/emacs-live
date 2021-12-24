@@ -146,7 +146,6 @@ p2
 *************** p3
 p4
 *************** END
-
 "
      (org-flag-subtree t)
      (org-cycle)
