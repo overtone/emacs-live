@@ -1,6 +1,6 @@
 ;;; cider-doc.el --- CIDER documentation functionality -*- lexical-binding: t -*-
 
-;; Copyright © 2014-2020 Bozhidar Batsov, Jeff Valk and CIDER contributors
+;; Copyright © 2014-2021 Bozhidar Batsov, Jeff Valk and CIDER contributors
 
 ;; Author: Jeff Valk <jv@jeffvalk.com>
 
@@ -120,25 +120,25 @@
 
 (defface cider-docview-emphasis-face
   '((t (:inherit default :underline t)))
-  "Face for emphasized text"
+  "Face for emphasized text."
   :group 'cider-docview-mode
   :package-version '(cider . "0.7.0"))
 
 (defface cider-docview-strong-face
   '((t (:inherit default :underline t :weight bold)))
-  "Face for strongly emphasized text"
+  "Face for strongly emphasized text."
   :group 'cider-docview-mode
   :package-version '(cider . "0.7.0"))
 
 (defface cider-docview-literal-face
   '((t (:inherit font-lock-string-face)))
-  "Face for literal text"
+  "Face for literal text."
   :group 'cider-docview-mode
   :package-version '(cider . "0.7.0"))
 
 (defface cider-docview-table-border-face
   '((t (:inherit shadow)))
-  "Face for table borders"
+  "Face for table borders."
   :group 'cider-docview-mode
   :package-version '(cider . "0.7.0"))
 
@@ -188,7 +188,7 @@
 (defvar cider-docview-line)
 
 (define-derived-mode cider-docview-mode help-mode "Doc"
-  "Major mode for displaying CIDER documentation
+  "Major mode for displaying CIDER documentation.
 
 \\{cider-docview-mode-map}"
   (setq buffer-read-only t)

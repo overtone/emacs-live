@@ -1,9 +1,9 @@
 ;;; cider-util-tests.el
 
-;; Copyright © 2012-2020 Tim King, Bozhidar Batsov
+;; Copyright © 2012-2021 Tim King, Bozhidar Batsov
 
 ;; Author: Tim King <kingtim@gmail.com>
-;;         Bozhidar Batsov <bozhidar@batsov.com>
+;;         Bozhidar Batsov <bozhidar@batsov.dev>
 ;;         Artur Malabarba <bruce.connor.am@gmail.com>
 
 ;; This file is NOT part of GNU Emacs.
@@ -129,13 +129,11 @@ buffer."
       (with-clojure-buffer ":abc/foo"
         (expect (cider-symbol-at-point) :to-equal ":abc/foo")))
 
-    (it "attempts to resolve namespaced keywords"
-      (spy-on 'cider-sync-request:macroexpand :and-return-value ":foo.bar/abc")
+    (it "does not attempt to resolve auto-resolved keywords"
       (with-clojure-buffer "(ns foo.bar) ::abc"
-        (expect (cider-symbol-at-point) :to-equal ":foo.bar/abc"))
-      (spy-on 'cider-sync-request:macroexpand :and-return-value ":clojure.string/abc")
+        (expect (cider-symbol-at-point) :to-equal "::abc"))
       (with-clojure-buffer "(ns foo.bar (:require [clojure.string :as str])) ::str/abc"
-        (expect (cider-symbol-at-point) :to-equal ":clojure.string/abc"))))
+        (expect (cider-symbol-at-point) :to-equal "::str/abc"))))
 
   (describe "when there's nothing at point"
     (it "returns nil"
@@ -165,13 +163,11 @@ buffer."
       (with-clojure-buffer "(1 2 3|)"
         (expect (cider-list-at-point) :to-equal "(1 2 3)")))
 
-    ;; doesn't work on Emacs 25
-    (xit "handles leading @ reader macro properly"
+    (it "handles leading @ reader macro properly"
       (with-clojure-buffer "@(1 2 3|)"
         (expect (cider-list-at-point) :to-equal "@(1 2 3)")))
 
-    ;; doesn't work on Emacs 25
-    (xit "handles leading ' reader macro properly"
+    (it "handles leading ' reader macro properly"
       (with-clojure-buffer "'(1 2 3|)"
         (expect (cider-list-at-point) :to-equal "'(1 2 3)")))
 
@@ -212,6 +208,23 @@ buffer."
         (delete-char -1)
         (insert "'")
         (expect (cider-sexp-at-point 'bounds) :to-equal '(5 15))))))
+
+(describe "cider-last-sexp"
+  (describe "when the param 'bounds is not given"
+    (it "returns the last sexp"
+      (with-clojure-buffer "a\n\n(defn ...)|\n\nb"
+        (expect (cider-last-sexp) :to-equal "(defn ...)")))
+    (it "returns the last sexp event when there are whitespaces"
+      (with-clojure-buffer "a\n\n(defn ...) ,\n|\nb"
+        (expect (cider-last-sexp) :to-equal "(defn ...)"))))
+
+  (describe "when the param 'bounds is given"
+    (it "returns the bounds of last sexp"
+      (with-clojure-buffer "a\n\n(defn ...)|\n\nb"
+        (expect (cider-last-sexp 'bounds) :to-equal '(4 14))))
+    (it "returns the bounds of last sexp event when there are whitespaces"
+      (with-clojure-buffer "a\n\n(defn ...) ,\n|\nb"
+        (expect (cider-last-sexp 'bounds) :to-equal '(4 14))))))
 
 (describe "cider-defun-at-point"
   (describe "when the param 'bounds is not given"

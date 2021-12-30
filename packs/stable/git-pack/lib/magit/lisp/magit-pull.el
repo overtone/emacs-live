@@ -1,12 +1,14 @@
 ;;; magit-pull.el --- update local objects and refs  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2008-2020  The Magit Project Contributors
+;; Copyright (C) 2008-2021  The Magit Project Contributors
 ;;
 ;; You should have received a copy of the AUTHORS.md file which
 ;; lists all contributors.  If not, see http://magit.vc/authors.
 
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
 ;; Maintainer: Jonas Bernoulli <jonas@bernoul.li>
+
+;; SPDX-License-Identifier: GPL-3.0-or-later
 
 ;; Magit is free software; you can redistribute it and/or modify it
 ;; under the terms of the GNU General Public License as published by
@@ -43,8 +45,10 @@
 (transient-define-prefix magit-pull ()
   "Pull from another repository."
   :man-page "git-pull"
+  :incompatible '(("--ff-only" "--rebase"))
   [:description
    (lambda () (if magit-pull-or-fetch "Pull arguments" "Arguments"))
+   ("-f" "Fast-forward only" "--ff-only")
    ("-r" "Rebase local commits" ("-r" "--rebase"))
    ("-A" "Autostash" "--autostash" :level 7)]
   [:description

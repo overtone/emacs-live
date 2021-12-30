@@ -4,7 +4,7 @@ The long lost Emacs string manipulation library.
 
 ## Installation
 
-It's available on [marmalade](http://marmalade-repo.org/) and [Melpa](https://melpa.org/):
+It's available on [Melpa](https://melpa.org/):
 
     M-x package-install s
 

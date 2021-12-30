@@ -1,6 +1,6 @@
 ;;; org-eldoc.el --- display org header and src block info using eldoc -*- lexical-binding: t; -*-
 
-;; Copyright (c) 2014-2020 Free Software Foundation, Inc.
+;; Copyright (c) 2014-2021 Free Software Foundation, Inc.
 
 ;; Author: Łukasz Gruner <lukasz@gruner.lu>
 ;; Maintainer: Łukasz Gruner <lukasz@gruner.lu>
@@ -23,7 +23,7 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 
@@ -154,7 +154,7 @@
 		   (let (eldoc-documentation-function)
 		     (eldoc-print-current-symbol-info)))))
            ((or
-             (string= lang "c") ;; http://github.com/nflath/c-eldoc
+             (string= lang "c") ;; https://github.com/nflath/c-eldoc
              (string= lang "C")) (when (require 'c-eldoc nil t)
                                    (c-eldoc-print-current-symbol-info)))
            ;; https://github.com/zenozeng/css-eldoc

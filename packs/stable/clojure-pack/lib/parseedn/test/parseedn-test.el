@@ -1,6 +1,6 @@
 ;;; parseedn-test.el --- Unit tests for EDN reading/printing
 
-;; Copyright (C) 2017-2018  Arne Brasseur
+;; Copyright (C) 2017-2021  Arne Brasseur
 
 ;; Author: Arne Brasseur <arne@arnebrasseur.net>
 
@@ -27,6 +27,7 @@
 
 ;;; Code
 
+(require 'a)
 (require 'ert)
 (require 'parseedn)
 

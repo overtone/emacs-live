@@ -92,20 +92,17 @@ unimportant fields are not listed):
 * `height` -- Max height of `popup` instance.
 * `min-height`
 * `current-height`
-* `direction` -- Positive number means forward, negative number means
-  backward.
+* `direction` -- Positive number means forward, negative number means backward.
 * `parent` -- The parent of `popup` instance.
 * `face` -- The background face.
 * `selection-face`
 * `margin-left`
 * `margin-right`
 * `scroll-bar` -- Non-nil means `popup` instance has a scroll bar.
-* `symbol` -- Non-nil means `popup` instance has a space for
-  displaying symbols of item.
+* `symbol` -- Non-nil means `popup` instance has a space for displaying symbols of item.
 * `cursor` -- The current position of `list`.
 * `scroll-top` -- The offset of scrolling.
-* `list` -- The contents of `popup` instance in a list of items
-  (strings).
+* `list` -- The contents of `popup` instance in a list of items (strings).
 * `original-list` -- Same as `list` except that this is not filtered.
 
 All of these fields can be accessed by `popup-<field>` function.
@@ -348,7 +345,8 @@ of completion. Default value is `#'regexp-quote`.
 
 ----
 
-Copyright (C) 2011-2015  Tomohiro Matsuyama <<m2ym.pub@gmail.com>>
+Copyright (C) 2011-2015  Tomohiro Matsuyama <<m2ym.pub@gmail.com>><br/>
+Copyright (C) 2020-2021  Jen-Chieh Shen <<jcs090218@gmail.com>>
 
 [melpa-link]: https://melpa.org/#/popup
 [melpa-stable-link]: https://stable.melpa.org/#/popup

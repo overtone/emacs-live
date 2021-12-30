@@ -1,6 +1,6 @@
 ;;; ob-sql.el --- Babel Functions for SQL            -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2009-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2021 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;; Keywords: literate programming, reproducible research
@@ -40,6 +40,7 @@
 ;; - dbuser
 ;; - dbpassword
 ;; - dbconnection (to reference connections in sql-connection-alist)
+;; - dbinstance (currently only used by SAP HANA)
 ;; - database
 ;; - colnames (default, nil, means "yes")
 ;; - result-params
@@ -58,6 +59,7 @@
 ;; - postgresql (postgres)
 ;; - oracle
 ;; - vertica
+;; - saphana
 ;;
 ;; TODO:
 ;;
@@ -85,6 +87,7 @@
     (dbport	       . :any)
     (dbuser	       . :any)
     (dbpassword	       . :any)
+    (dbinstance	       . :any)
     (database	       . :any))
   "SQL-specific header arguments.")
 
@@ -164,7 +167,8 @@ SQL Server on Windows and Linux platform."
              " "))
 
 (defun org-babel-sql-dbstring-vertica (host port user password database)
-  "Make Vertica command line args for database connection. Pass nil to omit that arg."
+  "Make Vertica command line args for database connection.
+Pass nil to omit that arg."
   (mapconcat #'identity
 	      (delq nil
 		    (list (when host     (format "-h %s" host))
@@ -173,6 +177,20 @@ SQL Server on Windows and Linux platform."
 			  (when password (format "-w %s" (shell-quote-argument password) ))
 			  (when database (format "-d %s" database))))
 	      " "))
+
+(defun org-babel-sql-dbstring-saphana (host port instance user password database)
+  "Make SAP HANA command line args for database connection.
+Pass nil to omit that arg."
+  (mapconcat #'identity
+             (delq nil
+                   (list (and host port (format "-n %s:%s" host port))
+                         (and host (not port) (format "-n %s" host))
+                         (and instance (format "-i %d" instance))
+                         (and user (format "-u %s" user))
+                         (and password (format "-p %s"
+                                               (shell-quote-argument password)))
+                         (and database (format "-d %s" database))))
+             " "))
 
 (defun org-babel-sql-convert-standard-filename (file)
   "Convert FILE to OS standard file name.
@@ -197,6 +215,7 @@ database connections."
                              (:dbport . sql-port)
                              (:dbuser . sql-user)
                              (:dbpassword . sql-password)
+                             (:dbinstance . sql-dbinstance)
                              (:database . sql-database)))
              (mapped-name (cdr (assq name name-mapping))))
         (cadr (assq mapped-name
@@ -212,6 +231,7 @@ This function is called by `org-babel-execute-src-block'."
          (dbport (org-babel-find-db-connection-param params :dbport))
          (dbuser (org-babel-find-db-connection-param params :dbuser))
          (dbpassword (org-babel-find-db-connection-param params :dbpassword))
+         (dbinstance (org-babel-find-db-connection-param params :dbinstance))
          (database (org-babel-find-db-connection-param params :database))
          (engine (cdr (assq :engine params)))
          (colnames-p (not (equal "no" (cdr (assq :colnames params)))))
@@ -245,11 +265,14 @@ This function is called by `org-babel-execute-src-block'."
 				   (org-babel-process-file-name in-file)
 				   (org-babel-process-file-name out-file)))
 		    ((postgresql postgres) (format
-					    "%spsql --set=\"ON_ERROR_STOP=1\" %s -A -P \
+					    "%s%s --set=\"ON_ERROR_STOP=1\" %s -A -P \
 footer=off -F \"\t\"  %s -f %s -o %s %s"
 					    (if dbpassword
 						(format "PGPASSWORD=%s " dbpassword)
 					      "")
+                                            (or (bound-and-true-p
+                                                 sql-postgres-program)
+                                                "psql")
 					    (if colnames-p "" "-t")
 					    (org-babel-sql-dbstring-postgresql
 					     dbhost dbport dbuser database)
@@ -276,6 +299,12 @@ footer=off -F \"\t\"  %s -f %s -o %s %s"
 			      dbhost dbport dbuser dbpassword database)
 			     (org-babel-process-file-name in-file)
 			     (org-babel-process-file-name out-file)))
+		    (saphana (format "hdbsql %s -I %s -o %s %s"
+				     (org-babel-sql-dbstring-saphana
+				      dbhost dbport dbinstance dbuser dbpassword database)
+				     (org-babel-process-file-name in-file)
+				     (org-babel-process-file-name out-file)
+				     (or cmdline "")))
                     (t (user-error "No support for the %s SQL engine" engine)))))
     (with-temp-file in-file
       (insert
@@ -309,7 +338,7 @@ SET COLSEP '|'
 	(progn (insert-file-contents-literally out-file) (buffer-string)))
       (with-temp-buffer
 	(cond
-	 ((memq (intern engine) '(dbi mysql postgresql postgres sqsh vertica))
+	 ((memq (intern engine) '(dbi mysql postgresql postgres saphana sqsh vertica))
 	  ;; Add header row delimiter after column-names header in first line
 	  (cond
 	   (colnames-p
@@ -346,8 +375,13 @@ SET COLSEP '|'
 	 (org-babel-pick-name (cdr (assq :rowname-names params))
 			      (cdr (assq :rownames params))))))))
 
-(defun org-babel-sql-expand-vars (body vars)
-  "Expand the variables held in VARS in BODY."
+(defun org-babel-sql-expand-vars (body vars &optional sqlite)
+  "Expand the variables held in VARS in BODY.
+
+If SQLITE has been provided, prevent passing a format to
+`orgtbl-to-csv'.  This prevents overriding the default format, which if
+there were commas in the context of the table broke the table as an
+argument mechanism."
   (mapc
    (lambda (pair)
      (setq body
@@ -358,9 +392,11 @@ SET COLSEP '|'
                   (let ((data-file (org-babel-temp-file "sql-data-")))
                     (with-temp-file data-file
                       (insert (orgtbl-to-csv
-                               val '(:fmt (lambda (el) (if (stringp el)
+                               val (if sqlite
+                                       nil
+                                     '(:fmt (lambda (el) (if (stringp el)
                                                       el
-                                                    (format "%S" el)))))))
+                                                    (format "%S" el))))))))
                     data-file)
                 (if (stringp val) val (format "%S" val))))
 	    body)))

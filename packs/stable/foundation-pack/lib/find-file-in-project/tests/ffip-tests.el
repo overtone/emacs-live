@@ -21,19 +21,14 @@
 ;; Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 ;;; Commentary:
+
+;;; Code:
+
 (require 'ert)
 (require 'find-file-in-project)
 
-(defvar ivy-read-called nil)
-
-(cl-defun ivy-read (prompt collection
-                           &key predicate require-match initial-input
-                           history preselect keymap update-fn sort
-                           action unwind re-builder matcher dynamic-collection caller)
-  (setq ivy-read-called t)
-  (message "`ivy-read' mockup is called"))
-
 (defun get-full-path (filename)
+  "Get full path of FILENAME in current directory."
   (concat
    (if load-file-name (file-name-directory load-file-name) default-directory)
    filename))
@@ -41,7 +36,7 @@
 (ert-deftest ffip-test-find-by-selected ()
   (let (files)
     (setq ffip-project-root default-directory)
-    (setq files (mapcar 'car (ffip-project-search "git-diff" nil)))
+    (setq files (mapcar 'car (ffip-project-search "git-diff")))
     ;; (message "files=%s" files)
     (should (string-match-p "git-diff.diff" (car files)))))
 
@@ -49,7 +44,7 @@
 (ert-deftest ffip-test-ffip ()
   (let (files)
     (setq ffip-project-root default-directory)
-    (setq files (mapcar 'car (ffip-project-search nil nil)))
+    (setq files (mapcar 'car (ffip-project-search nil)))
     (should (> (length files) 1))
     (should (not (active-minibuffer-window)))))
 
@@ -58,7 +53,7 @@
         (prefix-args '(4 (4))))
     (dolist (open-another-arg prefix-args)
       (setq ffip-project-root default-directory)
-      (setq files (mapcar 'car (ffip-project-search "git-diff" nil)))
+      (setq files (mapcar 'car (ffip-project-search "git-diff")))
       (should (= (length files) 1))
       (should (not (active-minibuffer-window))))))
 
@@ -66,24 +61,25 @@
   (let* (files
          (ffip-diff-backends '((with-temp-buffer
                                  (insert-file-contents (get-full-path "git-diff.diff"))
-                                 (buffer-string)))))
+                                 (buffer-string))))
+         ;; see https://github.com/redguardtoo/find-file-in-project/issues/137
+         ;; debian package creates some extra diff in parent directory "tests/"
+         ;; So root directory should be set to "tests/"
+         (ffip-diff-find-file-by-file-name-p t)
+         (ffip-project-root (file-name-directory load-file-name)))
     (ffip-show-diff)
     (switch-to-buffer "*ffip-diff*")
     (goto-char (point-min))
     (diff-file-next)
-    (setq ivy-read-called nil)
     ;; find now
     (ffip-diff-find-file)
-    (should (not ivy-read-called)) ; only one candidate
     (should (string= (file-name-nondirectory (buffer-file-name)) "ffip-tests.el"))
 
     ;; move to the second file hunk
     (switch-to-buffer "*ffip-diff*")
     (diff-file-next)
-    (setq ivy-read-called nil)
     ;; find file in the first diff hunk now
     (ffip-diff-find-file)
-    (should (not ivy-read-called)) ; only one candidate
     (should (string= (file-name-nondirectory (buffer-file-name)) "git-diff.diff"))
     ;; cleanup
     (kill-buffer "*ffip-diff*")))
@@ -120,10 +116,33 @@
       (should (string= (ffip--guess-physical-path fn) (file-truename "./test2.js"))))
     ))
 
+(ert-deftest ffip-test-completing-read ()
+  (should (eq (ffip-completing-read "hint:" '(a)) 'a))
+  (should (eq (ffip-completing-read "hint:" '((a . b))) 'b))
+  (ffip-completing-read "hint:"
+                        '("a")
+                        (lambda (selected) (should (string= selected "a")))))
+
+(ert-deftest ffip-test-ido ()
+  (should (boundp 'ffip-prefer-ido-mode))
+  (should (not ffip-prefer-ido-mode)))
+
 (ert-deftest ffip-test-windows ()
   (if (eq system-type 'windows-nt)
       (should (executable-find (ffip--guess-gnu-find)))
     (message "NOT windows native Emacs, nothing to test.")
     (should t)))
+
+(ert-deftest ffip-test-relative-path-commands ()
+  (with-temp-buffer
+    (let* (orig-pos)
+      (insert (get-full-path "git-diff.diff"))
+      (goto-char 5)
+      (should (file-exists-p (buffer-string)))
+      ;; absolute path
+      (should (not (string= "tests/git-diff.diff" (buffer-string))))
+      (ffip-fix-file-path-at-point)
+      ;; relative path
+      (should (string= "tests/git-diff.diff" (buffer-string))))))
 
 (ert-run-tests-batch-and-exit)

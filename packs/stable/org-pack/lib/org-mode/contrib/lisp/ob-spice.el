@@ -5,7 +5,7 @@
 ;; Maintainer: stardiviner (numbchild@gmail.com)
 ;; Version: 0.4
 ;; Package-Requires: ((spice-mode "0.0.1") (org "8"))
-;; Homepage: http://tiagoweber.github.io
+;; Homepage: https://tiagoweber.github.io
 
 ;; License: GPL v3, or any later version
 ;;
@@ -20,12 +20,12 @@
 ;; GNU General Public License for more details.
 ;;
 ;; You should have received a copy of the GNU General Public License
-;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 
 ;; Org-Babel support for evaluating spice script.
-;; Inspired by Ian Yang's org-export-blocks-format-plantuml (http://www.emacswiki.org/emacs/org-export-blocks-format-plantuml.el)
+;; Inspired by Ian Yang's org-export-blocks-format-plantuml (https://www.emacswiki.org/emacs/org-export-blocks-format-plantuml.el)
 
 ;;; Requirements:
 ;;

@@ -55,9 +55,44 @@ Typically this type of evaluation commands would provide you with dual feedback 
 you'd see the results in both the Emacs minibuffer and in an inline overlay in
 the source buffer.
 
+In case the result of the evaluation is big (e.g. a map with dozens of keys) it might be best
+to display it in a dedicated buffer. You can do this with
+`cider-pprint-eval-last-sexp` (kbd:[C-c C-p]). As a bonus -
+the result will be pretty-printed in the result buffer.
+
+.Why aren't results always pretty-printed?
+****
+Many people might be wondering why doesn't CIDER pretty-print all of the results
+all of the time. After all - pretty-printed results are always easier to read, right?
+
+The reason for not doing this is pretty simple - multi-line results don't look
+very good in the minibuffer and overlays.  That's why there's little point in
+pretty-printing results there.
+
+As most of the time you'll know in advance what kind of result to expect, we feel it's
+best to leave it to you to decide which evaluation command to use depending on the situation.
+****
+
 == Exotic Evaluation Commands
 
 NOTE: WIP
+
+While the basic evaluation commands discussed earlier should be enough for
+most people, CIDER features a ton of additional evaluation commands.
+Some of them are so peculiar that one can easily label them "exotic".
+This section will briefly go over some of them.
+
+Broadly speaking the exotic evaluation commands can be grouped in the following
+categories:
+
+- commands that are a variation of some basic commands (e.g. `cider-eval-list-at-point` and `cider-eval-sexp-at-point`)
+- commands that insert the result in the current buffer (e.g. `cider-eval-last-sexp-and-replace`)
+- commands that evaluate an expression in a different context (e.g. with user-supplied bindings)
+- commands that evaluate some particular part of a buffer (e.g. `cider-eval-ns-form`)
+
+Most of the exotic evaluation commands don't have "top-level" keybindings
+and should be accessed via CIDER's evaluation commands keymap (`cider-eval-commands-map`), meaning that they share the standard prefix `C-c C-v`. On top of this - several
+related commands that pretty-print their result are grouped under `C-c C-v C-f`.
 
 == Evaluating Clojure Code in the Minibuffer
 
@@ -82,9 +117,65 @@ available to you:
 
 == Evaluation Hooks
 
-NOTE: WIP
+You can use `cider-file-loaded-hook` to trigger some action after a
+file has been evaluated.
+
+TIP: `cider-auto-test-mode` is implemented in terms of this hook -
+tests are re-run every time you evaluate a file.
+
+You can use `cider-before-eval-hook` to trigger some action before eval
+request is sent to nrepl server.
+
+You can use `cider-after-eval-done-hook` to trigger some action after the
+eval response was received from nrepl server with status "done".
+
+== Synchronous vs Asynchronous Evaluation
+
+nREPL has an asynchronous evaluation model, where eval requests
+are enqueued and the responses are sent back to the clients when available.
+This model works great most of the time as doesn't require clients
+to block while waiting for responses, but it also requires the clients
+to able to handle comfortably response callbacks.
+
+Unfortunately, some of Emacs's internal APIs don't play well with asynchronous
+evaluation (e.g. completion, eldoc, etc) and in those cases CIDER simulates
+synchronous evaluation instead. It's important to understand several things:
+
+* CIDER's sync eval commands should be used sparingly
+* The most common use case for the sync eval API is evaluating some simple and fast to run tooling-related code
+* Sync eval may result in client lock-ups, as Emacs is (mostly) single-threaded by design
+
+CIDER tries to mitigate the latter by imposing a 10 second eval request timeout
+for sync eval. You can adjust this default if needed:
+
+[source,lisp]
+----
+;; increase the sync request timeout to 1 minute
+(setq nrepl-sync-request-timeout 60)
+
+;; disable sync request timeout
+(setq nrepl-sync-request-timeout nil)
+----
+
+NOTE: CIDER internally increases the timeout to 30 seconds for the first sync eval request it does, as it might require a lot of namespaces and take more time to complete. See `cider--prep-interactive-eval` for details.
 
 == Configuration
+
+=== Display Spinner During Evaluation
+
+Some evaluation operations take a while to complete, so CIDER will display a
+visual indicator (a spinner) in the modeline to indicate this. The
+evaluation-in-progress spinner can be controlled by several variables:
+
+* `cider-eval-spinner-type` (default value `'progress-bar) -
+controls the appearance of the spinner. See `spinner-types`
+for all possible options.
+* `cider-eval-spinner-delay` controls the time (in seconds) after which to
+show the spinner. The default value is 1 second.
+* `cider-show-eval-spinner` controls whether to show the spinner at all.
+Set this variable to `nil` to disable it.
+
+NOTE: CIDER uses internally the excellent package https://github.com/Malabarba/spinner.el[spinner.el].
 
 === Overlays
 
@@ -148,6 +239,24 @@ prefix). By default the prefix is `=> `.
 
 To remove the prefix altogether, just set it to the empty string (`""`).
 
+=== Change the Output Destination
+
+By default CIDER will display the output produced by some evaluation in the REPL buffer, but you can also funnel the output to a dedicated buffer. You can configure this behavior via `cider-interactive-eval-output-destination`.
+
+[source,lisp]
+----
+(setq cider-interactive-eval-output-destination 'output-buffer)
+----
+
+Additionally, there's the variable `cider-redirect-server-output-to-repl` that captures output that would normally end up in the `*nrepl-server*` buffer (provided it has been started via `cider-jack-in`) and redirects it to the REPL buffer. You can disable this redirection like this:
+
+[source,lisp]
+----
+(setq cider-redirect-server-output-to-repl nil)
+----
+
+NOTE: The redirection functionality is implemented in `cider-nrepl` as nREPL middleware. If you're using CIDER without `cider-nrepl` no output redirection is going to take place.
+
 == Keybindings
 
 You might have noticed that CIDER typically has 2-3 different keybindings for
@@ -166,6 +275,13 @@ like `cider-eval-defun-at-point` having 3 keybindings:
 * kbd:[C-c C-v (C-)d] (CIDER style)
 
 Okay, those are technically 4 keybindings, but who's counting!
+
+NOTE: Some of you are probably wonder why kbd:[C-c C-v] instead of
+kbd:[C-c C-e], right? Again - legacy. Historically kbd:[C-c C-e]
+was mapped to `cider-eval-last-sexp`, otherwise we would have picked
+this binding. It's still possible to recycle it down the road, as
+most people are probably using kbd:[C-x C-e] for `cider-eval-last-result`
+and good keybindings are too precious to be wasted like this.
 
 Below is a listing of most keybindings for evaluation commands:
 
@@ -190,7 +306,8 @@ kbd:[C-c C-e]
 | Load the form preceding point in the REPL buffer and eval.
 
 | `cider-pprint-eval-last-sexp`
-| kbd:[C-c C-v C-f e]
+| kbd:[C-c C-p] +
+kbd:[C-c C-v C-f e]
 | Evaluate the form preceding point and pretty-print the result in a popup buffer. If invoked with a prefix argument, insert the result into the current buffer as a comment.
 
 | `cider-pprint-eval-defun-at-point`
@@ -249,3 +366,5 @@ kbd:[C-u C-c C-c]
 | kbd:[C-c C-M-l]
 | Load (eval) all Clojure files below a directory.
 |===
+
+TIP: You'll find all evaluation commands and their keybindings in the `CIDER Eval` menu.

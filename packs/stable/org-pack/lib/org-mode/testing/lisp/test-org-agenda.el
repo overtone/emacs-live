@@ -15,7 +15,7 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 
@@ -23,7 +23,7 @@
 
 ;;; Code:
 
-(require 'org-test)
+(require 'org-test "../testing/org-test")
 (require 'org-agenda)
 (eval-and-compile (require 'cl-lib))
 
@@ -41,6 +41,13 @@
   "Kill all agenda buffers."
   (mapc #'kill-buffer
 	(org-test-agenda--agenda-buffers)))
+
+(defmacro org-test-agenda-with-agenda (text &rest body)
+  (declare (indent 1))
+  `(org-test-with-temp-text-in-file ,text
+     (let ((org-agenda-files `(,buffer-file-name)))
+       ,@body
+       (org-test-agenda--kill-all-agendas))))
 
 
 ;; Test the Agenda
@@ -141,6 +148,18 @@
   (org-toggle-sticky-agenda)
   (org-test-agenda--kill-all-agendas))
 
+(ert-deftest test-org-agenda/goto-date ()
+  "Test `org-agenda-goto-date'."
+  (unwind-protect
+      (should
+       (equal
+        (time-to-days (org-time-string-to-time "2019-12-30"))
+        (let ((org-agenda-files nil))
+          (org-agenda-list nil nil 'day)
+          (org-agenda-goto-date "2019-12-30")
+          (get-text-property (point) 'day))))
+    (org-test-agenda--kill-all-agendas)))
+
 
 ;; agenda redo
 
@@ -179,6 +198,67 @@
     (org-agenda-list nil "<2019-01-08>")
     (should (search-forward "f0bcf0cd8bad93c1451bb6e1b2aaedef5cce7cbb" nil t))
     (org-test-agenda--kill-all-agendas)))
+
+;; agenda bulk actions
+
+(ert-deftest test-org-agenda/bulk ()
+  "Bulk actions are applied to marked items."
+  (org-test-agenda-with-agenda "* TODO a\n* TODO b"
+    (org-todo-list)
+    (org-agenda-bulk-mark-all)
+    (cl-letf (((symbol-function 'read-char-exclusive)
+               (lambda () ?t))
+              ((symbol-function 'completing-read)
+               (lambda (&rest rest) "DONE")))
+      (org-agenda-bulk-action))
+    (org-agenda-previous-item 99)
+    (should (looking-at ".*DONE a"))
+    (org-agenda-next-item 1)
+    (should (looking-at ".*DONE b"))))
+
+(ert-deftest test-org-agenda/bulk-custom ()
+  "Custom bulk actions are applied to all marked items."
+  (org-test-agenda-with-agenda "* TODO a\n* TODO b"
+    (org-todo-list)
+    (org-agenda-bulk-mark-all)
+
+    ;; Mock read functions
+    (let* ((f-call-cnt 0)
+           (org-agenda-bulk-custom-functions
+           `((?P ,(lambda () (setq f-call-cnt (1+ f-call-cnt)))))))
+      (cl-letf* (((symbol-function 'read-char-exclusive)
+                  (lambda () ?P)))
+        (org-agenda-bulk-action)
+        (should (= f-call-cnt 2))))))
+
+(ert-deftest test-org-agenda/bulk-custom-arg-func ()
+  "Argument collection functions can be specified for custom bulk
+functions."
+  (org-test-agenda-with-agenda "* TODO a\n* TODO b"
+    (org-todo-list)
+    (org-agenda-bulk-mark-all)
+    (let* ((f-called-cnt 0)
+           (arg-f-call-cnt 0)
+           (f-called-args nil)
+           (org-agenda-bulk-custom-functions
+            `((?P
+               ;; Custom bulk function
+               ,(lambda (&rest args)
+                  (message "test" args)
+                  (setq f-called-cnt (1+ f-called-cnt)
+
+                        f-called-args args))
+               ;; Argument collection function
+               ,(lambda ()
+                  (setq arg-f-call-cnt (1+ arg-f-call-cnt))
+                  '(1 2 3))))))
+      (cl-letf (((symbol-function 'read-char-exclusive)
+                 (lambda () ?P)))
+        (org-agenda-bulk-action))
+      (should (= f-called-cnt 2))
+      (should (= arg-f-call-cnt 1))
+      (should (equal f-called-args '(1 2 3))))))
+
 
 
 (provide 'test-org-agenda)

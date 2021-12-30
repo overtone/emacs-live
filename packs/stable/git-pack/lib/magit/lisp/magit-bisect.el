@@ -1,12 +1,14 @@
 ;;; magit-bisect.el --- bisect support for Magit  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2011-2020  The Magit Project Contributors
+;; Copyright (C) 2011-2021  The Magit Project Contributors
 ;;
 ;; You should have received a copy of the AUTHORS.md file which
 ;; lists all contributors.  If not, see http://magit.vc/authors.
 
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
 ;; Maintainer: Jonas Bernoulli <jonas@bernoul.li>
+
+;; SPDX-License-Identifier: GPL-3.0-or-later
 
 ;; Magit is free software; you can redistribute it and/or modify it
 ;; under the terms of the GNU General Public License as published by
@@ -63,7 +65,11 @@
    ["Arguments"
     ("-n" "Don't checkout commits"              "--no-checkout")
     ("-p" "Follow only first parent of a merge" "--first-parent"
-     :if (lambda () (version<= "2.29" (magit-git-version))))]
+     :if (lambda () (version<= "2.29" (magit-git-version))))
+    (6 magit-bisect:--term-old
+       :if (lambda () (version<= "2.7" (magit-git-version))))
+    (6 magit-bisect:--term-new
+       :if (lambda () (version<= "2.7" (magit-git-version))))]
    ["Actions"
     ("B" "Start"        magit-bisect-start)
     ("s" "Start script" magit-bisect-run)]]
@@ -71,17 +77,31 @@
    :if magit-bisect-in-progress-p
    ("B" "Bad"          magit-bisect-bad)
    ("g" "Good"         magit-bisect-good)
+   (6 "m" "Mark"       magit-bisect-mark
+      :if (lambda () (version<= "2.7" (magit-git-version))))
    ("k" "Skip"         magit-bisect-skip)
    ("r" "Reset"        magit-bisect-reset)
    ("s" "Run script"   magit-bisect-run)])
+
+(transient-define-argument magit-bisect:--term-old ()
+  :description "Old/good term"
+  :class 'transient-option
+  :key "=o"
+  :argument "--term-old=")
+
+(transient-define-argument magit-bisect:--term-new ()
+  :description "New/bad term"
+  :class 'transient-option
+  :key "=n"
+  :argument "--term-new=")
 
 ;;;###autoload
 (defun magit-bisect-start (bad good args)
   "Start a bisect session.
 
 Bisecting a bug means to find the commit that introduced it.
-This command starts such a bisect session by asking for a know
-good and a bad commit.  To move the session forward use the
+This command starts such a bisect session by asking for a known
+good and a known bad commit.  To move the session forward use the
 other actions from the bisect transient command (\
 \\<magit-status-mode-map>\\[magit-bisect])."
   (interactive (if (magit-bisect-in-progress-p)
@@ -89,17 +109,27 @@ other actions from the bisect transient command (\
                  (magit-bisect-start-read-args)))
   (unless (magit-rev-ancestor-p good bad)
     (user-error
-     "The good revision (%s) has to be an ancestor of the bad one (%s)"
-     good bad))
+     "The %s revision (%s) has to be an ancestor of the %s one (%s)"
+     (or (transient-arg-value "--term-old=" args) "good")
+     good
+     (or (transient-arg-value "--term-new=" args) "bad")
+     bad))
   (when (magit-anything-modified-p)
     (user-error "Cannot bisect with uncommitted changes"))
   (magit-git-bisect "start" (list args bad good) t))
 
 (defun magit-bisect-start-read-args ()
-  (let ((bad (magit-read-branch-or-commit "Start bisect with bad revision")))
+  (let* ((args (transient-args 'magit-bisect))
+         (bad (magit-read-branch-or-commit
+               (format "Start bisect with %s revision"
+                       (or (transient-arg-value "--term-new=" args)
+                           "bad")))))
     (list bad
-          (magit-read-other-branch-or-commit "Good revision" bad)
-          (transient-args 'magit-bisect))))
+          (magit-read-other-branch-or-commit
+           (format "%s revision" (or (transient-arg-value "--term-old=" args)
+                                     "Good"))
+           bad)
+          args)))
 
 ;;;###autoload
 (defun magit-bisect-reset ()
@@ -115,7 +145,8 @@ other actions from the bisect transient command (\
 Use this after you have asserted that the commit does not contain
 the bug in question."
   (interactive)
-  (magit-git-bisect "good"))
+  (magit-git-bisect (or (cadr (magit-bisect-terms))
+                        (user-error "Not bisecting"))))
 
 ;;;###autoload
 (defun magit-bisect-bad ()
@@ -123,7 +154,28 @@ the bug in question."
 Use this after you have asserted that the commit does contain the
 bug in question."
   (interactive)
-  (magit-git-bisect "bad"))
+  (magit-git-bisect (or (car (magit-bisect-terms))
+                        (user-error "Not bisecting"))))
+
+;;;###autoload
+(defun magit-bisect-mark ()
+  "While bisecting, mark the current commit with a bisect term.
+During a bisect using alternate terms, commits can still be
+marked with `magit-bisect-good' and `magit-bisect-bad', as those
+commands map to the correct term (\"good\" to --term-old's value
+and \"bad\" to --term-new's).  However, in some cases, it can be
+difficult to keep that mapping straight in your head; this
+command provides an interface that exposes the underlying terms."
+  (interactive)
+  (magit-git-bisect
+   (pcase-let ((`(,term-new ,term-old) (or (magit-bisect-terms)
+                                           (user-error "Not bisecting"))))
+     (pcase (read-char-choice
+             (format "Mark HEAD as %s ([n]ew) or %s ([o]ld)"
+                     term-new term-old)
+             (list ?n ?o))
+       (?n term-new)
+       (?o term-old)))))
 
 ;;;###autoload
 (defun magit-bisect-skip ()
@@ -144,7 +196,14 @@ bisect run'."
                                 (magit-bisect-start-read-args))))
                  (cons (read-shell-command "Bisect shell command: ") args)))
   (when (and bad good)
-    (magit-bisect-start bad good args))
+    ;; Avoid `magit-git-bisect' because it's asynchronous, but the
+    ;; next `git bisect run' call requires the bisect to be started.
+    (magit-with-toplevel
+      (magit-process-git
+       (list :file (magit-git-dir "BISECT_CMD_OUTPUT"))
+       (magit-process-git-arguments
+        (list "bisect" "start" bad good args)))
+      (magit-refresh)))
   (magit-git-bisect "run" (list shell-file-name shell-command-switch cmdline)))
 
 (defun magit-git-bisect (subcommand &optional args no-assert)
@@ -176,6 +235,9 @@ bisect run'."
 
 (defun magit-bisect-in-progress-p ()
   (file-exists-p (magit-git-dir "BISECT_LOG")))
+
+(defun magit-bisect-terms ()
+  (magit-file-lines (magit-git-dir "BISECT_TERMS")))
 
 (defun magit-insert-bisect-output ()
   "While bisecting, insert section with output from `git bisect'."

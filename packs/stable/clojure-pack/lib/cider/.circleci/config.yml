@@ -1,5 +1,8 @@
 version: 2.1
 
+orbs:
+  win: circleci/windows@2.2.0
+
 # Default actions to perform on each Emacs version
 commands:
   setup:
@@ -8,6 +11,22 @@ commands:
       - run:
           name: Install Eldev
           command: curl -fsSL https://raw.github.com/doublep/eldev/master/webinstall/circle-eldev > x.sh && source ./x.sh
+      - run:
+          name: Install unzip
+          command: apt-get update && apt-get install unzip
+
+  setup-windows:
+    steps:
+      - checkout
+      - run:
+          name: Install Eldev
+          command: |
+            # Remove expired DST Root CA X3 certificate. Workaround
+            # for https://debbugs.gnu.org/cgi/bugreport.cgi?bug=51038
+            # bug on Emacs 27.2.
+            gci cert:\LocalMachine\Root\DAC9024F54D8F6DF94935FB1732638CA6AD77C13
+            gci cert:\LocalMachine\Root\DAC9024F54D8F6DF94935FB1732638CA6AD77C13 | Remove-Item
+            (iwr https://raw.github.com/doublep/eldev/master/webinstall/circle-eldev.ps1).Content | powershell -command -
   test:
     steps:
       - run:
@@ -23,14 +42,6 @@ commands:
           command: eldev -dtT compile --warnings-as-errors
 
 jobs:
-  test-emacs-25:
-    docker:
-      - image: silex/emacs:25-dev
-        entrypoint: bash
-    steps:
-      - setup
-      - test
-
   test-emacs-26:
     docker:
       - image: silex/emacs:26-dev
@@ -55,6 +66,16 @@ jobs:
       - setup
       - test
 
+  test-windows-emacs-latest:
+    executor: win/default
+    steps:
+      - run:
+          name: Install Emacs latest
+          command: |
+            choco install emacs
+      - setup-windows
+      - test
+
   test-lint:
     docker:
       - image: silex/emacs:27-dev
@@ -66,8 +87,8 @@ workflows:
   version: 2
   ci-test-matrix:
     jobs:
-      - test-emacs-25
       - test-emacs-26
       - test-emacs-27
       - test-emacs-master
       - test-lint
+      - test-windows-emacs-latest

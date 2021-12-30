@@ -1,11 +1,11 @@
 ;;; cider-macroexpansion.el --- Macro expansion support -*- lexical-binding: t -*-
 
 ;; Copyright © 2012-2013 Tim King, Phil Hagelberg, Bozhidar Batsov
-;; Copyright © 2013-2020 Bozhidar Batsov, Artur Malabarba and CIDER contributors
+;; Copyright © 2013-2021 Bozhidar Batsov, Artur Malabarba and CIDER contributors
 ;;
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Phil Hagelberg <technomancy@gmail.com>
-;;         Bozhidar Batsov <bozhidar@batsov.com>
+;;         Bozhidar Batsov <bozhidar@batsov.dev>
 ;;         Artur Malabarba <bruce.connor.am@gmail.com>
 ;;         Hugo Duncan <hugo@hugoduncan.org>
 ;;         Steve Purcell <steve@sanityinc.com>
@@ -83,7 +83,7 @@ ARG is passed along to `undo-only'."
     (undo-only arg)))
 
 (defvar cider-last-macroexpand-expression nil
-  "Specify the last macroexpansion preformed.
+  "Specify the last macroexpansion performed.
 This variable specifies both what was expanded and the expander.")
 
 (defun cider-macroexpand-expr (expander expr)

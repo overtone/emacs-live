@@ -1,6 +1,6 @@
 ;;; cider-repl-history.el --- REPL input history browser
 
-;; Copyright (c) 2017-2020 John Valente and browse-kill-ring authors
+;; Copyright (c) 2017-2021 John Valente and browse-kill-ring authors
 
 ;; This program is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -348,7 +348,7 @@ it's turned on."
 (defun cider-repl-history-target-overlay-at (position &optional no-error)
   "Return overlay at POSITION that has property `cider-repl-history-target'.
 If no such overlay, raise an error unless NO-ERROR is true, in which
-case retun nil."
+case return nil."
   (let ((ovs  (overlays-at (point))))
     (catch 'cider-repl-history-target-overlay-at
       (dolist (ov ovs)

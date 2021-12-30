@@ -1,6 +1,6 @@
 ;;; ob-csharp.el --- org-babel functions for csharp evaluation
 
-;; Copyright (C) 2011-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2011-2021 Free Software Foundation, Inc.
 
 ;; Author: thomas "at" friendlyvillagers.com based on ob-java.el by Eric Schulte
 ;; Keywords: literate programming, reproducible research
@@ -19,7 +19,7 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 

@@ -1,6 +1,7 @@
 [![Build Status](https://secure.travis-ci.org/magnars/multiple-cursors.el.png)](https://travis-ci.org/magnars/multiple-cursors.el)
 [![MELPA](https://melpa.org/packages/multiple-cursors-badge.svg)](https://melpa.org/#/multiple-cursors)
 [![MELPA Stable](https://stable.melpa.org/packages/multiple-cursors-badge.svg)](https://stable.melpa.org/#/multiple-cursors)
+[![NonGNU ELPA](https://elpa.nongnu.org/nongnu/multiple-cursors.svg)](https://elpa.nongnu.org/nongnu/multiple-cursors.html)
 
 # multiple-cursors.el
 
@@ -29,7 +30,9 @@ TLDR: *I am still maintaining this package*, but I am no longer crowdsourcing a 
 
 I highly recommend installing multiple-cursors through `package.el`.
 
-It's available on [MELPA](http://melpa.org/) and [MELPA Stable](http://stable.melpa.org):
+It's available on [MELPA](http://melpa.org/), [MELPA Stable](http://stable.melpa.org) and 
+[NonGNU ELPA](https://elpa.nongnu.org/nongnu/multiple-cursors.html) (enabled by default
+from Emacs 28 onwards):
 
     M-x package-install multiple-cursors
 
@@ -119,6 +122,8 @@ You can [watch an intro to multiple-cursors at Emacs Rocks](http://emacsrocks.co
  - `mc/insert-letters`: Insert increasing letters for each cursor, top to bottom.
  - `mc/sort-regions`: Sort the marked regions alphabetically.
  - `mc/reverse-regions`: Reverse the order of the marked regions.
+ - `mc/vertical-align`: Aligns all cursors vertically with a given CHARACTER to the one with the highest column number (the rightest). (Might not behave as intended if more than one cursors are on the same line.)
+ - `mc/vertical-align-with-space`: Aligns all cursors with whitespace like `mc/vertical-align` does.
 
 ## Tips and tricks
 
@@ -156,6 +161,10 @@ You can [watch an intro to multiple-cursors at Emacs Rocks](http://emacsrocks.co
 
 - If you would like to keep the global bindings clean, and get custom keybindings
   when the region is active, you can try [region-bindings-mode](https://github.com/fgallina/region-bindings-mode).
+
+- There is a special hook that is run when the mode is diabled
+  (which is equivalent to the number of cursors going back to 1):
+  `multiple-cursors-mode-disabled-hook`
 
 BTW, I highly recommend adding `mc/mark-next-like-this` to a key binding that's
 right next to the key for `er/expand-region`.

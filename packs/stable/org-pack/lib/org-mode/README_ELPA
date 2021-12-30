@@ -10,7 +10,7 @@ This distribution contains an ELPA packaged version of Org.
 "ELPA" stands for the "Emacs Lisp Package Archive".
 
 The GNU ELPA is at:
-  http://elpa.gnu.org
+  https://elpa.gnu.org
 
 It contains the org-*.tar package, containing only the org files
 that are also part of GNU Emacs.

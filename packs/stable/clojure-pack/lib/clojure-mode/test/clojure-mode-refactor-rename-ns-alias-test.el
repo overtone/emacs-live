@@ -127,18 +127,48 @@
 (m*/operator 1 (math.-/subtract 2 3))"
     (clojure--rename-ns-alias-internal "math.*" "m*"))
 
-  (it "should offer completions"
+  (when-refactoring-it "should replace aliases in region"
+    "(str/join [])
+
+(s/with-gen #(string/includes? % \"gen/nope\")
+  #(gen/fmap (fn [[s1 s2]] (str s1 \"hello\" s2))
+     (gen/tuple (gen/string-alphanumeric) (gen/string-alphanumeric))))
+
+(gen/different-library)"
+    "(string/join [])
+
+(s/with-gen #(string/includes? % \"gen/nope\")
+  #(s.gen/fmap (fn [[s1 s2]] (str s1 \"hello\" s2))
+     (s.gen/tuple (s.gen/string-alphanumeric) (s.gen/string-alphanumeric))))
+
+(gen/different-library)"
+
+    (clojure--rename-ns-alias-usages "str" "string" (point-min) 13)
+    (clojure--rename-ns-alias-usages "gen" "s.gen" (point-min) (- (point-max) 23)))
+
+  (it "should offer completions for ns forms"
     (expect
-     (clojure-collect-ns-aliases
-      "(ns test.ns
+     (with-clojure-buffer
+         "(ns test.ns
   (:require [my.math.subtraction :as math.-]
             [my.math.multiplication :as math.*]
             [clojure.spec.alpha :as s]
             ;; [clojure.spec.alpha2 :as s2]
             [symbols :as abc123.-$#.%*+!@]))
 
-(math.*/operator 1 (math.-/subtract 2 3))")
-     :to-equal '("abc123.-$#.%*+!@" "s" "math.*" "math.-"))))
+(math.*/operator 1 (math.-/subtract 2 3))"
+       (clojure--collect-ns-aliases (point-min) (point-max) 'ns-form))
+     :to-equal '("math.-" "math.*" "s" "abc123.-$#.%*+!@")))
+
+  (it "should offer completions for usages in region"
+    (expect
+     (with-clojure-buffer
+         "(s/with-gen #(string/includes? % \"hello\")
+  #(gen/fmap (fn [[s1 s2]] (str s1 \"hello\" s2))
+     (gen/tuple (gen/string-alphanumeric) (gen/string-alphanumeric))))"
+       (clojure--collect-ns-aliases (point-min) (point-max) nil))
+     :to-equal '("s" "string" "gen"))))
+
 
 (provide 'clojure-mode-refactor-rename-ns-alias-test)
 

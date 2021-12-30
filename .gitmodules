@@ -190,3 +190,6 @@
 [submodule "packs/dev/clojure-pack/vendor/submodules/sesman"]
 	path = packs/dev/clojure-pack/vendor/submodules/sesman
 	url = https://github.com/vspinu/sesman.git
+[submodule "packs/dev/lang-pack/vendor/submodules/elixir"]
+	path = packs/dev/lang-pack/vendor/submodules/elixir
+	url = git://github.com/elixir-editors/emacs-elixir.git

@@ -5,7 +5,7 @@ ORG NEWS -- history of user-visible changes.   -*- mode: org; coding: utf-8 -*-
 #+LINK: doc https://orgmode.org/worg/doc.html#%s
 #+LINK: git https://code.orgmode.org/bzg/org-mode/commit/%s
 
-Copyright (C) 2012-2020 Free Software Foundation, Inc.
+Copyright (C) 2012-2021 Free Software Foundation, Inc.
 See the end of the file for license conditions.
 
 Please send Org bug reports to mailto:emacs-orgmode@gnu.org.
@@ -81,6 +81,30 @@ block. ~org-babel-latex-preamble~, ~org-babel-latex-begin-env~ and
 the user to specify the preamble and code that preceedes and proceeds
 the contents of the source block.
 
+*** New option ~org-html-meta-tags~ allows for HTML meta tags customization
+
+New variable ~org-html-meta-tags~ makes it possible to customize the
+=<meta>= tags used in an HTML export.  Accepts either a static list of
+values, or a function that generates such a list (see
+~org-html-meta-tags-default~ as an example of the latter).
+
+*** Option ~org-agenda-bulk-custom-functions~ now supports collecting bulk arguments
+
+When specifying a custom agenda bulk option, you can now also specify
+a function which collects the arguments to be used with each call to
+the custom function.
+
+*** New option ~org-clock-ask-before-exiting~
+
+By default, a function is now added to ~kill-emacs-query-functions~
+that asks whether to clock out and save when there's a running clock.
+Customize ~org-clock-ask-before-exiting~~ to nil to disable this new
+behavior.
+
+*** Option ~org-html-inline-image-rules~ now includes .webp
+
+By default ox-html now inlines webp images.
+
 ** New features
 *** =ob-python= improvements to =:return= header argument 
 
@@ -149,6 +173,13 @@ Example:
 A new =u= mode flag for Calc formulas in Org tables has been added to
 enable Calc units simplification mode.
 
+*** =org-set-tags-command= select tags from ~org-global-tags-completion-table~
+
+Let ~org-set-tags-command~ TAB fast tag completion interface complete
+tags including from both buffer local and user defined persistent
+global list (~org-tag-alist~ and ~org-tag-persistent-alist~).  Now
+option ~org-complete-tags-always-offer-all-agenda-tags~ is honored.
+
 ** Miscellaneous
 *** =org-goto-first-child= now works before first heading
 
@@ -189,6 +220,13 @@ changed to
                                 :background "chocolate"
                                 :height 0.75)))
 #+end_src
+
+*** Storing ID-links before first heading uses title as description
+
+Storing links to files using ~org-store-link~ (=<C-c l>=) when
+~org-id-link-to-org-use-id~ is not nil will now store the title as
+description of the link, if available.  If no title exists it falls
+back to the filename as before.
 
 * Version 9.4
 ** Incompatible changes
@@ -281,6 +319,40 @@ Also, ~org-startup-folded~ now defaults to ~showeverything~.
 
 ** New features
 
+*** =RET= and =C-j= now obey ~electric-indent-mode~
+
+Since Emacs 24.4, ~electric-indent-mode~ is enabled by default.  In
+most major modes, this causes =RET= to reindent the current line and
+indent the new line, and =C-j= to insert a newline without indenting.
+
+Org mode now obeys this minor mode: when ~electric-indent-mode~ is
+enabled, and point is neither in a table nor on a timestamp or a link:
+
+- =RET= (bound to ~org-return~) reindents the current line and indents
+  the new line;
+- =C-j= (bound to the new command ~org-return-and-maybe-indent~)
+  merely inserts a newline.
+
+To get the previous behaviour back, disable ~electric-indent-mode~
+explicitly:
+
+#+begin_src emacs-lisp
+(add-hook 'org-mode-hook (lambda () (electric-indent-local-mode -1)))
+#+end_src
+
+Alternatively, if you wish to keep =RET= as the "smart-return" key,
+but dislike Org's default indentation of sections, you may prefer to
+customize ~org-adapt-indentation~ to either =nil= or =headline-data=.
+
+*** New allowed value for ~org-adapt-indentation~
+
+~org-adapt-indentation~ now accepts a new value, =headline-data=.
+
+When set to this value, Org will only adapt indentation of headline
+data lines, such as planning/clock lines and property/logbook drawers.
+Also, with this setting, =org-indent-mode= will keep these data lines
+correctly aligned with the headline above.
+
 *** Looping agenda commands over headlines
 
 ~org-agenda-loop-over-headlines-in-active-region~ allows you to loop
@@ -313,15 +385,6 @@ call ~org-toggle-radio-button~.
 
 You can also add =#+ATTR_ORG: :radio t= right before the list to tell
 Org to use radio buttons for this list only.
-
-*** New allowed value for ~org-adapt-indentation~
-
-~org-adapt-indentation~ now accepts a new value, ='headline-data=.
-
-When set to this value, Org will only adapt indentation of headline
-data lines, such as planning/clock lines and property/logbook drawers.
-Also, with this setting, =org-indent-mode= will keep these data lines
-correctly aligned with the headline above.
 
 *** Numeric priorities are now allowed (up to 65)
 
@@ -391,31 +454,6 @@ can now be inserted with this prefix argument.
 
 Source code block header argument =:file-mode= can set file
 permissions if =:file= argument is provided.
-
-*** =RET= and =C-j= now obey ~electric-indent-mode~
-
-Since Emacs 24.4, ~electric-indent-mode~ is enabled by default.  In
-most major modes, this causes =RET= to reindent the current line and
-indent the new line, and =C-j= to insert a newline without indenting.
-
-Org mode now obeys this minor mode: when ~electric-indent-mode~ is
-enabled, and point is neither in a table nor on a timestamp or a link:
-
-- =RET= (bound to ~org-return~) reindents the current line and indents
-  the new line;
-- =C-j= (bound to the new command ~org-return-and-maybe-indent~)
-  merely inserts a newline.
-
-To get the previous behaviour back, disable ~electric-indent-mode~
-explicitly:
-
-#+begin_src emacs-lisp
-(add-hook 'org-mode-hook (lambda () (electric-indent-local-mode -1)))
-#+end_src
-
-Alternatively, if you wish to keep =RET= as the "smart-return" key,
-but dislike Org's default indentation of sections, you may prefer to
-customize ~org-adapt-indentation~ to either =nil= or ='headline-data=.
 
 *** =ob-C.el= allows the inclusion of non-system header files
 
@@ -927,7 +965,7 @@ removed.
 For those who hate breaking changes, even though the changes are made
 to clean things up; fear not.  ATTACH_DIR will still continue to work.
 It's just not documented any longer.  When you get the chance, run the
-code above to clean things up anyways!
+code above to clean things up anyway!
 
 **** New hooks
 Two hooks are added to org-attach:
@@ -4450,8 +4488,8 @@ found here: https://orgmode.org/worg/org-tutorials/org-outside-org.html
 
 Here are two screencasts demonstrating Thorsten's tools:
 
-- [[http://youtu.be/nqE6YxlY0rw]["Modern conventions for Emacs Lisp files"]]
-- [[http://www.youtube.com/watch?v%3DII-xYw5VGFM][Exploring Bernt Hansen's Org-mode tutorial with 'navi-mode']]
+- [[https://youtu.be/nqE6YxlY0rw]["Modern conventions for Emacs Lisp files"]]
+- [[https://www.youtube.com/watch?v%3DII-xYw5VGFM][Exploring Bernt Hansen's Org-mode tutorial with 'navi-mode']]
 
 *** MobileOrg for iOS
 

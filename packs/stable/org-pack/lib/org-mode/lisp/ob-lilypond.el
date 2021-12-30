@@ -1,6 +1,6 @@
 ;;; ob-lilypond.el --- Babel Functions for Lilypond  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2010-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2010-2021 Free Software Foundation, Inc.
 
 ;; Author: Martyn Jago
 ;; Keywords: babel language, literate programming
@@ -27,9 +27,9 @@
 ;; https://orgmode.org/worg/org-contrib/babel/languages/ob-doc-lilypond.html
 ;;
 ;; Lilypond documentation can be found at
-;; http://lilypond.org/manuals.html
+;; https://lilypond.org/manuals.html
 ;;
-;; This depends on epstopdf --- See http://www.ctan.org/pkg/epstopdf.
+;; This depends on epstopdf --- See https://www.ctan.org/pkg/epstopdf.
 
 ;;; Code:
 (require 'ob)
@@ -220,7 +220,7 @@ If error in compilation, attempt to mark the error in lilypond org file."
 FILE-NAME is full path to lilypond (.ly) file."
   (message "Compiling LilyPond...")
   (let ((arg-1 org-babel-lilypond-ly-command) ;program
-        (arg-2 nil)                    ;infile
+        ;; (arg-2 nil)                    ;infile
         (arg-3 "*lilypond*")           ;buffer
 	(arg-4 t)                      ;display
 	(arg-5 (if org-babel-lilypond-gen-png  "--png"  "")) ;&rest...
@@ -231,10 +231,10 @@ FILE-NAME is full path to lilypond (.ly) file."
         (arg-10 (concat "--output=" (file-name-sans-extension file-name)))
         (arg-11 file-name))
     (if test
-        `(,arg-1 ,arg-2 ,arg-3 ,arg-4 ,arg-5 ,arg-6
+        `(,arg-1 ,nil ,arg-3 ,arg-4 ,arg-5 ,arg-6 ;; arg-2
                  ,arg-7 ,arg-8 ,arg-9 ,arg-10 ,arg-11)
       (call-process
-       arg-1 arg-2 arg-3 arg-4 arg-5 arg-6
+       arg-1 nil arg-3 arg-4 arg-5 arg-6 ;; arg-2
        arg-7 arg-8 arg-9 arg-10 arg-11))))
 
 (defun org-babel-lilypond-check-for-compile-error (file-name &optional test)

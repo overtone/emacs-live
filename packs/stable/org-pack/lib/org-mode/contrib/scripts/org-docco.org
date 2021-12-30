@@ -3,7 +3,7 @@
 #+Style: <link rel="stylesheet" href="docco.css" type="text/css">
 #+Property: tangle yes
 
-The =docco= tool (see http://jashkenas.github.com/docco/) generates
+The =docco= tool (see https://jashkenas.github.com/docco/) generates
 HTML from JavaScript source code providing an attractive side-by-side
 display of source code and comments.  This file (see [[https://orgmode.org/cgit.cgi/org-mode.git/plain/contrib/scripts/org-docco.org][org-docco.org]])
 generates the same type of output from Org-mode documents with code
@@ -155,7 +155,7 @@ and code on the right side.  This function has two parts.
             (error "leftover points")))))))
 #+end_src
 
-We'll use Emacs [[http://www.gnu.org/software/emacs/manual/html_node/emacs/Specifying-File-Variables.html][File Local Variables]] and the
+We'll use Emacs [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Specifying-File-Variables.html][File Local Variables]] and the
 =org-export-html-final-hook= to control which buffers have
 =org-docco-buffer= run as part of their export process.
 #+begin_src emacs-lisp

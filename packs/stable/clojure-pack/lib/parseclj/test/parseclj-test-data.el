@@ -28,10 +28,10 @@
 ;;; Code:
 
 (setq parseclj-test-data
-      (a-list
+      (parseclj-alist
 
        "simple-list"
-       (a-list
+       (parseclj-alist
         :tags '(:edn-roundtrip)
         :source "(1 2 3)"
         :edn '((1 2 3))
@@ -54,7 +54,7 @@
 
 
        "empty-list"
-       (a-list
+       (parseclj-alist
         :source "()"
         :edn '(())
         :ast '((:node-type . :root)
@@ -64,7 +64,7 @@
                               (:children . nil))))))
 
        "size-1"
-       (a-list
+       (parseclj-alist
         :tags '(:edn-roundtrip)
         :source "(1)"
         :edn '((1))
@@ -78,7 +78,7 @@
                                              (:value . 1)))))))))
 
        "leafs"
-       (a-list
+       (parseclj-alist
         :source "(nil true false hello-world)"
         :edn '((nil t nil hello-world))
         :ast '((:node-type . :root)
@@ -103,7 +103,7 @@
                                              (:value . hello-world)))))))))
 
        "qualified-symbol"
-       (a-list
+       (parseclj-alist
         :tags '(:edn-roundtrip)
         :source "clojure.string/join"
         :edn '(clojure.string/join)
@@ -115,7 +115,7 @@
                               (:value . clojure.string/join))))))
 
        "nested-lists"
-       (a-list
+       (parseclj-alist
         :source "((.9 abc (true) (hello)))"
         :edn '(((0.9 abc (t) (hello))))
         :ast '((:node-type . :root)
@@ -146,7 +146,7 @@
                                                                      (:value . hello)))))))))))))
 
        "strings-1"
-       (a-list
+       (parseclj-alist
         :tags '(:edn-roundtrip)
         :source "\"abc hello \\t\\\"x\""
         :edn '("abc hello \t\"x")
@@ -158,7 +158,7 @@
                               (:value . "abc hello \t\"x"))))))
 
        "strings-2"
-       (a-list
+       (parseclj-alist
         :source "(\"---\\f---\\\"-'\\'-\\\\-\\r\\n\")"
         :edn '(("---\f---\"-''-\\-\r\n"))
         :ast '((:node-type . :root)
@@ -171,7 +171,7 @@
                                              (:value . "---\f---\"-''-\\-\r\n")))))))))
 
        "chars-1"
-       (a-list
+       (parseclj-alist
         :source "(\\newline \\return \\space \\tab \\a \\b \\c \\u0078 \\o171)"
         :edn '((?\n ?\r ?\ ?\t ?a ?b ?c ?x ?y))
         :ast '((:node-type . :root)
@@ -189,7 +189,7 @@
                                             ((:node-type . :character) (:position . 47) (:form . "\\o171") (:value . ?y)))))))))
 
        "chars-2"
-       (a-list
+       (parseclj-alist
         :source "\"\\u0078 \\o171\""
         :edn '("x y")
         :ast '((:node-type . :root)
@@ -200,7 +200,7 @@
                               (:value . "x y"))))))
 
        "keywords"
-       (a-list
+       (parseclj-alist
         :tags '(:edn-roundtrip)
         :source ":foo-bar"
         :edn '(:foo-bar)
@@ -212,7 +212,7 @@
                               (:value . :foo-bar))))))
 
        "vector"
-       (a-list
+       (parseclj-alist
         :tags '(:edn-roundtrip)
         :source "[123]"
         :edn '([123])
@@ -226,10 +226,10 @@
                                              (:value . 123)))))))))
 
        "map"
-       (a-list
+       (parseclj-alist
         :tags '(:edn-roundtrip)
         :source "{:count 123}"
-        :edn (list (a-hash-table :count 123))
+        :edn (list (parseclj-hash-table :count 123))
         :ast '((:node-type . :root)
                (:position . 1)
                (:children . (((:node-type . :map)
@@ -244,7 +244,7 @@
                                              (:value . 123)))))))))
 
        "set"
-       (a-list
+       (parseclj-alist
         :tags '(:edn-roundtrip)
         :source "#{:x}"
         :edn '((edn-set (:x)))
@@ -258,7 +258,7 @@
                                              (:value . :x)))))))))
 
        "discard"
-       (a-list
+       (parseclj-alist
         :source "(10 #_11 12 #_#_ 13 14)"
         :edn '((10 12))
         :ast '((:node-type . :root)
@@ -272,11 +272,24 @@
                                             ((:node-type . :number)
                                              (:position . 10)
                                              (:form . "12")
-                                             (:value . 12)))))))))
+                                             (:value . 12))))))))
+        ;; After round-tripping the position of the "12" is no longer the same
+        :roundtrip-ast '((:node-type . :root)
+                         (:position . 1)
+                         (:children . (((:node-type . :list)
+                                        (:position . 1)
+                                        (:children . (((:node-type . :number)
+                                                       (:position . 2)
+                                                       (:form . "10")
+                                                       (:value . 10))
+                                                      ((:node-type . :number)
+                                                       (:position . 5)
+                                                       (:form . "12")
+                                                       (:value . 12)))))))))
 
 
        "tag-1"
-       (a-list
+       (parseclj-alist
         :source "#foo/bar [1]"
         :ast '((:node-type . :root)
                (:position . 1)
@@ -291,7 +304,7 @@
                                                             (:value . 1))))))))))))
 
        "tag-2"
-       (a-list
+       (parseclj-alist
         :source "(fn #param :param-name 1)"
         :ast '((:node-type . :root)
                (:position . 1)
@@ -314,7 +327,7 @@
                                              (:value . 1)))))))))
 
        "nested-tags"
-       (a-list
+       (parseclj-alist
         :source "[#lazy-error #error {:cause \"Divide by zero\"}]"
         :ast '((:node-type . :root)
                (:position . 1)
@@ -338,7 +351,7 @@
                                                                            (:value . "Divide by zero")))))))))))))
 
        "booleans"
-       (a-list
+       (parseclj-alist
         :source "[nil true false]"
         :edn '([nil t nil]))))
 

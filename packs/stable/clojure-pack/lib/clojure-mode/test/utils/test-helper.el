@@ -1,6 +1,6 @@
 ;;; test-helper.el --- Clojure Mode: Non-interactive unit-test setup  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2014-2020 Bozhidar Batsov <bozhidar@batsov.com>
+;; Copyright (C) 2014-2021 Bozhidar Batsov <bozhidar@batsov.dev>
 
 ;; This file is not part of GNU Emacs.
 
@@ -41,6 +41,19 @@
      (clojure-mode)
      ,@body))
 
+(defmacro with-clojure-buffer-point (text &rest body)
+  "Run BODY in a temporary clojure buffer with TEXT.
+
+TEXT is a string with a | indicating where point is.  The | will be erased
+and point left there."
+  (declare (indent 2))
+  `(progn
+     (with-clojure-buffer ,text
+       (goto-char (point-min))
+       (re-search-forward "|")
+       (delete-char -1)
+       ,@body)))
+
 (defmacro when-refactoring-it (description before after &rest body)
   "Return a buttercup spec.
 
@@ -55,5 +68,31 @@ DESCRIPTION is the description of the spec."
      (with-clojure-buffer ,before
        ,@body
        (expect (buffer-string) :to-equal ,after))))
+
+(defmacro when-refactoring-with-point-it (description before after &rest body)
+  "Return a buttercup spec.
+
+Like when-refactor-it but also checks whether point is moved to the expected
+position.
+
+BEFORE is the buffer string before refactoring, where a pipe (|) represents
+point.
+
+AFTER is the expected buffer string after refactoring, where a pipe (|)
+represents the expected position of point.
+
+DESCRIPTION is a string with the description of the spec."
+  (declare (indent 1))
+  `(it ,description
+     (let* ((after ,after)
+            (expected-cursor-pos (1+ (s-index-of "|" after)))
+            (expected-state (delete ?| after)))
+       (with-clojure-buffer ,before
+         (goto-char (point-min))
+         (search-forward "|")
+         (delete-char -1)
+         ,@body
+         (expect (buffer-string) :to-equal expected-state)
+         (expect (point) :to-equal expected-cursor-pos)))))
 
 ;;; test-helper.el ends here

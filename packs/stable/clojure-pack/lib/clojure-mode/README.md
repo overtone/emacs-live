@@ -1,7 +1,9 @@
-[![License GPL 3][badge-license]][copying]
+[![circleci][badge-circleci]][circleci]
 [![MELPA][melpa-badge]][melpa-package]
 [![MELPA Stable][melpa-stable-badge]][melpa-stable-package]
-[![circleci][badge-circleci]][circleci]
+[![NonGNU ELPA](https://elpa.nongnu.org/nongnu/clojure-mode.svg)](https://elpa.nongnu.org/nongnu/clojure-mode.html)
+[![Discord](https://img.shields.io/badge/chat-on%20discord-7289da.svg?sanitize=true)](https://discord.com/invite/nFPpynQPME)
+[![License GPL 3][badge-license]][copying]
 
 # Clojure Mode
 
@@ -9,40 +11,13 @@
 highlighting), indentation, navigation and refactoring support for the
 [Clojure(Script) programming language](http://clojure.org).
 
-This document assumes you're familiar with Emacs.  More thorough walkthroughs,
-targeting Emacs beginners, are available at
-[clojure-doc.org](http://clojure-doc.org/articles/tutorials/emacs.html) and
-[Clojure for the Brave and the True](http://www.braveclojure.com/basic-emacs/).
-Keep in mind, however, that they might be out-of-date.
+-----------
 
 **This documentation tracks the `master` branch of `clojure-mode`. Some of
 the features and settings discussed here might not be available in
 older releases (including the current stable release). Please, consult
 the relevant git tag (e.g. 5.1.0) if you need documentation for a
 specific `clojure-mode` release.**
-
-***
-
-- [Installation](#installation)
-- [Bundled major modes](#bundled-major-modes)
-- [Configuration](#configuration)
-  - [Indentation options](#indentation-options)
-    - [Indentation of function forms](#indentation-of-function-forms)
-    - [Indentation of macro forms](#indentation-of-macro-forms)
-  - [Vertical alignment](#vertical-alignment)
-- [Refactoring support](#refactoring-support)
-  - [Threading macros](#threading-macros-related-features)
-  - [Cycling things](#cycling-things)
-  - [Convert collection](#convert-collection)
-  - [Let expression](#let-expression)
-  - [Rename ns alias](#rename-ns-alias)
-  - [Add arity to a function](#add-arity-to-a-function)
-- [Related packages](#related-packages)
-- [REPL Interaction](#repl-interaction)
-  - [Basic REPL](#basic-repl)
-  - [CIDER](#cider)
-- [Changelog](#changelog)
-- [License](#license)
 
 ## Installation
 
@@ -100,7 +75,7 @@ To see a list of available configuration options do `M-x customize-group RET clo
 ### Indentation options
 
 The default indentation rules in `clojure-mode` are derived from the
-[community Clojure Style Guide](https://github.com/bbatsov/clojure-style-guide).
+[community Clojure Style Guide](https://guide.clojure.style).
 Please, refer to the guide for the general Clojure indentation rules.
 
 #### Indentation of docstrings
@@ -186,6 +161,12 @@ A more compact way to do the same thing is:
   (->> 1))
 ```
 
+To indent something like a definition (`defn`) you can do something like:
+
+``` el
+(put-clojure-indent '>defn :defn)
+```
+
 You can also specify different indentation settings for symbols
 prefixed with some ns (or ns alias):
 
@@ -216,6 +197,27 @@ For instructions on how to write these specifications, see
 [this document](https://docs.cider.mx/cider/indent_spec.html).
 The only difference is that you're allowed to use lists instead of vectors.
 
+The indentation of [special arguments](https://docs.cider.mx/cider/indent_spec.html#special-arguments) is controlled by
+`clojure-special-arg-indent-factor`, which by default indents special arguments
+a further `lisp-body-indent` when compared to ordinary arguments.
+
+An example of the default formatting is:
+
+```clojure
+(defrecord MyRecord
+    [my-field])
+```
+
+Note that `defrecord` has two special arguments, followed by the form's body -
+namely the record's name and its fields vector.
+
+Setting `clojure-special-arg-indent-factor` to 1, results in:
+
+```clojure
+(defrecord MyRecord
+  [my-field])
+```
+
 ### Indentation of Comments
 
 `clojure-mode` differentiates between comments like `;`, `;;`, etc.
@@ -228,6 +230,8 @@ You can change this behaviour like this:
 
 You might also want to change `comment-add` to 0 in that way, so that Emacs comment
 functions (e.g. `comment-region`) would use `;` by default instead of `;;`.
+
+**Note:** Check out [this section](https://guide.clojure.style/#comments) of the Clojure style guide to understand better the semantics of the different comment levels and why `clojure-mode` treats them differently by default.
 
 ### Vertical alignment
 
@@ -251,6 +255,64 @@ Leads to the following:
 This can also be done automatically (as part of indentation) by
 turning on `clojure-align-forms-automatically`. This way it will
 happen whenever you select some code and hit `TAB`.
+
+### Font-locking
+
+`clojure-mode` features static font-locking (syntax highlighting) that you can extend yourself
+if needed. As typical for Emacs, it's based on regular expressions. You can find
+the default font-locking rules in `clojure-font-lock-keywords`. Here's how you can add font-locking for built-in Clojure functions and vars:
+
+``` el
+(defvar clojure-built-in-vars
+  '(;; clojure.core
+    "accessor" "aclone"
+    "agent" "agent-errors" "aget" "alength" "alias"
+    "all-ns" "alter" "alter-meta!" "alter-var-root" "amap"
+    ;; omitted for brevity
+    ))
+
+(defvar clojure-built-in-dynamic-vars
+  '(;; clojure.test
+    "*initial-report-counters*" "*load-tests*" "*report-counters*"
+    "*stack-trace-depth*" "*test-out*" "*testing-contexts*" "*testing-vars*"
+    ;; clojure.xml
+    "*current*" "*sb*" "*stack*" "*state*"
+    ))
+
+(font-lock-add-keywords 'clojure-mode
+                        `((,(concat "(\\(?:\.*/\\)?"
+                                    (regexp-opt clojure-built-in-vars t)
+                                    "\\>")
+                           1 font-lock-builtin-face)))
+
+(font-lock-add-keywords 'clojure-mode
+                        `((,(concat "\\<"
+                                    (regexp-opt clojure-built-in-dynamic-vars t)
+                                    "\\>")
+                           0 font-lock-builtin-face)))
+
+```
+
+**Note:** The package `clojure-mode-extra-font-locking` provides such additional
+font-locking for Clojure built-ins.
+
+As you might imagine one problem with this font-locking approach is that because
+it's based on regular expressions you'll get some false positives here and there
+(there's no namespace information, and no way for `clojure-mode` to know what
+var a symbol resolves to). That's why `clojure-mode`'s font-locking defaults are
+conservative and minimalistic.
+
+Precise font-locking requires additional data that can obtained from a running
+REPL (that's how CIDER's [dynamic font-locking](https://docs.cider.mx/cider/config/syntax_highlighting.html) works) or from static code analysis.
+
+When it comes to definitions, `clojure-mode` employs a simple heuristic and will treat every symbol named `def`something as a built-in keyword. Still, you'll need to
+teach `clojure-mode` manually how to handle the docstrings of non built-in definition forms. Here's an example:
+
+``` emacs-lisp
+(put '>defn 'clojure-doc-string-elt 2)
+```
+
+**Note:** The `clojure-doc-string-elt` attribute is processed by the function `clojure-font-lock-syntactic-face-function`.
 
 ## Refactoring support
 
@@ -340,9 +402,15 @@ form. If called with a prefix argument slurp the previous n forms.
 
 ### Rename ns alias
 
-`clojure-rename-ns-alias`: Rename an alias inside a namespace declaration.
+`clojure-rename-ns-alias`: Rename an alias inside a namespace declaration,
+and all of its usages in the buffer
 
 <img width="512" src="/doc/clojure-rename-ns-alias.gif">
+
+If there is an active selected region, only rename usages of aliases within the region,
+without affecting the namespace declaration.
+
+<img width="512" src="/doc/clojure-rename-ns-alias-region.gif">
 
 ### Add arity to a function
 
@@ -452,14 +520,47 @@ similar to SLIME for Common Lisp.
 
 If you're into Clojure and Emacs you should definitely check it out.
 
+## Tutorials
+
+Tutorials,
+targeting Emacs beginners, are available at
+[clojure-doc.org](http://clojure-doc.org/articles/tutorials/emacs.html) and
+[Clojure for the Brave and the True](http://www.braveclojure.com/basic-emacs/).
+Keep in mind, however, that they might be out-of-date.
+
+## Caveats
+
+`clojure-mode` is a capable tool, but it's certainly not perfect. This section
+lists a couple of general design problems/limitations that might affect your
+experience negatively.
+
+### General Issues
+
+`clojure-mode` derives a lot of functionality directly from `lisp-mode` (an Emacs major mode for Common Lisp), which
+simplified the initial implementation, but also made it harder to implement
+certain functionality. Down the road it'd be nice to fully decouple `clojure-mode`
+from `lisp-mode`.
+
+See [this ticket](https://github.com/clojure-emacs/clojure-mode/issues/270) for a bit more details.
+
+### Indentation Performance
+
+`clojure-mode`'s indentation engine is a bit slow. You can speed things up significantly by disabling `clojure-use-backtracking-indent`, but this will break the indentation of complex forms like `deftype`, `defprotocol`, `reify`, `letfn`, etc.
+
+We should look into ways to optimize the performance of the backtracking indentation logic. See [this ticket](https://github.com/clojure-emacs/clojure-mode/issues/606) for more details.
+
+### Font-locking Implementation
+
+As mentioned [above](https://github.com/clojure-emacs/clojure-mode#font-locking), the font-locking is implemented in terms of regular expressions which makes it both slow and inaccurate.
+
 ## Changelog
 
 An extensive changelog is available [here](CHANGELOG.md).
 
 ## License
 
-Copyright © 2007-2020 Jeffrey Chu, Lennart Staflin, Phil Hagelberg, Bozhidar
-Batsov, Artur Malabarba and [contributors][].
+Copyright © 2007-2021 Jeffrey Chu, Lennart Staflin, Phil Hagelberg, Bozhidar
+Batsov, Artur Malabarba, Magnar Sveen and [contributors][].
 
 Distributed under the GNU General Public License; type <kbd>C-h C-c</kbd> to view it.
 

@@ -1,11 +1,11 @@
 ;;; nrepl-dict.el --- Dictionary functions for Clojure nREPL -*- lexical-binding: t -*-
 
 ;; Copyright © 2012-2013 Tim King, Phil Hagelberg, Bozhidar Batsov
-;; Copyright © 2013-2020 Bozhidar Batsov, Artur Malabarba and CIDER contributors
+;; Copyright © 2013-2021 Bozhidar Batsov, Artur Malabarba and CIDER contributors
 ;;
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Phil Hagelberg <technomancy@gmail.com>
-;;         Bozhidar Batsov <bozhidar@batsov.com>
+;;         Bozhidar Batsov <bozhidar@batsov.dev>
 ;;         Artur Malabarba <bruce.connor.am@gmail.com>
 ;;         Hugo Duncan <hugo@hugoduncan.org>
 ;;         Steve Purcell <steve@sanityinc.com>
@@ -124,7 +124,7 @@ any of the values is nil."
 (defun nrepl-dict-flat-map (function dict)
   "Map FUNCTION over DICT and flatten the result.
 FUNCTION follows the same restrictions as in `nrepl-dict-map', and it must
-also alway return a sequence (since the result will be flattened)."
+also always return a sequence (since the result will be flattened)."
   (when dict
     (apply #'append (nrepl-dict-map function dict))))
 

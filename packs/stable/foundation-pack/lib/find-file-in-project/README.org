@@ -1,6 +1,6 @@
 * find-file-in-project
 
-[[https://travis-ci.org/technomancy/find-file-in-project][https://travis-ci.org/technomancy/find-file-in-project.svg?branch=master]]
+[[https://github.com/redguardtoo/find-file-in-project/actions/workflows/test.yml][https://github.com/redguardtoo/find-file-in-project/actions/workflows/test.yml/badge.svg]]
 [[http://melpa.org/#/find-file-in-project][file:http://melpa.org/packages/find-file-in-project-badge.svg]] [[http://stable.melpa.org/#/find-file-in-project][file:http://stable.melpa.org/packages/find-file-in-project-badge.svg]]
 
 Find file/directory and review Diff/Patch/Commit quickly everywhere.
@@ -15,25 +15,44 @@ Diff/patch files. Target files could be under any Version Control Software (VCS)
 - Works on Windows64/Linux/macOS with minimum setup. Only dependency is =BSD/GNU Find=
 - Fast. Tested with 50,000+ files
 - Works flawlessly with [[https://www.emacswiki.org/emacs/TrampMode][Tramp Mode]]
+- Uses native API =completing-read= and supports [[https://www.gnu.org/software/emacs/manual/html_mono/ido.html][ido]]/[[https://github.com/emacs-helm/helm][helm]]/[[https://github.com/abo-abo/swiper][ivy]]/[[https://github.com/minad/consult][consult]]/[[https://github.com/raxod502/selectrum][selectrum]] out of box
 
 *Screenshot:*
 
-[[https://raw.githubusercontent.com/technomancy/find-file-in-project/master/ffip-screenshot-nq8.png]]
+[[https://raw.githubusercontent.com/redguardtoo/find-file-in-project/master/ffip-screenshot-nq8.png]]
 
 * Install
-Place [[https://raw.githubusercontent.com/technomancy/find-file-in-project/master/find-file-in-project.el][find-file-in-project.el]] under [[https://www.emacswiki.org/emacs/LoadPath][Load Path]]. Then add =(require 'find-file-in-project)= to your configuration.
+Place [[https://raw.githubusercontent.com/redguardtoo/find-file-in-project/master/find-file-in-project.el][find-file-in-project.el]] under [[https://www.emacswiki.org/emacs/LoadPath][Load Path]]. Then add =(require 'find-file-in-project)= to your configuration.
 
 It is also possible to use [[http://stable.melpa.org/#/find-file-in-project][melpa]]; however be aware that as of the time of this writing installation using =package.el= is [[https://glyph.twistedmatrix.com/2015/11/editor-malware.html][not recommended]] due to flaws in Emacs's TLS implementation.
-
-[[https://github.com/abo-abo/swiper][Ivy-mode]] is the optional dependency. It's installed automatically if you use melpa. If it is not found, ido is used instead.
 
 Since =v3.7=, =Emacs 24.3= is required.
 
 Since =v5.7.5=, =Emacs 24.4= is required.
 
+Since =v6=, =Emacs 25.1= is required.
+
 Users of Debian ≥10 and derivatives can install this program with the following command:
 =sudo apt install elpa-find-file-in-project=
 * Setup
+Since v6, ffip gives you freedom to choose your favorite completion framework. 
+
+It only uses builtin api =completing-read=.
+
+Ido setup,
+#+begin_src elisp
+(setq ffip-prefer-ido-mode t)
+#+end_src
+
+Helm setup,
+#+begin_src elisp
+(helm-mode 1)
+#+end_src
+
+Ivy setup,
+#+begin_src elisp
+(ivy-mode 1)
+#+end_src
 ** Windows
 Windows setup is as easy as *installing [[http://cygwin.com][Cygwin]] or [[https://msys2.github.io/][MYSYS2]] at default directory of any driver*. =GNU Find= executable is detected automatically.
 
@@ -77,6 +96,12 @@ If parameter is passed , directory will be opened in new window.
 It replaces path at point with correct relative/absolute path.
 ** =find-file-in-project=
 Starts search immediately. This command is slow if there 10K+ files because it use ONLY Emacs Lisp to filter candidates. You should always use =find-file-in-project-by-selected= in big project..
+** =ffip-find-files-resume=
+File/directory searching actions are automatically stored into =ffip-find-files-history=.
+
+Use =ffip-find-files-resume= to replay any previous action.
+
+The maximum number of items of the history is set in =ffip-find-files-history-max-items=.
 ** =ffip-lisp-find-file-in-project=
 By default it finds file in project. f its parameter is not nil, it find directory instead.
 
@@ -98,7 +123,7 @@ Execute backend from =ffip-diff-backends=.
 
 The output of backend execution is in [[http://www.gnu.org/software/diffutils/manual/html_node/Unified-Format.html][Unified Diff Format]] and is inserted into  =*ffip-diff*= buffer where you can press =o=, =C-c C-c=, =ENTER= , =M-x ffip-diff-find-file=  to open the corresponding file.
 
-=ffip-diff-find-file-before-hook= is called before =M-x ffip-diff-find-file=.
+=ffip-diff-find-file-before-hook= is called in =ffip-diff-find-file=. Two file names are passed to it as parameters. One name is returned by the hook as the file searching keyword.
 
 For example, you can =M-x ffip-show-diff= to view the git commit and open file inside patch.
 
@@ -117,8 +142,8 @@ Other key bindings defined in =*ffip-diff*= buffer,
 Insert below code into =.emacs= if you use =evil-mode=,
 #+begin_src elisp
 (defun ffip-diff-mode-hook-setup ()
-    (evil-local-set-key 'normal "p" 'diff-hunk-prev)
-    (evil-local-set-key 'normal "n" 'diff-hunk-next)
+    (evil-local-set-key 'normal "K" 'diff-hunk-prev)
+    (evil-local-set-key 'normal "J" 'diff-hunk-next)
     (evil-local-set-key 'normal "P" 'diff-file-prev)
     (evil-local-set-key 'normal "N" 'diff-file-next)
     (evil-local-set-key 'normal (kbd "RET") 'ffip-diff-find-file)
@@ -137,14 +162,8 @@ You can customize the =ffip-diff-backends=,
         "cd $(hg root) && hg diff"
         "svn diff"))
 #+end_src
-** =ffip-save-ivy-last= and =ffip-ivy-resume=
-These two commands requires [[https://github.com/abo-abo/swiper][ivy-mode]].
 
-=ffip-save-ivy-last= saves the most recent search result.
-
-=ffip-ivy-resume= re-uses the search result *saved* by =ffip-save-ivy-last=.
-
-You can also use =ivy-resume= to re-use the most recent search result.
+Please note some backends assume that the git cli program is added into environment variable PATH.
 ** =find-relative-path=
 Find file/directory and copy its relative path into `kill-ring'.
 
@@ -177,19 +196,18 @@ For example, for files under [[https://www.perforce.com/][Perforce]] control,
       (p4-edit-file-and-make-buffer-writable file)))
 (add-hook 'ffip-diff-apply-hunk-hook 'ffip-diff-apply-hunk-hook-setup)
 #+end_src
-** =ffip-split-window-horizontally= and =ffip-split-window-vertically=
-Find&Open file in split window.
+** =ffip-diff-filter-hunks-by-file-name=
+It can filter hunks by their file names.
+
+For example, user input pattern "regex !exclude1 exclude1" means the hunk's file name does match "regex", but does not match "exclude1" or "exclude2".
+
+Please note in "regex", space represents any string.
 ** =ffip-insert-file=
 Insert file content into current buffer.
 * Tips
 All tips are OPTIONAL. =find-file-in-project= works out of box in 99% cases.
 ** Use fd (A simple, fast and user-friendly alternative to 'find')
 Please insert =(setq ffip-use-rust-fd t)= into =.emacs= to use [[https://github.com/sharkdp/fd][fd]] (alternative to GNU Find).
-** Use ido-mode instead of ivy
-#+begin_src elisp
-(ido-mode 1)
-(setq ffip-prefer-ido-mode t)
-#+end_src
 ** APIs
 - =ffip-get-project-root-directory= return the full path of current project
 ** Per-project setup using Emacs lisp
@@ -247,21 +265,13 @@ BTW, please use either per-directory setup or per-project setup, *NOT* both.
   ;; Cygwin
   (setq ffip-project-root "~/projs/myprojs1"))
 #+end_src
-** More keybinding tips
-=C-h i g (ivy) Enter= for more key-binding tips.
 ** Search and grep files under Git control
 Install [[https://github.com/abo-abo/swiper][counsel]].
 
 Use =counsel-git= to find file and =counsel-git-grep= to grep.
-* Development
-This program *only* uses =ivy-read= from ivy-mode.
-
-DO NOT use other APIs from =ivy-mode=. The less APIs used, the more stable this package is.
-
-Run =tests/test.sh= before =git commit=.
 * Bug Report
-Check [[https://github.com/technomancy/find-file-in-project]].
+Check [[https://github.com/redguardtoo/find-file-in-project]].
 * License
-This program is free software: you can redistribute it and/or modify it under the terms of the [[https://raw.githubusercontent.com/technomancy/find-file-in-project/master/LICENSE][GNU General Public License]] as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+This program is free software: you can redistribute it and/or modify it under the terms of the [[file:LICENSE][GNU General Public License]] as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
-This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the [[https://raw.githubusercontent.com/technomancy/find-file-in-project/master/LICENSE][GNU General Public License]] for more details.
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the [[file:LICENSE][GNU General Public License]] for more details.

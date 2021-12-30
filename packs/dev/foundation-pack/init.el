@@ -48,6 +48,7 @@
 (live-load-config-file "zone-conf.el")
 (live-load-config-file "monkey-patch.el")
 (live-load-config-file "live.el")
+(live-load-config-file "with-editor.el")
 
 
 (when (eq system-type 'darwin)

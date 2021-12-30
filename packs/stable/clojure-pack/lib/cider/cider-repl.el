@@ -1,11 +1,11 @@
 ;;; cider-repl.el --- CIDER REPL mode interactions -*- lexical-binding: t -*-
 
 ;; Copyright © 2012-2013 Tim King, Phil Hagelberg, Bozhidar Batsov
-;; Copyright © 2013-2020 Bozhidar Batsov, Artur Malabarba and CIDER contributors
+;; Copyright © 2013-2021 Bozhidar Batsov, Artur Malabarba and CIDER contributors
 ;;
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Phil Hagelberg <technomancy@gmail.com>
-;;         Bozhidar Batsov <bozhidar@batsov.com>
+;;         Bozhidar Batsov <bozhidar@batsov.dev>
 ;;         Artur Malabarba <bruce.connor.am@gmail.com>
 ;;         Hugo Duncan <hugo@hugoduncan.org>
 ;;         Steve Purcell <steve@sanityinc.com>
@@ -424,7 +424,7 @@ present."
 ;; In case you're seeing any warnings you should consult the manual's
 ;; \"Troubleshooting\" section.
 ;;
-;; Here are few tips to get you started:
+;; Here are a few tips to get you started:
 ;;
 ;; * Press <\\[describe-mode]> to see a list of the keybindings available (this
 ;;   will work in every Emacs buffer)
@@ -910,6 +910,13 @@ Part of the default `cider-repl-content-type-handler-alist'."
                              (cider-repl--image image 'png t)
                              show-prefix bol))
 
+(defun cider-repl-handle-svg (_type buffer image &optional show-prefix bol)
+  "A handler for inserting an svg IMAGE into a repl BUFFER.
+Part of the default `cider-repl-content-type-handler-alist'."
+  (cider-repl--display-image buffer
+                             (cider-repl--image image 'svg t)
+                             show-prefix bol))
+
 (defun cider-repl-handle-external-body (type buffer _ &optional _show-prefix _bol)
   "Handler for slurping external content into BUFFER.
 Handles an external-body TYPE by issuing a slurp request to fetch the content."
@@ -924,7 +931,8 @@ Handles an external-body TYPE by issuing a slurp request to fetch the content."
 (defvar cider-repl-content-type-handler-alist
   `(("message/external-body" . ,#'cider-repl-handle-external-body)
     ("image/jpeg" . ,#'cider-repl-handle-jpeg)
-    ("image/png" . ,#'cider-repl-handle-png))
+    ("image/png" . ,#'cider-repl-handle-png)
+    ("image/svg+xml" . ,#'cider-repl-handle-svg))
   "Association list from content-types to handlers.
 Handlers must be functions of two required and two optional arguments - the
 REPL buffer to insert into, the value of the given content type as a raw
@@ -1019,7 +1027,7 @@ If NEWLINE is true then add a newline at the end of the input."
 
 (defun cider-repl-return (&optional end-of-input)
   "Evaluate the current input string, or insert a newline.
-Send the current input ony if a whole expression has been entered,
+Send the current input only if a whole expression has been entered,
 i.e. the parenthesis are matched.
 When END-OF-INPUT is non-nil, send the input even if the parentheses
 are not balanced."
@@ -1142,7 +1150,7 @@ With a prefix argument CLEAR-REPL it will clear the entire REPL buffer instead."
   (interactive)
   ;; TODO: Improve the boundaries detecting logic
   ;; probably it should be based on text properties
-  ;; the current implemetation will clear warnings as well
+  ;; the current implementation will clear warnings as well
   (let ((start (point-min))
         (end (save-excursion
                (goto-char (point-min))
@@ -1199,9 +1207,11 @@ command will prompt for the name of the namespace to switch to."
     (user-error "No namespace selected"))
   (cider-map-repls :auto
     (lambda (connection)
-      (cider-nrepl-request:eval (if cider-repl-require-ns-on-set
-                                    (format "(do (require '%s) (in-ns '%s))" ns ns)
-                                  (format "(in-ns '%s)" ns))
+      ;; NOTE: `require' and `in-ns' are special forms in ClojureScript.
+      ;; That's why we eval them separately instead of combining them with `do'.
+      (when cider-repl-require-ns-on-set
+        (cider-nrepl-sync-request:eval (format "(require '%s)" ns) connection))
+      (cider-nrepl-request:eval (format "(in-ns '%s)" ns)
                                 (cider-repl-switch-ns-handler connection)))))
 
 

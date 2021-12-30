@@ -1,8 +1,8 @@
 ;;; cider-find-tests.el
 
-;; Copyright © 2012-2020 Bozhidar Batsov
+;; Copyright © 2012-2021 Bozhidar Batsov
 
-;; Author: Bozhidar Batsov <bozhidar@batsov.com>
+;; Author: Bozhidar Batsov <bozhidar@batsov.dev>
 
 ;; This file is NOT part of GNU Emacs.
 

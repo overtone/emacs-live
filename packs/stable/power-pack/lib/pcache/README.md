@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/sigma/pcache.png?branch=master)](https://travis-ci.org/sigma/pcache)
+![Build Status](https://github.com/sigma/pcache/workflows/CI/badge.svg?branch=master)
 
 ## Pcache
 

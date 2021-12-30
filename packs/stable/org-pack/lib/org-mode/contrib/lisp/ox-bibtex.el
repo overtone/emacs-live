@@ -26,11 +26,11 @@
 ;; This is an utility to handle BibTeX export to LaTeX, html and ascii
 ;; exports.  For HTML and ascii it uses the bibtex2html software from:
 ;;
-;;   http://www.lri.fr/~filliatr/bibtex2html/
+;;   https://www.lri.fr/~filliatr/bibtex2html/
 ;;
 ;; For ascii it uses the pandoc software from:
 ;;
-;;   http://johnmacfarlane.net/pandoc/
+;;   https://pandoc.org/
 ;;
 ;; It also introduces "cite" syntax for Org links.
 ;;

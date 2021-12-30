@@ -1,19 +1,18 @@
-;;; gitconfig-mode.el --- Major mode for editing .gitconfig files -*- lexical-binding: t; -*-
+;;; gitconfig-mode.el --- Major mode for editing .gitconfig files  -*- lexical-binding: t -*-
 
 ;; Copyright (c) 2012-2013  Sebastian Wiesner
-;; Copyright (C) 2012-2018  The Magit Project Contributors
+;; Copyright (C) 2012-2021  The Magit Project Contributors
 
 ;; Author: Sebastian Wiesner <lunaryorn@gmail.com>
 ;; Maintainer: Jonas Bernoulli <jonas@bernoul.li>
 ;; Homepage: https://github.com/magit/git-modes
 ;; Keywords: convenience vc git
-
-;; This file is not part of GNU Emacs.
+;; SPDX-License-Identifier: GPL-3.0-or-later
 
 ;; This file is free software; you can redistribute it and/or modify
-;; it under the terms of the GNU General Public License as published by
-;; the Free Software Foundation; either version 3, or (at your option)
-;; any later version.
+;; it under the terms of the GNU General Public License as published
+;; by the Free Software Foundation; either version 3 of the License,
+;; or (at your option) any later version.
 
 ;; This file is distributed in the hope that it will be useful,
 ;; but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -121,8 +120,7 @@
   ;; .gitconfig is indented with tabs only
   (conf-mode-initialize "#" gitconfig-mode-font-lock-keywords)
   (setq indent-tabs-mode t)
-  (set (make-local-variable 'indent-line-function)
-       'gitconfig-indent-line))
+  (setq-local indent-line-function 'gitconfig-indent-line))
 
 ;;;###autoload
 (dolist (pattern '("/\\.gitconfig\\'"      "/\\.git/config\\'"

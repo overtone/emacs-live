@@ -1,6 +1,6 @@
 ;;; org-mac-link.el --- Insert org-mode links to items selected in various Mac apps
 ;;
-;; Copyright (c) 2010-2020 Free Software Foundation, Inc.
+;; Copyright (c) 2010-2021 Free Software Foundation, Inc.
 ;;
 ;; Author: Anthony Lander <anthony.lander@gmail.com>
 ;;      John Wiegley <johnw@gnu.org>
@@ -43,7 +43,7 @@
 ;; GNU General Public License for more details.
 ;;
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 ;;
 ;;; Commentary:
 ;;
@@ -207,18 +207,13 @@
   :group 'org-mac-flagged-mail
   :type 'string)
 
-(defcustom org-mac-grab-Evernote-app-p
-  (< 0 (length (shell-command-to-string
-                "mdfind kMDItemCFBundleIdentifier == 'com.evernote.Evernote'")))
+(defcustom org-mac-grab-Evernote-app-p nil
   "Add menu option [e]vernote to grab note links from Evernote.app."
   :tag "Grab Evernote.app note links"
   :group 'org-mac-link
   :type 'boolean)
 
-(defcustom org-mac-evernote-path (replace-regexp-in-string (rx (* (any " \t\n")) eos)
-                                                           ""
-                                                           (shell-command-to-string
-                                                            "mdfind kMDItemCFBundleIdentifier == 'com.evernote.Evernote'"))
+(defcustom org-mac-evernote-path nil
   "The path to the installed copy of Evernote.app. Do not escape spaces as the AppleScript call will quote this string."
   :tag "Path to Evernote"
   :group 'org-mac-link
@@ -809,11 +804,21 @@ after heading."
 
 (org-link-set-parameters "mac-evernote" :follow #'org-mac-evernote-note-open)
 
+(defun org-mac-evernote-path ()
+  "Get path to evernote.
+First consider the value of ORG-MAC-EVERNOTE-PATH, then attempt to find it.
+Finding the path can be slow."
+  (or org-mac-evernote-path
+      (replace-regexp-in-string (rx (* (any " \t\n")) eos)
+                                ""
+                                (shell-command-to-string
+                                 "mdfind kMDItemCFBundleIdentifier == 'com.evernote.Evernote'"))))
+
 (defun org-mac-evernote-note-open (noteid _)
   "Open a note in Evernote"
   (do-applescript
    (concat
-    "tell application \"" org-mac-evernote-path "\"\n"
+    "tell application \"" (org-mac-evernote-path) "\"\n"
     "    set theNotes to get every note of every notebook where its local id is \"" (substring-no-properties noteid) "\"\n"
     "    repeat with _note in theNotes\n"
     "        if length of _note is not 0 then\n"
@@ -828,7 +833,7 @@ after heading."
   "AppleScript to create links to selected notes in Evernote.app."
   (do-applescript
    (concat
-    "tell application \"" org-mac-evernote-path "\"\n"
+    "tell application \"" (org-mac-evernote-path) "\"\n"
      "    set noteCount to count selection\n"
      "    if (noteCount < 1) then\n"
      "        return\n"

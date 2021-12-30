@@ -7,7 +7,7 @@
 ;; homepage: https://github.com/stardiviner/ob-clojure-literate
 
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 ;;
@@ -20,7 +20,7 @@
 ;;; Code:
 
 (require 'ob-clojure)
-(require 'cider)
+(require 'cider nil t)
 
 (defgroup ob-clojure-literate nil
   "Clojure's Org-mode Literate Programming."

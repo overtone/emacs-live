@@ -1,6 +1,6 @@
 ;;; ob-exp.el --- Exportation of Babel Source Blocks -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2009-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2021 Free Software Foundation, Inc.
 
 ;; Authors: Eric Schulte
 ;;	Dan Davison
@@ -216,8 +216,11 @@ this template."
 			     (delete-region begin end)
 			     (insert replacement)))))
 		      ((or `babel-call `inline-babel-call)
-		       (org-babel-exp-do-export (org-babel-lob-get-info element)
-						'lob)
+                       (org-babel-exp-do-export
+                        (or (org-babel-lob-get-info element)
+                            (user-error "Unknown Babel reference: %s"
+                                        (org-element-property :call element)))
+                        'lob)
 		       (let ((rep
 			      (org-fill-template
 			       org-babel-exp-call-line-template

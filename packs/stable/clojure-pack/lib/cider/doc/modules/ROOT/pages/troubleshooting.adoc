@@ -68,7 +68,7 @@ between CIDER and nREPL. CIDER has a simple message log that looks like this:
     status     ("done")
   )
 
-That's CIDER's way of representing the request (marked with `-->`) and response maps (marked with `<--`).
+That's CIDER's way of representing the request (marked with `+-->+`) and response maps (marked with `+<--+`).
 
 nREPL message logging is not enabled by default. Set `nrepl-log-messages` to `t`
 to activate it. Alternatively you can use kbd:[M-x]
@@ -268,3 +268,62 @@ Emacs and Clojure differ in their indexing of column numbers -- Emacs starts
 counting from 0 while Clojure starts from 1. Accordingly, the `cider-nrepl`
 middleware uses 1-based indexing and all conversions to 0-based indexing should
 be handled client-side. See https://github.com/clojure-emacs/cider/issues/2852.
+
+=== Empty Java stacktraces
+
+Occasionally the JVM might remove some stack frames, resulting in no stacktrace
+information being displayed in CIDER's error buffer.
+
+That's caused by an JVM optimization (`OmitStackTraceInFastThrow`, enabled by
+default), which optimizes "built-in" exceptions that are thrown frequently enough
+to be cached and have no stacktrace.
+
+You can turn off the optimization by adding the JVM flag `-XX:-OmitStackTraceInFastThrow` to whatever
+command you're using to start nREPL.
+
+In particular, by adding it to a `deps.edn` file under an alias (eg. `:dev`)
+[source,lisp]
+---
+{:aliases
+ {:dev
+  {:jvm-opts ["-XX:-OmitStackTraceInFastThrow"]
+  ...}}}
+---
+
+Or by customising the jack-in options.
+[source,lisp]
+---
+(setq cider-clojure-cli-global-options "-J-XX:-OmitStackTraceInFastThrow")
+---
+
+NOTE: Leiningen disables `OmitStackTraceInFastThrow` by default.
+
+=== Errors Related to enrich-classpath
+
+If you get any errors related to `enrich-classpath` when doing `cider-jack-in`, you can disable
+the `enrich-classpath` integration like this:
+
+[source,lisp]
+----
+(setq cider-enrich-classpath nil)
+----
+
+=== Navigation to JDK sources doesn't work
+
+If you can't navigate to the source of built-in methods like `.toUpperCase` you
+probably haven't installed the JDK sources. While you're at it - it's good to
+install the JDK's Javadocs as well. On Debian/Ubuntu:
+
+[source,shell]
+----
+$ sudo apt install openjdk-11-source openjdk-11-doc
+----
+
+On Red Hat/Fedora/CentOS:
+
+[source,shell]
+----
+$ sudo dnf install java-11-openjdk-src java-11-openjdk-javadoc
+----
+
+NOTE: On Windows and macOS the JDK source code is bundled with the JDK.

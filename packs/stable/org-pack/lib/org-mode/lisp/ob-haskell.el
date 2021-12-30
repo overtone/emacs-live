@@ -1,6 +1,6 @@
 ;;; ob-haskell.el --- Babel Functions for Haskell    -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2009-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2021 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;; Maintainer: Lawrence Bottorff <borgauf@gmail.com>
@@ -34,9 +34,9 @@
 
 ;;; Requirements:
 
-;; - haskell-mode: http://www.iro.umontreal.ca/~monnier/elisp/#haskell-mode
-;; - inf-haskell: http://www.iro.umontreal.ca/~monnier/elisp/#haskell-mode
-;; - (optionally) lhs2tex: http://people.cs.uu.nl/andres/lhs2tex/
+;; - haskell-mode: https://www.iro.umontreal.ca/~monnier/elisp/#haskell-mode
+;; - inf-haskell: https://www.iro.umontreal.ca/~monnier/elisp/#haskell-mode
+;; - (optionally) lhs2tex: https://people.cs.uu.nl/andres/lhs2tex/
 
 ;;; Code:
 (require 'ob)

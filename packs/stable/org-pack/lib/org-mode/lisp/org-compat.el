@@ -1,6 +1,6 @@
 ;;; org-compat.el --- Compatibility Code for Older Emacsen -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2004-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2004-2021 Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -179,9 +179,9 @@ This is a floating point number if the size is too large for an integer."
 Case is significant."
     (string< s1 s2)))
 
-;; The time- functions below translate nil to `current-time` and
-;; accept an integer as of Emacs 25.  `decode-time` and
-;; `format-time-string` accept nil on Emacs 24 but don't accept an
+;; The time- functions below translate nil to `current-time' and
+;; accept an integer as of Emacs 25.  `decode-time' and
+;; `format-time-string' accept nil on Emacs 24 but don't accept an
 ;; integer until Emacs 25.
 (if (< emacs-major-version 25)
     (let ((convert
@@ -732,6 +732,8 @@ context.  See the individual commands for more information."
  "use `org-planning-line-re', followed by `org-ts-regexp-both' instead."
  "Org 9.4")
 
+(define-obsolete-function-alias 'org-copy 'org-refile-copy "Org 9.4")
+
 ;;;; Obsolete link types
 
 (eval-after-load 'ol
@@ -1023,8 +1025,7 @@ ELEMENT is the element at point."
 (defun org-mode-flyspell-verify ()
   "Function used for `flyspell-generic-check-word-predicate'."
   (if (org-at-heading-p)
-      ;; At a headline or an inlinetask, check title only.  This is
-      ;; faster than relying on `org-element-at-point'.
+      ;; At a headline or an inlinetask, check title only.
       (and (save-excursion (beginning-of-line)
 			   (and (let ((case-fold-search t))
 				  (not (looking-at-p "\\*+ END[ \t]*$")))
@@ -1033,7 +1034,9 @@ ELEMENT is the element at point."
 	   (match-beginning 4)
 	   (>= (point) (match-beginning 4))
 	   (or (not (match-beginning 5))
-	       (< (point) (match-beginning 5))))
+	       (< (point) (match-beginning 5)))
+           ;; Ignore checks in code, verbatim and others.
+           (org--flyspell-object-check-p (org-element-at-point)))
     (let* ((element (org-element-at-point))
 	   (post-affiliated (org-element-property :post-affiliated element)))
       (cond
@@ -1102,14 +1105,7 @@ ELEMENT is the element at point."
        (org-show-context 'bookmark-jump)))
 
 ;; Make `bookmark-jump' shows the jump location if it was hidden.
-(eval-after-load 'bookmark
-  '(if (boundp 'bookmark-after-jump-hook)
-       ;; We can use the hook
-       (add-hook 'bookmark-after-jump-hook 'org-bookmark-jump-unhide)
-     ;; Hook not available, use advice
-     (defadvice bookmark-jump (after org-make-visible activate)
-       "Make the position visible."
-       (org-bookmark-jump-unhide))))
+(add-hook 'bookmark-after-jump-hook 'org-bookmark-jump-unhide)
 
 ;;;; Calendar
 

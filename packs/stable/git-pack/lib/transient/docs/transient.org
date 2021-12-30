@@ -2,19 +2,19 @@
 :PREAMBLE:
 #+AUTHOR: Jonas Bernoulli
 #+EMAIL: jonas@bernoul.li
-#+DATE: 2018-2020
+#+DATE: 2018-{{{year}}}
 #+LANGUAGE: en
 
 #+TEXINFO_DIR_CATEGORY: Emacs
 #+TEXINFO_DIR_TITLE: Transient: (transient).
 #+TEXINFO_DIR_DESC: Transient Commands
-#+SUBTITLE: for version 0.2.0 (v0.2.0-54-gd76f73f8+1)
+#+SUBTITLE: for version {{{version}}}
 
 #+TEXINFO_DEFFN: t
 #+OPTIONS: H:4 num:4 toc:2
 #+PROPERTY: header-args :eval never
-#+BIND: ox-texinfo+-before-export-hook ox-texinfo+-update-copyright-years
-#+BIND: ox-texinfo+-before-export-hook ox-texinfo+-update-version-strings
+#+MACRO: version (eval (ox-texinfo+-get-version 'mixed))
+#+MACRO: year (eval (format-time-string "%Y"))
 
 Taking inspiration from prefix keys and prefix arguments, Transient
 implements a similar abstraction involving a prefix command, infix
@@ -37,10 +37,10 @@ Calling a suffix command usually causes the transient to be exited
 but suffix commands can also be configured to not exit the transient.
 
 #+TEXINFO: @noindent
-This manual is for Transient version 0.2.0 (v0.2.0-54-gd76f73f8+1).
+This manual is for Transient version {{{version}}}.
 
 #+BEGIN_QUOTE
-Copyright (C) 2018-2020 Jonas Bernoulli <jonas@bernoul.li>
+Copyright (C) 2018-{{{year}}} Jonas Bernoulli <jonas@bernoul.li>
 
 You can redistribute this document and/or modify it under the terms
 of the GNU General Public License as published by the Free Software
@@ -96,12 +96,12 @@ actually called.  Suffix commands can also be configured to not exit
 the transient.
 
 A suffix command can, but does not have to, use the infix arguments in
-much the same way it can choose to use or ignore the prefix arguments.
-For a suffix command that was invoked from a transient the variable
-~transient-current-suffixes~ and the function ~transient-args~ serve about
-the same purpose as the variables ~prefix-arg~ and ~current-prefix-arg~ do
-for any command that was called after the prefix arguments have been
-set using a command such as ~universal-argument~.
+much the same way any command can choose to use or ignore the prefix
+arguments.  For a suffix command that was invoked from a transient the
+variable ~transient-current-suffixes~ and the function ~transient-args~
+serve about the same purpose as the variables ~prefix-arg~ and
+~current-prefix-arg~ do for any command that was called after the prefix
+arguments have been set using a command such as ~universal-argument~.
 
 The information shown in the popup buffer while a transient is active
 looks a bit like this:
@@ -130,8 +130,9 @@ Transient can be used to implement simple "command dispatchers".  The
 main benefit then is that the user can see all the available commands
 in a popup buffer.  That is useful by itself because it frees the user
 from having to remember all the keys that are valid after a certain
-prefix key or command.  Magit's ~magit-dispatch~ command is an example
-of using Transient to merely implement a command dispatcher.
+prefix key or command.  Magit's ~magit-dispatch~ (on ~C-x M-g~) command is
+an example of using Transient to merely implement a command
+dispatcher.
 
 In addition to that, Transient also allows users to interactively pass
 arguments to commands.  These arguments can be much more complex than
@@ -188,7 +189,8 @@ the transient and they may use the values set by the infix commands,
 i.e. the infix *arguments*.
 
 Instead of setting arguments to be used by a suffix command, infix
-commands may also set some value by side-effect.
+commands may also set some value by side-effect, e.g. by setting the
+value of some variable.
 
 ** Aborting and Resuming Transients
 
@@ -252,12 +254,13 @@ doc string.
 A few shared suffix commands are available in all transients.  These
 suffix commands are not shown in the popup buffer by default.
 
-Most of these commands are bound to ~C-x <key>~ and after pressing ~C-x~ a
-section featuring all common commands is temporarily shown in the popup
-buffer.  After invoking one of these commands, that section disappears
-again.  Note however that one of these commands is described as "Show
-common permanently"; invoke that if you want the common commands to
-always be shown for all transients.
+This includes the aborting commands mentioned in the previous node as
+well as some other commands that are all bound to ~C-x <key>~.  After
+~C-x~ is pressed, a section featuring all these common commands is
+temporarily shown in the popup buffer.  After invoking one of them,
+the section disappears again.  Note however that one of these commands
+is described as "Show common permanently"; invoke that if you want the
+common commands to always be shown for all transients.
 
 - Key: C-x t, transient-toggle-common
 
@@ -316,8 +319,7 @@ but it is easily accessible (see [[*Using History]]).
 
 [fn:1] ~magit-diff~ and ~magit-log~ are two prominent examples, and their
 handling of buffer-local values is actually a bit more complicated
-than outlined above and even customizable.  This is something I am
-rethinking, but I don't want to rush any changes.)
+than outlined above and even customizable.
 
 ** Using History
 
@@ -413,11 +415,6 @@ expect that it won't be of use to most users, and they should place
 very important suffixes on a lower level, so that they remain
 available even if the user lowers the transient level.
 
-(Magit currently places nearly all suffixes on level 4 and lower
-levels are not used at all yet.  So for the time being you should not
-set a lower default level and using a higher level might not give you
-as many additional suffixes as you hoped.)
-
 - User Option: transient-default-level
 
   This option controls which suffix levels are made available by
@@ -475,7 +472,7 @@ window, and the key bindings are the same as for ~scroll-up-command~ and
   lines.  If ARG is ~nil~, then it scrolls near full screen.  This
   is a wrapper around ~scroll-down-command~ (which see).
 
-* Other Options
+** Other Options
 
 - User Option: transient-show-popup
 
@@ -501,7 +498,7 @@ window, and the key bindings are the same as for ~scroll-up-command~ and
 - User Option: transient-enable-popup-navigation
 
   This option controls whether navigation commands are enabled in the
-  transient popup.
+  transient popup buffer.
 
   While a transient is active the transient popup buffer is not the
   current buffer, making it necessary to use dedicated commands to act
@@ -518,26 +515,41 @@ window, and the key bindings are the same as for ~scroll-up-command~ and
 
   This option specifies the action used to display the transient popup
   buffer.  The transient popup buffer is displayed in a window using
-  ~(display-buffer buf transient-display-buffer-action)~.
+  ~(display-buffer BUFFER transient-display-buffer-action)~.
 
-  The value of this option has the form ~(FUNCTION . ALIST)~, where
-  FUNCTION is a function or a list of functions.  Each such function
-  should accept two arguments: a buffer to display and an alist of the
-  same form as ALIST.  See [[info:elisp#Choosing Window]].
+  The value of this option has the form ~(FUNCTION . ALIST)~,
+  where FUNCTION is a function or a list of functions.  Each such
+  function should accept two arguments: a buffer to display and an
+  alist of the same form as ALIST.  See [[info:elisp#Choosing Window]]
+  for details.
 
-  The default is ~(display-buffer-in-side-window (side . bottom))~.
+  The default is:
+
+  (display-buffer-in-side-window
+    (side . bottom)
+    (inhibit-same-window . t)
+    (window-parameters (no-other-window . t)))
+
   This displays the window at the bottom of the selected frame.
-  Another useful value is ~(display-buffer-below-selected)~.  This is
-  what ~magit-popup~ used by default.  For more alternatives see
-  [[info:elisp#Display Action Functions]].
+  Another useful FUNCTION is ~display-buffer-below-selected~, which
+  is what ~magit-popup~ used by default.  For more alternatives see
+  [[info:elisp#Display Action Functions]] and [[info:elisp#Buffer Display
+  Action Alists]].
+
+  Note that the buffer that was current before the transient buffer
+  is shown should remain the current buffer.  Many suffix commands
+  act on the thing at point, if appropriate, and if the transient
+  buffer became the current buffer, then that would change what is
+  at point.  To that effect ~inhibit-same-window~ ensures that the
+  selected window is not used to show the transient buffer.
 
   It may be possible to display the window in another frame, but
   whether that works in practice depends on the window-manager.
   If the window manager selects the new window (Emacs frame),
-  then it doesn't work.
+  then that unfortunately changes which buffer is current.
 
-  If you change the value of this option, then you might also want
-  to change the value of ~transient-mode-line-format~.
+  If you change the value of this option, then you might also
+  want to change the value of ~transient-mode-line-format~.
 
 - User Option: transient-mode-line-format
 
@@ -758,7 +770,6 @@ that is used to invoke that transient.
   the branch whose variables are being configured.
 
 ** Binding Suffix and Infix Commands
-*** _ :ignore:
 
 The macro ~transient-define-prefix~ is used to define a transient.
 This defines the actual transient prefix command (see [[*Defining
@@ -926,6 +937,18 @@ argument that is mandatory in all cases.
   be set in the suffix specification.  Therefore if there is no object,
   then you have to make sure to specify the KEY and the DESCRIPTION.
 
+  As a special case, if you want to add a command that might be neither
+  defined nor autoloaded, you can use a workaround like:
+
+  #+BEGIN_SRC emacs-lisp
+    (transient-insert-suffix 'some-prefix "k"
+      '("!" "Ceci n'est pas une commande" no-command
+        :if (lambda () (featurep 'no-library))))
+  #+END_SRC
+
+  Instead of ~featurep~ you could also use ~require~ with a non-nil value
+  for NOERROR.
+
 - The mandatory argument can also be a command-line argument, a
   string.  In that case an anonymous command is defined and bound.
 
@@ -1005,8 +1028,8 @@ suffixes".
   methods are different for different infix command classes.  In rare
   cases the above command function might not be suitable, even if you
   define your own infix command class.  In that case you have to use
-  ~transient-suffix-command~ to define the infix command and use ~t~ as
-  the value of the ~:transient~ keyword.
+  ~transient-define-suffix~ to define the infix command and use ~t~ as the
+  value of the ~:transient~ keyword.
 
 - Macro: transient-define-argument name arglist [docstring] [keyword value]...
 
@@ -1080,7 +1103,6 @@ function, which for infix arguments serves about the same purpose as
   returned value is a symbol, the transient prefix command.
 
 ** Transient State
-*** _ :ignore:
 
 Invoking a transient prefix command "activates" the respective
 transient, i.e. it puts a transient keymap into effect, which binds
@@ -1155,7 +1177,7 @@ and set the values of ~transient--exitp~, ~transient--helpp~ or
 
 *** Pre-commands for Infixes
 :PROPERTIES:
-:NONODE: t
+:UNNUMBERED: notoc
 :END:
 
 The default for infixes is ~transient--do-stay~.  This is also the only
@@ -1167,7 +1189,7 @@ function that makes sense for infixes.
 
 *** Pre-commands for Suffixes
 :PROPERTIES:
-:NONODE: t
+:UNNUMBERED: notoc
 :END:
 
 The default for suffixes is ~transient--do-exit~.
@@ -1189,7 +1211,7 @@ The default for suffixes is ~transient--do-exit~.
 
 *** Pre-commands for Non-Suffixes
 :PROPERTIES:
-:NONODE: t
+:UNNUMBERED: notoc
 :END:
 
 The default for non-suffixes, i.e commands that are bound in other
@@ -1211,7 +1233,7 @@ slot.
 
 *** Special Pre-Commands
 :PROPERTIES:
-:NONODE: t
+:UNNUMBERED: notoc
 :END:
 
 - Function: transient--do-quit-one
@@ -1233,7 +1255,6 @@ slot.
   This is used when the user pressed ~C-z~.
 
 * Classes and Methods
-** _ :ignore:
 
 Transient uses classes and generic functions to make it possible to
 define new types of suffix commands that are similar to existing
@@ -1409,7 +1430,6 @@ classes will likely get generalized and added to Transient.  For now
 they are very much subject to change and not documented.
 
 ** Suffix Methods
-*** _ :ignore:
 
 To get information about the methods implementing these generic
 functions use ~describe-function~.
@@ -1540,14 +1560,15 @@ functions use ~describe-function~.
 
 - ~incompatible~ A list of lists.  Each sub-list specifies a set of
   mutually exclusive arguments.  Enabling one of these arguments
-  causes the others to be disabled.
+  causes the others to be disabled.  An argument may appear in
+  multiple sub-lists.
 
 - ~scope~ For some transients it might be necessary to have a sort of
   secondary value, called a "scope".  See ~transient-define-prefix~.
 
 *** Internal Prefix Slots
 :PROPERTIES:
-:NONODE: t
+:UNNUMBERED: notoc
 :END:
 
 These slots are mostly intended for internal use.  They should not be
@@ -1584,7 +1605,7 @@ Also see [[*Suffix Classes]].
 
 *** Slots of ~transient-suffix~
 :PROPERTIES:
-:NONODE: t
+:UNNUMBERED: notoc
 :END:
 
 - ~key~ The key, a key vector or a key description string.
@@ -1605,7 +1626,7 @@ Also see [[*Suffix Classes]].
 
 *** Slots of ~transient-infix~
 :PROPERTIES:
-:NONODE: t
+:UNNUMBERED: notoc
 :END:
 
 Some of these slots are only meaningful for some of the subclasses.
@@ -1626,7 +1647,30 @@ They are defined here anyway to allow sharing certain methods.
   the prefixes.
 
 - ~multi-value~ For options, whether the option can have multiple
-  values.  If non-nil, then default to use ~completing-read-multiple~.
+  values.  If this is non-nil, then the values are read using
+  ~completing-read-multiple~ by default and if you specify your own
+  reader, then it should read the values using that function or
+  similar.
+
+  Supported non-nil values are:
+
+  - Use ~rest~ for an option that can have multiple values.  This is
+    useful e.g. for an ~--~ argument that indicates that all remaining
+    arguments are files (such as ~git log -- file1 file2~).
+
+    In the list returned by ~transient-args~ such an option and its
+    values are represented by a single list of the form ~(ARGUMENT
+    . VALUES)~.
+
+  - Use ~repeat~ for an option that can be specified multiple times.
+
+    In the list returned by ~transient-args~ each instance of the option
+    and its value appears separately in the usual from, for example:
+    ~("--another-argument" "--option=first" "--option=second")~.
+
+  In both cases the option's values have to be specified in the
+  default value of a prefix using the same format as returned by
+  ~transient-args~, e.g.: ~("--other" "--o=1" "--o=2" ("--" "f1" "f2"))~.
 
 - ~always-read~ For options, whether to read a value on every invocation.
   If this is nil, then options that have a value are simply unset and
@@ -1651,14 +1695,14 @@ They are defined here anyway to allow sharing certain methods.
 
 *** Slots of ~transient-variable~
 :PROPERTIES:
-:NONODE: t
+:UNNUMBERED: notoc
 :END:
 
 - ~variable~ The variable.
 
 *** Slots of ~transient-switches~
 :PROPERTIES:
-:NONODE: t
+:UNNUMBERED: notoc
 :END:
 
 - ~argument-format~ The display format.  Must contain ~%s~, one of the
@@ -1705,7 +1749,7 @@ The following diagrams illustrate some of the differences.
 
 *** Regular Prefix Commands
 :PROPERTIES:
-:NONODE: t
+:UNNUMBERED: notoc
 :END:
 
 See [[info:elisp#Prefix Keys]].
@@ -1720,7 +1764,7 @@ See [[info:elisp#Prefix Keys]].
 
 *** Regular Prefix Arguments
 :PROPERTIES:
-:NONODE: t
+:UNNUMBERED: notoc
 :END:
 
 See [[info:elisp#Prefix Command Arguments]].
@@ -1743,7 +1787,7 @@ See [[info:elisp#Prefix Command Arguments]].
 
 *** Transients
 :PROPERTIES:
-:NONODE: t
+:UNNUMBERED: notoc
 :END:
 
 (∩｀-´)⊃━☆ﾟ.*･｡ﾟ
@@ -1902,7 +1946,7 @@ covered elsewhere.
 ** Comparison With Other Packages
 *** Magit-Popup
 :PROPERTIES:
-:NONODE: t
+:UNNUMBERED: notoc
 :END:
 
 Transient is the successor to Magit-Popup (see [[info:magit-popup]]).
@@ -1925,7 +1969,7 @@ options must begin with "=".
 
 *** Hydra
 :PROPERTIES:
-:NONODE: t
+:UNNUMBERED: notoc
 :END:
 
 Hydra (see https://github.com/abo-abo/hydra) is another package that
@@ -2004,14 +2048,14 @@ commands are outlined:
 
 ** Can I control how the popup buffer is displayed?
 :PROPERTIES:
-:NONODE: t
+:UNNUMBERED: notoc
 :END:
 
 Yes, see ~transient-display-buffer-action~ in [[*Other Options]].
 
 ** Why did some of the key bindings change?
 :PROPERTIES:
-:NONODE: t
+:UNNUMBERED: notoc
 :END:
 
 You may have noticed that the bindings for some of the common commands
@@ -2055,7 +2099,7 @@ also using that for a common command would prevent me from doing so.
 
 ** Why does ~q~ not quit popups anymore?
 :PROPERTIES:
-:NONODE: t
+:UNNUMBERED: notoc
 :END:
 
 I agree that ~q~ is a good binding for commands that quit something.
@@ -2098,13 +2142,13 @@ necessary changes.  See its doc string for more information.
 :INDEX:      vr
 :END:
 
-* _ Copying
+* Copying
 :PROPERTIES:
 :COPYING:    t
 :END:
 
 #+BEGIN_QUOTE
-Copyright (C) 2018-2020 Jonas Bernoulli <jonas@bernoul.li>
+Copyright (C) 2018-{{{year}}} Jonas Bernoulli <jonas@bernoul.li>
 
 You can redistribute this document and/or modify it under the terms
 of the GNU General Public License as published by the Free Software
@@ -2117,8 +2161,6 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 General Public License for more details.
 #+END_QUOTE
 
-* _ :ignore:
-
 #  LocalWords:  ARGLIST ARGS DOCSTRING ELEMENTs EVAL GROUPs Infixes
 #  LocalWords:  Infixes KEYWORDs LOC LocalWords MERCHANTABILITY Magit
 #  LocalWords:  Magit's Makefile OBJ OBJ's Pre arglist
@@ -2130,9 +2172,7 @@ General Public License for more details.
 
 # IMPORTANT: Also update ORG_ARGS and ORG_EVAL in the Makefile.
 # Local Variables:
-# eval: (require 'ox-extra    nil t)
 # eval: (require 'ox-texinfo+ nil t)
-# eval: (and (featurep 'ox-extra) (ox-extras-activate '(ignore-headlines)))
 # indent-tabs-mode: nil
 # org-src-preserve-indentation: nil
 # End:

@@ -12,7 +12,7 @@ current Org development version.)
 
 Optionally, references to the math fonts used will be converted to
 "data:" URIs, thus embedding the font data into the HTML file itself.
-(see [[http://en.wikipedia.org/wiki/Data_URI_scheme]])
+(see [[https://en.wikipedia.org/wiki/Data_URI_scheme]])
 
 The code is licensed under the GNU General Public License version
 2, or, at your option, any later version.

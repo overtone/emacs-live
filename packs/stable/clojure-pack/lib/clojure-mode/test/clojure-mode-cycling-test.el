@@ -1,6 +1,6 @@
 ;;; clojure-mode-cycling-test.el --- Clojure Mode: cycling things tests  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2016-2020 Benedek Fazekas <benedek.fazekas@gmail.com>
+;; Copyright (C) 2016-2021 Benedek Fazekas <benedek.fazekas@gmail.com>
 
 ;; This file is not part of GNU Emacs.
 

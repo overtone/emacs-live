@@ -1,6 +1,6 @@
 ;;; ox-latex.el --- LaTeX Back-End for Org Export Engine -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2011-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2011-2021 Free Software Foundation, Inc.
 
 ;; Author: Nicolas Goaziou <n.goaziou at gmail dot com>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -932,7 +932,7 @@ using customize, or with
   (add-to-list \\='org-latex-packages-alist \\='(\"newfloat\" \"minted\"))
 
 In addition, it is necessary to install pygments
-\(URL `http://pygments.org>'), and to configure the variable
+\(URL `https://pygments.org>'), and to configure the variable
 `org-latex-pdf-process' so that the -shell-escape option is
 passed to pdflatex.
 
@@ -956,7 +956,7 @@ URL `https://orgmode.org/worg/org-tutorials/org-latex-preview.html'."
     (tex "TeX") (latex "[LaTeX]TeX")
     (shell-script "bash")
     (gnuplot "Gnuplot")
-    (ocaml "Caml") (caml "Caml")
+    (ocaml "[Objective]Caml") (caml "Caml")
     (sql "SQL") (sqlite "sql")
     (makefile "make")
     (R "r"))
@@ -1521,21 +1521,22 @@ INFO is a plist used as a communication channel.  See
 		 separator
 		 (replace-regexp-in-string "\n" " " text)
 		 separator)))
-      ;; Handle the `protectedtexttt' special case: Protect some
-      ;; special chars and use "\texttt{%s}" format string.
-      (protectedtexttt
-       (format "\\texttt{%s}"
-	       (replace-regexp-in-string
-		"--\\|[\\{}$%&_#~^]"
-		(lambda (m)
-		  (cond ((equal m "--") "-{}-")
-			((equal m "\\") "\\textbackslash{}")
-			((equal m "~") "\\textasciitilde{}")
-			((equal m "^") "\\textasciicircum{}")
-			(t (org-latex--protect-text m))))
-		text nil t)))
+      (protectedtexttt (org-latex--protect-texttt text))
       ;; Else use format string.
       (t (format fmt text)))))
+
+(defun org-latex--protect-texttt (text)
+  "Protect special chars, then wrap TEXT in \"\\texttt{}\"."
+  (format "\\texttt{%s}"
+          (replace-regexp-in-string
+           "--\\|[\\{}$%&_#~^]"
+           (lambda (m)
+             (cond ((equal m "--") "-{}-")
+                   ((equal m "\\") "\\textbackslash{}")
+                   ((equal m "~") "\\textasciitilde{}")
+                   ((equal m "^") "\\textasciicircum{}")
+                   (t (org-latex--protect-text m))))
+           text nil t)))
 
 (defun org-latex--delayed-footnotes-definitions (element info)
   "Return footnotes definitions in ELEMENT as a string.
@@ -1954,10 +1955,16 @@ holding contextual information."
 	   ;; Create a temporary export back-end that hard-codes
 	   ;; "\underline" within "\section" and alike.
 	   (section-back-end
-	    (org-export-create-backend
-	     :parent 'latex
-	     :transcoders
-	     '((underline . (lambda (o c i) (format "\\underline{%s}" c))))))
+            (org-export-create-backend
+             :parent 'latex
+             :transcoders
+             '((underline . (lambda (o c i) (format "\\underline{%s}" c)))
+               ;; LaTeX isn't happy when you try to use \verb inside the argument of other
+               ;; commands (like \section, etc.), and this causes compilation to fail.
+               ;; So, within headings it's a good idea to replace any instances of \verb
+               ;; with \texttt.
+               (code . (lambda (_ c _) (org-latex--protect-texttt c)))
+               (verbatim . (lambda (_ c _) (org-latex--protect-texttt c))))))
 	   (text
 	    (org-export-data-with-backend
 	     (org-element-property :title headline) section-back-end info))
@@ -3666,12 +3673,12 @@ produced."
 		     (match-string 0)))
 	      "pdflatex"))
 	 (process (if (functionp org-latex-pdf-process) org-latex-pdf-process
-		    ;; Replace "%latex" and "%bibtex" with,
-		    ;; respectively, "%L" and "%B" so as to adhere to
-		    ;; `format-spec' specifications.
+		    ;; Replace "%latex" with "%L" and "%bib" and
+		    ;; "%bibtex" with "%B" to adhere to `format-spec'
+		    ;; specifications.
 		    (mapcar (lambda (command)
 			      (replace-regexp-in-string
-			       "%\\(?:bib\\|la\\)tex\\>"
+                               "%\\(?:\\(?:bib\\|la\\)tex\\|bib\\)\\>"
 			       (lambda (m) (upcase (substring m 0 2)))
 			       command))
 			    org-latex-pdf-process)))

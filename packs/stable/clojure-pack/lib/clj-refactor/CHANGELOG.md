@@ -2,11 +2,35 @@
 
 ## Unreleased
 
+## 3.2.0, 3.2.1, 3.2.2 (2021-11-16)
+
+- [#504](https://github.com/clojure-emacs/clj-refactor.el/issues/504): Introduce `cljr-print-right-margin`, `cljr-print-miser-width` customization options which control the line wrapping of ns forms after formatting them (as performed after `clean-ns`, `rename-file-or-dir`, etc).
+
+## 3.1.0 (2021-11-10)
+
+- Use refactor-nrepl [3.1.0](https://github.com/clojure-emacs/refactor-nrepl/blob/a6b052809e6c2c8b077bf0ae4684e05af0a5f484/CHANGELOG.md#310-2021-11-09).
+- [#139](https://github.com/clojure-emacs/clj-refactor.el/issues/139): avoid a repeated prompt when using `(cljr-project-clean)`.
+
+## 3.0.0 (2021-10-25)
+
+- [#483](https://github.com/clojure-emacs/clj-refactor.el/issues/483): Improve performance of `cljr-slash` when typing fraction literals.
+- [#482](https://github.com/clojure-emacs/clj-refactor.el/issues/482): Add missing defgroup form.
+- [#470](https://github.com/clojure-emacs/clj-refactor.el/issues/470): Choose `deps.edn` over `pom.xml` as project file.
+- Introduce `cljr-insert-newline-after-require` option.
+- Introduce `cljr-injected-middleware-version` option, allowing users to customize the [refactor-nrepl](https://github.com/clojure-emacs/refactor-nrepl) version to be used.
+- Dropped support for Emacs 25 (to match upstream changes in CIDER).
+
+## 2.5.1 (2021-02-16)
+
+- [#442](https://github.com/clojure-emacs/clj-refactor.el/issues/442): Send nREPL-based paths instead of CIDER-based paths.
+- [#465](https://github.com/clojure-emacs/clj-refactor.el/issues/465): Fix breakage in `cljr-rename-symbol`.
+- Automatically namespace artifacts in `deps.edn`.
+
 ## 2.5.0 (2020-02-29)
 
 - [#455](https://github.com/clojure-emacs/clj-refactor.el/pull/455): Added support for detecting shadow-cljs projects.
-- [#402](https://github.com/clojure-emacs/clj-refactor.el/issues/402): cljr-stop-referring: do not alter strings.
-- [#380](https://github.com/clojure-emacs/clj-refactor.el/issues/380): clean-ns: fix FileNotFoundException, by trying both the absolute path and the path relative to the project root. This requires a new refactor-nrepl, old versions will only check the absolute path.
+- [#402](https://github.com/clojure-emacs/clj-refactor.el/issues/402): `cljr-stop-referring`: do not alter strings.
+- [#380](https://github.com/clojure-emacs/clj-refactor.el/issues/380): `cljr-clean-ns`: fix `FileNotFoundException`, by trying both the absolute path and the path relative to the project root. This requires a new refactor-nrepl, old versions will only check the absolute path.
 
 ## 2.4.0 (2018-08-26)
 

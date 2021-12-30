@@ -1,6 +1,6 @@
 ;;; org-protocol.el --- Intercept Calls from Emacsclient to Trigger Custom Actions -*- lexical-binding: t; -*-
 ;;
-;; Copyright (C) 2008-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2008-2021 Free Software Foundation, Inc.
 ;;
 ;; Authors: Bastien Guerry <bzg@gnu.org>
 ;;       Daniel M German <dmg AT uvic DOT org>
@@ -49,7 +49,7 @@
 ;;   4.) Try this from the command line (adjust the URL as needed):
 ;;
 ;;       $ emacsclient \
-;;         org-protocol://store-link?url=http:%2F%2Flocalhost%2Findex.html&title=The%20title
+;;         "org-protocol://store-link?url=http:%2F%2Flocalhost%2Findex.html&title=The%20title"
 ;;
 ;;   5.) Optionally add custom sub-protocols and handlers:
 ;;
@@ -176,12 +176,13 @@ Possible properties are:
 
   :online-suffix     - the suffix to strip from the published URLs
   :working-suffix    - the replacement for online-suffix
-  :base-url          - the base URL, e.g. http://www.example.com/project/
+  :base-url          - the base URL, e.g. https://www.example.com/project/
                        Last slash required.
   :working-directory - the local working directory.  This is, what base-url will
                        be replaced with.
   :redirects         - A list of cons cells, each of which maps a regular
-                       expression to match to a path relative to :working-directory.
+                       expression to match to a path relative to
+                       :working-directory.
 
 Example:
 
@@ -202,7 +203,8 @@ Example:
           :working-directory \"~/site/content/post/\"
           :online-suffix \".html\"
           :working-suffix \".md\"
-          :rewrites ((\"\\(https://site.com/[0-9]+/[0-9]+/[0-9]+/\\)\" . \".md\")))
+          :rewrites ((\"\\(https://site.com/[0-9]+/[0-9]+/[0-9]+/\\)\"
+                     . \".md\")))
          (\"GNU emacs OpenGrok\"
           :base-url \"https://opengrok.housegordon.com/source/xref/emacs/\"
           :working-directory \"~/dev/gnu-emacs/\")))
@@ -533,7 +535,7 @@ The location for a browser's bookmark should look like this:
         encodeURIComponent(location.href)"
   ;; As we enter this function for a match on our protocol, the return value
   ;; defaults to nil.
-  (let ((result nil)
+  (let (;; (result nil)
 	(f (org-protocol-sanitize-uri
 	    (plist-get (org-protocol-parse-parameters fname nil '(:url))
 		       :url))))
@@ -584,7 +586,7 @@ The location for a browser's bookmark should look like this:
               (if (file-exists-p the-file)
                   (message "%s: permission denied!" the-file)
                 (message "%s: no such file or directory." the-file))))))
-      result)))
+      nil))) ;; FIXME: Really?
 
 
 ;;; Core functions:

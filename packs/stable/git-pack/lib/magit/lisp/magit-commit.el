@@ -1,12 +1,14 @@
 ;;; magit-commit.el --- create Git commits  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2008-2020  The Magit Project Contributors
+;; Copyright (C) 2008-2021  The Magit Project Contributors
 ;;
 ;; You should have received a copy of the AUTHORS.md file which
 ;; lists all contributors.  If not, see http://magit.vc/authors.
 
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
 ;; Maintainer: Jonas Bernoulli <jonas@bernoul.li>
+
+;; SPDX-License-Identifier: GPL-3.0-or-later
 
 ;; Magit is free software; you can redistribute it and/or modify it
 ;; under the terms of the GNU General Public License as published by
@@ -34,12 +36,11 @@
 
 (eval-when-compile (require 'epa)) ; for `epa-protocol'
 (eval-when-compile (require 'epg))
-(eval-when-compile (require 'subr-x))
 
 ;;; Options
 
 (defcustom magit-commit-ask-to-stage 'verbose
-  "Whether to ask to stage all unstaged changes when committing and nothing is staged."
+  "Whether to ask to stage everything when committing and nothing is staged."
   :package-version '(magit . "2.3.0")
   :group 'magit-commands
   :type '(choice (const :tag "Ask" t)
@@ -89,6 +90,34 @@ Also see `git-commit-post-finish-hook'."
   :package-version '(magit . "2.90.0")
   :group 'magit-commands
   :type 'hook)
+
+(defcustom magit-commit-diff-inhibit-same-window nil
+  "Whether to inhibit use of same window when showing diff while committing.
+
+When writing a commit, then a diff of the changes to be committed
+is automatically shown.  The idea is that the diff is shown in a
+different window of the same frame and for most users that just
+works.  In other words most users can completely ignore this
+option because its value doesn't make a difference for them.
+
+However for users who configured Emacs to never create a new
+window even when the package explicitly tries to do so, then
+displaying two new buffers necessarily means that the first is
+immediately replaced by the second.  In our case the message
+buffer is immediately replaced by the diff buffer, which is of
+course highly undesirable.
+
+A workaround is to suppress this user configuration in this
+particular case.  Users have to explicitly opt-in by toggling
+this option.  We cannot enable the workaround unconditionally
+because that again causes issues for other users: if the frame
+is too tiny or the relevant settings too aggressive, then the
+diff buffer would end up being displayed in a new frame.
+
+Also see https://github.com/magit/magit/issues/4132."
+  :package-version '(magit . "3.3.0")
+  :group 'magit-commands
+  :type 'boolean)
 
 (defvar magit-post-commit-hook-commands
   '(magit-commit-extend
@@ -145,27 +174,45 @@ Also see `git-commit-post-finish-hook'."
   :shortarg "-S"
   :argument "--gpg-sign="
   :allow-empty t
-  :reader 'magit-read-gpg-secret-key)
+  :reader 'magit-read-gpg-signing-key)
 
 (defvar magit-gpg-secret-key-hist nil)
 
-(defun magit-read-gpg-secret-key (prompt &optional initial-input history)
+(defun magit-read-gpg-secret-key
+    (prompt &optional initial-input history predicate)
   (require 'epa)
-  (let* ((keys (mapcar
-                (lambda (obj)
-                  (let ((key (epg-sub-key-id (car (epg-key-sub-key-list obj))))
-                        (author
-                         (when-let ((id-obj (car (epg-key-user-id-list obj))))
-                           (let ((id-str (epg-user-id-string id-obj)))
-                             (if (stringp id-str)
-                                 id-str
-                               (epg-decode-dn id-obj))))))
-                    (propertize key 'display (concat key " " author))))
+  (let* ((keys (cl-mapcan
+                (lambda (cert)
+                  (and (or (not predicate)
+                           (funcall predicate cert))
+                       (let* ((key (car (epg-key-sub-key-list cert)))
+                              (fpr (epg-sub-key-fingerprint key))
+                              (id  (epg-sub-key-id key))
+                              (author
+                               (when-let ((id-obj
+                                           (car (epg-key-user-id-list cert))))
+                                 (let ((id-str (epg-user-id-string id-obj)))
+                                   (if (stringp id-str)
+                                       id-str
+                                     (epg-decode-dn id-obj))))))
+                         (list
+                          (propertize fpr 'display
+                                      (concat (substring fpr 0 (- (length id)))
+                                              (propertize id 'face 'highlight)
+                                              " " author))))))
                 (epg-list-keys (epg-make-context epa-protocol) nil t)))
          (choice (completing-read prompt keys nil nil nil
                                   history nil initial-input)))
     (set-text-properties 0 (length choice) nil choice)
     choice))
+
+(defun magit-read-gpg-signing-key (prompt &optional initial-input history)
+  (magit-read-gpg-secret-key
+   prompt initial-input history
+   (lambda (cert)
+     (cl-some (lambda (key)
+                (memq 'sign (epg-sub-key-capability key)))
+              (epg-key-sub-key-list cert)))))
 
 (transient-define-argument magit-commit:--reuse-message ()
   :description "Reuse commit message"
@@ -264,7 +311,10 @@ depending on the value of option `magit-commit-squash-confirm'."
 
 With a prefix argument the target COMMIT has to be confirmed.
 Otherwise the commit at point may be used without confirmation
-depending on the value of option `magit-commit-squash-confirm'."
+depending on the value of option `magit-commit-squash-confirm'.
+
+If you want to immediately add a message to the squash commit,
+then use `magit-commit-augment' instead of this command."
   (interactive (list (magit-commit-at-point)
                      (magit-commit-arguments)))
   (magit-commit-squash-internal "--squash" commit args))
@@ -296,7 +346,7 @@ depending on the value of option `magit-commit-squash-confirm'."
 
 (defun magit-commit-squash-internal
     (option commit &optional args rebase edit confirmed)
-  (when-let ((args (magit-commit-assert args t)))
+  (when-let ((args (magit-commit-assert args (not edit))))
     (when commit
       (when (and rebase (not (magit-rev-ancestor-p commit "HEAD")))
         (magit-read-char-case
@@ -360,9 +410,9 @@ depending on the value of option `magit-commit-squash-confirm'."
              (or (member "--amend" args)
                  (member "--allow-empty" args)
                  (member "--reset-author" args)
-                 (member "--author" args)
                  (member "--signoff" args)
-                 (cl-find-if (lambda (a) (string-match-p "\\`--date=" a)) args))))
+                 (transient-arg-value "--author=" args)
+                 (transient-arg-value "--date=" args))))
     (or args (list "--")))
    ((and (magit-rebase-in-progress-p)
          (not (magit-anything-unstaged-p))
@@ -391,29 +441,37 @@ depending on the value of option `magit-commit-squash-confirm'."
 (defvar magit--reshelve-history nil)
 
 ;;;###autoload
-(defun magit-commit-reshelve (date)
+(defun magit-commit-reshelve (date update-author &optional args)
   "Change the committer date and possibly the author date of `HEAD'.
 
-If you are the author of `HEAD', then both dates are changed,
-otherwise only the committer date.  The current time is used
-as the initial minibuffer input and the original author (if
-that is you) or committer date is available as the previous
-history element."
+The current time is used as the initial minibuffer input and the
+original author or committer date is available as the previous
+history element.
+
+Both the author and the committer dates are changes, unless one
+of the following is true, in which case only the committer date
+is updated:
+- You are not the author of the commit that is being reshelved.
+- The command was invoked with a prefix argument.
+- Non-interactively if UPDATE-AUTHOR is nil."
   (interactive
-   (let ((author-p (magit-rev-author-p "HEAD")))
-     (push (magit-rev-format (if author-p "%ad" "%cd") "HEAD"
+   (let ((update-author (and (magit-rev-author-p "HEAD")
+                             (not current-prefix-arg))))
+     (push (magit-rev-format (if update-author "%ad" "%cd") "HEAD"
                              (concat "--date=format:%F %T %z"))
            magit--reshelve-history)
-     (list (read-string (if author-p
+     (list (read-string (if update-author
                             "Change author and committer dates to: "
                           "Change committer date to: ")
                         (cons (format-time-string "%F %T %z") 17)
-                        'magit--reshelve-history))))
+                        'magit--reshelve-history)
+           update-author
+           (magit-commit-arguments))))
   (let ((process-environment process-environment))
     (push (concat "GIT_COMMITTER_DATE=" date) process-environment)
     (magit-run-git "commit" "--amend" "--no-edit"
-                   (and (magit-rev-author-p "HEAD")
-                        (concat "--date=" date)))))
+                   (and update-author (concat "--date=" date))
+                   args)))
 
 ;;;###autoload
 (defun magit-commit-absorb-modules (phase commit)
@@ -544,7 +602,11 @@ See `magit-commit-absorb' for an alternative implementation."
               (magit-inhibit-save-previous-winconf 'unset)
               (magit-display-buffer-noselect t)
               (inhibit-quit nil)
-              (display-buffer-overriding-action '(nil (inhibit-same-window t))))
+              (display-buffer-overriding-action
+               display-buffer-overriding-action))
+          (when magit-commit-diff-inhibit-same-window
+            (setq display-buffer-overriding-action
+                  '(nil (inhibit-same-window t))))
           (message "Diffing changes to be committed (C-g to abort diffing)")
           (cl-case last-command
             (magit-commit

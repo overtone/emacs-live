@@ -1,6 +1,6 @@
 ;;; ob-R.el --- Babel Functions for R                -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2009-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2021 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;;	Dan Davison
@@ -349,7 +349,7 @@ Each member of this list is a list with three members:
                         {
                             tfile<-tempfile()
                             write.table(object, file=tfile, sep=\"\\t\",
-                                        na=\"nil\",row.names=%s,col.names=%s,
+                                        na=\"\",row.names=%s,col.names=%s,
                                         quote=FALSE)
                             file.rename(tfile,transfer.file)
                         },
@@ -362,7 +362,7 @@ Each member of this list is a list with three members:
             )
     }
 }(object=%s,transfer.file=\"%s\")"
-  "A template for an R command to evaluate a block of code and write the result to a file.
+  "Template for an R command to evaluate a block of code and write result to file.
 
 Has four %s escapes to be filled in:
 1. Row names, \"TRUE\" or \"FALSE\"

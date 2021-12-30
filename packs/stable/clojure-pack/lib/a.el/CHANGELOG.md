@@ -10,6 +10,9 @@ All notable changes to this project will be documented in this file. This change
 <!-- ### Removed -->
 <!-- ### Fixed -->
 
+## 1.0.0 - 2021-09-29
+### Fixed
+
 ## [0.1.1] - 2018-09-07
 ### Fixed
 

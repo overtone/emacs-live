@@ -25,31 +25,6 @@
 (require 'clojure-mode)
 (require 'buttercup)
 
-(defmacro when-refactoring-with-point-it (description before after &rest body)
-  "Return a buttercup spec.
-
-Like when-refactor-it but also checks whether point is moved to the expected
-position.
-
-BEFORE is the buffer string before refactoring, where a pipe (|) represents
-point.
-
-AFTER is the expected buffer string after refactoring, where a pipe (|)
-represents the expected position of point.
-
-DESCRIPTION is a string with the description of the spec."
-  `(it ,description
-    (let* ((after ,after)
-           (expected-cursor-pos (1+ (s-index-of "|" after)))
-           (expected-state (delete ?| after)))
-      (with-clojure-buffer ,before
-        (goto-char (point-min))
-        (search-forward "|")
-        (delete-char -1)
-        ,@body
-        (expect (buffer-string) :to-equal expected-state)
-        (expect (point) :to-equal expected-cursor-pos)))))
-
 (describe "clojure-add-arity"
 
   (when-refactoring-with-point-it "should add an arity to a single-arity defn with args on same line"

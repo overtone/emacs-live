@@ -1,6 +1,6 @@
 ;;; parseedn-test-data.el --- Clojure/EDN parser - test data
 
-;; Copyright (C) 2017-2018  Arne Brasseur
+;; Copyright (C) 2017-2021  Arne Brasseur
 
 ;; Author: Arne Brasseur <arne@arnebrasseur.net>
 
@@ -340,6 +340,17 @@
        "booleans"
        (a-list
         :source "[nil true false]"
-        :edn '([nil t nil]))))
+        :edn '([nil t nil]))
+
+       "uuid"
+       (a-list
+        :source "#uuid \"c9c4eac2-7b23-4d62-a444-41a72dc09039\""
+        :edn '((edn-uuid "c9c4eac2-7b23-4d62-a444-41a72dc09039")))
+
+       "inst"
+       (a-list
+        :source "#inst \"2020-09-09T06:56:04\""
+        ;; FIXME this value may differ depending on the timezone of your machine
+        :edn '((edn-inst 24408 31876)))))
 
 ;;; parseedn-test-data.el ends here

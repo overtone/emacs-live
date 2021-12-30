@@ -50,7 +50,9 @@ Used for locating additional package data files.")
 
 (defcustom haskell-process-type
   'auto
-  "The inferior Haskell process type to use: ghci, stack, cabal, or auto.
+  "The inferior Haskell process type to use.
+
+Customize this variable to see the supported symbol values.
 
 When set to 'auto (the default), the directory contents and
 available programs will be used to make a best guess at the
@@ -172,7 +174,7 @@ pass additional flags to `ghc'."
 
 (defcustom haskell-process-do-cabal-format-string
   ":!cd %s && %s"
-  "The way to run cabal comands. It takes two arguments -- the directory and the command.
+  "The way to run cabal commands. It takes two arguments -- the directory and the command.
 See `haskell-process-do-cabal' for more details."
   :group 'haskell-interactive
   :type 'string)
@@ -409,9 +411,9 @@ imports."
 presence of a *.cabal file or stack.yaml file or something similar.")
 
 (defun haskell-build-type ()
-  "Looks for cabal and stack spec files. 
-   When found, returns a pair (TAG . DIR) 
-   where TAG is 'cabal-project, 'cabal-sandbox. 'cabal, or 'stack; 
+  "Looks for cabal and stack spec files.
+   When found, returns a pair (TAG . DIR)
+   where TAG is 'cabal-project, 'cabal-sandbox. 'cabal, or 'stack;
    and DIR is the directory containing cabal or stack file.
    When none found, DIR is nil, and TAG is 'ghc"
   ;; REVIEW maybe just 'cabal is enough.

@@ -1,8 +1,8 @@
 ;;; cider-ns-tests.el
 
-;; Copyright © 2019-2020 Bozhidar Batsov
+;; Copyright © 2019-2021 Bozhidar Batsov
 
-;; Author: Bozhidar Batsov <bozhidar@batsov.com>
+;; Author: Bozhidar Batsov <bozhidar@batsov.dev>
 
 ;; This file is NOT part of GNU Emacs.
 

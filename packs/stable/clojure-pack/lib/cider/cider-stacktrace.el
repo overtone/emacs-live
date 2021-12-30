@@ -1,6 +1,6 @@
 ;;; cider-stacktrace.el --- Stacktrace navigator -*- lexical-binding: t -*-
 
-;; Copyright © 2014-2020 Jeff Valk, Bozhidar Batsov and CIDER contributors
+;; Copyright © 2014-2021 Jeff Valk, Bozhidar Batsov and CIDER contributors
 
 ;; Author: Jeff Valk <jv@jeffvalk.com>
 
@@ -86,43 +86,43 @@ The error types are represented as strings."
 
 (defface cider-stacktrace-error-class-face
   '((t (:inherit font-lock-warning-face)))
-  "Face for exception class names"
+  "Face for exception class names."
   :group 'cider-stacktrace
   :package-version '(cider . "0.6.0"))
 
 (defface cider-stacktrace-error-message-face
   '((t (:inherit font-lock-doc-face)))
-  "Face for exception messages"
+  "Face for exception messages."
   :group 'cider-stacktrace
   :package-version '(cider . "0.7.0"))
 
 (defface cider-stacktrace-filter-active-face
   '((t (:inherit button :underline t :weight normal)))
-  "Face for filter buttons representing frames currently visible"
+  "Face for filter buttons representing frames currently visible."
   :group 'cider-stacktrace
   :package-version '(cider . "0.6.0"))
 
 (defface cider-stacktrace-filter-inactive-face
   '((t (:inherit button :underline nil :weight normal)))
-  "Face for filter buttons representing frames currently filtered out"
+  "Face for filter buttons representing frames currently filtered out."
   :group 'cider-stacktrace
   :package-version '(cider . "0.6.0"))
 
 (defface cider-stacktrace-face
   '((t (:inherit default)))
-  "Face for stack frame text"
+  "Face for stack frame text."
   :group 'cider-stacktrace
   :package-version '(cider . "0.6.0"))
 
 (defface cider-stacktrace-ns-face
   '((t (:inherit font-lock-comment-face)))
-  "Face for stack frame namespace name"
+  "Face for stack frame namespace name."
   :group 'cider-stacktrace
   :package-version '(cider . "0.6.0"))
 
 (defface cider-stacktrace-fn-face
   '((t (:inherit default :weight bold)))
-  "Face for stack frame function name"
+  "Face for stack frame function name."
   :group 'cider-stacktrace
   :package-version '(cider . "0.6.0"))
 
@@ -415,7 +415,7 @@ grouped with a suppressed error type."
 
 (defun cider-stacktrace-cycle-cause (num &optional level)
   "Update element NUM of `cider-stacktrace-cause-visibility'.
-If LEVEL is specified, it is useed, otherwise its current value is incremented.
+If LEVEL is specified, it is used, otherwise its current value is incremented.
 When it reaches 3, it wraps to 0."
   (let ((level (or level (1+ (elt cider-stacktrace-cause-visibility num)))))
     (aset cider-stacktrace-cause-visibility num (mod level 3))
@@ -677,30 +677,37 @@ others."
   "Emit into BUFFER function call site info for the stack FRAME.
 This associates text properties to enable filtering and source navigation."
   (with-current-buffer buffer
-    (nrepl-dbind-response frame (file line flags class method name var ns fn)
-      (let ((flags (mapcar 'intern flags))) ; strings -> symbols
-        (insert-text-button (format "%26s:%5d  %s/%s"
-                                    (if (member 'repl flags) "REPL" file) line
-                                    (if (member 'clj flags) ns class)
-                                    (if (member 'clj flags) fn method))
-                            'var var 'class class 'method method
-                            'name name 'file file 'line line
-                            'flags flags 'follow-link t
-                            'action 'cider-stacktrace-navigate
-                            'help-echo (cider-stacktrace-tooltip
-                                        "View source at this location")
-                            'font-lock-face 'cider-stacktrace-face
-                            'type 'cider-plain-button)
-        (save-excursion
-          (let ((p4 (point))
-                (p1 (search-backward " "))
-                (p2 (search-forward "/"))
-                (p3 (search-forward-regexp "[^/$]+")))
-            (put-text-property p1 p4 'font-lock-face 'cider-stacktrace-ns-face)
-            (put-text-property p2 p3 'font-lock-face 'cider-stacktrace-fn-face)
-            (put-text-property (line-beginning-position) (line-end-position)
-                               'cider-stacktrace-frame t)))
-        (insert "\n")))))
+    (if (null frame) ;; Probably caused by OmitStackTraceInFastThrow
+        (let ((url "https://docs.cider.mx/cider/troubleshooting.html#empty-java-stacktraces"))
+          (insert "  No stacktrace available!\n  Please see ")
+          (insert-text-button url
+                              'url url
+                              'follow-link t
+                              'action (lambda (x) (browse-url (button-get x 'url)))))
+      (nrepl-dbind-response frame (file line flags class method name var ns fn)
+        (let ((flags (mapcar 'intern flags))) ; strings -> symbols
+          (insert-text-button (format "%26s:%5d  %s/%s"
+                                      (if (member 'repl flags) "REPL" file) line
+                                      (if (member 'clj flags) ns class)
+                                      (if (member 'clj flags) fn method))
+                              'var var 'class class 'method method
+                              'name name 'file file 'line line
+                              'flags flags 'follow-link t
+                              'action 'cider-stacktrace-navigate
+                              'help-echo (cider-stacktrace-tooltip
+                                          "View source at this location")
+                              'font-lock-face 'cider-stacktrace-face
+                              'type 'cider-plain-button)
+          (save-excursion
+            (let ((p4 (point))
+                  (p1 (search-backward " "))
+                  (p2 (search-forward "/"))
+                  (p3 (search-forward-regexp "[^/$]+")))
+              (put-text-property p1 p4 'font-lock-face 'cider-stacktrace-ns-face)
+              (put-text-property p2 p3 'font-lock-face 'cider-stacktrace-fn-face)
+              (put-text-property (line-beginning-position) (line-end-position)
+                                 'cider-stacktrace-frame t)))
+          (insert "\n"))))))
 
 (defun cider-stacktrace-render-compile-error (buffer cause)
   "Emit into BUFFER the compile error CAUSE, and enable jumping to it."

@@ -11,8 +11,16 @@ INSTSUB       = $(SUBDIRS:%=install-%)
 ORG_MAKE_DOC ?= info html pdf
 
 ifneq ($(wildcard .git),)
-  GITVERSION ?= $(shell git describe --match release\* --abbrev=6 HEAD)
   ORGVERSION ?= $(subst release_,,$(shell git describe --match release\* --abbrev=0 HEAD))
+  ifeq ($(ORGVERSION),)
+    # In elpa.git, there are no tags available.  Fall back to using
+    # the org.el header.
+    ORGVERSION := $(shell $(BATCH) --eval "(require 'lisp-mnt)" \
+      --visit lisp/org.el --eval '(princ (lm-header "version"))')
+    GITVERSION ?= $(ORGVERSION)-g$(shell git rev-parse --short=6 HEAD)
+  else
+    GITVERSION ?= $(shell git describe --match release\* --abbrev=6 HEAD)
+  endif
   GITSTATUS  ?= $(shell git status -uno --porcelain)
 else
  -include mk/version.mk

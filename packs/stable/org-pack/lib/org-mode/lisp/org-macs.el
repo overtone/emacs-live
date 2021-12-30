@@ -1,6 +1,6 @@
 ;;; org-macs.el --- Top-level Definitions for Org -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2004-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2004-2021 Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -172,7 +172,7 @@ because otherwise all these markers will point to nowhere."
        ,@body)))
 
 (defmacro org-eval-in-environment (environment form)
-  (declare (debug (form form)) (indent 1))
+  (declare (debug (form form)) (indent 1) (obsolete cl-progv "Mar 2021"))
   `(eval (list 'let ,environment ',form)))
 
 ;;;###autoload
@@ -366,15 +366,17 @@ error when the user input is empty."
 	  (allow-empty? nil)
 	  (t (user-error "Empty input is not valid")))))
 
+(declare-function org-time-stamp-inactive "org" (&optional arg))
+
 (defun org-completing-read (&rest args)
   "Completing-read with SPACE being a normal character."
   (let ((enable-recursive-minibuffers t)
 	(minibuffer-local-completion-map
 	 (copy-keymap minibuffer-local-completion-map)))
-    (define-key minibuffer-local-completion-map " " 'self-insert-command)
-    (define-key minibuffer-local-completion-map "?" 'self-insert-command)
+    (define-key minibuffer-local-completion-map " " #'self-insert-command)
+    (define-key minibuffer-local-completion-map "?" #'self-insert-command)
     (define-key minibuffer-local-completion-map (kbd "C-c !")
-      'org-time-stamp-inactive)
+      #'org-time-stamp-inactive)
     (apply #'completing-read args)))
 
 (defun org--mks-read-key (allowed-keys prompt navigation-keys)
@@ -627,18 +629,34 @@ program is needed for, so that the error message can be more informative."
   (let ((message-log-max nil))
     (apply #'message args)))
 
-(defun org-let (list &rest body)
-  (eval (cons 'let (cons list body))))
-(put 'org-let 'lisp-indent-function 1)
+(defmacro org-dlet (binders &rest body)
+  "Like `let*' but using dynamic scoping."
+  (declare (indent 1) (debug let))
+  (let ((vars (mapcar (lambda (binder)
+                        (if (consp binder) (car binder) binder))
+                      binders)))
+    `(progn
+       (with-no-warnings
+         ,@(mapcar (lambda (var) `(defvar ,var)) vars))
+       (let* ,binders ,@body))))
 
-(defun org-let2 (list1 list2 &rest body)
-  (eval (cons 'let (cons list1 (list (cons 'let (cons list2 body)))))))
-(put 'org-let2 'lisp-indent-function 2)
+(defmacro org-pushnew-to-end (val var)
+  "Like `cl-pushnew' but pushes to the end of the list.
+Uses `equal' for comparisons.
+
+Beware: this performs O(N) memory allocations, so if you use it in a loop, you
+get an unnecessary O(N²) space complexity, so you're usually better off using
+`cl-pushnew' (with a final `reverse' if you care about the order of elements)."
+  (declare (debug (form gv-place)))
+  (let ((v (make-symbol "v")))
+    `(let ((,v ,val))
+       (unless (member ,v ,var)
+         (setf ,var (append ,var (list ,v)))))))
 
 (defun org-eval (form)
   "Eval FORM and return result."
   (condition-case error
-      (eval form)
+      (eval form t)
     (error (format "%%![Error: %s]" error))))
 
 (defvar org-outline-regexp) ; defined in org.el
@@ -877,7 +895,8 @@ delimiting S."
 		    (let ((width (plist-get props :width)))
 		      (and (wholenump width) width)))
 		   (`(image . ,_)
-		    (ceiling (car (image-size spec))))
+                    (and (fboundp 'image-size)
+                         (ceiling (car (image-size spec)))))
 		   ((pred stringp)
 		    ;; Displayed string could contain invisible parts,
 		    ;; but no nested display.
@@ -982,7 +1001,7 @@ IF WIDTH is nil and LINES is non-nil, the string is forced into at most that
 many lines, whatever width that takes.
 The return value is a list of lines, without newlines at the end."
   (let* ((words (split-string string))
-	 (maxword (apply 'max (mapcar 'org-string-width words)))
+	 (maxword (apply #'max (mapcar #'org-string-width words)))
 	 w ll)
     (cond (width
 	   (org--do-wrap words (max maxword width)))
@@ -1079,10 +1098,11 @@ that will be added to PLIST.  Returns the string that was modified."
   string)
 
 (defun org-make-parameter-alist (flat)
+  ;; FIXME: "flat" is called a "plist"!
   "Return alist based on FLAT.
 FLAT is a list with alternating symbol names and values.  The
 returned alist is a list of lists with the symbol name in car and
-the value in cdr."
+the value in cadr."
   (when flat
     (cons (list (car flat) (cadr flat))
 	  (org-make-parameter-alist (cddr flat)))))
@@ -1228,10 +1248,11 @@ Return 0. if S is not recognized as a valid value."
        ((string= s "<tomorrow>") (+ 86400.0 today))
        ((string= s "<yesterday>") (- today 86400.0))
        ((string-match "\\`<\\([-+][0-9]+\\)\\([hdwmy]\\)>\\'" s)
-	(+ today
+	(+ (if (string= (match-string 2 s) "h") (float-time) today)
 	   (* (string-to-number (match-string 1 s))
 	      (cdr (assoc (match-string 2 s)
-			  '(("d" . 86400.0)   ("w" . 604800.0)
+			  '(("h" . 3600.0)
+			    ("d" . 86400.0)   ("w" . 604800.0)
 			    ("m" . 2678400.0) ("y" . 31557600.0)))))))
        ((string-match org-ts-regexp0 s) (org-2ft s))
        (t 0.)))))
@@ -1241,31 +1262,29 @@ Return 0. if S is not recognized as a valid value."
 When ADDITIONAL-KEYS is not nil, also include SPC and DEL in the
 allowed keys for scrolling, as expected in the export dispatch
 window."
-  (let ((scrlup (if additional-keys '(?\s 22) 22))
-	(scrldn (if additional-keys `(?\d 134217846) 134217846)))
-    (eval
-     `(cl-case ,key
-	;; C-n
-	(14 (if (not (pos-visible-in-window-p (point-max)))
-		(ignore-errors (scroll-up 1))
-	      (message "End of buffer")
-	      (sit-for 1)))
-	;; C-p
-	(16 (if (not (pos-visible-in-window-p (point-min)))
-		(ignore-errors (scroll-down 1))
-	      (message "Beginning of buffer")
-	      (sit-for 1)))
-	;; SPC or
-	(,scrlup
-	 (if (not (pos-visible-in-window-p (point-max)))
-	     (scroll-up nil)
-	   (message "End of buffer")
-	   (sit-for 1)))
-	;; DEL
-	(,scrldn (if (not (pos-visible-in-window-p (point-min)))
-		     (scroll-down nil)
-		   (message "Beginning of buffer")
-		   (sit-for 1)))))))
+  (let ((scrlup (if additional-keys '(?\s ?\C-v) ?\C-v))
+	(scrldn (if additional-keys `(?\d ?\M-v) ?\M-v)))
+    (pcase key
+      (?\C-n (if (not (pos-visible-in-window-p (point-max)))
+	      (ignore-errors (scroll-up 1))
+	    (message "End of buffer")
+	    (sit-for 1)))
+      (?\C-p (if (not (pos-visible-in-window-p (point-min)))
+	      (ignore-errors (scroll-down 1))
+	    (message "Beginning of buffer")
+	    (sit-for 1)))
+      ;; SPC or
+      ((guard (memq key scrlup))
+       (if (not (pos-visible-in-window-p (point-max)))
+	   (scroll-up nil)
+	 (message "End of buffer")
+	 (sit-for 1)))
+      ;; DEL
+      ((guard (memq key scrldn))
+       (if (not (pos-visible-in-window-p (point-min)))
+	   (scroll-down nil)
+	 (message "Beginning of buffer")
+	 (sit-for 1))))))
 
 (provide 'org-macs)
 

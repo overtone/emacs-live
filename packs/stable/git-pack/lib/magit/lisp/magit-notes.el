@@ -1,12 +1,14 @@
 ;;; magit-notes.el --- notes support  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2010-2020  The Magit Project Contributors
+;; Copyright (C) 2010-2021  The Magit Project Contributors
 ;;
 ;; You should have received a copy of the AUTHORS.md file which
 ;; lists all contributors.  If not, see http://magit.vc/authors.
 
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
 ;; Maintainer: Jonas Bernoulli <jonas@bernoul.li>
+
+;; SPDX-License-Identifier: GPL-3.0-or-later
 
 ;; Magit is free software; you can redistribute it and/or modify it
 ;; under the terms of the GNU General Public License as published by
@@ -93,7 +95,7 @@
   :prompt "Set global notes.displayRef")
 
 (transient-define-argument magit-notes:--ref ()
-  :description "Merge strategy"
+  :description "Manipulate ref"
   :class 'transient-option
   :key "-r"
   :argument "--ref="
@@ -174,7 +176,7 @@ Also see `magit-notes-merge'."
         it
       (concat "refs/notes/" it))))
 
-(defun magit-notes-read-refs (prompt)
+(defun magit-notes-read-refs (prompt &optional _initial-input _history)
   (mapcar (lambda (ref)
             (if (string-prefix-p "refs/" ref)
                 ref
@@ -190,10 +192,10 @@ Also see `magit-notes-merge'."
                       ","))))
 
 (defun magit-notes-read-args (prompt)
- (list (magit-read-branch-or-commit prompt (magit-stash-at-point))
-       (--when-let (--first (string-match "^--ref=\\(.+\\)" it)
-                            (transient-args 'magit-notes))
-         (match-string 1 it))))
+  (list (magit-read-branch-or-commit prompt (magit-stash-at-point))
+        (--when-let (--first (string-match "^--ref=\\(.+\\)" it)
+                             (transient-args 'magit-notes))
+          (match-string 1 it))))
 
 ;;; _
 (provide 'magit-notes)

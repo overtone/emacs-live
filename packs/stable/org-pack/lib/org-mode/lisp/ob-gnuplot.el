@@ -1,6 +1,6 @@
 ;;; ob-gnuplot.el --- Babel Functions for Gnuplot    -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2009-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2021 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;; Keywords: literate programming, reproducible research
@@ -33,7 +33,7 @@
 
 ;;; Requirements:
 
-;; - gnuplot :: http://www.gnuplot.info/
+;; - gnuplot :: https://www.gnuplot.info/
 ;;
 ;; - gnuplot-mode :: you can search the web for the latest active one.
 

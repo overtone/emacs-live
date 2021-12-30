@@ -159,6 +159,6 @@ void main()
       writef ("%s ", tinomogen[i][j]);
     writeln();
   }
-  writefln ("Friday %s\n", tinomogen_h(4,"day"));
+  writefln ("Friday %s", tinomogen_h(4,"day"));
 }
 #+end_src

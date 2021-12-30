@@ -33,6 +33,7 @@
 
 (require 'expand-region-core)
 (require 'org-macs)
+(require 'org-element)
 
 (declare-function org-up-element "org")
 (declare-function org-mark-subtree "org")

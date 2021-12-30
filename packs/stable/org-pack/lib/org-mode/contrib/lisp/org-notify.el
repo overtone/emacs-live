@@ -1,6 +1,6 @@
 ;;; org-notify.el --- Notifications for Org-mode
 
-;; Copyright (C) 2012-2020  Free Software Foundation, Inc.
+;; Copyright (C) 2012-2021  Free Software Foundation, Inc.
 
 ;; Author: Peter Münster <pmrb@free.fr>
 ;; Keywords: notification, todo-list, alarm, reminder, pop-up
@@ -18,7 +18,7 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 

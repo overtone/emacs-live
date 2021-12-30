@@ -8,7 +8,7 @@
 
 @copying
 @quotation
-Copyright (C) 2018-2020 Jonas Bernoulli <jonas@@bernoul.li>
+Copyright (C) 2018-2021 Jonas Bernoulli <jonas@@bernoul.li>
 
 You can redistribute this document and/or modify it under the terms
 of the GNU General Public License as published by the Free Software
@@ -31,7 +31,7 @@ General Public License for more details.
 @finalout
 @titlepage
 @title Transient User and Developer Manual
-@subtitle for version 0.2.0 (v0.2.0-54-gd76f73f8+1)
+@subtitle for version 0.3.7 (v0.3.7-12-g34911615+1)
 @author Jonas Bernoulli
 @page
 @vskip 0pt plus 1filll
@@ -65,10 +65,10 @@ Calling a suffix command usually causes the transient to be exited
 but suffix commands can also be configured to not exit the transient.
 
 @noindent
-This manual is for Transient version 0.2.0 (v0.2.0-54-gd76f73f8+1).
+This manual is for Transient version 0.3.7 (v0.3.7-12-g34911615+1).
 
 @quotation
-Copyright (C) 2018-2020 Jonas Bernoulli <jonas@@bernoul.li>
+Copyright (C) 2018-2021 Jonas Bernoulli <jonas@@bernoul.li>
 
 You can redistribute this document and/or modify it under the terms
 of the GNU General Public License as published by the Free Software
@@ -86,7 +86,6 @@ General Public License for more details.
 @menu
 * Introduction::
 * Usage::
-* Other Options::
 * Modifying Existing Transients::
 * Defining New Commands::
 * Classes and Methods::
@@ -110,6 +109,7 @@ Usage
 * Getting Help for Suffix Commands::
 * Enabling and Disabling Suffixes::
 * Other Commands::
+* Other Options::
 
 Defining New Commands
 
@@ -195,12 +195,12 @@ actually called.  Suffix commands can also be configured to not exit
 the transient.
 
 A suffix command can, but does not have to, use the infix arguments in
-much the same way it can choose to use or ignore the prefix arguments.
-For a suffix command that was invoked from a transient the variable
-@code{transient-current-suffixes} and the function @code{transient-args} serve about
-the same purpose as the variables @code{prefix-arg} and @code{current-prefix-arg} do
-for any command that was called after the prefix arguments have been
-set using a command such as @code{universal-argument}.
+much the same way any command can choose to use or ignore the prefix
+arguments.  For a suffix command that was invoked from a transient the
+variable @code{transient-current-suffixes} and the function @code{transient-args}
+serve about the same purpose as the variables @code{prefix-arg} and
+@code{current-prefix-arg} do for any command that was called after the prefix
+arguments have been set using a command such as @code{universal-argument}.
 
 The information shown in the popup buffer while a transient is active
 looks a bit like this:
@@ -230,8 +230,9 @@ Transient can be used to implement simple "command dispatchers".  The
 main benefit then is that the user can see all the available commands
 in a popup buffer.  That is useful by itself because it frees the user
 from having to remember all the keys that are valid after a certain
-prefix key or command.  Magit's @code{magit-dispatch} command is an example
-of using Transient to merely implement a command dispatcher.
+prefix key or command.  Magit's @code{magit-dispatch} (on @code{C-x M-g}) command is
+an example of using Transient to merely implement a command
+dispatcher.
 
 In addition to that, Transient also allows users to interactively pass
 arguments to commands.  These arguments can be much more complex than
@@ -282,6 +283,7 @@ to implementing yet).
 * Getting Help for Suffix Commands::
 * Enabling and Disabling Suffixes::
 * Other Commands::
+* Other Options::
 @end menu
 
 @node Invoking Transients
@@ -302,7 +304,8 @@ the transient and they may use the values set by the infix commands,
 i.e. the infix @strong{arguments}.
 
 Instead of setting arguments to be used by a suffix command, infix
-commands may also set some value by side-effect.
+commands may also set some value by side-effect, e.g. by setting the
+value of some variable.
 
 @node Aborting and Resuming Transients
 @section Aborting and Resuming Transients
@@ -382,12 +385,13 @@ if any.
 A few shared suffix commands are available in all transients.  These
 suffix commands are not shown in the popup buffer by default.
 
-Most of these commands are bound to @code{C-x <key>} and after pressing @code{C-x} a
-section featuring all common commands is temporarily shown in the popup
-buffer.  After invoking one of these commands, that section disappears
-again.  Note however that one of these commands is described as "Show
-common permanently"; invoke that if you want the common commands to
-always be shown for all transients.
+This includes the aborting commands mentioned in the previous node as
+well as some other commands that are all bound to @code{C-x <key>}.  After
+@code{C-x} is pressed, a section featuring all these common commands is
+temporarily shown in the popup buffer.  After invoking one of them,
+the section disappears again.  Note however that one of these commands
+is described as "Show common permanently"; invoke that if you want the
+common commands to always be shown for all transients.
 
 @table @asis
 @kindex C-x t
@@ -431,8 +435,7 @@ designed so that the value that they use is stored externally as the
 buffer-local value of some variable.  Invoking such a transient again
 uses the buffer-local value. @footnote{@code{magit-diff} and @code{magit-log} are two prominent examples, and their
 handling of buffer-local values is actually a bit more complicated
-than outlined above and even customizable.  This is something I am
-rethinking, but I don't want to rush any changes.)}
+than outlined above and even customizable.}
 
 If the user does not save the value and just exits using a regular
 suffix command, then the value is merely saved to the transient's
@@ -575,11 +578,6 @@ expect that it won't be of use to most users, and they should place
 very important suffixes on a lower level, so that they remain
 available even if the user lowers the transient level.
 
-(Magit currently places nearly all suffixes on level 4 and lower
-levels are not used at all yet.  So for the time being you should not
-set a lower default level and using a higher level might not give you
-as many additional suffixes as you hoped.)
-
 @defopt transient-default-level
 
 This option controls which suffix levels are made available by
@@ -649,7 +647,7 @@ is a wrapper around @code{scroll-down-command} (which see).
 @end deffn
 
 @node Other Options
-@chapter Other Options
+@section Other Options
 
 @defopt transient-show-popup
 
@@ -683,7 +681,7 @@ then the popup is shown after that many seconds of inactivity
 @defopt transient-enable-popup-navigation
 
 This option controls whether navigation commands are enabled in the
-transient popup.
+transient popup buffer.
 
 While a transient is active the transient popup buffer is not the
 current buffer, making it necessary to use dedicated commands to act
@@ -708,26 +706,40 @@ is non-nil, then the following features are available:
 
 This option specifies the action used to display the transient popup
 buffer.  The transient popup buffer is displayed in a window using
-@code{(display-buffer buf transient-display-buffer-action)}.
+@code{(display-buffer BUFFER transient-display-buffer-action)}.
 
-The value of this option has the form @code{(FUNCTION . ALIST)}, where
-FUNCTION is a function or a list of functions.  Each such function
-should accept two arguments: a buffer to display and an alist of the
-same form as ALIST@.  See @ref{Choosing Window,,,elisp,}.
+The value of this option has the form @code{(FUNCTION . ALIST)},
+where FUNCTION is a function or a list of functions.  Each such
+function should accept two arguments: a buffer to display and an
+alist of the same form as ALIST@.  See @ref{Choosing Window,,,elisp,}
+for details.
 
-The default is @code{(display-buffer-in-side-window (side . bottom))}.
+The default is:
+
+(display-buffer-in-side-window
+  (side . bottom)
+  (inhibit-same-window . t)
+  (window-parameters (no-other-window . t)))
+
 This displays the window at the bottom of the selected frame.
-Another useful value is @code{(display-buffer-below-selected)}.  This is
-what @code{magit-popup} used by default.  For more alternatives see
-@ref{Display Action Functions,,,elisp,}.
+Another useful FUNCTION is @code{display-buffer-below-selected}, which
+is what @code{magit-popup} used by default.  For more alternatives see
+@ref{Display Action Functions,,,elisp,} and @ref{Buffer Display Action Alists,,,elisp,}.
+
+Note that the buffer that was current before the transient buffer
+is shown should remain the current buffer.  Many suffix commands
+act on the thing at point, if appropriate, and if the transient
+buffer became the current buffer, then that would change what is
+at point.  To that effect @code{inhibit-same-window} ensures that the
+selected window is not used to show the transient buffer.
 
 It may be possible to display the window in another frame, but
 whether that works in practice depends on the window-manager.
 If the window manager selects the new window (Emacs frame),
-then it doesn't work.
+then that unfortunately changes which buffer is current.
 
-If you change the value of this option, then you might also want
-to change the value of @code{transient-mode-line-format}.
+If you change the value of this option, then you might also
+want to change the value of @code{transient-mode-line-format}.
 @end defopt
 
 @defopt transient-mode-line-format
@@ -1172,6 +1184,18 @@ be used to set the default for certain values that otherwise have to
 be set in the suffix specification.  Therefore if there is no object,
 then you have to make sure to specify the KEY and the DESCRIPTION@.
 
+As a special case, if you want to add a command that might be neither
+defined nor autoloaded, you can use a workaround like:
+
+@lisp
+(transient-insert-suffix 'some-prefix "k"
+  '("!" "Ceci n'est pas une commande" no-command
+    :if (lambda () (featurep 'no-library))))
+@end lisp
+
+Instead of @code{featurep} you could also use @code{require} with a non-nil value
+for NOERROR@.
+
 
 @item
 The mandatory argument can also be a command-line argument, a
@@ -1255,8 +1279,8 @@ Different infix commands behave differently because the concrete
 methods are different for different infix command classes.  In rare
 cases the above command function might not be suitable, even if you
 define your own infix command class.  In that case you have to use
-@code{transient-suffix-command} to define the infix command and use @code{t} as
-the value of the @code{:transient} keyword.
+@code{transient-define-suffix} to define the infix command and use @code{t} as the
+value of the @code{:transient} keyword.
 @end defmac
 
 @defmac transient-define-argument name arglist [docstring] [keyword value]@dots{}
@@ -1433,7 +1457,8 @@ call @code{transient-export}, @code{transient--stack-zap} or @code{transient--st
 and set the values of @code{transient--exitp}, @code{transient--helpp} or
 @code{transient--editp}.
 
-@subsection Pre-commands for Infixes
+@anchor{Pre-commands for Infixes}
+@subheading Pre-commands for Infixes
 
 The default for infixes is @code{transient--do-stay}.  This is also the only
 function that makes sense for infixes.
@@ -1443,7 +1468,8 @@ function that makes sense for infixes.
 Call the command without exporting variables and stay transient.
 @end defun
 
-@subsection Pre-commands for Suffixes
+@anchor{Pre-commands for Suffixes}
+@subheading Pre-commands for Suffixes
 
 The default for suffixes is @code{transient--do-exit}.
 
@@ -1465,7 +1491,8 @@ This is used for suffixes that are prefixes themselves, i.e. for
 sub-prefixes.
 @end defun
 
-@subsection Pre-commands for Non-Suffixes
+@anchor{Pre-commands for Non-Suffixes}
+@subheading Pre-commands for Non-Suffixes
 
 The default for non-suffixes, i.e commands that are bound in other
 keymaps beside the transient keymap, is @code{transient--do-warn}.  Silently
@@ -1486,7 +1513,8 @@ Call @code{transient-undefined} and stay transient.
 Call @code{transient-noop} and stay transient.
 @end defun
 
-@subsection Special Pre-Commands
+@anchor{Special Pre-Commands}
+@subheading Special Pre-Commands
 
 @defun transient--do-quit-one
 
@@ -1896,7 +1924,8 @@ command is invoked.  See @ref{Transient State}.
 @item
 @code{incompatible} A list of lists.  Each sub-list specifies a set of
 mutually exclusive arguments.  Enabling one of these arguments
-causes the others to be disabled.
+causes the others to be disabled.  An argument may appear in
+multiple sub-lists.
 
 
 @item
@@ -1904,7 +1933,8 @@ causes the others to be disabled.
 secondary value, called a "scope".  See @code{transient-define-prefix}.
 @end itemize
 
-@subsection Internal Prefix Slots
+@anchor{Internal Prefix Slots}
+@subheading Internal Prefix Slots
 
 These slots are mostly intended for internal use.  They should not be
 set in calls to @code{transient-define-prefix}.
@@ -1949,7 +1979,8 @@ documented in @ref{Predicate Slots}.
 
 Also see @ref{Suffix Classes}.
 
-@subsection Slots of @code{transient-suffix}
+@anchor{Slots of @code{transient-suffix}}
+@subheading Slots of @code{transient-suffix}
 
 @itemize
 @item
@@ -1985,7 +2016,8 @@ It must contain the following %-placeholders:
 called with no argument and returns a string.
 @end itemize
 
-@subsection Slots of @code{transient-infix}
+@anchor{Slots of @code{transient-infix}}
+@subheading Slots of @code{transient-infix}
 
 Some of these slots are only meaningful for some of the subclasses.
 They are defined here anyway to allow sharing certain methods.
@@ -2017,7 +2049,35 @@ the prefixes.
 
 @item
 @code{multi-value} For options, whether the option can have multiple
-values.  If non-nil, then default to use @code{completing-read-multiple}.
+values.  If this is non-nil, then the values are read using
+@code{completing-read-multiple} by default and if you specify your own
+reader, then it should read the values using that function or
+similar.
+
+Supported non-nil values are:
+
+@itemize
+@item
+Use @code{rest} for an option that can have multiple values.  This is
+useful e.g. for an @code{--} argument that indicates that all remaining
+arguments are files (such as @code{git log -- file1 file2}).
+
+In the list returned by @code{transient-args} such an option and its
+values are represented by a single list of the form @code{(ARGUMENT
+    . VALUES)}.
+
+
+@item
+Use @code{repeat} for an option that can be specified multiple times.
+
+In the list returned by @code{transient-args} each instance of the option
+and its value appears separately in the usual from, for example:
+@code{("--another-argument" "--option=first" "--option=second")}.
+@end itemize
+
+In both cases the option's values have to be specified in the
+default value of a prefix using the same format as returned by
+@code{transient-args}, e.g.: @code{("--other" "--o=1" "--o=2" ("--" "f1" "f2"))}.
 
 
 @item
@@ -2053,14 +2113,16 @@ returns a prompt string.
 the class of the object.
 @end itemize
 
-@subsection Slots of @code{transient-variable}
+@anchor{Slots of @code{transient-variable}}
+@subheading Slots of @code{transient-variable}
 
 @itemize
 @item
 @code{variable} The variable.
 @end itemize
 
-@subsection Slots of @code{transient-switches}
+@anchor{Slots of @code{transient-switches}}
+@subheading Slots of @code{transient-switches}
 
 @itemize
 @item
@@ -2144,7 +2206,8 @@ The following diagrams illustrate some of the differences.
 @code{@{NUMBER@}} is a footnote.
 @end itemize
 
-@subsection Regular Prefix Commands
+@anchor{Regular Prefix Commands}
+@subheading Regular Prefix Commands
 
 See @ref{Prefix Keys,,,elisp,}.
 
@@ -2156,7 +2219,8 @@ See @ref{Prefix Keys,,,elisp,}.
                                   `--> command3 --> (c)
 @end example
 
-@subsection Regular Prefix Arguments
+@anchor{Regular Prefix Arguments}
+@subheading Regular Prefix Arguments
 
 See @ref{Prefix Command Arguments,,,elisp,}.
 
@@ -2176,7 +2240,8 @@ See @ref{Prefix Command Arguments,,,elisp,}.
                                       `-------- discards --------'
 @end example
 
-@subsection Transients
+@anchor{Transients}
+@subheading Transients
 
 (∩｀-´)⊃━☆ﾟ.*･｡ﾟ
 
@@ -2339,7 +2404,8 @@ covered elsewhere.
 @node Comparison With Other Packages
 @section Comparison With Other Packages
 
-@subsection Magit-Popup
+@anchor{Magit-Popup}
+@subheading Magit-Popup
 
 Transient is the successor to Magit-Popup (see @ref{Top,,,magit-popup,}).
 
@@ -2359,7 +2425,8 @@ A lot of things are hard-coded in Magit-Popup.  One random example is
 that the key bindings for switches must begin with "-" and those for
 options must begin with "=".
 
-@subsection Hydra
+@anchor{Hydra}
+@subheading Hydra
 
 Hydra (see @uref{https://github.com/abo-abo/hydra}) is another package that
 provides features similar to those of Transient.
@@ -2445,10 +2512,12 @@ currently exist.
 
 
 
+@anchor{Can I control how the popup buffer is displayed?}
 @appendixsec Can I control how the popup buffer is displayed?
 
 Yes, see @code{transient-display-buffer-action} in @ref{Other Options}.
 
+@anchor{Why did some of the key bindings change?}
 @appendixsec Why did some of the key bindings change?
 
 You may have noticed that the bindings for some of the common commands
@@ -2490,6 +2559,7 @@ also using that for a common command would prevent me from doing so.
 
 (Also see the next question.)
 
+@anchor{Why does @code{q} not quit popups anymore?}
 @appendixsec Why does @code{q} not quit popups anymore?
 
 I agree that @code{q} is a good binding for commands that quit something.

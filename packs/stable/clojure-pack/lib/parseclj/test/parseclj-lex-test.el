@@ -21,11 +21,11 @@
 ;; the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
 ;; Boston, MA 02110-1301, USA.
 
-;;; Commentary
+;;; Commentary:
 
 ;; Unit tests for the lexer
 
-;;; Code
+;;; Code:
 
 (require 'ert)
 (require 'parseclj-lex)
@@ -222,7 +222,37 @@
     (should (equal (parseclj-lex-next) (parseclj-lex-token :number "13" 18)))
     (should (equal (parseclj-lex-next) (parseclj-lex-token :whitespace " " 20)))
     (should (equal (parseclj-lex-next) (parseclj-lex-token :number "14" 21)))
-    (should (equal (parseclj-lex-next) (parseclj-lex-token :rparen ")" 23)))))
+    (should (equal (parseclj-lex-next) (parseclj-lex-token :rparen ")" 23))))
+
+  (with-temp-buffer
+    (insert "#!/usr/bin/clojure")
+    (goto-char 1)
+    (should (equal (parseclj-lex-next) (parseclj-lex-token :comment "#!/usr/bin/clojure" 1))))
+
+  (with-temp-buffer
+    (insert "##-Inf ##Inf ##NaN")
+    (goto-char 1)
+    (should (equal
+             (list (parseclj-lex-next)
+                   (parseclj-lex-next)
+                   (parseclj-lex-next)
+                   (parseclj-lex-next)
+                   (parseclj-lex-next))
+             '(((:token-type . :symbolic-value)
+                (:form . "##-Inf")
+                (:pos . 1))
+               ((:token-type . :whitespace)
+                (:form . " ")
+                (:pos . 7))
+               ((:token-type . :symbolic-value)
+                (:form . "##Inf")
+                (:pos . 8))
+               ((:token-type . :whitespace)
+                (:form . " ")
+                (:pos . 13))
+               ((:token-type . :symbolic-value)
+                (:form . "##NaN")
+                (:pos . 14)))))))
 
 (ert-deftest parseclj-lex-test-at-number-p ()
   (dolist (str '("123" ".9" "+1" "0" "-456"))

@@ -28,9 +28,9 @@ guide::		orgguide.texi org-version.inc
 endif
 
 org.texi orgguide.texi:	org-manual.org org-guide.org
-	$(BATCH) \
-	  --eval '(add-to-list '"'"'load-path "../lisp")' \
-	  --eval '(load "../mk/org-fixup.el")' \
+	$(BATCH) 				      \
+	  --eval '(add-to-list `load-path "../lisp")' \
+	  --eval '(load "../mk/org-fixup.el")' 	      \
 	  --eval '(org-make-manuals)'
 
 org-version.inc:	org.texi
@@ -88,8 +88,8 @@ ifneq ($(SERVERMK),)
 endif
 
 %_letter.tex:	%.tex
-	$(BATCH) \
-	  --eval '(add-to-list '"'"'load-path "../lisp")' \
-	  --eval '(load "org-compat.el")' \
-	  --eval '(load "../mk/org-fixup.el")' \
+	$(BATCH) 				      \
+	  --eval '(add-to-list `load-path "../lisp")' \
+	  --eval '(load "org-compat.el")' 	      \
+	  --eval '(load "../mk/org-fixup.el")' 	      \
 	  --eval '(org-make-letterformat "$(<F)" "$(@F)")'

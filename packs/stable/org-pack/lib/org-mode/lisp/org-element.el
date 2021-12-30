@@ -1,6 +1,6 @@
 ;;; org-element.el --- Parser for Org Syntax         -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2012-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2012-2021 Free Software Foundation, Inc.
 
 ;; Author: Nicolas Goaziou <n.goaziou at gmail dot com>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -3971,7 +3971,7 @@ element it has to parse."
 		       (cond
 			;; Must end with a full rule.
 			((not (re-search-forward non-table.el-line limit 'move))
-			 (beginning-of-line)
+			 (if (bolp) (forward-line -1) (beginning-of-line))
 			 (looking-at rule-regexp))
 			;; Ignore pseudo-tables with a single
 			;; rule.
@@ -4228,6 +4228,7 @@ looking into captions:
    (lambda (b)
      (and (org-element-map b \\='latex-snippet #\\='identity nil t) b))
    nil nil nil t)"
+  (declare (indent 2))
   ;; Ensure TYPES and NO-RECURSION are a list, even of one element.
   (let* ((types (if (listp types) types (list types)))
 	 (no-recursion (if (listp no-recursion) no-recursion
@@ -4321,7 +4322,6 @@ looking into captions:
 	(funcall --walk-tree data)
 	;; Return value in a proper order.
 	(nreverse --acc)))))
-(put 'org-element-map 'lisp-indent-function 2)
 
 ;; The following functions are internal parts of the parser.
 ;;

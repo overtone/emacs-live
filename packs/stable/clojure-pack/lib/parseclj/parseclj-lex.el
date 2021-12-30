@@ -1,6 +1,6 @@
 ;;; parseclj-lex.el --- Clojure/EDN Lexer
 
-;; Copyright (C) 2017-2018  Arne Brasseur
+;; Copyright (C) 2017-2021  Arne Brasseur
 
 ;; Author: Arne Brasseur <arne@arnebrasseur.net>
 
@@ -27,8 +27,11 @@
 
 ;;; Code:
 
+(require 'parseclj-alist)
+
 (defvar parseclj-lex--leaf-tokens '(:whitespace
                                     :comment
+                                    :symbolic-value
                                     :number
                                     :nil
                                     :true
@@ -73,7 +76,7 @@ Tokens at a mimimum have these attributes
 - POS: the position in the input, starts from 1 (like point)
 
 Other ATTRIBUTES can be given as a flat list of key-value pairs."
-  (apply 'a-list :token-type type :form form :pos pos attributes))
+  (apply #'parseclj-alist :token-type type :form form :pos pos attributes))
 
 (defun parseclj-lex-error-token (pos &optional error-type)
   "Create a lexer error token starting at POS.
@@ -137,14 +140,15 @@ S goes through three transformations:
       (make-string 1 (string-to-number (substring x 2) 16)))
     (replace-regexp-in-string "\\\\[tbnrf'\"\\]"
                               (lambda (x)
-                                (cl-case (elt x 1)
-                                  (?t "\t")
-                                  (?f "\f")
-                                  (?\" "\"")
-                                  (?r "\r")
-                                  (?n "\n")
-                                  (?\\ "\\\\")
-                                  (t (substring x 1))))
+                                (let ((ch (elt x 1)))
+                                  (cond
+                                   ((eq ?t ch) "\t")
+                                   ((eq ?f ch) "\f")
+                                   ((eq ?\" ch) "\"")
+                                   ((eq ?r ch) "\r")
+                                   ((eq ?n ch) "\n")
+                                   ((eq ?\\ ch) "\\\\")
+                                   (t (substring x 1)))))
                               (substring s 1 -1)))))
 
 (defun parseclj-lex--character-value (c)
@@ -161,16 +165,17 @@ S goes through three transformations:
 
 (defun parseclj-lex--leaf-token-value (token)
   "Parse the given leaf TOKEN to an Emacs Lisp value."
-  (cl-case (parseclj-lex-token-type token)
-    (:number (string-to-number (alist-get :form token)))
-    (:nil nil)
-    (:true t)
-    (:false nil)
-    (:symbol (intern (alist-get :form token)))
-    (:keyword (intern (alist-get :form token)))
-    (:string (parseclj-lex--string-value (alist-get :form token)))
-    (:character (parseclj-lex--character-value (alist-get :form token)))))
-
+  (let ((token-type (parseclj-lex-token-type token)))
+    (cond
+     ((eq :number token-type) (string-to-number (alist-get :form token)))
+     ((eq :nil token-type) nil)
+     ((eq :true token-type) t)
+     ((eq :false token-type) nil)
+     ((eq :symbol token-type) (intern (alist-get :form token)))
+     ((eq :keyword token-type) (intern (alist-get :form token)))
+     ((eq :string token-type) (parseclj-lex--string-value (alist-get :form token)))
+     ((eq :character token-type) (parseclj-lex--character-value (alist-get :form token)))
+     ((eq :symbolic-value token-type) (intern (substring (alist-get :form token) 2))))))
 
 ;; Stream tokenization
 
@@ -515,6 +520,10 @@ See `parseclj-lex-token'."
            ((equal char ?=)
             (right-char)
             (parseclj-lex-token :eval "#=" pos))
+           ((equal char ?#)
+            (right-char)
+            (let ((sym (parseclj-lex-get-symbol-at-point (point))))
+              (parseclj-lex-token :symbolic-value (concat "##" sym) pos)))
            ((equal char ?\")
             (parseclj-lex-regex))
            ((equal char ?:)
@@ -529,6 +538,9 @@ See `parseclj-lex-token'."
            ((parseclj-lex-symbol-start-p char t)
             (right-char)
             (parseclj-lex-token :tag (concat "#" (parseclj-lex-get-symbol-at-point (1+ pos))) pos))
+           ((equal char ?!) ;; shebang
+            (left-char)
+            (parseclj-lex-comment))
            (t
             (while (not (or (parseclj-lex-at-whitespace-p)
                             (parseclj-lex-at-eof-p)))

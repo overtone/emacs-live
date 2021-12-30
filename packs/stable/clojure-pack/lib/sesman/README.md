@@ -45,7 +45,7 @@ Systems should link sesman map into their key-maps (ideally on `C-c C-s`) and in
 
 ### Implementations
 
-  - [CIDER implementation](http://docs.cider.mx/en/latest/managing_connections/)
+  - [CIDER implementation](https://docs.cider.mx/cider/usage/managing_connections.html)
 
 <!-- , which is a good mnemonic and is already used in CIDER and ESS. -->
 

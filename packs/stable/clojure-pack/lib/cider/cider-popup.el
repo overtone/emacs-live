@@ -1,6 +1,6 @@
 ;;; cider-popup.el --- Creating and quitting popup buffers  -*- lexical-binding: t; -*-
 
-;; Copyright © 2015-2020  Bozhidar Batsov, Artur Malabarba and CIDER contributors
+;; Copyright © 2015-2021  Bozhidar Batsov, Artur Malabarba and CIDER contributors
 
 ;; Author: Artur Malabarba <bruce.connor.am@gmail.com>
 
@@ -27,7 +27,7 @@
 (require 'cider-compat)
 
 (define-minor-mode cider-popup-buffer-mode
-  "Mode for CIDER popup buffers"
+  "Mode for CIDER popup buffers."
   nil
   (" cider-tmp")
   '(("q" .  cider-popup-buffer-quit-function)))

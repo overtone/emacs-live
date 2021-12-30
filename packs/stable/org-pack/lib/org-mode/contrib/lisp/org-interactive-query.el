@@ -1,6 +1,6 @@
 ;;; org-interactive-query.el --- Interactive modification of agenda query
 ;;
-;; Copyright 2007-2020 Free Software Foundation, Inc.
+;; Copyright 2007-2021 Free Software Foundation, Inc.
 ;;
 ;; Author: Christopher League <league at contrapunctus dot net>
 ;; Version: 1.0
@@ -19,7 +19,7 @@
 ;; GNU General Public License for more details.
 ;;
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 ;;
 ;;; Commentary:
 ;;

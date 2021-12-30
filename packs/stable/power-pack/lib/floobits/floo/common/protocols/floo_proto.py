@@ -148,7 +148,10 @@ class FlooProtocol(base.BaseProtocol):
                 return self.reconnect()
         if self._secure:
             sock_debug('SSL-wrapping socket')
-            self._sock = ssl.wrap_socket(self._sock, ca_certs=self._cert_path, cert_reqs=ssl.CERT_REQUIRED, do_handshake_on_connect=False)
+            cert_reqs = ssl.CERT_REQUIRED
+            if G.INSECURE_SSL:
+                cert_reqs = ssl.CERT_NONE
+            self._sock = ssl.wrap_socket(self._sock, ca_certs=self._cert_path, cert_reqs=cert_reqs, do_handshake_on_connect=False)
 
         self._q.clear()
         self._buf_out = bytes()
@@ -313,7 +316,7 @@ class FlooProtocol(base.BaseProtocol):
             # sock_debug('read data')
             return self._handle(buf)
 
-        # sock_debug('empty select')
+        sock_debug('empty select')
         self._empty_reads += 1
         if self._empty_reads > (3000 / G.TICK_TIME):
             msg.error('No data from sock.recv() {0} times.'.format(self._empty_reads))

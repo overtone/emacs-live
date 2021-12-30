@@ -163,6 +163,10 @@ the test."
 (js2-deftest-parse void
   "void 0;")
 
+(js2-deftest-parse catch-without-identifier
+  "try {\n} catch {\n  4 + 4;\n}"
+  :warnings-count 0)
+
 ;;; Callers of `js2-valid-prop-name-token'
 
 (js2-deftest-parse parse-property-access-when-not-keyword
@@ -191,6 +195,12 @@ the test."
 
 (js2-deftest-parse parse-for-of
   "for (var a of []) {\n}")
+
+(js2-deftest-parse parse-for-each
+  "for each (var a of []) {\n}")
+
+(js2-deftest-parse parse-for-await
+  "for await (var a of []) {\n}")
 
 (js2-deftest-parse of-can-be-name
   "void of;")
@@ -442,6 +452,10 @@ the test."
 
 (js2-deftest-parse arrow-function-recovers-from-error
   "[(,foo) => 1];" :syntax-error "," :errors-count 6)
+
+(js2-deftest-parse arrow-function-with-trailing-comma-in-arguments
+  "(a, b = 1,) => {  c;\n};"
+  :reference "(a, b = 1) => {  c;\n};")
 
 ;;; Automatic semicolon insertion
 
@@ -792,6 +806,15 @@ the test."
 (js2-deftest-parse import-default-and-namespace "import robert as bob, * as lib from 'src/lib';")
 (js2-deftest-parse import-from-this-module "import {url} from this module;")
 
+(js2-deftest-parse import-meta
+  "console.log(import.meta);")
+
+(js2-deftest-parse import-dynamic-stmt
+  "import('/modules/my-module.js').then((module) => {});")
+
+(js2-deftest-parse import-dynamic-expr
+  "let v = import('/modules/my-module.js').then((module) => {  module.getV();\n});")
+
 ;; Module Exports
 
 (js2-deftest export-rexport "export * from 'other/lib'"
@@ -989,6 +1012,18 @@ the test."
 
 (js2-deftest-parse parse-class-static-fields-no-semi
   "class C {\n  static a\n  static b = 42\n}")
+
+;;; Private names
+
+(js2-deftest-parse parse-class-private-field-with-init
+  "class C {\n  #x = 42;\n  static #y = 24;\n}"
+  :reference "class C {\n  #x = 42\n  static #y = 24\n}")
+
+(js2-deftest-parse parse-class-private-method
+  "class C {\n  #foo(y) {  this.#x = 5;\n  y.#x = 6;\n}\n}")
+
+(js2-deftest-parse parse-class-private-getter
+  "class C {\n  get #foo(y) {  this.#x;\n}\n}")
 
 ;;; Operators
 

@@ -204,9 +204,8 @@
   1)
 
 (setq parseedn-test-extra-handlers
-      (a-list
-       'my/type #'test-val-passed-to-handler
-       'my/other-type (lambda (val) 2)))
+      (list (cons 'my/type #'test-val-passed-to-handler)
+            (cons 'my/other-type (lambda (val) 2))))
 
 (ert-deftest tags ()
   :tags '(edn tags)

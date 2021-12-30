@@ -212,7 +212,7 @@ class FlooUI(event_emitter.EventEmitter):
         if self.agent:
             try:
                 self.agent.stop()
-            except:
+            except Exception:
                 pass
 
         G.WORKSPACE_WINDOW = yield self.get_a_window, d

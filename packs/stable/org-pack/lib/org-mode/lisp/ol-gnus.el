@@ -1,6 +1,6 @@
 ;;; ol-gnus.el --- Links to Gnus Groups and Messages -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2004-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2004-2021 Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;;         Tassilo Horn <tassilo at member dot fsf dot org>
@@ -198,11 +198,11 @@ If `org-store-link' was called with a prefix arg the meaning of
 	       (to (mail-fetch-field "To"))
 	       (from (mail-fetch-field "From"))
 	       (subject (mail-fetch-field "Subject"))
-	       newsgroup xarchive)	;those are always nil for gcc
+	       ) ;; newsgroup xarchive	;those are always nil for gcc
 	   (unless gcc (error "Can not create link: No Gcc header found"))
 	   (org-link-store-props :type "gnus" :from from :subject subject
 				 :message-id id :group gcc :to to)
-	   (let ((link (org-gnus-article-link gcc newsgroup id xarchive))
+	   (let ((link (org-gnus-article-link gcc nil id nil)) ;;newsgroup xarchive
 		 (description (org-link-email-description)))
 	     (org-link-add-props :link link :description description)
 	     link)))))))

@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  pull_request:
+    paths:
+      - '**.el'
+      - '**.yml'
+      - 'Makefile'
+  push:
+    paths:
+      - '**.el'
+      - '**.yml'
+      - 'Makefile'
+
+jobs:
+  test:
+    if: github.repository_owner == 'mooz'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        emacs_version:
+          - 25.1
+          - 26.3
+          - 27.2
+          - snapshot
+    steps:
+    - name: Set up Emacs
+      uses: purcell/setup-emacs@master
+      with:
+        version: ${{matrix.emacs_version}}
+
+    - name: Check out the source code
+      uses: actions/checkout@v2
+
+    - name: Test the project
+      run: |
+        emacs --version
+        make test
