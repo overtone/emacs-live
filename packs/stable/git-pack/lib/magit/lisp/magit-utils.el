@@ -1,6 +1,6 @@
 ;;; magit-utils.el --- various utilities  -*- lexical-binding: t; coding: utf-8 -*-
 
-;; Copyright (C) 2010-2020  The Magit Project Contributors
+;; Copyright (C) 2010-2021  The Magit Project Contributors
 ;;
 ;; You should have received a copy of the AUTHORS.md file which
 ;; lists all contributors.  If not, see http://magit.vc/authors.
@@ -10,6 +10,8 @@
 
 ;; Contains code from GNU Emacs https://www.gnu.org/software/emacs,
 ;; released under the GNU General Public License version 3 or later.
+
+;; SPDX-License-Identifier: GPL-3.0-or-later
 
 ;; Magit is free software; you can redistribute it and/or modify it
 ;; under the terms of the GNU General Public License as published by
@@ -40,17 +42,13 @@
 
 (require 'cl-lib)
 (require 'dash)
-
-(eval-when-compile
-  (require 'subr-x))
+(require 'eieio)
+(require 'seq)
+(require 'subr-x)
 
 (require 'crm)
 
 (eval-when-compile (require 'ido))
-(declare-function ido-completing-read+ "ido-completing-read+"
-                  (prompt collection &optional predicate
-                          require-match initial-input
-                          hist def inherit-input-method))
 (declare-function Info-get-token "info" (pos start all &optional errorstring))
 
 (eval-when-compile (require 'vc-git))
@@ -108,7 +106,8 @@ alphabetical order, depending on your version of Ivy."
     (forge-edit-topic-note    nil t)
     (forge-pull-pullreq       nil t)
     (forge-visit-issue        nil t)
-    (forge-visit-pullreq      nil t))
+    (forge-visit-pullreq      nil t)
+    (forge-visit-topic        nil t))
   "When not to offer alternatives and ask for confirmation.
 
 Many commands by default ask the user to select from a list of
@@ -161,6 +160,7 @@ The value has the form ((COMMAND nil|PROMPT DEFAULT)...).
     (const abort-merge)
     (const merge-dirty)
     (const delete-unmerged-branch)
+    (const delete-branch-on-remote)
     (const delete-pr-remote)
     (const drop-stashes)
     (const set-and-push)
@@ -241,6 +241,13 @@ References:
   choice (or selecting another branch), but when a branch has
   not been merged yet, also make sure the user is aware of that.
 
+  `delete-branch-on-remote' Deleting a \"remote branch\" may mean
+  deleting the (local) \"remote-tracking\" branch only, or also
+  removing it from the remote itself.  The latter often makes more
+  sense because otherwise simply fetching from the remote would
+  restore the remote-tracking branch, but doing that can be
+  surprising and hard to recover from, so we ask.
+
   `delete-pr-remote' When deleting a branch that was created from
   a pull-request and if no other branches still exist on that
   remote, then `magit-branch-delete' offers to delete the remote
@@ -271,11 +278,11 @@ Edit published history:
   editing commits that have already been pushed to one of the
   branches listed in `magit-published-branches'.
 
-  `amend-published' Affects most commands that amend to \"HEAD\".
+  `amend-published' Affects most commands that amend to `HEAD'.
 
   `rebase-published' Affects commands that perform interactive
   rebases.  This includes commands from the commit popup that
-  modify a commit other than \"HEAD\", namely the various fixup
+  modify a commit other than `HEAD', namely the various fixup
   and squash variants.
 
   `edit-published' Affects the commands `magit-edit-line-commit'
@@ -379,14 +386,21 @@ Messages which can currently be suppressed using this option are:
   :group 'magit-miscellaneous
   :type '(repeat string))
 
-(defcustom magit-ellipsis ?…
-  "Character used to abbreviate text.
+(defcustom magit-ellipsis (if (char-displayable-p ?…) "…" "...")
+  "String used to abbreviate text in process buffers.
 
-Currently this is used to abbreviate author names in the margin
-and in process buffers to elide `magit-git-global-arguments'."
-  :package-version '(magit . "2.1.0")
+Currently this is only used to elide `magit-git-global-arguments'
+in process buffers.  In the future it may be used in other places
+as well, but not the following:
+
+- Author names in the log margin are always abbreviated using
+  \"…\" or if that is not displayable, then \">\".
+
+- Whether collapsed sections are indicated using ellipsis is
+  controlled by `magit-section-visibility-indicator'."
+  :package-version '(magit . "3.0.0")
   :group 'magit-miscellaneous
-  :type 'character)
+  :type 'string)
 
 (defcustom magit-update-other-window-delay 0.2
   "Delay before automatically updating the other window.
@@ -516,21 +530,27 @@ acts similarly to `completing-read', except for the following:
       (complete-with-action action collection string pred))))
 
 (defun magit-builtin-completing-read
-  (prompt choices &optional predicate require-match initial-input hist def)
+    (prompt choices &optional predicate require-match initial-input hist def)
   "Magit wrapper for standard `completing-read' function."
   (unless (or (bound-and-true-p helm-mode)
+              (bound-and-true-p ivy-mode)
+              (bound-and-true-p vertico-mode)
+              (bound-and-true-p selectrum-mode))
+    (setq prompt (magit-prompt-with-default prompt def)))
+  (unless (or (bound-and-true-p helm-mode)
               (bound-and-true-p ivy-mode))
-    (setq prompt (magit-prompt-with-default prompt def))
     (setq choices (magit--completion-table choices)))
-  (cl-letf (((symbol-function 'completion-pcm--all-completions)
-             #'magit-completion-pcm--all-completions))
+  (cl-letf (((symbol-function 'completion-pcm--all-completions)))
+    (when (< emacs-major-version 26)
+      (fset 'completion-pcm--all-completions
+            'magit-completion-pcm--all-completions))
     (let ((ivy-sort-functions-alist nil))
       (completing-read prompt choices
                        predicate require-match
                        initial-input hist def))))
 
 (defun magit-completing-read-multiple
-  (prompt choices &optional sep default hist keymap)
+    (prompt choices &optional sep default hist keymap)
   "Read multiple items from CHOICES, separated by SEP.
 
 Set up the `crm' variables needed to read multiple values with
@@ -543,6 +563,7 @@ When KEYMAP is nil, it defaults to `crm-local-completion-map'.
 
 Unlike `completing-read-multiple', the return value is not split
 into a list."
+  (declare (obsolete magit-completing-read-multiple* "Magit 3.1.0"))
   (let* ((crm-separator (or sep crm-default-separator))
          (crm-completion-table (magit--completion-table choices))
          (choose-completion-string-functions
@@ -553,8 +574,10 @@ into a list."
          (helm-crm-default-separator nil)
          (ivy-sort-matches-functions-alist nil)
          (input
-          (cl-letf (((symbol-function 'completion-pcm--all-completions)
-                     #'magit-completion-pcm--all-completions))
+          (cl-letf (((symbol-function 'completion-pcm--all-completions)))
+            (when (< emacs-major-version 26)
+              (fset 'completion-pcm--all-completions
+                    'magit-completion-pcm--all-completions))
             (read-from-minibuffer
              (concat prompt (and default (format " (%s)" default)) ": ")
              nil (or keymap crm-local-completion-map)
@@ -566,47 +589,78 @@ into a list."
 
 (defun magit-completing-read-multiple*
     (prompt table &optional predicate require-match initial-input
-	    hist def inherit-input-method)
+            hist def inherit-input-method
+            no-split)
   "Read multiple strings in the minibuffer, with completion.
 Like `completing-read-multiple' but don't mess with order of
-TABLE.  Also bind `helm-completion-in-region-default-sort-fn'
-to nil."
-  (unwind-protect
-      (cl-letf (((symbol-function 'completion-pcm--all-completions)
-                 #'magit-completion-pcm--all-completions))
-        (add-hook 'choose-completion-string-functions
-                  'crm--choose-completion-string)
-        (let* ((minibuffer-completion-table #'crm--collection-fn)
-               (minibuffer-completion-predicate predicate)
-               ;; see completing_read in src/minibuf.c
-               (minibuffer-completion-confirm
-                (unless (eq require-match t) require-match))
-               (crm-completion-table (magit--completion-table table))
-               (map (if require-match
-                        crm-local-must-match-map
-                      crm-local-completion-map))
-               (helm-completion-in-region-default-sort-fn nil)
-               (ivy-sort-matches-functions-alist nil)
-               ;; If the user enters empty input, `read-from-minibuffer'
-               ;; returns the empty string, not DEF.
-               (input (read-from-minibuffer
-                       prompt initial-input map
-                       nil hist def inherit-input-method)))
-          (and def (string-equal input "") (setq input def))
-          ;; Remove empty strings in the list of read strings.
-          (split-string input crm-separator t)))
-    (remove-hook 'choose-completion-string-functions
-                 'crm--choose-completion-string)))
+TABLE and take an additional argument NO-SPLIT, which causes
+the user input to be returned as a single unmodified string.
+Also work around various incompatible features of various
+third-party completion frameworks."
+  (cl-letf*
+      (;; To implement NO-SPLIT we have to manipulate the respective
+       ;; `split-string' invocation.  We cannot simply advice it to
+       ;; return the input string because `SELECTRUM' would choke on
+       ;; that string.  Use a variable to pass along the raw user
+       ;; input string. aa5f098ab
+       (input nil)
+       (split-string (symbol-function 'split-string))
+       ((symbol-function 'split-string)
+        (lambda (string &optional separators omit-nulls trim)
+          (when (and no-split
+                     (equal separators crm-separator)
+                     (equal omit-nulls t))
+            (setq input string))
+          (funcall split-string string separators omit-nulls trim)))
+       ;; In Emacs 25 this function has a bug, so we use a copy of the
+       ;; version from Emacs 26. bef9c7aa3
+       ((symbol-function 'completion-pcm--all-completions)
+        (if (< emacs-major-version 26)
+            'magit-completion-pcm--all-completions
+          (symbol-function 'completion-pcm--all-completions)))
+       ;; Prevent `BUILT-IN' completion from messing up our existing
+       ;; order of the completion candidates. aa5f098ab
+       (table (magit--completion-table table))
+       ;; Prevent `IVY' from messing up our existing order. c7af78726
+       (ivy-sort-matches-functions-alist nil)
+       ;; Prevent `HELM' from messing up our existing order.  6fcf994bd
+       (helm-completion-in-region-default-sort-fn nil)
+       ;; Prevent `HELM' from automatically appending the separator,
+       ;; which is counterproductive when NO-SPLIT is non-nil and/or
+       ;; when reading commit ranges. 798aff564
+       (helm-crm-default-separator
+        (if no-split nil (bound-and-true-p helm-crm-default-separator)))
+       (values
+        (if (and no-split
+                 (advice-member-p 'consult-completing-read-multiple
+                                  'completing-read-multiple))
+            ;; Our NO-SPLIT hack is not compatible with `CONSULT's
+            ;; implemenation so fall back to the original function.
+            ;; #4437
+            (unwind-protect
+                (progn
+                  (advice-remove 'completing-read-multiple
+                                 'consult-completing-read-multiple)
+                  (completing-read-multiple
+                   prompt table predicate require-match initial-input
+                   hist def inherit-input-method))
+              (advice-add 'completing-read-multiple :override
+                          'consult-completing-read-multiple))
+          (completing-read-multiple
+           prompt table predicate require-match initial-input
+           hist def inherit-input-method))))
+    (if no-split input values)))
 
 (defun magit-ido-completing-read
-  (prompt choices &optional predicate require-match initial-input hist def)
+    (prompt choices &optional predicate require-match initial-input hist def)
   "Ido-based `completing-read' almost-replacement.
 
 Unfortunately `ido-completing-read' is not suitable as a
 drop-in replacement for `completing-read', instead we use
 `ido-completing-read+' from the third-party package by the
 same name."
-  (if (require 'ido-completing-read+ nil t)
+  (if (and (require 'ido-completing-read+ nil t)
+           (fboundp 'ido-completing-read+))
       (ido-completing-read+ prompt choices predicate require-match
                             initial-input hist
                             (or def (and require-match (car choices))))
@@ -687,9 +741,11 @@ This is similar to `read-string', but
            (debug (form form &rest (characterp form body))))
   `(prog1 (pcase (read-char-choice
                   (concat ,prompt
-                          ,(concat (mapconcat 'cadr clauses ", ")
-                                   (and verbose ", or [C-g] to abort") " "))
-                  ',(mapcar 'car clauses))
+                          (mapconcat #'identity
+                                     (list ,@(mapcar #'cadr clauses))
+                                     ", ")
+                          ,(if verbose ", or [C-g] to abort " " "))
+                  ',(mapcar #'car clauses))
             ,@(--map `(,(car it) ,@(cddr it)) clauses))
      (message "")))
 
@@ -786,11 +842,10 @@ See info node `(magit)Debugging Tools' for more information."
                        "with-editor"
                        ;; Obviously `magit' itself is needed too.
                        "magit"
-                       ;; While this is part of the Magit repository,
-                       ;; it is distributed as a separate package.
+                       ;; While these are part of the Magit repository,
+                       ;; they are distributed as separate packages.
+                       "magit-section"
                        "git-commit"
-                       ;; Even though `async' is a dependency of the
-                       ;; `magit' package, it is not required here.
                        ))))
                 ;; Avoid Emacs bug#16406 by using full path.
                 "-l" ,(file-name-sans-extension (locate-library "magit")))
@@ -812,7 +867,11 @@ as STRING."
         (i 0))
     `(let ((,s ,string))
        (let ,(save-match-data
-               (--map (list it (list 'match-string (cl-incf i) s)) varlist))
+               (cl-mapcan (lambda (sym)
+                            (cl-incf i)
+                            (and (not (eq (aref (symbol-name sym) 0) ?_))
+                                 (list (list sym (list 'match-string i s)))))
+                          varlist))
          ,@body))))
 
 (defun magit-delete-line ()
@@ -1001,27 +1060,26 @@ and https://github.com/magit/magit/issues/2295."
   (advice-add 'auto-revert-handler :around 'auto-revert-handler@bug21559)
   )
 
-;; `completion-pcm--all-completions' reverses the completion list.  To
-;; preserve the order of our pre-sorted completions, we'll temporarily
-;; override it with the function below.  bug#24676
-(defun magit-completion-pcm--all-completions (prefix pattern table pred)
-  (if (completion-pcm--pattern-trivial-p pattern)
-      (all-completions (concat prefix (car pattern)) table pred)
-    (let* ((regex (completion-pcm--pattern->regex pattern))
-           (case-fold-search completion-ignore-case)
-           (completion-regexp-list (cons regex completion-regexp-list))
-           (compl (all-completions
-                   (concat prefix
-                           (if (stringp (car pattern)) (car pattern) ""))
-                   table pred)))
-      (if (not (functionp table))
-          compl
-        (let ((poss ()))
-          (dolist (c compl)
-            (when (string-match-p regex c) (push c poss)))
-          ;; This `nreverse' call is the only code change made to the
-          ;; `completion-pcm--all-completions' that shipped with Emacs 25.1.
-          (nreverse poss))))))
+(when (< emacs-major-version 26)
+  ;; In Emacs 25 `completion-pcm--all-completions' reverses the
+  ;; completion list.  This is the version from Emacs 26, which
+  ;; fixes that issue.  bug#24676
+  (defun magit-completion-pcm--all-completions (prefix pattern table pred)
+    (if (completion-pcm--pattern-trivial-p pattern)
+        (all-completions (concat prefix (car pattern)) table pred)
+      (let* ((regex (completion-pcm--pattern->regex pattern))
+             (case-fold-search completion-ignore-case)
+             (completion-regexp-list (cons regex completion-regexp-list))
+             (compl (all-completions
+                     (concat prefix
+                             (if (stringp (car pattern)) (car pattern) ""))
+                     table pred)))
+        (if (not (functionp table))
+            compl
+          (let ((poss ()))
+            (dolist (c compl)
+              (when (string-match-p regex c) (push c poss)))
+            (nreverse poss)))))))
 
 (defun magit-which-function ()
   "Return current function name based on point.
@@ -1139,67 +1197,6 @@ See <https://github.com/raxod502/straight.el/issues/520>."
       (unless (eq target 'broken)
         (setq filename target))))
   (file-chase-links filename))
-
-;;; Bitmaps
-
-(when (fboundp 'define-fringe-bitmap)
-  (define-fringe-bitmap 'magit-fringe-bitmap+
-    [#b00000000
-     #b00011000
-     #b00011000
-     #b01111110
-     #b01111110
-     #b00011000
-     #b00011000
-     #b00000000])
-  (define-fringe-bitmap 'magit-fringe-bitmap-
-    [#b00000000
-     #b00000000
-     #b00000000
-     #b01111110
-     #b01111110
-     #b00000000
-     #b00000000
-     #b00000000])
-
-  (define-fringe-bitmap 'magit-fringe-bitmap>
-    [#b01100000
-     #b00110000
-     #b00011000
-     #b00001100
-     #b00011000
-     #b00110000
-     #b01100000
-     #b00000000])
-  (define-fringe-bitmap 'magit-fringe-bitmapv
-    [#b00000000
-     #b10000010
-     #b11000110
-     #b01101100
-     #b00111000
-     #b00010000
-     #b00000000
-     #b00000000])
-
-  (define-fringe-bitmap 'magit-fringe-bitmap-bold>
-    [#b11100000
-     #b01110000
-     #b00111000
-     #b00011100
-     #b00011100
-     #b00111000
-     #b01110000
-     #b11100000])
-  (define-fringe-bitmap 'magit-fringe-bitmap-boldv
-    [#b10000001
-     #b11000011
-     #b11100111
-     #b01111110
-     #b00111100
-     #b00011000
-     #b00000000
-     #b00000000])
-  )
 
 ;;; Miscellaneous
 

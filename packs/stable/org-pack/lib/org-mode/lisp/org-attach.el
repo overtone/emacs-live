@@ -1,6 +1,6 @@
 ;;; org-attach.el --- Manage file attachments to Org outlines -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2008-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2008-2021 Free Software Foundation, Inc.
 
 ;; Author: John Wiegley <johnw@newartisans.com>
 ;; Keywords: org data attachment
@@ -42,6 +42,8 @@
 (declare-function dired-dwim-target-directory "dired-aux")
 (declare-function org-element-property "org-element" (property element))
 (declare-function org-element-type "org-element" (element))
+(declare-function org-inlinetask-goto-beginning "org-inlinetask" ())
+(declare-function org-inlinetask-in-task-p "org-inlinetask" ())
 
 (defgroup org-attach nil
   "Options concerning attachments in Org mode."
@@ -182,7 +184,7 @@ attachment folders based on ID."
   :type '(repeat (function :tag "Function with ID as input")))
 
 (defvar org-attach-after-change-hook nil
-  "Hook to be called when files have been added or removed to the attachment folder.")
+  "Hook called when files have been added or removed to the attachment folder.")
 
 (defvar org-attach-open-hook nil
   "Hook that is invoked by `org-attach-open'.

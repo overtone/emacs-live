@@ -1,6 +1,6 @@
 ;;; a-test.el --- Associative data structure functions: tests              -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2017  Arne Brasseur
+;; Copyright (C) 2017-2021  Arne Brasseur
 
 ;; Author: Arne Brasseur <arne@arnebrasseur.net>
 
@@ -133,6 +133,8 @@
   (should (not (a-equal '((:a . 1) (:b . 2)) '((:a . 1) (:b . 3)))))
   (should (not (a-equal '((:a . 1) (:b . 2)) '((:a . 1)))))
   (should (not (a-equal '((:a . 1) (:b . 2)) '((:a . 1) (:b . 2) (:c . 3)))))
+
+  (should (not (a-equal '(((:position . 5))) '(((:position . 15))))))
 
   (let ((hash (make-hash-table :test #'equal)))
     (puthash :foo 123 hash)

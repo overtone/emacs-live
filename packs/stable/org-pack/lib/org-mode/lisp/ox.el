@@ -1,6 +1,6 @@
 ;;; ox.el --- Export Framework for Org Mode          -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2012-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2012-2021 Free Software Foundation, Inc.
 
 ;; Author: Nicolas Goaziou <n.goaziou at gmail dot com>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -2706,9 +2706,9 @@ a list of footnote definitions or in the widened buffer."
 	       (and (or (eq (org-element-type f) 'footnote-definition)
 			(eq (org-element-property :type f) 'inline))
 		    (org-element-property :label f)))))
-	  seen)
+	  ) ;; seen
       (dolist (l (funcall list-labels tree))
-	(cond ((member l seen))
+	(cond ;; ((member l seen))
 	      ((member l known-definitions) (push l defined))
 	      (t (push l undefined)))))
     ;; Complete MISSING-DEFINITIONS by finding the definition of every
@@ -3115,7 +3115,7 @@ locally for the subtree through node properties."
     (when options
       (let ((items
 	     (mapcar
-	      #'(lambda (opt) (format "%s:%S" (car opt) (cdr opt)))
+              (lambda (opt) (format "%s:%S" (car opt) (cdr opt)))
 	      (sort options (lambda (k1 k2) (string< (car k1) (car k2)))))))
 	(if subtreep
 	    (org-entry-put
@@ -5483,7 +5483,7 @@ transcoding it."
      (apostrophe :utf-8 "’" :html "&rsquo;"))
     ("ru"
      ;; https://ru.wikipedia.org/wiki/%D0%9A%D0%B0%D0%B2%D1%8B%D1%87%D0%BA%D0%B8#.D0.9A.D0.B0.D0.B2.D1.8B.D1.87.D0.BA.D0.B8.2C_.D0.B8.D1.81.D0.BF.D0.BE.D0.BB.D1.8C.D0.B7.D1.83.D0.B5.D0.BC.D1.8B.D0.B5_.D0.B2_.D1.80.D1.83.D1.81.D1.81.D0.BA.D0.BE.D0.BC_.D1.8F.D0.B7.D1.8B.D0.BA.D0.B5
-     ;; http://www.artlebedev.ru/kovodstvo/sections/104/
+     ;; https://www.artlebedev.ru/kovodstvo/sections/104/
      (primary-opening :utf-8 "«" :html "&laquo;" :latex "{}<<"
 		      :texinfo "@guillemetleft{}")
      (primary-closing :utf-8 "»" :html "&raquo;" :latex ">>{}"

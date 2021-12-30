@@ -15,7 +15,7 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Code:
 
@@ -138,7 +138,20 @@
 	  (org-test-with-temp-text
 	      "Paragraph<point>\n# Local Variables:\n# foo: t\n# End:"
 	    (let ((org-footnote-section "Footnotes")) (org-footnote-new))
-	    (buffer-string)))))
+	    (buffer-string))))
+  (should
+   (equal "Para[fn:1]
+* Footnotes
+:properties:
+:custom_id: id
+:end:
+
+\[fn:1]"
+          (org-test-with-temp-text
+              "Para<point>\n* Footnotes\n:properties:\n:custom_id: id\n:end:"
+            (let ((org-footnote-section "Footnotes"))
+              (org-footnote-new))
+            (org-trim (buffer-string))))))
 
 (ert-deftest test-org-footnote/delete ()
   "Test `org-footnote-delete' specifications."

@@ -1,6 +1,6 @@
 ;;; clojure-mode-refactor-let-test.el --- Clojure Mode: refactor let  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2016-2020 Benedek Fazekas <benedek.fazekas@gmail.com>
+;; Copyright (C) 2016-2021 Benedek Fazekas <benedek.fazekas@gmail.com>
 
 ;; This file is not part of GNU Emacs.
 

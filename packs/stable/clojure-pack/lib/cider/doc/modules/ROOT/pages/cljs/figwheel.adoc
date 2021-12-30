@@ -1,7 +1,7 @@
 = Using Figwheel
 :experimental:
 
-Figwheel is one of the most popular ClojureScript REPLs today. Bellow you'll
+Figwheel is one of the most popular ClojureScript REPLs today. Below you'll
 instructions how to setup and use it with CIDER.
 
 NOTE: There are two versions of Figwheel out there - the legacy https://github.com/bhauman/lein-figwheel[figwheel] and
@@ -77,7 +77,7 @@ use `revert-buffer`.)
 +
 [source,lisp]
 ----
-((clojurescript-mode . ((cider-clojure-cli-global-options . "-A:fig"))))
+((clojurescript-mode . ((cider-clojure-cli-aliases . "-A:fig"))))
 ----
 
 TIP: If you didn't setup `.dir-locals.el` you can edit the command-line
@@ -152,3 +152,4 @@ https://github.com/bhauman/lein-figwheel/wiki/Using-the-Figwheel-REPL-within-NRe
 === Tutorials
 
 * https://cjohansen.no/tools-deps-figwheel-main-devcards-emacs/[tools.deps, figwheel-main, Devcards, and Emacs]
+* https://lambdaisland.com/episodes/figwheel-emacs-cider[Using Figwheel with CIDER]

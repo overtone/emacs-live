@@ -1,6 +1,6 @@
 ;;; ob-dot.el --- Babel Functions for dot            -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2009-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2021 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;; Maintainer: Justin Abrahms
@@ -26,7 +26,7 @@
 
 ;; Org-Babel support for evaluating dot source code.
 ;;
-;; For information on dot see http://www.graphviz.org/
+;; For information on dot see https://www.graphviz.org/
 ;;
 ;; This differs from most standard languages in that
 ;;

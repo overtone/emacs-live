@@ -1,12 +1,14 @@
 ;;; magit-imenu.el --- Integrate Imenu in magit major modes  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2010-2020  The Magit Project Contributors
+;; Copyright (C) 2010-2021  The Magit Project Contributors
 ;;
 ;; You should have received a copy of the AUTHORS.md file which
 ;; lists all contributors.  If not, see http://magit.vc/authors.
 
 ;; Author: Damien Cassou <damien@cassou.me>
 ;; Maintainer: Jonas Bernoulli <jonas@bernoul.li>
+
+;; SPDX-License-Identifier: GPL-3.0-or-later
 
 ;; Magit is free software; you can redistribute it and/or modify it
 ;; under the terms of the GNU General Public License as published by
@@ -33,9 +35,6 @@
 
 ;;; Code:
 
-(eval-when-compile
-  (require 'subr-x))
-
 (require 'magit)
 (require 'git-rebase)
 
@@ -48,21 +47,28 @@ ENTRY-TYPES is a list of section types to be selected through
 `imenu'.
 
 MENU-TYPES is a list of section types containing elements of
-ENTRY-TYPES.  Elements of MENU-TYPES are are used to categories
+ENTRY-TYPES.  Elements of MENU-TYPES are used to categorize
 elements of ENTRY-TYPES.
 
 This function is used as a helper for functions set as
 `imenu-create-index-function'."
-  (let ((entries (make-hash-table :test 'equal)))
+  ;; If `which-function-mode' is active, then the create-index
+  ;; function is called at the time the major-mode is being enabled.
+  ;; Modes that derive from `magit-mode' have not populated the buffer
+  ;; at that time yet, so we have to abort.
+  (when-let ((section (magit-current-section))
+             (entries (make-hash-table :test 'equal)))
     (goto-char (point-max))
+    (unless (oref section parent)
+      (forward-line -1))
     (while (magit-section--backward-find
             (lambda ()
               (let* ((section (magit-current-section))
                      (type (oref section type))
                      (parent (oref section parent))
                      (parent-type (oref parent type)))
-                (and (-contains-p entry-types type)
-                     (-contains-p menu-types parent-type)))))
+                (and (memq type entry-types)
+                     (memq parent-type menu-types)))))
       (let* ((section (magit-current-section))
              (name (buffer-substring-no-properties
                     (line-beginning-position)
@@ -71,6 +77,8 @@ This function is used as a helper for functions set as
              (parent-title (buffer-substring-no-properties
                             (oref parent start)
                             (1- (oref parent content)))))
+        (when (string-match " ([0-9]*)\\'" parent-title)
+          (setq parent-title (substring parent-title 0 (match-beginning 0))))
         (puthash parent-title
                  (cons (cons name (point))
                        (gethash parent-title entries (list)))
@@ -134,10 +142,10 @@ beginning of the line."
 This function is used as a value for
 `imenu-create-index-function'."
   (magit-imenu--index-function
-   '(file commit stash)
-   '(unpushed unstaged unpulled untracked staged stashes)))
+   '(file commit stash pullreq issue)
+   '(unpushed unstaged unpulled untracked staged stashes pullreqs issues)))
 
-;;;; Refs mode
+;;; Refs mode
 
 ;;;###autoload
 (defun magit-imenu--refs-create-index-function ()
@@ -148,7 +156,7 @@ This function is used as a value for
    '(branch commit tag)
    '(local remote tags)))
 
-;;;; Cherry mode
+;;; Cherry mode
 
 ;;;###autoload
 (defun magit-imenu--cherry-create-index-function ()
@@ -159,7 +167,7 @@ This function is used as a value for
    '(commit)
    '(cherries)))
 
-;;;; Submodule list mode
+;;; Submodule list mode
 
 ;;;###autoload
 (defun magit-imenu--submodule-prev-index-position-function ()
@@ -177,7 +185,7 @@ This function is used as a value for
 beginning of the line."
   (elt (tabulated-list-get-entry) 0))
 
-;;;; Repolist mode
+;;; Repolist mode
 
 ;;;###autoload
 (defun magit-imenu--repolist-prev-index-position-function ()
@@ -198,7 +206,7 @@ beginning of the line."
             (elt entry 0)
             (elt entry (1- (length entry))))))
 
-;;;; Process mode
+;;; Process mode
 
 ;;;###autoload
 (defun magit-imenu--process-prev-index-position-function ()
@@ -218,7 +226,7 @@ beginning of the line."
   (buffer-substring-no-properties (line-beginning-position)
                                   (line-end-position)))
 
-;;;; Rebase mode
+;;; Rebase mode
 
 ;;;###autoload
 (defun magit-imenu--rebase-prev-index-position-function ()

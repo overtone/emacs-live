@@ -1,6 +1,6 @@
 ;;; test-ob-java.el --- tests for ob-java.el
 
-;; Copyright (c) 2020 Free Software Foundation, Inc.
+;; Copyright (c) 2020-2021 Free Software Foundation, Inc.
 ;; Authors: Eric Schulte
 ;;          Dan Davison
 ;; Maintainer: Ian Martins <ianxm@jhu.edu>
@@ -18,10 +18,10 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Code:
-(require 'org-test)
+(require 'org-test "../testing/org-test")
 
 (require 'ob-core)
 (defvar org-babel-temporary-directory ; from ob-core

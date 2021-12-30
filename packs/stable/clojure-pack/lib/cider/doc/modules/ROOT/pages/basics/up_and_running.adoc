@@ -79,10 +79,28 @@ add `piggieback` as well. The injection mechanism is configurable and
 you can easily add more libraries there. Some CIDER extensions would use
 this mechanism to auto-inject their own dependencies.
 
-CIDER would also inject the most recent version of nREPL that it supports. This is a simple
-trick to override the version of nREPL bundled with your build tool, so you can gain
+Here's how you can modify the injected dependencies for `cider-jack-in-clj`:
+
+[source,lisp]
+----
+;; auto-inject version 1.0 of the library foo/bar
+(cider-add-to-alist 'cider-jack-in-dependencies
+                    "foo/bar" "1.0")
+----
+
+CIDER will also inject the most recent version of nREPL that it supports. This is a simple
+trick to override the version of nREPL bundled with your build tool (e.g. Leiningen), so you can gain
 access to the newest nREPL features. Generally that's one aspect of CIDER's inner workings
 that end-users will rarely have to think about.
+
+You can override the injected versions of `cider-nrepl` and nREPL by customizing
+`cider-injected-middleware-version` and `cider-injected-nrepl-version`.
+Generally you should avoid doing this, but it may be useful if you want to try
+a newer version or you encounter some regression that forces you to temporarily use
+an older version.
+
+NOTE: You'll have to restart Emacs for such changes to take effect, if you've already loaded CIDER. Alternatively you can update
+manually the underlying dependencies list (e.g. `cider-jack-in-dependencies`).
 
 CIDER can also inject a Clojure dependency into your project, which is useful,
 for example, if your project defaults to an older version of Clojure than that
@@ -123,22 +141,52 @@ NOTE: The examples use only `cider-jack-in`, but this behavior is consistent
 for all `cider-jack-in-*` commands.
 
 You can further customize the command line CIDER uses for `cider-jack-in` by
-modifying the following string options:
+modifying the some options. Those differ a bit between the various tools,
+so we'll examine them tool by tool.
 
-* `cider-lein-global-options`, `cider-boot-global-options`,
-`cider-clojure-cli-global-options`, `cider-gradle-global-options`:
-these are passed to the command directly, in first position
-(e.g., `-o` to `lein` enables offline mode).
-* `cider-lein-parameters`, `cider-boot-parameters`,
-`cider-clojure-cli-parameters`, `cider-gradle-parameters`: these are
-usually task names and their parameters (e.g., `dev` for launching
-boot's dev task instead of the standard `repl -s wait`).
+==== Leiningen Options
+
+* `cider-lein-command` - the name of the Leiningen executable (`lein` by default)
+* `cider-lein-parameters` - the command-line params to start a REPL (e.g. `repl :headless`)
+* `cider-lein-global-options` - these are passed to the command directly, in
+first position (e.g., `-o` to `lein` enables offline mode).
+
+NOTE: Originally CIDER supported jacking in only for Leiningen, so its configuration
+options became the archetype for everything else.
+
+==== Clojure CLI Options
+
+* `cider-clojure-cli-command` - the name of the `clojure` executable (`clojure` by default)
+* `cider-clojure-cli-aliases` - a list of aliases to be used at jack-in time
 
 To use `cider-jack-in` with `tools.deps` on Windows set the
 `cider-clojure-cli-command` to `"powershell"`. This happens by default
 if you are on Windows and no `clojure` executable is found. Using
 `"powershell"` will Base64 encode the clojure launch command before
 passing it to PowerShell and avoids shell-escaping issues.
+
+NOTE: Alternatively you can use WSL (e.g. to run nREPL and Emacs there), which
+will likely result in a better overall development experience.
+
+==== Boot Options
+
+* `cider-boot-command` - the name of the Boot executable (`boot` by default)
+* `cider-boot-parameters` - these are usually task names and their parameters
+(e.g., `dev` for launching boot's dev task instead of the standard `repl -s
+wait`)
+* `cider-boot-global-options`
+
+==== Gradle Options
+
+* `cider-gradle-command` - the name of the Gradle executable (`gradle` by default)
+* `cider-gradle-parameters`
+* `cider-gradle-global-options`
+
+==== shadow-cljs
+
+* `cider-shadow-cljs-command` - the command to run `shadow-cljs` (`npx shadow-cljs` by default). By default we favor the project-specific shadow-cljs over the system-wide.
+* `cider-shadow-cljs-parameters` - the task to start a REPL server (`server` by default)
+* `cider-shadow-cljs-global-options`
 
 == Connect to a Running nREPL Server
 
@@ -220,6 +268,30 @@ cause problems with complex or nonstandard ssh configs.
 
 You can safely run `cider-jack-in-*` while working with remote files over TRAMP. CIDER
 will handle this use-case transparently for you.
+
+== Connecting via unix domain file socket
+
+NOTE: Unix socket support was introduced in nREPL 0.9. Currently
+CIDER's support for Unix sockets is considered experimental and its
+interface might change in future CIDER releases.
+
+When locally running nREPL servers, there is the option to listen on a
+socket file instead of opening a network port. This can have
+advantages in some use cases, e.g. when working with virtual networks
+(containers) where sharing a file socket can be vastly simpler than
+managing bridge networks and firewall setups.
+
+After having started an nREPL server on a file socket, e.g. with the
+`clj` command (see https://nrepl.org/nrepl/usage/server.html for other
+examples),
+
+[source,sh]
+----
+$ clj -R:nREPL -m nrepl.cmdline --socket nrepl.sock
+----
+
+you can then connect CIDER by using the `local-unix-domain-socket`
+special hostname with `cider-connect`: kbd:[M-x] `cider-connect` kbd:[RET] `local-unix-domain-socket` kbd:[RET] `nrepl.sock` kbd:[RET].
 
 == What's Next?
 

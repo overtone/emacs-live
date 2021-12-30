@@ -1,6 +1,6 @@
 ;;; ob-core.el --- Working with Code Blocks          -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2009-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2021 Free Software Foundation, Inc.
 
 ;; Authors: Eric Schulte
 ;;	Dan Davison
@@ -1107,7 +1107,7 @@ end-header-args -- point at the end of the header-args
 body ------------- string holding the body of the code block
 beg-body --------- point at the beginning of the body
 end-body --------- point at the end of the body"
-  (declare (indent 1))
+  (declare (indent 1) (debug t))
   (let ((tempvar (make-symbol "file")))
     `(let* ((case-fold-search t)
 	    (,tempvar ,file)
@@ -1146,7 +1146,6 @@ end-body --------- point at the end of the body"
 	       (goto-char end-block)))))
        (unless visited-p (kill-buffer to-be-removed))
        (goto-char point))))
-(def-edebug-spec org-babel-map-src-blocks (form body))
 
 ;;;###autoload
 (defmacro org-babel-map-inline-src-blocks (file &rest body)
@@ -1361,7 +1360,7 @@ the `org-mode-hook'."
 	(goto-char (match-beginning 0))
 	(org-babel-hide-hash)
 	(goto-char (match-end 0))))))
-(add-hook 'org-mode-hook 'org-babel-hide-all-hashes)
+(add-hook 'org-mode-hook #'org-babel-hide-all-hashes)
 
 (defun org-babel-hash-at-point (&optional point)
   "Return the value of the hash at POINT.
@@ -1379,7 +1378,7 @@ This can be called with `\\[org-ctrl-c-ctrl-c]'."
 Add `org-babel-hide-result' as an invisibility spec for hiding
 portions of results lines."
   (add-to-invisibility-spec '(org-babel-hide-result . t)))
-(add-hook 'org-mode-hook 'org-babel-result-hide-spec)
+(add-hook 'org-mode-hook #'org-babel-result-hide-spec)
 
 (defvar org-babel-hide-result-overlays nil
   "Overlays hiding results.")
@@ -1450,11 +1449,11 @@ portions of results lines."
 	(push ov org-babel-hide-result-overlays)))))
 
 ;; org-tab-after-check-for-cycling-hook
-(add-hook 'org-tab-first-hook 'org-babel-hide-result-toggle-maybe)
+(add-hook 'org-tab-first-hook #'org-babel-hide-result-toggle-maybe)
 ;; Remove overlays when changing major mode
 (add-hook 'org-mode-hook
 	  (lambda () (add-hook 'change-major-mode-hook
-			  'org-babel-show-result-all 'append 'local)))
+			  #'org-babel-show-result-all 'append 'local)))
 
 (defun org-babel-params-from-properties (&optional lang no-eval)
   "Retrieve source block parameters specified as properties.
@@ -3001,7 +3000,7 @@ situations in which is it not appropriate."
   "If STRING represents a number return its value.
 Otherwise return nil."
   (unless (or (string-match-p "\\s-" (org-trim string))
-	      (not (string-match-p "^[0-9-e.+ ]+$" string)))
+	      (not (string-match-p "^[0-9e.+ -]+$" string)))
     (let ((interned-string (ignore-errors (read string))))
       (when (numberp interned-string)
 	interned-string))))
@@ -3081,8 +3080,7 @@ Emacs shutdown."))
 
 (defmacro org-babel-result-cond (result-params scalar-form &rest table-forms)
   "Call the code to parse raw string results according to RESULT-PARAMS."
-  (declare (indent 1)
-	   (debug (form form &rest form)))
+  (declare (indent 1) (debug t))
   (org-with-gensyms (params)
     `(let ((,params ,result-params))
        (unless (member "none" ,params)
@@ -3141,7 +3139,7 @@ of `org-babel-temporary-directory'."
 		    org-babel-temporary-directory
 		  "[directory not defined]"))))))
 
-(add-hook 'kill-emacs-hook 'org-babel-remove-temporary-directory)
+(add-hook 'kill-emacs-hook #'org-babel-remove-temporary-directory)
 
 (defun org-babel-one-header-arg-safe-p (pair safe-list)
   "Determine if the PAIR is a safe babel header arg according to SAFE-LIST.

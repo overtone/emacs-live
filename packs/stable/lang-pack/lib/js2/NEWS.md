@@ -1,5 +1,21 @@
 # History of user-visible changes
 
+## Next
+
+* Imenu support for mocha-like (includes Jasmine and Cypress) test
+  files: i.e., `M-x imenu` will now list test blocks defined with
+  `describe()` and `it()`
+  ([#576](https://github.com/mooz/js2-mode/pull/576)).
+* Minor improvements in `js2-jump-to-definition`
+  ([#423](https://github.com/mooz/js2-mode/issues/423)).
+* Support for private class members
+  ([#537](https://github.com/mooz/js2-mode/issues/537)).
+* Support for dynamic imports and `import.meta`
+  ([#547](https://github.com/mooz/js2-mode/issues/547)).
+* Support for trailing comma in arrow function parameters
+  ([#480](https://github.com/mooz/js2-mode/issues/480)).
+* Support for `for await of` syntax ([#543](https://github.com/mooz/js2-mode/pull/543)).
+
 ## 2020-12-20
 
 * Support for logical assignment operators ([#564](https://github.com/mooz/js2-mode/issues/564)).

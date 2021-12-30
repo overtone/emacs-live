@@ -1,12 +1,14 @@
 ;;; magit-clone.el --- clone a repository  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2008-2020  The Magit Project Contributors
+;; Copyright (C) 2008-2021  The Magit Project Contributors
 ;;
 ;; You should have received a copy of the AUTHORS.md file which
 ;; lists all contributors.  If not, see http://magit.vc/authors.
 
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
 ;; Maintainer: Jonas Bernoulli <jonas@bernoul.li>
+
+;; SPDX-License-Identifier: GPL-3.0-or-later
 
 ;; Magit is free software; you can redistribute it and/or modify it
 ;; under the terms of the GNU General Public License as published by
@@ -193,11 +195,15 @@ Then show the status buffer for the new repository."
 
 (defun magit-clone-internal (repository directory args)
   (let* ((checkout (not (memq (car args) '("--bare" "--mirror"))))
+         (remote (or (transient-arg-value "--origin" args)
+                     (magit-get "clone.defaultRemote")
+                     "origin"))
          (set-push-default
           (and checkout
                (or (eq  magit-clone-set-remote.pushDefault t)
                    (and magit-clone-set-remote.pushDefault
-                        (y-or-n-p "Set `remote.pushDefault' to \"origin\"? "))))))
+                        (y-or-n-p (format "Set `remote.pushDefault' to %S? "
+                                          remote)))))))
     (run-hooks 'magit-credential-hook)
     (setq directory (file-name-as-directory (expand-file-name directory)))
     (when (file-exists-p directory)
@@ -225,9 +231,9 @@ Then show the status buffer for the new repository."
          (when checkout
            (let ((default-directory directory))
              (when set-push-default
-               (setf (magit-get "remote.pushDefault") "origin"))
+               (setf (magit-get "remote.pushDefault") remote))
              (unless magit-clone-set-remote-head
-               (magit-remote-unset-head "origin"))))
+               (magit-remote-unset-head remote))))
          (with-current-buffer (process-get process 'command-buf)
            (magit-status-setup-buffer directory)))))))
 
@@ -251,9 +257,15 @@ Then show the status buffer for the new repository."
               str
             (magit-clone--name-to-url str))))
     (?p "[p]ath"
-        (read-directory-name "Clone repository: "))
-    (?l "or [l]ocal url"
-        (concat "file://" (read-directory-name "Clone repository: file://")))))
+        (magit-convert-filename-for-git
+         (read-directory-name "Clone repository: ")))
+    (?l "[l]ocal url"
+        (concat "file://"
+                (magit-convert-filename-for-git
+                 (read-directory-name "Clone repository: file://"))))
+    (?b "or [b]undle"
+        (magit-convert-filename-for-git
+         (read-file-name "Clone from bundle: ")))))
 
 (defun magit-clone--url-to-name (url)
   (and (string-match "\\([^/:]+?\\)\\(/?\\.git\\)?$" url)

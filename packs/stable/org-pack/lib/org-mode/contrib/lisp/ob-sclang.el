@@ -1,7 +1,7 @@
 ;;; ob-sclang.el --- SCLang support for Org-mode Babel
 ;;; -*- coding: utf-8 -*-
 
-;; Copyright (C) 2017-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2017-2021 Free Software Foundation, Inc.
 
 ;; Authors: stardiviner <numbchild@gmail.com>
 ;; Package-Version: 0.1
@@ -20,7 +20,7 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 
@@ -60,7 +60,7 @@
 (require 'org)
 (require 'ob)
 
-(require 'sclang)
+(require 'sclang nil t)
 
 (defgroup ob-sclang nil
   "org-mode blocks for SuperCollider SCLang."

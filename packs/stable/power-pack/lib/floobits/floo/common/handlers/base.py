@@ -1,3 +1,5 @@
+import time
+
 try:
     from ... import editor
 except ValueError:
@@ -11,6 +13,7 @@ class BaseHandler(event_emitter.EventEmitter):
     def __init__(self):
         super(BaseHandler, self).__init__()
         self.joined_workspace = False
+        self.last_ack_time = None
         G.AGENT = self
         # TODO: removeme?
         utils.reload_settings()
@@ -25,6 +28,15 @@ class BaseHandler(event_emitter.EventEmitter):
 
     def send(self, d, cb=None):
         """@return the request id"""
+        if self.last_ack_time:
+            now = time.time()
+            since_last_ack = now - self.last_ack_time
+            if since_last_ack > G.HEARTBEAT_TIMEOUT:
+                msg.error('%s since last ack/ping. Reconnecting...' % since_last_ack)
+                self.last_ack_time = None
+                self.proto.reconnect()
+                return
+
         if not d:
             return
         req_id = self.proto.put(d)
@@ -64,6 +76,7 @@ class BaseHandler(event_emitter.EventEmitter):
 
     def _on_ack(self, data):
         msg.debug('Ack ', data)
+        self.last_ack_time = time.time()
 
     def _on_error(self, data):
         message = 'Error from Floobits server: %s' % str(data.get('msg'))

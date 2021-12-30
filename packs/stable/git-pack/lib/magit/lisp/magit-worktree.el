@@ -1,12 +1,14 @@
 ;;; magit-worktree.el --- worktree support  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2010-2020  The Magit Project Contributors
+;; Copyright (C) 2010-2021  The Magit Project Contributors
 ;;
 ;; You should have received a copy of the AUTHORS.md file which
 ;; lists all contributors.  If not, see http://magit.vc/authors.
 
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
 ;; Maintainer: Jonas Bernoulli <jonas@bernoul.li>
+
+;; SPDX-License-Identifier: GPL-3.0-or-later
 
 ;; Magit is free software; you can redistribute it and/or modify it
 ;; under the terms of the GNU General Public License as published by
@@ -62,7 +64,7 @@ Used by `magit-worktree-checkout' and `magit-worktree-branch'."
      (list (funcall magit-worktree-read-directory-name-function
                     (format "Checkout %s in new worktree: " branch))
            branch)))
-  (magit-run-git "worktree" "add" (expand-file-name path) branch)
+  (magit-run-git "worktree" "add" (magit--expand-worktree path) branch)
   (magit-diff-visit-directory path))
 
 ;;;###autoload
@@ -74,7 +76,7 @@ Used by `magit-worktree-checkout' and `magit-worktree-branch'."
      ,@(magit-branch-read-args "Create and checkout branch")
      ,current-prefix-arg))
   (magit-run-git "worktree" "add" (if force "-B" "-b")
-                 branch (expand-file-name path) start-point)
+                 branch (magit--expand-worktree path) start-point)
   (magit-diff-visit-directory path))
 
 ;;;###autoload
@@ -91,7 +93,7 @@ Used by `magit-worktree-checkout' and `magit-worktree-branch'."
       (user-error "You may not move the main working tree")
     (let ((preexisting-directory (file-directory-p path)))
       (when (and (zerop (magit-call-git "worktree" "move" worktree
-                                        (expand-file-name path)))
+                                        (magit--expand-worktree path)))
                  (not (file-exists-p default-directory))
                  (derived-mode-p 'magit-status-mode))
         (kill-buffer)
@@ -140,6 +142,9 @@ then show it in Dired instead."
                          (magit-list-worktrees)
                          :test #'equal :key #'car)))))
   (magit-diff-visit-directory worktree))
+
+(defun magit--expand-worktree (path)
+  (magit-convert-filename-for-git (expand-file-name path)))
 
 ;;; Sections
 

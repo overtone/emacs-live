@@ -3,6 +3,7 @@
 ;; Copyright (C) 2004, 2005, 2007, 2009  Free Software Foundation, Inc.
 ;; Copyright (C) 1997-1998  Graeme E Moss
 ;; Copyright (C) 2016  Chris Gregory
+;; Copyright (C) 2020  Jacob Ilsø
 
 ;; Author: 1997-1998 Graeme E Moss <gem@cs.york.ac.uk>
 ;; Maintainer: Stefan Monnier <monnier@gnu.org>
@@ -542,9 +543,6 @@ datatypes) in a Haskell file for the `imenu' package."
          (index-imp-alist '())   ;; Imports
          (index-inst-alist '())  ;; Instances
          (index-type-alist '())  ;; Datatypes
-         ;; Variables for showing progress.
-         (bufname (buffer-name))
-         (divisor-of-progress (max 1 (/ (buffer-size) 100)))
          ;; The result we wish to return.
          result)
     (goto-char (point-min))

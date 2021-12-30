@@ -8,9 +8,17 @@ CIDER stands for **C**lojure **I**nteractive **D**evelopment **E**nvironment tha
 
 Yes.
 
+== Is "jack-in" a reference to "Neuromancer"?
+
+Yes.
+
+== Is "jack-in" a reference to "The Matrix"?
+
+Yes.
+
 == What are CIDER's installation prerequisites?
 
-CIDER officially supports Emacs 25.1+, Java 8+ and Clojure(Script) 1.8+.
+CIDER officially supports Emacs 26.1+, Java 8+ and Clojure(Script) 1.8+.
 
 NOTE: CIDER 0.17 was the final release which supported Java 7 and Clojure(Script) 1.7.
 
@@ -25,15 +33,17 @@ introduced in Clojure 1.8) down the road.
 == What's the relationship between CIDER and monroe?
 
 https://github.com/sanel/monroe[monroe] is basically a fork of an old CIDER
-version before the time we started relying on nREPL middleware.
+version before the time we started relying on nREPL middleware.  Monroe opted
+for a simpler UX, that's very REPL-centric, and uses only built-in nREPL ops (unlike CIDER, which relies on cider-nrepl heavily).
 
 == What's the relationship between CIDER and inf-clojure?
 
-There's pretty much no relationship. https://github.com/clojure-emacs/inf-clojure[inf-clojure] provides a REPL based on the
-`comint` Emacs package - you're basically running an external REPL process
-inside of Emacs (there's no network connectivity involved).  The advantage of
-this is that you have no external dependencies what-so-ever - you just need some
-command to start a REPL process for you.
+There's pretty much no relationship, other than the fact they have the same
+author (Bozhidar). https://github.com/clojure-emacs/inf-clojure[inf-clojure] provides a
+REPL based on the `comint` Emacs package - you're basically running an external
+REPL process inside of Emacs (there's no network connectivity involved).  The
+advantage of this is that you have no external dependencies what-so-ever - you
+just need some command to start a REPL process for you (e.g. `lein repl`).
 
 == Isn't IntelliJ's Cursive the best Clojure IDE?
 
@@ -49,6 +59,10 @@ maintainer (Bozhidar).
 TIP: Bozhidar really loves Spain and the West Coast of the US, so he tends
 to name really special releases with codenames related to them (e.g.
 Seattle, California, Andalucia, etc).
+
+== Why is CIDER's website using a .mx domain?
+
+Because that's the https://emacsredux.com/blog/2018/11/17/the-perfect-domain-for-emacs-projects/[perfect domain for Emacs projects].
 
 == Is using CIDER a good idea if I'm new to both Emacs and Clojure?
 
@@ -73,16 +87,17 @@ No. Stable releases are issued when the maintainers feel a new release is
 warranted. The maintainers generally aim to deliver at least 2-3 stable releases
 per year.
 
-== When is CIDER 1.0 going to be released?
+== Does CIDER have a roadmap?
 
-There's no exact roadmap for the 1.0 release. Roughly speaking the idea is to
-release 1.0 once our ClojureScript support is as good as the Clojure support and
-when the most important refactoring functionality from our sibling
-project https://github.com/clojure-emacs/clj-refactor.el[clj-refactor] lands
-into CIDER.
+There's no precise roadmap, but there are a few major goals for the (near) future:
 
-NOTE: While there's no exact roadmap for the 1.0 release, we do have *a*
-https://github.com/clojure-emacs/cider/blob/master/ROADMAP.md[roadmap].
+* improve session management (make it simpler and more predictable)
+* reach parity between the functionality for ClojureScript and Clojure (as it stands today a lot of functionality is Clojure-only)
+* integrate the most important refactoring functionality from our sibling project https://github.com/clojure-emacs/clj-refactor.el[clj-refactor] into CIDER.
+
+You can find more details in our https://github.com/clojure-emacs/cider/blob/master/ROADMAP.md[roadmap document].
+
+NOTE: If you'd like to tackle some item from the roadmap, Bozhidar will happy to help and guide you along the way.
 
 == Is it true that stable CIDER releases often happen around major Clojure conferences?
 

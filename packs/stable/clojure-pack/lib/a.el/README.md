@@ -5,6 +5,8 @@
 
 Emacs Lisp functions for dealing with associative structures in a uniform and functional way.
 
+**This library is sunsetting, you are advised not to use it on new projects.**
+
 Inspired by Clojure, dash, and seq.el.
 
 These functions can take association lists, hash tables, and in some cases vectors (where the index is considered the key).

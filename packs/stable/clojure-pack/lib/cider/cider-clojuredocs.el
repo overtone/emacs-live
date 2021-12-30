@@ -1,8 +1,8 @@
 ;;; cider-clojuredocs.el --- ClojureDocs integration -*- lexical-binding: t -*-
 
-;; Copyright © 2014-2020 Bozhidar Batsov and CIDER contributors
+;; Copyright © 2014-2021 Bozhidar Batsov and CIDER contributors
 ;;
-;; Author: Bozhidar Batsov <bozhidar@batsov.com>
+;; Author: Bozhidar Batsov <bozhidar@batsov.dev>
 
 ;; This program is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -100,6 +100,8 @@ opposite of what that option dictates."
   "Create a new ClojureDocs buffer with CONTENT."
   (with-current-buffer (cider-popup-buffer cider-clojuredocs-buffer t)
     (read-only-mode -1)
+    (set-syntax-table clojure-mode-syntax-table)
+    (local-set-key (kbd "C-c C-d C-c") 'cider-clojuredocs)
     (insert content)
     (cider-popup-buffer-mode 1)
     (view-mode 1)
@@ -119,7 +121,11 @@ opposite of what that option dictates."
     (insert "\n== See Also\n\n")
     (if-let ((see-alsos (nrepl-dict-get dict "see-alsos")))
         (dolist (see-also see-alsos)
-          (insert (format "* %s\n" see-also)))
+          (insert-text-button (format "* %s\n" see-also)
+                              'sym see-also
+                              'action (lambda (btn)
+                                        (cider-clojuredocs-lookup (button-get btn 'sym)))
+                              'help-echo (format "Press Enter or middle click to jump to %s" see-also)))
       (insert "Not available\n"))
     (insert "\n== Examples\n\n")
     (if-let ((examples (nrepl-dict-get dict "examples")))
@@ -138,7 +144,9 @@ opposite of what that option dictates."
 (defun cider-clojuredocs-lookup (sym)
   "Look up the ClojureDocs documentation for SYM."
   (let ((docs (cider-sync-request:clojuredocs-lookup (cider-current-ns) sym)))
-    (pop-to-buffer (cider-create-clojuredocs-buffer (cider-clojuredocs--content docs)))))
+    (pop-to-buffer (cider-create-clojuredocs-buffer (cider-clojuredocs--content docs)))
+    ;; highlight the symbol in question in the docs buffer
+    (highlight-regexp (cadr (split-string sym "/")) 'bold)))
 
 ;;;###autoload
 (defun cider-clojuredocs (&optional arg)

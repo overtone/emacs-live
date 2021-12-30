@@ -1,10 +1,10 @@
 ;;; cider-scratch.el --- *scratch* buffer for Clojure -*- lexical-binding: t -*-
 
-;; Copyright © 2014-2020 Bozhidar Batsov and CIDER contributors
+;; Copyright © 2014-2021 Bozhidar Batsov and CIDER contributors
 ;;
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Phil Hagelberg <technomancy@gmail.com>
-;;         Bozhidar Batsov <bozhidar@batsov.com>
+;;         Bozhidar Batsov <bozhidar@batsov.dev>
 ;;         Artur Malabarba <bruce.connor.am@gmail.com>
 ;;         Hugo Duncan <hugo@hugoduncan.org>
 ;;         Steve Purcell <steve@sanityinc.com>
@@ -71,7 +71,7 @@
 
 (define-derived-mode cider-clojure-interaction-mode clojure-mode "Clojure Interaction"
   "Major mode for typing and evaluating Clojure forms.
-Like clojure-mode except that \\[cider-eval-print-last-sexp] evals the Lisp expression
+Like `clojure-mode' except that \\[cider-eval-print-last-sexp] evals the Lisp expression
 before point, and prints its value into the buffer, advancing point.
 
 \\{cider-clojure-interaction-mode-map}"

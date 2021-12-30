@@ -2,6 +2,7 @@
 
 ;; Copyright (C) 2013  Herbert Valerio Riedel
 ;;               2020  Marc Berkowitz <mberkowitz@github.com>
+;;               2020  Jacob Ilsø
 
 ;; Author: Herbert Valerio Riedel <hvr@gnu.org>
 
@@ -91,7 +92,8 @@ The `%s' placeholder is replaced by the current buffer's filename."
 
 (defconst haskell-compilation-error-regexp-alist
   `((,(concat
-       "^ *\\(?1:[^\t\r\n]+?\\):"
+       "^ *\\([^\n\r\t>]*\s*> \\)?" ;; if using multi-package stack project, remove the package name that is prepended
+       "\\(?1:[^\t\r\n]+?\\):"
        "\\(?:"
        "\\(?2:[0-9]+\\):\\(?4:[0-9]+\\)\\(?:-\\(?5:[0-9]+\\)\\)?" ;; "121:1" & "12:3-5"
        "\\|"
@@ -170,7 +172,7 @@ base directory for build tools, or the current buffer for
   (interactive "P")
   (save-some-buffers (not compilation-ask-about-save)
                      compilation-save-buffers-predicate)
-  (let (htype dir)                      
+  (let (htype dir)
     ;;test haskell-compiler-type to set htype and dir
     (cond
      ((eq haskell-compiler-type 'cabal)
@@ -180,8 +182,7 @@ base directory for build tools, or the current buffer for
       (setq htype 'stack)
       (setq dir (locate-dominating-file default-directory "stack.yaml")))
      ((eq haskell-compiler-type 'ghc)
-      (setq htype 'ghc)
-      (setq dir (buffer-file-name)))
+      (setq htype 'ghc))
      ((eq haskell-compiler-type 'auto)
       (let ((r (haskell-build-type)))
         (setq htype (car r))
@@ -204,7 +205,7 @@ base directory for build tools, or the current buffer for
         haskell-compile-stack-build-command
         haskell-compile-stack-build-alt-command))
      ((eq htype 'ghc)
-      (haskell--compile dir edit-command
+      (haskell--compile (buffer-file-name) edit-command
         'haskell--compile-ghc-last
         haskell-compile-command
         haskell-compile-command)))))
@@ -218,24 +219,25 @@ base directory for build tools, or the current buffer for
 ;; called only by (haskell-compile):
 (defun haskell--compile (dir-or-file edit last-sym fallback alt)
   (let* ((dir-or-file (or dir-or-file default-directory))
+         (local-dir-or-file (or (file-remote-p dir-or-file 'localname) dir-or-file))
          (last-pair (symbol-value last-sym))
          (last-command (car last-pair))
          (last-dir (cdr last-pair))
-         (default (or (and last-dir (eq last-dir dir-or-file) last-command)
+         (default (or (and last-dir (eq last-dir local-dir-or-file) last-command)
                       fallback))
          (template (cond
                     ((null edit) default)
                     ((eq edit '-) alt)
                     (t (compilation-read-command default))))
-         (command (format template dir-or-file))
-         (dir (if (directory-name-p dir-or-file)
-                  dir-or-file
+         (command (format template (shell-quote-argument local-dir-or-file)))
+         (dir (if (directory-name-p local-dir-or-file)
+                  local-dir-or-file
                 default-directory))
-         (name (if (directory-name-p dir-or-file)
-                   (file-name-base (directory-file-name dir-or-file))
-                 (file-name-nondirectory dir-or-file))))
+         (name (if (directory-name-p local-dir-or-file)
+                   (file-name-base (directory-file-name local-dir-or-file))
+                 (file-name-nondirectory local-dir-or-file))))
     (unless (eq edit'-)
-      (set last-sym (cons template dir-or-file)))
+      (set last-sym (cons template local-dir-or-file)))
     (let ((default-directory dir))
       (compilation-start
        command

@@ -51,7 +51,7 @@
     minnow))
 
 ;; character literals
-[\a \newline \u0032 \/ \+ \,, \;]
+[\a \newline \u0032 \/ \+ \,, \; \( \% \)]
 
 ;; TODO change font-face for sexps starting with @,#
 (comment ;; examples

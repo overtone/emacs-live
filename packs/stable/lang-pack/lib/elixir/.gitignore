@@ -3,3 +3,9 @@
 /.cask/
 /dist/
 *-emacs-elixir-format.ex
+elixir-mode-autoloads.el
+
+# Added automatically by ‘eldev init’.
+/.eldev
+/Eldev-local
+

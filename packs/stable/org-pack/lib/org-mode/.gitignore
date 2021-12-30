@@ -49,6 +49,12 @@ local*.mk
 mk/x11idle
 ChangeLog
 
+# Files generated during `make packages/org` in a clone of `elpa.git`.
+
+/org-pkg.el
+/org-autoloads.el
+/lisp/org-autoloads.el
+
 # texi2pdf --tidy
 
 doc/*.t2d

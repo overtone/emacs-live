@@ -9,7 +9,7 @@
 ;;      Geoff Greer
 ;; Keywords: comm, tools
 ;; Package-Requires: ((json "1.2") (highlight "0"))
-;; Package-Version: 1.9.3
+;; Package-Version: 1.9.4
 ;; URL: http://github.com/Floobits/floobits-emacs
 ;; Version: 24.0
 ;;
@@ -100,7 +100,7 @@ The defaults are consistent with the colors used on the floobits.com interface."
 ;; TODO: figure out why we increased max-specpdl-size
 (setq max-specpdl-size 1500)
 
-(defconst floobits-version "1.9.3" "Floobits Plugin Version")
+(defconst floobits-version "1.9.4" "Floobits Plugin Version")
 
 (defvar floobits-debug nil)
 (defvar floobits-agent-host "127.0.0.1")

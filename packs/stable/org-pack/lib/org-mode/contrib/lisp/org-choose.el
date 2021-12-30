@@ -175,8 +175,8 @@ Each entry is an `org-choose-mark-data.'" )
       (pushnew (cons text tail)
 	       org-choose-mark-data
 	       :test
-	       #'(lambda (a b)
-		   (equal (car a) (car b)))))))
+               (lambda (a b)
+                 (equal (car a) (car b)))))))
 
 ;;; org-choose-filter-tail
 (defun org-choose-filter-tail (raw)
@@ -347,8 +347,8 @@ setting was changed."
 		   org-todo-log-states)
 		;;Map over group
 		(funcall map-over-entries
-			 #'(lambda ()
-			     (apply func-d473 args-46k))))))))
+                         (lambda ()
+                           (apply func-d473 args-46k))))))))
     ;;Remove the marker
     (set-marker entry-pos nil)))
 
@@ -371,18 +371,18 @@ setting was changed."
 
 (defun org-choose-get-fn-map-group ()
   "Return a function to map over the group"
-  #'(lambda (fn)
-      (require 'org-agenda) ;; `org-map-entries' seems to need it.
-      (save-excursion
-	(unless (org-up-heading-safe)
-	  (error "Choosing is only supported between siblings in a tree, not on top level"))
-	(let
-	    ((level (org-reduced-level (org-outline-level))))
-	  (save-restriction
-	    (org-map-entries
-	     fn
-	     (format "LEVEL=%d" level)
-	     'tree))))))
+  (lambda (fn)
+    (require 'org-agenda) ;; `org-map-entries' seems to need it.
+    (save-excursion
+      (unless (org-up-heading-safe)
+        (error "Choosing is only supported between siblings in a tree, not on top level"))
+      (let
+          ((level (org-reduced-level (org-outline-level))))
+        (save-restriction
+          (org-map-entries
+           fn
+           (format "LEVEL=%d" level)
+           'tree))))))
 
 ;;; org-choose-get-highest-mark-index
 
@@ -396,8 +396,8 @@ If there is none, return 0"
        (indexes-list
 	(remove nil
 		(funcall map-over-entries
-			 #'(lambda ()
-			     (org-choose-get-entry-index keywords))))))
+                         (lambda ()
+                           (org-choose-get-entry-index keywords))))))
     (if
 	indexes-list
 	(apply #'max indexes-list)

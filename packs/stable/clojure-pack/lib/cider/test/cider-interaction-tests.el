@@ -1,9 +1,9 @@
 ;;; cider-eval-tests.el
 
-;; Copyright © 2012-2020 Tim King, Bozhidar Batsov
+;; Copyright © 2012-2021 Tim King, Bozhidar Batsov
 
 ;; Author: Tim King <kingtim@gmail.com>
-;;         Bozhidar Batsov <bozhidar@batsov.com>
+;;         Bozhidar Batsov <bozhidar@batsov.dev>
 ;;         Artur Malabarba <bruce.connor.am@gmail.com>
 
 ;; This file is NOT part of GNU Emacs.
@@ -57,11 +57,15 @@
           (expect (funcall cider-to-nrepl-filename-function unix-file-name)
                   :to-equal unix-file-name)))))
   (it "translates file paths from container/vm location to host location"
-    (let ((cider-path-translations '(("/docker/src" . "/cygdrive/c/project/src"))))
-      (expect (funcall cider-from-nrepl-filename-function "/docker/src/ns.clj")
-              :to-equal "/cygdrive/c/project/src/ns.clj")
-      (expect (funcall cider-to-nrepl-filename-function "/cygdrive/c/project/src/ns.clj")
-              :to-equal "/docker/src/ns.clj"))))
+    (let* ((/docker/src (expand-file-name "/docker/src"))
+           (/cygdrive/c/project/src (expand-file-name "/cygdrive/c/project/src"))
+           (/docker/src/ns.clj (expand-file-name "/docker/src/ns.clj"))
+           (/cygdrive/c/project/src/ns.clj (expand-file-name "/cygdrive/c/project/src/ns.clj"))
+           (cider-path-translations `((,/docker/src . ,/cygdrive/c/project/src))))
+      (expect (funcall cider-from-nrepl-filename-function /docker/src/ns.clj)
+              :to-equal /cygdrive/c/project/src/ns.clj)
+      (expect (funcall cider-to-nrepl-filename-function /cygdrive/c/project/src/ns.clj)
+              :to-equal /docker/src/ns.clj))))
 
 (describe "cider-quit"
   (it "raises a user error if cider is not connected"
@@ -100,14 +104,6 @@
           (clojure-mode)
           (expect (cider-interactive-eval "(+ 1)") :not :to-throw))))))
 
-(describe "cider--calculate-opening-delimiters"
-  (it "returns the right opening delimiters"
-    (with-temp-buffer
-      (clojure-mode)
-      (insert "(let [a 1] (let [b 2] (+ a b)))")
-      (backward-char 2)
-      (expect (cider--calculate-opening-delimiters) :to-equal '(40 40)))))
-
 (describe "cider--matching-delimiter"
   (it "returns the right closing delimiter"
     (expect (cider--matching-delimiter ?\() :to-equal ?\))
@@ -117,3 +113,8 @@
     (expect (cider--matching-delimiter ?\)) :to-equal ?\()
     (expect (cider--matching-delimiter ?\}) :to-equal ?\{)
     (expect (cider--matching-delimiter ?\]) :to-equal ?\[)))
+
+(describe "cider--insert-closing-delimiters"
+  (it "appends any matching closing delimiters"
+    (expect (cider--insert-closing-delimiters "(let [a 1] (prn 1 [2 {3 4")
+            :to-equal "(let [a 1] (prn 1 [2 {3 4}]))")))

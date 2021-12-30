@@ -83,18 +83,18 @@ This moves point to the next line to include the end of the block"
                    (ruby-beginning-of-block)
                    ;; "Block beginning" is often not at indentation in Emacs 24.
                    (< (er/point-at-indentation) orig-point))
-      (loop do
-            (ruby-beginning-of-block)
-            (setq progress-beg (point))
-            (when (= (point) (point-min))
-              (return))
-            (ruby-end-of-block)
-            (setq progress-end (if (looking-at-p er/ruby-block-end-re)
-                                   (point-at-bol 0)
-                                 (point-at-bol 1)))
-            (goto-char progress-beg)
-            (when (> progress-end orig-point)
-              (return))))))
+      (cl-loop
+       (ruby-beginning-of-block)
+       (setq progress-beg (point))
+       (when (= (point) (point-min))
+         (cl-return))
+       (ruby-end-of-block)
+       (setq progress-end (if (looking-at-p er/ruby-block-end-re)
+                              (point-at-bol 0)
+                            (point-at-bol 1)))
+       (goto-char progress-beg)
+       (when (> progress-end orig-point)
+         (cl-return))))))
 
 ;;; This command isn't used here explicitly, but it's symmetrical with
 ;;; `er/ruby-backward-up', and nifty for interactive use.

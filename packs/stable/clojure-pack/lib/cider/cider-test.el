@@ -1,6 +1,6 @@
 ;;; cider-test.el --- Test result viewer -*- lexical-binding: t -*-
 
-;; Copyright © 2014-2020 Jeff Valk, Bozhidar Batsov and CIDER contributors
+;; Copyright © 2014-2021 Jeff Valk, Bozhidar Batsov and CIDER contributors
 
 ;; Author: Jeff Valk <jv@jeffvalk.com>
 
@@ -617,6 +617,18 @@ This uses the Leiningen convention of appending '-test' to the namespace name."
 
 ;;; Test execution
 
+(defcustom cider-test-default-include-selectors '()
+  "List of include selector strings to use when executing tests if none provided."
+  :type '(repeat string)
+  :group 'cider-test
+  :package-version '(cider . "1.1.0"))
+
+(defcustom cider-test-default-exclude-selectors '()
+  "List of exclude selector strings to use when executing tests if none provided."
+  :type '(repeat string)
+  :group 'cider-test
+  :package-version '(cider . "1.1.0"))
+
 (declare-function cider-emit-interactive-eval-output "cider-eval")
 (declare-function cider-emit-interactive-eval-err-output "cider-eval")
 
@@ -638,14 +650,18 @@ are highlighted.
 If SILENT is non-nil, suppress all messages other then test results.
 If PROMPT-FOR-FILTERS is non-nil, prompt the user for a test selector filters.
 The include/exclude selectors will be used to filter the tests before
- running them."
+running them."
   (cider-test-clear-highlights)
   (let ((include-selectors
-         (when prompt-for-filters
-           (cider-test--prompt-for-selectors "Test selectors to include (space separated): ")))
+         (if prompt-for-filters
+             (cider-test--prompt-for-selectors
+              "Test selectors to include (space separated): ")
+           cider-test-default-include-selectors))
         (exclude-selectors
-         (when prompt-for-filters
-           (cider-test--prompt-for-selectors "Test selectors to exclude (space separated): "))))
+         (if prompt-for-filters
+             (cider-test--prompt-for-selectors
+              "Test selectors to exclude (space separated): ")
+           cider-test-default-exclude-selectors)))
     (cider-map-repls :clj-strict
       (lambda (conn)
         (unless silent
@@ -812,7 +828,7 @@ the results are received."
 When enabled this reruns tests every time a Clojure file is loaded.
 Only runs tests corresponding to the loaded file's namespace and does
 nothing if no tests are defined or if the file failed to load."
-  nil (cider-mode " Test") nil
+  :init-value nil :lighter (cider-mode " Test") :keymap nil
   :global t
   (if cider-auto-test-mode
       (add-hook 'cider-file-loaded-hook #'cider--test-silently)

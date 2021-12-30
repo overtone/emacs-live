@@ -192,12 +192,14 @@ Can be either a symbol, or a function returning a symbol.")
         (funcall sesman-system)
       sesman-system)))
 
-(defun sesman--system ()
+(defun sesman-get-system ()
   (if sesman-system
       (if (functionp sesman-system)
           (funcall sesman-system)
         sesman-system)
     (error "No `sesman-system' in buffer `%s'" (current-buffer))))
+
+(defalias 'sesman--system #'sesman-get-system)
 
 (defun sesman--linked-sessions (system &optional sort cxt-types)
   (let* ((system (or system (sesman--system)))
@@ -463,14 +465,18 @@ buffer."
   (sesman--link-session-interactively session nil nil))
 
 ;;;###autoload
-(defun sesman-unlink ()
-  "Break any of the previously created links."
+(defun sesman-unlink (&optional links)
+  "Break sesman LINKS.
+If LINKS is nil, ask interactively for a link. With a prefix argument break all
+links."
   (interactive)
-  (let* ((system (sesman--system))
-         (links (or (sesman-current-links system)
-                    (user-error "No %s links found" system))))
-    (mapc #'sesman--unlink
-          (sesman--ask-for-link "Unlink: " links 'ask-all)))
+  (mapc #'sesman--unlink (or (when current-prefix-arg
+                               (sesman-current-links (sesman--system)))
+                             links
+                             (sesman--ask-for-link "Unlink: "
+                                                   (or (sesman-current-links (sesman--system))
+                                                       (user-error "No %s links found" (sesman--system)))
+                                                   'ask-all)))
   (run-hooks 'sesman-post-command-hook))
 
 (declare-function sesman-browser "sesman-browser")

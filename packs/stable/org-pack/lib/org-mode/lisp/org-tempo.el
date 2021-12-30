@@ -1,6 +1,6 @@
 ;;; org-tempo.el --- Template expansion for Org structures -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2017-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2017-2021 Free Software Foundation, Inc.
 ;;
 ;; Author: Rasmus Pank Roulund <emacs at pank dot eu>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -65,7 +65,7 @@ just like `org-structure-template-alist'.  The tempo snippet
 \"<KEY\" will be expanded using the KEYWORD value.  For example
 \"<L\" at the beginning of a line is expanded to \"#+latex:\".
 
-Do not use \"I\" as a KEY, as it it reserved for expanding
+Do not use \"I\" as a KEY, as it is reserved for expanding
 \"#+include\"."
   :group 'org-tempo
   :type '(repeat (cons (string :tag "Key")

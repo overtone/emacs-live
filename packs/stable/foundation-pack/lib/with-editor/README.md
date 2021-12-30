@@ -26,15 +26,16 @@ which always sets `$EDITOR` for all Emacs commands which ultimately
 use `shell-command` to asynchronously run some shell command.
 
 The command `with-editor-export-editor` exports `$EDITOR` or
-another such environment variable in `shell-mode`, `term-mode` and
-`eshell-mode` buffers.  Use this Emacs command before executing a
-shell command which needs the editor set, or always arrange for the
-current Emacs instance to be used as editor by adding it to the
-appropriate mode hooks:
+another such environment variable in `shell-mode`, `eshell-mode`,
+`term-mode` and `vterm-mode` buffers.  Use this Emacs command
+before executing a shell command which needs the editor set, or
+always arrange for the current Emacs instance to be used as editor
+by adding it to the appropriate mode hooks:
 
     (add-hook 'shell-mode-hook  'with-editor-export-editor)
-    (add-hook 'term-exec-hook   'with-editor-export-editor)
     (add-hook 'eshell-mode-hook 'with-editor-export-editor)
+    (add-hook 'term-exec-hook   'with-editor-export-editor)
+    (add-hook 'vterm-mode-hook  'with-editor-export-editor)
 
 Some variants of this function exist, these two forms are
 equivalent:

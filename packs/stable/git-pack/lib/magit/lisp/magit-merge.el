@@ -1,12 +1,14 @@
 ;;; magit-merge.el --- merge functionality  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2010-2020  The Magit Project Contributors
+;; Copyright (C) 2010-2021  The Magit Project Contributors
 ;;
 ;; You should have received a copy of the AUTHORS.md file which
 ;; lists all contributors.  If not, see http://magit.vc/authors.
 
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
 ;; Maintainer: Jonas Bernoulli <jonas@bernoul.li>
+
+;; SPDX-License-Identifier: GPL-3.0-or-later
 
 ;; Magit is free software; you can redistribute it and/or modify it
 ;; under the terms of the GNU General Public License as published by
@@ -27,9 +29,6 @@
 
 ;;; Code:
 
-(eval-when-compile
-  (require 'subr-x))
-
 (require 'magit)
 (require 'magit-diff)
 
@@ -48,6 +47,8 @@
    ("-n" "No fast-forward"   "--no-ff")
    (magit-merge:--strategy)
    (5 magit-merge:--strategy-option)
+   (5 "-b" "Ignore changes in amount of whitespace" "-Xignore-space-change")
+   (5 "-w" "Ignore whitespace when comparing lines" "-Xignore-all-space")
    (5 magit-diff:--diff-algorithm :argument "-Xdiff-algorithm=")
    (5 magit:--gpg-sign)]
   ["Actions"
@@ -59,7 +60,7 @@
    [("p" "Preview merge"          magit-merge-preview)
     ""
     ("s" "Squash merge"           magit-merge-squash)
-    ("i" "Merge into"             magit-merge-into)]]
+    ("i" "Dissolve"               magit-merge-into)]]
   ["Actions"
    :if magit-merge-in-progress-p
    ("m" "Commit merge" magit-commit-create)
@@ -138,7 +139,7 @@ provided the respective remote branch already exists, ensuring
 that the respective pull-request (if any) won't get stuck on some
 obsolete version of the commits that are being merged.  Finally
 if `forge-branch-pullreq' was used to create the merged branch,
-branch, then also remove the respective remote branch."
+then also remove the respective remote branch."
   (interactive
    (list (magit-read-other-local-branch
           (format "Merge `%s' into"
@@ -171,9 +172,10 @@ then also remove the respective remote branch."
   (magit--merge-absorb branch args))
 
 (defun magit--merge-absorb (branch args)
-  (when (equal branch "master")
+  (when (equal branch (magit-main-branch))
     (unless (yes-or-no-p
-             "Do you really want to merge `master' into another branch? ")
+             (format "Do you really want to merge `%s' into another branch? "
+                     branch))
       (user-error "Abort")))
   (if-let ((target (magit-get-push-branch branch t)))
       (progn
@@ -196,7 +198,9 @@ then also remove the respective remote branch."
        (format "Merge branch '%s'%s [#%s]"
                branch
                (let ((current (magit-get-current-branch)))
-                 (if (equal current "master") "" (format " into %s" current)))
+                 (if (equal current (magit-main-branch))
+                     ""
+                   (format " into %s" current)))
                pr)
        branch)
     (magit-run-git-async "merge" args "--no-edit" branch))

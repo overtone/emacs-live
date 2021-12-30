@@ -2826,7 +2826,7 @@ either graphically or in ASCII art.
 
 #+cindex: @samp{PLOT}, keyword
 Org Plot can produce 2D and 3D graphs of information stored in Org
-tables using [[http://www.gnuplot.info/][Gnuplot]] and [[http://cars9.uchicago.edu/~ravel/software/gnuplot-mode.html][Gnuplot mode]].  To see this in action, ensure
+tables using [[https://www.gnuplot.info/][Gnuplot]] and [[http://cars9.uchicago.edu/~ravel/software/gnuplot-mode.html][Gnuplot mode]].  To see this in action, ensure
 that you have both Gnuplot and Gnuplot mode installed on your system,
 then call {{{kbd(C-c \quot g)}}} or {{{kbd(M-x org-plot/gnuplot)}}} on the
 following table.
@@ -3309,7 +3309,7 @@ A link should be enclosed in double brackets and may contain
 descriptive text to be displayed instead of the URL (see [[*Link
 Format]]), for example:
 
-: [[http://www.gnu.org/software/emacs/][GNU Emacs]]
+: [[https://www.gnu.org/software/emacs/][GNU Emacs]]
 
 If the description is a file name or URL that points to an image, HTML
 export (see [[*HTML Export]]) inlines the image as a clickable button.  If
@@ -3602,7 +3602,7 @@ the link.  Such a function will be called with the tag as the only
 argument.
 
 With the above setting, you could link to a specific bug with
-=[[bugzilla:129]]=, search the web for =OrgMode= with =[[google:OrgMode]]=,
+=[[bugzilla:129]]=, search the web for =OrgMode= with =[[duckduckgo:OrgMode]]=,
 show the map location of the Free Software Foundation =[[gmap:51
 Franklin Street, Boston]]= or of Carsten office =[[omap:Science Park 904,
 Amsterdam, The Netherlands]]= and find out what the Org author is doing
@@ -3614,7 +3614,7 @@ can define them in the file with
 #+cindex: @samp{LINK}, keyword
 #+begin_example
 ,#+LINK: bugzilla  http://10.1.2.9/bugzilla/show_bug.cgi?id=
-,#+LINK: google    http://www.google.com/search?q=%s
+,#+LINK: duckduckgo https://duckduckgo.com/?q=%s
 #+end_example
 
 In-buffer completion (see [[*Completion]]) can be used after =[= to
@@ -4860,9 +4860,10 @@ In this interface, you can also use the following special keys:
 
   #+kindex: TAB
   Enter a tag in the minibuffer, even if the tag is not in the
-  predefined list.  You can complete on all tags present in the
-  buffer.  You can also add several tags: just separate them with
-  a comma.
+  predefined list.  You can complete on all tags present in the buffer
+  and globally pre-defined tags from ~org-tag-alist~ and
+  ~org-tag-persistent-alist~.  You can also add several tags: just
+  separate them with a comma.
 
 - {{{kbd(SPC)}}} ::
 
@@ -6052,15 +6053,17 @@ various inputs are interpreted, the items filled in by Org mode are in
 | =2012-w04-5=   | \rArr{} Same as above                           |
 
 Furthermore you can specify a relative date by giving, as the /first/
-thing in the input: a plus/minus sign, a number and a letter---=d=,
-=w=, =m= or =y=---to indicate change in days, weeks, months, or
-years.  With a single plus or minus, the date is always relative to
-today.  With a double plus or minus, it is relative to the default
-date.  If instead of a single letter, you use the abbreviation of day
-name, the date is the Nth such day, e.g.:
+thing in the input: a plus/minus sign, a number and a letter---=h=,
+=d=, =w=, =m= or =y=---to indicate a change in hours, days, weeks,
+months, or years.  With =h= the date is relative to the current time,
+with the other letters and a single plus or minus, the date is
+relative to today at 00:00.  With a double plus or minus, it is
+relative to the default date.  If instead of a single letter, you use
+the abbreviation of day name, the date is the Nth such day, e.g.:
 
 | =+0=    | \rArr{} today                       |
 | =.=     | \rArr{} today                       |
+| =+2h=   | \rArr{} two hours from now          |
 | =+4d=   | \rArr{} four days from today        |
 | =+4=    | \rArr{} same as +4d                 |
 | =+2w=   | \rArr{} two weeks from today        |
@@ -8328,7 +8331,7 @@ variable has detailed information.  With the following
 #+begin_src emacs-lisp
 (setq org-feed-alist
       '(("Slashdot"
-         "http://rss.slashdot.org/Slashdot/slashdot"
+         "https://rss.slashdot.org/Slashdot/slashdot"
          "~/txt/org/feeds.org" "Slashdot Entries")))
 #+end_src
 
@@ -10932,7 +10935,7 @@ pretty output for a number of export back-ends.
 Org mode can contain LaTeX math fragments, and it supports ways to
 process these for several export back-ends.  When exporting to LaTeX,
 the code is left as it is.  When exporting to HTML, Org can use either
-[[http://www.mathjax.org][MathJax]] (see [[*Math formatting in HTML export]]) or transcode the math
+[[https://www.mathjax.org][MathJax]] (see [[*Math formatting in HTML export]]) or transcode the math
 into images (see [[*Previewing LaTeX fragments]]).
 
 LaTeX fragments do not need any special marking at all.  The following
@@ -12621,6 +12624,9 @@ settings described in [[*Export Settings]].
   multiple =DESCRIPTION= lines.  The exporter takes care of wrapping
   the lines properly.
 
+  The exporter includes a number of other meta tags, which can be customized
+  by modifying ~org-html-meta-tags~.
+
 - =HTML_DOCTYPE= ::
 
   #+cindex: @samp{HTML_DOCTYPE}, keyword
@@ -12994,7 +13000,7 @@ as-is.
 
 #+vindex: org-html-mathjax-options~
 LaTeX math snippets (see [[*LaTeX fragments]]) can be displayed in two
-different ways on HTML pages.  The default is to use the [[http://www.mathjax.org][MathJax]],
+different ways on HTML pages.  The default is to use the [[https://www.mathjax.org][MathJax]],
 which should work out of the box with Org[fn:129][fn:130].  Some MathJax
 display options can be configured via ~org-html-mathjax-options~, or
 in the buffer.  For example, with the following settings,
@@ -15837,14 +15843,14 @@ following properties
 Publishing means that a file is copied to the destination directory
 and possibly transformed in the process.  The default transformation
 is to export Org files as HTML files, and this is done by the function
-~org-publish-org-to-html~ which calls the HTML exporter (see [[*HTML
+~org-html-publish-to-html~ which calls the HTML exporter (see [[*HTML
 Export]]).  But you can also publish your content as PDF files using
-~org-publish-org-to-pdf~, or as ASCII, Texinfo, etc., using the
+~org-latex-publish-to-pdf~, or as ASCII, Texinfo, etc., using the
 corresponding functions.
 
 If you want to publish the Org file as an =.org= file but with
 /archived/, /commented/, and /tag-excluded/ trees removed, use
-~org-publish-org-to-org~.  This produces =file.org= and put it in the
+~org-org-publish-to-org~.  This produces =file.org= and puts it in the
 publishing directory.  If you want a htmlized version of this file,
 set the parameter ~:htmlized-source~ to ~t~.  It produces
 =file.org.html= in the publishing directory[fn:140].
@@ -16316,6 +16322,7 @@ directory on the local machine.
 (setq org-publish-project-alist
       '(("org"
          :base-directory "~/org/"
+         :publishing-function org-html-publish-to-html
          :publishing-directory "~/public_html"
          :section-numbers nil
          :table-of-contents nil
@@ -17620,7 +17627,7 @@ follows from the type specified above.
 
   #+begin_example
   ,#+begin_src shell :results file link :file "download.tar.gz"
-  wget -c "http://example.com/download.tar.gz"
+  wget -c "https://example.com/download.tar.gz"
   ,#+end_src
   #+end_example
 
@@ -19581,7 +19588,7 @@ passed to Emacs through the =emacsclient= command, so you also need to
 ensure an Emacs server is running.  More precisely, when the
 application calls
 
-: emacsclient org-protocol://PROTOCOL?key1=val1&key2=val2
+: emacsclient "org-protocol://PROTOCOL?key1=val1&key2=val2"
 
 #+texinfo: @noindent
 Emacs calls the handler associated to {{{var(PROTOCOL)}}} with
@@ -19604,7 +19611,7 @@ Using the ~store-link~ handler, you can copy links, to that they can
 be inserted using {{{kbd(M-x org-insert-link)}}} or yanking.  More
 precisely, the command
 
-: emacsclient org-protocol://store-link?url=URL&title=TITLE
+: emacsclient "org-protocol://store-link?url=URL&title=TITLE"
 
 #+texinfo: @noindent
 stores the following link:
@@ -19633,7 +19640,7 @@ javascript:location.href='org-protocol://store-link?url='+
 Activating the "capture" handler pops up a =Capture= buffer in Emacs,
 using acapture template.
 
-: emacsclient org-protocol://capture?template=X?url=URL?title=TITLE?body=BODY
+: emacsclient "org-protocol://capture?template=X&url=URL&title=TITLE&body=BODY"
 
 To use this feature, add a bookmark with an arbitrary name, e.g.,
 =Org: capture=, and enter this as =Location=:
@@ -19700,13 +19707,13 @@ click the bookmark and start editing.
 #+cindex: rewritten URL in open-source protocol
 #+cindex: protocol, open-source rewritten URL
 However, such mapping may not always yield the desired results.
-Suppose you maintain an online store located at =http://example.com/=.
+Suppose you maintain an online store located at =https://example.com/=.
 The local sources reside in =/home/user/example/=.  It is common
 practice to serve all products in such a store through one file and
 rewrite URLs that do not match an existing file on the server.  That
-way, a request to =http://example.com/print/posters.html= might be
+way, a request to =https://example.com/print/posters.html= might be
 rewritten on the server to something like
-=http://example.com/shop/products.php/posters.html.php=.  The
+=https://example.com/shop/products.php/posters.html.php=.  The
 ~open-source~ handler probably cannot find a file named
 =/home/user/example/print/posters.html.php= and fails.
 
@@ -19721,7 +19728,7 @@ adding ~:rewrites~ rules like this:
 #+begin_src emacs-lisp
 (setq org-protocol-project-alist
       '(("example.com"
-         :base-url "http://example.com/"
+         :base-url "https://example.com/"
          :working-directory "/home/user/example/"
          :online-suffix ".php"
          :working-suffix ".php"
@@ -21317,7 +21324,7 @@ that are mentioned in the manual.  For a more complete list, use
 
 This manual is for Org version {{{version}}}.
 
-Copyright \copy 2004--2020 Free Software Foundation, Inc.
+Copyright \copy 2004--2021 Free Software Foundation, Inc.
 
 #+begin_quote
 Permission is granted to copy, distribute and/or modify this document
@@ -21781,7 +21788,7 @@ a fragment, see the documentation of the function
 version 1.34 of the =htmlize.el= package, which you need to install).
 Fontified code chunks in LaTeX can be achieved using either the
 [[https://www.ctan.org/pkg/listings][listings]] package or the [[https://www.ctan.org/pkg/minted][minted]] package.  Refer to
-~org-export-latex-listings~ for details.
+~org-latex-listings~ for details.
 
 [fn:115] Source code in code blocks may also be evaluated either
 interactively or on export.  See [[*Working with Source Code]] for more
@@ -21833,7 +21840,7 @@ to make it visible.  The tag serves as a visual aid and has no
 semantic relevance.
 
 [fn:129] By default Org loads MathJax from [[https://cdnjs.com][cdnjs.com]] as recommended by
-[[http://www.mathjax.org][MathJax]].
+[[https://www.mathjax.org][MathJax]].
 
 [fn:130] Please note that exported formulas are part of an HTML
 document, and that signs such as =<=, =>=, or =&= have special

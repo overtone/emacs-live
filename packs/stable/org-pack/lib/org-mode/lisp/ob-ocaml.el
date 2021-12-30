@@ -1,6 +1,6 @@
 ;;; ob-ocaml.el --- Babel Functions for Ocaml        -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2009-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2021 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;; Keywords: literate programming, reproducible research
@@ -32,7 +32,7 @@
 
 ;;; Requirements:
 
-;; - tuareg-mode :: http://www-rocq.inria.fr/~acohen/tuareg/
+;; - tuareg-mode :: https://elpa.nongnu.org/nongnu/tuareg.html
 
 ;;; Code:
 (require 'ob)

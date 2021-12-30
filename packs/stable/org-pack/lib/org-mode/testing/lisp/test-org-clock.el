@@ -5,7 +5,7 @@
 ;; Author: Nicolas Goaziou <n.goaziou at gmail dot com>
 
 ;; Released under the GNU General Public License version 3
-;; see: http://www.gnu.org/licenses/gpl-3.0.html
+;; see: https://www.gnu.org/licenses/gpl-3.0.html
 
 ;;;; Comments
 
@@ -357,9 +357,9 @@ the buffer."
 |--------------+--------+------|
 | H1           |        | 2:00 |"
     (org-test-with-temp-text "** H1\n\n*** H2 :tag:\n\n*** H3\n<point>"
-      (insert (org-test-clock-create-clock ". 1:00" ". 2:00"))
+      (insert (org-test-clock-create-clock ". 8:00" ". 9:00"))
       (goto-line 4)
-      (insert (org-test-clock-create-clock ". 2:00" ". 4:00"))
+      (insert (org-test-clock-create-clock ". 9:00" ". 11:00"))
       (test-org-clock-clocktable-contents ":match \"tag\" :indent nil")))))
 
 (ert-deftest test-org-clock/clocktable/tags ()

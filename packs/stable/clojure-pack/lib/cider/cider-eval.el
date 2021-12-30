@@ -1,14 +1,15 @@
 ;;; cider-eval.el --- Interactive evaluation (compilation) functionality -*- lexical-binding: t -*-
 
 ;; Copyright © 2012-2013 Tim King, Phil Hagelberg, Bozhidar Batsov
-;; Copyright © 2013-2020 Bozhidar Batsov, Artur Malabarba and CIDER contributors
+;; Copyright © 2013-2021 Bozhidar Batsov, Artur Malabarba and CIDER contributors
 ;;
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Phil Hagelberg <technomancy@gmail.com>
-;;         Bozhidar Batsov <bozhidar@batsov.com>
+;;         Bozhidar Batsov <bozhidar@batsov.dev>
 ;;         Artur Malabarba <bruce.connor.am@gmail.com>
 ;;         Hugo Duncan <hugo@hugoduncan.org>
 ;;         Steve Purcell <steve@sanityinc.com>
+;;         Arne Brasseur <arne@arnebraasseur.net>
 
 ;; This program is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -52,6 +53,7 @@
 (require 'cider-client)
 (require 'cider-common)
 (require 'cider-compat)
+(require 'cider-jar)
 (require 'cider-overlays)
 (require 'cider-popup)
 (require 'cider-repl)
@@ -188,15 +190,62 @@ When invoked with a prefix ARG the command doesn't prompt for confirmation."
 
 
 ;;; Sideloader
+;;
+;; nREPL includes sideloader middleware which provides a Java classloader that
+;; is able to dynamically load classes and resources at runtime by interacting
+;; with the nREPL client (as opposed to using the classpath of the JVM hosting
+;; nREPL server).
+;;
+;; This performs a similar functionality as the load-file
+;; operation, where we can load Clojure namespaces (as source files) or Java
+;; classes (as bytecode) by simply requiring or importing them.
+;;
+;; See https://nrepl.org/nrepl/design/middleware.html#sideloading
 
-(defvar cider-sideloader-dir (file-name-directory load-file-name))
+(defcustom cider-sideloader-path nil
+  "List of directories and jar files to scan for sideloader resources.
+When not set the cider-nrepl jar will be added automatically when upgrading
+an nREPL connection."
+  :type 'list
+  :group 'cider
+  :package-version '(cider . "1.2.0"))
+
+(defcustom cider-dynload-cider-nrepl-version nil
+  "Version of the cider-nrepl jar used for dynamically upgrading a connection.
+Defaults to `cider-required-middleware-version'."
+  :type 'string
+  :group 'cider
+  :package-version '(cider . "1.2.0"))
+
+(defun cider-read-bytes (path)
+  "Read binary data from PATH.
+Return the binary data as unibyte string."
+  ;; based on f-read-bytes
+  (with-temp-buffer
+    (set-buffer-multibyte nil)
+    (setq buffer-file-coding-system 'binary)
+    (insert-file-contents-literally path nil)
+    (buffer-substring-no-properties (point-min) (point-max))))
+
+(defun cider-retrieve-resource (dirs name)
+  "Find a resource NAME in a list DIRS of directories or jar files.
+Similar to a classpath lookup.  Returns the file contents as a string."
+  (seq-some
+   (lambda (path)
+     (cond
+      ((file-directory-p path)
+       (let ((expanded (expand-file-name name path)))
+         (when (file-exists-p expanded)
+           (cider-read-bytes expanded))))
+      ((and (file-exists-p path) (string-suffix-p ".jar" path))
+       (cider-jar-retrieve-resource path name))))
+   dirs))
 
 (defun cider-provide-file (file)
   "Provide FILE in a format suitable for sideloading."
-  (let ((file (expand-file-name file cider-sideloader-dir)))
-    (if (file-exists-p file)
-        (with-current-buffer (find-file-noselect file)
-          (base64-encode-string (substring-no-properties (buffer-string))))
+  (let ((contents (cider-retrieve-resource cider-sideloader-path file)))
+    (if contents
+        (base64-encode-string contents 'no-line-breaks)
       ;; if we can't find the file we should return an empty string
       (base64-encode-string ""))))
 
@@ -208,13 +257,30 @@ When invoked with a prefix ARG the command doesn't prompt for confirmation."
           (when (member "sideloader-lookup" status)
             (cider-request:sideloader-provide id type name))))))
 
-(defun cider-request:sideloader-start (&optional connection)
+(defun cider-add-middleware-handler (continue)
+  "Make a add-middleware handler.
+CONTINUE is an optional continuation function."
+  (lambda (response)
+    (nrepl-dbind-response response (status unresolved-middleware) ;; id middleware
+      (when unresolved-middleware
+        (seq-do
+         (lambda (mw)
+           (cider-repl-emit-interactive-stderr
+            (concat "WARNING: middleware " mw " was not found or failed to load.\n")))
+         unresolved-middleware))
+      (when (and status (member "done" status) continue)
+        (funcall continue)))))
+
+(defun cider-request:sideloader-start (&optional connection tooling)
   "Perform the nREPL \"sideloader-start\" op.
-If CONNECTION is nil, use `cider-current-repl'."
+If CONNECTION is nil, use `cider-current-repl'.
+If TOOLING is truthy then the operation is performed over the tooling
+session, rather than the regular session."
   (cider-ensure-op-supported "sideloader-start")
   (cider-nrepl-send-request `("op" "sideloader-start")
                             (cider-sideloader-lookup-handler)
-                            connection))
+                            connection
+                            tooling))
 
 (defun cider-request:sideloader-provide (id type file &optional connection)
   "Perform the nREPL \"sideloader-provide\" op for ID, TYPE and FILE.
@@ -232,7 +298,78 @@ If CONNECTION is nil, use `cider-current-repl'."
 If CONNECTION is nil, use `cider-current-repl'."
   (interactive)
   (message "Starting nREPL's sideloader")
-  (cider-request:sideloader-start connection))
+  (cider-request:sideloader-start connection)
+  (cider-request:sideloader-start connection 'tooling))
+
+(defvar cider-nrepl-middlewares
+  '("cider.nrepl/wrap-apropos"
+    "cider.nrepl/wrap-classpath"
+    "cider.nrepl/wrap-clojuredocs"
+    "cider.nrepl/wrap-complete"
+    "cider.nrepl/wrap-content-type"
+    "cider.nrepl/wrap-debug"
+    "cider.nrepl/wrap-enlighten"
+    "cider.nrepl/wrap-format"
+    "cider.nrepl/wrap-info"
+    "cider.nrepl/wrap-inspect"
+    "cider.nrepl/wrap-macroexpand"
+    "cider.nrepl/wrap-ns"
+    "cider.nrepl/wrap-out"
+    "cider.nrepl/wrap-slurp"
+    "cider.nrepl/wrap-profile"
+    "cider.nrepl/wrap-refresh"
+    "cider.nrepl/wrap-resource"
+    "cider.nrepl/wrap-spec"
+    "cider.nrepl/wrap-stacktrace"
+    "cider.nrepl/wrap-test"
+    "cider.nrepl/wrap-trace"
+    "cider.nrepl/wrap-tracker"
+    "cider.nrepl/wrap-undef"
+    "cider.nrepl/wrap-version"
+    "cider.nrepl/wrap-xref"))
+
+(defun cider-request:add-middleware (middlewares
+                                     &optional connection tooling continue)
+  "Use the nREPL dynamic loader to add MIDDLEWARES to the nREPL session.
+
+- If CONNECTION is nil, use `cider-current-repl'.
+- If TOOLING it truthy, use the tooling session instead of the main session.
+- CONTINUE is an optional continuation function, which will be called when the
+add-middleware op has finished successfully."
+  (cider-nrepl-send-request `("op" "add-middleware"
+                              "middleware" ,middlewares)
+                            (cider-add-middleware-handler continue)
+                            connection
+                            tooling))
+
+(defun cider-add-cider-nrepl-middlewares (&optional connection)
+  "Use dynamic loading to add the cider-nrepl middlewares to nREPL.
+If CONNECTION is nil, use `cider-current-repl'."
+  (cider-request:add-middleware
+   cider-nrepl-middlewares connection nil
+   (lambda ()
+     ;; When the main session is done adding middleware, then do the tooling
+     ;; session. At this point all the namespaces have been sideloaded so this
+     ;; is faster, we don't want these to race to sideload resources.
+     (cider-request:add-middleware
+      cider-nrepl-middlewares connection 'tooling
+      (lambda ()
+        ;; Ask nREPL again what its capabilities are, so we know which new
+        ;; operations are supported.
+        (nrepl--init-capabilities (or connection (cider-current-repl))))))))
+
+(defvar cider-required-middleware-version)
+(defun cider-upgrade-nrepl-connection (&optional connection)
+  "Sideload cider-nrepl middleware.
+If CONNECTION is nil, use `cider-current-repl'."
+  (interactive)
+  (when (not cider-sideloader-path)
+    (setq cider-sideloader-path (list (cider-jar-find-or-fetch
+                                       "cider" "cider-nrepl"
+                                       (or cider-dynload-cider-nrepl-version
+                                           cider-required-middleware-version)))))
+  (cider-sideloader-start connection)
+  (cider-add-cider-nrepl-middlewares connection))
 
 
 ;;; Dealing with compilation (evaluation) errors and warnings
@@ -1038,34 +1175,19 @@ command `cider-debug-defun-at-point'."
                             (cider-defun-at-point 'bounds)
                             (cider--nrepl-pr-request-map))))
 
-(defun cider--calculate-opening-delimiters ()
-  "Walks up the list of expressions to collect all sexp opening delimiters.
-The result is a list of the delimiters.
-
-That function is used in `cider-eval-defun-up-to-point' so it can make an
-incomplete expression complete."
-  (interactive)
-  (let ((result nil))
-    (save-excursion
-      (condition-case nil
-          (while t
-            (backward-up-list)
-            (push (char-after) result))
-        (error result)))))
-
-(defun cider--matching-delimiter (delimiter)
-  "Get the matching (opening/closing) delimiter for DELIMITER."
-  (pcase delimiter
-    (?\( ?\))
-    (?\[ ?\])
-    (?\{ ?\})
-    (?\) ?\()
-    (?\] ?\[)
-    (?\} ?\{)))
-
-(defun cider--calculate-closing-delimiters ()
-  "Compute the list of closing delimiters to make the defun before point valid."
-  (mapcar #'cider--matching-delimiter (cider--calculate-opening-delimiters)))
+(defun cider--insert-closing-delimiters (code)
+  "Closes all open parenthesized or bracketed expressions of CODE."
+  (with-temp-buffer
+    (insert code)
+    (goto-char (point-max))
+    (let ((matching-delimiter nil))
+      (while (ignore-errors
+               (save-excursion
+                 (backward-up-list 1)
+                 (setq matching-delimiter (cdr (syntax-after (point)))))
+               t)
+        (insert-char matching-delimiter)))
+    (buffer-string)))
 
 (defun cider-eval-defun-up-to-point (&optional output-to-current-buffer)
   "Evaluate the current toplevel form up to point.
@@ -1078,12 +1200,22 @@ buffer.  It constructs an expression to eval in the following manner:
   (interactive "P")
   (let* ((beg-of-defun (save-excursion (beginning-of-defun) (point)))
          (code (buffer-substring-no-properties beg-of-defun (point)))
-         (code (concat code (cider--calculate-closing-delimiters))))
+         (code (cider--insert-closing-delimiters code)))
     (cider-interactive-eval code
                             (when output-to-current-buffer
                               (cider-eval-print-handler))
                             nil
                             (cider--nrepl-pr-request-map))))
+
+(defun cider--matching-delimiter (delimiter)
+  "Get the matching (opening/closing) delimiter for DELIMITER."
+  (pcase delimiter
+    (?\( ?\))
+    (?\[ ?\])
+    (?\{ ?\})
+    (?\) ?\()
+    (?\] ?\[)
+    (?\} ?\{)))
 
 (defun cider-eval-sexp-up-to-point (&optional  output-to-current-buffer)
   "Evaluate the current sexp form up to point.
@@ -1191,7 +1323,7 @@ passing arguments."
     (define-key map (kbd "C-r") #'cider-eval-region)
     (define-key map (kbd "C-n") #'cider-eval-ns-form)
     (define-key map (kbd "C-d") #'cider-eval-defun-at-point)
-    (define-key map (kbd "C-f") #'cider-eval-last-sexp)
+    (define-key map (kbd "C-e") #'cider-eval-last-sexp)
     (define-key map (kbd "C-l") #'cider-eval-list-at-point)
     (define-key map (kbd "C-v") #'cider-eval-sexp-at-point)
     (define-key map (kbd "C-o") #'cider-eval-sexp-up-to-point)

@@ -1,12 +1,14 @@
 ;;; magit-status.el --- the grand overview  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2010-2020  The Magit Project Contributors
+;; Copyright (C) 2010-2021  The Magit Project Contributors
 ;;
 ;; You should have received a copy of the AUTHORS.md file which
 ;; lists all contributors.  If not, see http://magit.vc/authors.
 
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
 ;; Maintainer: Jonas Bernoulli <jonas@bernoul.li>
+
+;; SPDX-License-Identifier: GPL-3.0-or-later
 
 ;; Magit is free software; you can redistribute it and/or modify it
 ;; under the terms of the GNU General Public License as published by
@@ -26,9 +28,6 @@
 ;; This library implements the status buffer.
 
 ;;; Code:
-
-(eval-when-compile
-  (require 'subr-x))
 
 (require 'magit)
 
@@ -269,8 +268,9 @@ prefix arguments:
   (interactive
    (let ((magit--refresh-cache (list (cons 0 0))))
      (list (and (or current-prefix-arg (not (magit-toplevel)))
-                (magit-read-repository
-                 (>= (prefix-numeric-value current-prefix-arg) 16)))
+                (progn (magit--assert-usable-git)
+                       (magit-read-repository
+                        (>= (prefix-numeric-value current-prefix-arg) 16))))
            magit--refresh-cache)))
   (let ((magit--refresh-cache (or cache (list (cons 0 0)))))
     (if directory
@@ -309,6 +309,30 @@ also contains other useful hints.")
 
 (put 'magit-status-here 'interactive-only 'magit-status-setup-buffer)
 
+;;;###autoload
+(defun magit-status-quick ()
+  "Show the status of the current Git repository, maybe without refreshing.
+
+If the status buffer of the current Git repository exists but
+isn't being displayed in the selected frame, then display it
+without refreshing it.
+
+If the status buffer is being displayed in the selected frame,
+then also refresh it.
+
+Prefix arguments have the same meaning as for `magit-status',
+and additionally cause the buffer to be refresh.
+
+To use this function instead of `magit-status', add this to your
+init file: (global-set-key (kbd \"C-x g\") 'magit-status-quick)."
+  (interactive)
+  (if-let ((buffer
+            (and (not current-prefix-arg)
+                 (not (magit-get-mode-buffer 'magit-status-mode nil 'selected))
+                 (magit-get-mode-buffer 'magit-status-mode))))
+      (magit-display-buffer buffer)
+    (call-interactively #'magit-status)))
+
 (defvar magit--remotes-using-recent-git nil)
 
 (defun magit--tramp-asserts (directory)
@@ -324,25 +348,14 @@ Magit requires Git >= %s, but on %s the version is %s.
 If multiple Git versions are installed on the host, then the
 problem might be that TRAMP uses the wrong executable.
 
-First check the value of `magit-git-executable'.  Its value is
-used when running git locally as well as when running it on a
-remote host.  The default value is \"git\", except on Windows
-where an absolute path is used for performance reasons.
-
-If the value already is just \"git\" but TRAMP never-the-less
-doesn't use the correct executable, then consult the info node
-`(tramp)Remote programs'.\n" magit--minimal-git remote version) :error))
+Check the value of `magit-remote-git-executable' and consult
+the info node `(tramp)Remote programs'.
+" magit--minimal-git remote version) :error))
         (display-warning 'magit (format "\
 Magit cannot find Git on %s.
 
-First check the value of `magit-git-executable'.  Its value is
-used when running git locally as well as when running it on a
-remote host.  The default value is \"git\", except on Windows
-where an absolute path is used for performance reasons.
-
-If the value already is just \"git\" but TRAMP never-the-less
-doesn't find the executable, then consult the info node
-`(tramp)Remote programs'.\n" remote) :error)))))
+Check the value of `magit-remote-git-executable' and consult
+the info node `(tramp)Remote programs'." remote) :error)))))
 
 ;;; Mode
 
@@ -386,7 +399,8 @@ doesn't find the executable, then consult the info node
     ("a " "Assumed unstaged" magit-jump-to-assume-unchanged
      :if (lambda () (memq 'magit-insert-assume-unchanged-files magit-status-sections-hook)))
     ("w " "Skip worktree" magit-jump-to-skip-worktree
-     :if (lambda () (memq 'magit-insert-skip-worktree-files magit-status-sections-hook)))]])
+     :if (lambda () (memq 'magit-insert-skip-worktree-files magit-status-sections-hook)))]
+   [("i" "Using Imenu" imenu)]])
 
 (define-derived-mode magit-status-mode magit-mode "Magit"
   "Mode for looking at Git status.
@@ -537,8 +551,7 @@ the status buffer causes this section to disappear again."
     (magit-insert-section (error 'git)
       (insert (propertize (format "%-10s" "GitError! ")
                           'font-lock-face 'magit-section-heading))
-      (insert (propertize magit-this-error
-                          'font-lock-face 'font-lock-warning-face))
+      (insert (propertize magit-this-error 'font-lock-face 'error))
       (when-let ((key (car (where-is-internal 'magit-process-buffer))))
         (insert (format "  [Type `%s' for details]" (key-description key))))
       (insert ?\n))
@@ -623,17 +636,18 @@ arguments are for internal use only."
               ((magit--valid-upstream-p remote merge)
                (if (equal remote ".")
                    (concat
-                    (propertize merge 'font-lock-face 'magit-branch-local)
-                    (propertize " does not exist"
-                                'font-lock-face 'font-lock-warning-face))
-                 (concat
+                    (propertize merge 'font-lock-face 'magit-branch-local) " "
+                    (propertize "does not exist"
+                                'font-lock-face 'magit-branch-warning))
+                 (format
+                  "%s %s %s"
                   (propertize merge 'font-lock-face 'magit-branch-remote)
-                  (propertize " does not exist on "
-                              'font-lock-face 'font-lock-warning-face)
+                  (propertize "does not exist on"
+                              'font-lock-face 'magit-branch-warning)
                   (propertize remote 'font-lock-face 'magit-branch-remote))))
               (t
                (propertize "invalid upstream configuration"
-                           'font-lock-face 'font-lock-warning-face)))))
+                           'font-lock-face 'magit-branch-warning)))))
           (insert ?\n))))))
 
 (defun magit-insert-push-branch-header ()
@@ -655,12 +669,12 @@ arguments are for internal use only."
                                          "(no commit message)"))))
          (let ((remote (magit-get-push-remote branch)))
            (if (magit-remote-p remote)
-               (concat target
-                       (propertize " does not exist"
-                                   'font-lock-face 'font-lock-warning-face))
-             (concat remote
-                     (propertize " remote does not exist"
-                                 'font-lock-face 'font-lock-warning-face))))))
+               (concat target " "
+                       (propertize "does not exist"
+                                   'font-lock-face 'magit-branch-warning))
+             (concat remote " "
+                     (propertize "remote does not exist"
+                                 'font-lock-face 'magit-branch-warning))))))
       (insert ?\n))))
 
 (defun magit-insert-tags-header ()

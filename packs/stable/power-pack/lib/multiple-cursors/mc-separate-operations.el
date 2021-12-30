@@ -106,7 +106,8 @@
       (progn
         (mc/mark-next-lines 1)
         (mc/reverse-regions)
-        (multiple-cursors-mode 0))
+        (mc/disable-multiple-cursors-mode)
+        )
     (unless (use-region-p)
       (mc/execute-command-for-all-cursors 'mark-sexp))
     (setq mc--strings-to-replace (nreverse (mc--ordered-region-strings)))

@@ -1,8 +1,8 @@
 ;;; cider-format.el --- Code and EDN formatting functionality -*- lexical-binding: t -*-
 
-;; Copyright © 2013-2020 Bozhidar Batsov, Artur Malabarba and CIDER contributors
+;; Copyright © 2013-2021 Bozhidar Batsov, Artur Malabarba and CIDER contributors
 ;;
-;; Author: Bozhidar Batsov <bozhidar@batsov.com>
+;; Author: Bozhidar Batsov <bozhidar@batsov.dev>
 ;;         Artur Malabarba <bruce.connor.am@gmail.com>
 
 ;; This program is free software: you can redistribute it and/or modify
@@ -85,7 +85,9 @@ Uses the following heuristic to try to maintain point position:
 START and END represent the region's boundaries."
   (interactive "r")
   (cider-ensure-connected)
-  (cider--format-region start end #'cider-sync-request:format-code))
+  (cider--format-region start end
+                        (lambda (buf)
+                          (cider-sync-request:format-code buf cider-format-code-options))))
 
 
 ;;; Format defun
@@ -114,7 +116,8 @@ of the buffer into a formatted string."
   (interactive)
   (check-parens)
   (cider-ensure-connected)
-  (cider--format-buffer #'cider-sync-request:format-code))
+  (cider--format-buffer (lambda (buf)
+                          (cider-sync-request:format-code buf cider-format-code-options))))
 
 
 ;;; Format EDN

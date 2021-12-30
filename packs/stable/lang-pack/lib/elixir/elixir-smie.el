@@ -67,6 +67,38 @@
                                (rassoc next smie-closer-alist))))
                      (smie-indent-calculate))))))))
 
+;; In Emacs 27, ppss became a structure and has proper accessors.
+
+(defalias 'elixir-ppss-depth
+  (if (<= 27 emacs-major-version)
+      'ppss-depth
+    (lambda (parse-data) (nth 0 parse-data))))
+
+(defalias 'elixir-ppss-innermost-start
+  (if (<= 27 emacs-major-version)
+      'ppss-innermost-start
+    (lambda (parse-data) (nth 1 parse-data))))
+
+(defalias 'elixir-ppss-last-complete-sexp-start
+  (if (<= 27 emacs-major-version)
+      'ppss-last-complete-sexp-start
+    (lambda (parse-data) (nth 2 parse-data))))
+
+(defalias 'elixir-ppss-string-terminator
+  (if (<= 27 emacs-major-version)
+      'ppss-string-terminator
+    (lambda (parse-data) (nth 3 parse-data))))
+
+(defalias 'elixir-ppss-comment-depth
+  (if (<= 27 emacs-major-version)
+      'ppss-comment-depth
+    (lambda (parse-data) (nth 4 parse-data))))
+
+(defalias 'elixir-ppss-comment-or-string-start
+  (if (<= 27 emacs-major-version)
+      'ppss-comment-or-string-start
+    (lambda (parse-data) (nth 8 parse-data))))
+
 (defun elixir-smie-looking-around (back at)
   "Check if looking backwards at BACK and forward at AT."
   (and (looking-at-p at) (looking-back back)))
@@ -187,7 +219,7 @@
            (looking-back elixir-smie--operator-regexp (- (point) 3) t))))
 
 (defun elixir-smie-current-line-contains-built-in-keyword-p ()
-  "Return non-nil if the current line contains built in keywords with a `.'"
+  "Return non-nil if the current line contains built in keywords with a \".\"."
   (save-excursion
     (beginning-of-line)
     (looking-at ".+\\.\\(case\\|try\\|if\\|rescue\\)")))
@@ -260,7 +292,7 @@
                  (not (looking-back ".+fn.+")))))))))
 
 (defun elixir-smie--same-line-as-parent (parent-pos child-pos)
-  "Return non-nil if `child-pos' is on same line as `parent-pos'."
+  "Return non-nil if CHILD-POS is on same line as PARENT-POS."
   (= (line-number-at-pos parent-pos) (line-number-at-pos child-pos)))
 
 (defun elixir-smie-forward-token ()
@@ -279,7 +311,7 @@
     (if (elixir-smie--semi-ends-match)
         "MATCH-STATEMENT-DELIMITER"
       (if (and (looking-at ".+,$")
-               (not (> (nth 0 (syntax-ppss)) 0)))
+               (not (> (elixir-ppss-depth (syntax-ppss)) 0)))
           "COMMA"
         ";")))
    ((looking-at elixir-smie--block-operator-regexp)
@@ -308,7 +340,7 @@
       (if (elixir-smie--semi-ends-match)
           "MATCH-STATEMENT-DELIMITER"
         (if (and (looking-back ",$" (- (point) 3) t)
-                 (not (> (nth 0 (syntax-ppss)) 0)))
+                 (not (> (elixir-ppss-depth (syntax-ppss)) 0)))
 	    "COMMA"
 	  ";")))
      ((looking-back elixir-smie--block-operator-regexp (- (point) 3) t)
@@ -446,11 +478,11 @@
             (not (smie-rule-hanging-p)))
        0)
       ((and (not (smie-rule-sibling-p))
-            (nth 2 smie--parent)
+            (elixir-ppss-last-complete-sexp-start smie--parent)
             (smie-rule-hanging-p))
        (smie-rule-parent elixir-smie-indent-basic))
       ((and (not (smie-rule-sibling-p))
-            (not (nth 2 smie--parent))
+            (not (elixir-ppss-last-complete-sexp-start smie--parent))
             (smie-rule-hanging-p))
        (smie-rule-parent))))
     (`(:after . "MATCH-STATEMENT-DELIMITER")
@@ -512,12 +544,12 @@
 	    (save-excursion
 	      (move-beginning-of-line 1)
 	      (looking-at "^\s*do:.+$")))
-       (if (> (nth 0 (syntax-ppss)) 0)
+       (if (> (elixir-ppss-depth (syntax-ppss)) 0)
 	   (smie-rule-parent (- 3))
 	 (smie-rule-parent elixir-smie-indent-basic)))
       ((and (smie-rule-parent-p ";")
             (not (smie-rule-hanging-p)))
-       (if (> (nth 0 (syntax-ppss)) 0)
+       (if (> (elixir-ppss-depth (syntax-ppss)) 0)
 	   (smie-rule-parent (- elixir-smie-indent-basic))
 	 (smie-rule-parent)))
       ((and (smie-rule-parent-p "OP")
@@ -567,7 +599,7 @@
     (`(:before . "else:")
      (cond
       ((smie-rule-parent-p ";")
-       (if (> (nth 0 (syntax-ppss)) 0)
+       (if (> (elixir-ppss-depth (syntax-ppss)) 0)
 	   (smie-rule-parent elixir-smie-indent-basic)
 	 (smie-rule-parent)))
       ((smie-rule-parent-p "if")
@@ -724,7 +756,7 @@
        ;; ... then indent the line after the `->' aligned with the
        ;; parent, offset by `elixir-smie-indent-basic'."
        (if (and smie--parent (elixir-smie--same-line-as-parent
-                              (nth 1 smie--parent)
+                              (elixir-ppss-innermost-start smie--parent)
                               (point)))
            (smie-rule-parent elixir-smie-indent-basic)
          elixir-smie-indent-basic))
@@ -845,12 +877,10 @@
 (defun elixir-smie--heredoc-at-current-point-p ()
   "Return non-nil if cursor is at a string."
   (save-excursion
-    (or (and (nth 3 (save-excursion
-                      (let ((pos (point)))
-                        (parse-partial-sexp 1 pos))))
-             (nth 8 (save-excursion
-                      (let ((pos (point)))
-                        (parse-partial-sexp 1 pos)))))
+    (or (save-excursion
+          (let ((parse-data (parse-partial-sexp 1 (point))))
+            (and (elixir-ppss-string-terminator parse-data)
+                 (elixir-ppss-comment-or-string-start parse-data))))
         (and (looking-at "\"\"\"")
              (match-beginning 0)))))
 
@@ -876,8 +906,7 @@
 Rules:
   1. If the previous line is empty, indent as the basic indentation
      at the beginning of the heredoc.
-  2. If the previous line is not empty, indent as the previous line.
-"
+  2. If the previous line is not empty, indent as the previous line."
   (if (eq major-mode 'elixir-mode)
       (if (elixir-smie--heredoc-at-current-point-p)
           (let ((indent

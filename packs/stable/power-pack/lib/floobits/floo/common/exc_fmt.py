@@ -18,7 +18,7 @@ def str_e(e):
             return str(e)
         try:
             return unicode(message, "utf8").encode("utf8")
-        except:
+        except Exception:
             return message.encode("utf8")
 
 

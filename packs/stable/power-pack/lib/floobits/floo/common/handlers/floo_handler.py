@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import hashlib
 import base64
 import collections
@@ -365,6 +366,15 @@ class FlooHandler(base.BaseHandler):
         cb()
 
     def _scan_dir(self, bufs, ig, read_only):
+        status_msg = 'Comparing local files against workspace...'
+        editor.status_message(status_msg)
+        update_status_msg = getattr(self, 'update_status_msg', None)
+        if update_status_msg:
+            try:
+                update_status_msg(self, status_msg)
+            except Exception as e:
+                pass
+
         changed_bufs = []
         missing_bufs = []
         new_files = set()
@@ -413,6 +423,7 @@ class FlooHandler(base.BaseHandler):
             except Exception as e:
                 msg.debug('Error calculating md5 for ', buf['path'], ', ', str_e(e))
                 missing_bufs.append(buf)
+        editor.status_message('Comparing local files against workspace... done.')
         return changed_bufs, missing_bufs, new_files
 
     @utils.inlined_callbacks
@@ -658,6 +669,7 @@ class FlooHandler(base.BaseHandler):
         self.on_msg(data)
 
     def _on_ping(self, data):
+        self.last_ack_time = time.time()
         self.send({'name': 'pong'})
 
     @utils.inlined_callbacks

@@ -6,6 +6,9 @@ Emacs major modes for various Git configuration files.
 The list of contributors can be found
 [here](https://github.com/magit/git-modes/graphs/contributors).
 
+The following libraries are part of the `git-modes` package, which
+is available from NonGNU ELPA as well as from Melpa.
+
 `gitattributes-mode`
 --------------------
 

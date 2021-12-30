@@ -1,6 +1,6 @@
 ;;; org-capture.el --- Fast note taking in Org       -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2010-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2010-2021 Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -1028,28 +1028,23 @@ Store them in the capture property list."
 	       (time-to-days org-overriding-default-time))
 	      ((or (org-capture-get :time-prompt)
 		   (equal current-prefix-arg 1))
-	       ;; Prompt for date.
-	       (let ((prompt-time (org-read-date
-				   nil t nil "Date for tree entry:")))
+               ;; Prompt for date.  Bind `org-end-time-was-given' so
+               ;; that `org-read-date-analyze' handles the time range
+               ;; case and returns `prompt-time' with the start value.
+               (let* ((org-time-was-given nil)
+                      (org-end-time-was-given nil)
+                      (prompt-time (org-read-date
+				    nil t nil "Date for tree entry:")))
 		 (org-capture-put
 		  :default-time
-		  (cond ((and (or (not (boundp 'org-time-was-given))
-				  (not org-time-was-given))
-			      (not (= (time-to-days prompt-time) (org-today))))
-			 ;; Use 00:00 when no time is given for another
-			 ;; date than today?
-			 (apply #'encode-time 0 0
-				org-extend-today-until
-				(cl-cdddr (decode-time prompt-time))))
-			((string-match "\\([^ ]+\\)-[^ ]+[ ]+\\(.*\\)"
-				       org-read-date-final-answer)
-			 ;; Replace any time range by its start.
-			 (apply #'encode-time
-				(org-read-date-analyze
-				 (replace-match "\\1 \\2" nil nil
-						org-read-date-final-answer)
-				 prompt-time (decode-time prompt-time))))
-			(t prompt-time)))
+                  (if (or org-time-was-given
+                          (= (time-to-days prompt-time) (org-today)))
+                      prompt-time
+                    ;; Use 00:00 when no time is given for another
+                    ;; date than today?
+                    (apply #'encode-time 0 0
+                           org-extend-today-until
+                           (cl-cdddr (decode-time prompt-time)))))
 		 (time-to-days prompt-time)))
 	      (t
 	       ;; Current date, possibly corrected for late night

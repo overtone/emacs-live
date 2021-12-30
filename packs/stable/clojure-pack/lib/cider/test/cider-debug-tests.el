@@ -1,9 +1,9 @@
 ;;; cider-debug-tests.el
 
-;; Copyright © 2012-2020 Tim King, Bozhidar Batsov
+;; Copyright © 2012-2021 Tim King, Bozhidar Batsov
 
 ;; Author: Tim King <kingtim@gmail.com>
-;;         Bozhidar Batsov <bozhidar@batsov.com>
+;;         Bozhidar Batsov <bozhidar@batsov.dev>
 ;;         Artur Malabarba <bruce.connor.am@gmail.com>
 
 ;; This file is NOT part of GNU Emacs.

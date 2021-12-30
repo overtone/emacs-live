@@ -1,6 +1,6 @@
 ;;; ob-java.el --- org-babel functions for java evaluation -*- lexical-binding: t -*-
 
-;; Copyright (C) 2011-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2011-2021 Free Software Foundation, Inc.
 
 ;; Authors: Eric Schulte
 ;;          Dan Davison
@@ -87,7 +87,8 @@ like javac -verbose."
 					 (0+ space) ?\; line-end)
   "Regexp for the package statement.")
 (defconst org-babel-java--imports-re (rx line-start (0+ space) "import"
-					 (1+ space) (group (1+ (in alnum ?_ ?.))) ; capture the fully qualified class name
+                                         (opt (1+ space) "static")
+					 (1+ space) (group (1+ (in alnum ?_ ?. ?*))) ; capture the fully qualified class name
 					 (0+ space) ?\; line-end)
   "Regexp for import statements.")
 (defconst org-babel-java--class-re (rx line-start (0+ space) (opt (seq "public" (1+ space)))
@@ -163,8 +164,15 @@ replaced in this string.")
 
 (defun org-babel-execute:java (body params)
   "Execute a java source block with BODY code and PARAMS params."
-  (let* (;; if true, run from babel temp directory
-         (run-from-temp (not (alist-get :dir params)))
+  (let* (;; allow header overrides
+         (org-babel-java-compiler
+          (or (cdr (assq :javac params))
+              org-babel-java-compiler))
+         (org-babel-java-command
+          (or (cdr (assq :java params))
+              org-babel-java-command))
+         ;; if true, run from babel temp directory
+         (run-from-temp (not (cdr (assq :dir params))))
          ;; class and package
          (fullclassname (or (cdr (assq :classname params))
                             (org-babel-java-find-classname body)))
@@ -303,7 +311,8 @@ RESULT-FILE is the temp file to write the result."
     (goto-char (point-min))
     (setq class-found (re-search-forward class nil t))
     (goto-char (point-min))
-    (setq import-found (re-search-forward (concat "^import .*" package ".*" class ";") nil t))
+    (setq import-found
+          (re-search-forward (concat "^import .*" package ".*\\(?:\\*\\|" class "\\);") nil t))
     (when (and class-found (not import-found))
       (org-babel-java--move-past org-babel-java--package-re)
       (insert (concat "import " package "." class ";\n")))))

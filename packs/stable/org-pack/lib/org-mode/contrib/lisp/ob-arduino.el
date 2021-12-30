@@ -7,7 +7,7 @@
 ;; homepage: https://github.com/stardiviner/arduino-mode
 ;;
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 ;;
 ;;; Commentary:
 ;; 
@@ -33,7 +33,7 @@
 
 (require 'org)
 (require 'ob)
-(require 'arduino-mode)
+(require 'arduino-mode nil t)
 
 (defgroup ob-arduino nil
   "org-mode blocks for Arduino."

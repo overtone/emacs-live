@@ -117,7 +117,7 @@ And then you will have the following functions at your disposal:
 
 ## License
 
-&copy; 2017-2018 Arne Brasseur
+&copy; 2017-2021 Arne Brasseur and contributors.
 
 Distributed under the terms of the GNU General Public License 3.0 or later. See
 [LICENSE](LICENSE).

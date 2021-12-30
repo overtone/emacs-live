@@ -1,6 +1,6 @@
 ;;; parseclj-ast.el --- Clojure parser/unparser              -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2017-2018  Arne Brasseur
+;; Copyright (C) 2017-2021  Arne Brasseur
 
 ;; Author: Arne Brasseur <arne@arnebrasseur.net>
 
@@ -27,17 +27,17 @@
 
 ;;; Code:
 
-(require 'a)
 (require 'seq)
 (require 'subr-x)
 (require 'parseclj-lex)
+(require 'parseclj-alist)
 
 ;; AST helper functions
 
 (defun parseclj-ast-node (type position &rest attributes)
   "Create an AST node with given TYPE and POSITION.
 Other ATTRIBUTES can be given as a flat list of key-value pairs."
-  (apply 'a-list :node-type type :position position attributes))
+  (apply 'parseclj-alist :node-type type :position position attributes))
 
 (defun parseclj-ast-node-p (node)
   "Return t if the given NODE is a Clojure AST node."
@@ -47,19 +47,19 @@ Other ATTRIBUTES can be given as a flat list of key-value pairs."
 
 (defun parseclj-ast-node-attr (node attr)
   "Return NODE's ATTR, or nil."
-  (a-get node attr))
+  (map-elt node attr))
 
 (defun parseclj-ast-node-type (node)
   "Return the type of the AST node NODE."
-  (a-get node :node-type))
+  (map-elt node :node-type))
 
 (defun parseclj-ast-children (node)
   "Return children for the AST NODE."
-  (a-get node :children))
+  (map-elt node :children))
 
 (defun parseclj-ast-value (node)
   "Return the value of NODE as another AST node."
-  (a-get node :value))
+  (map-elt node :value))
 
 (defun parseclj-ast-leaf-node-p (node)
   "Return t if the given ast NODE is a leaf node."
@@ -82,8 +82,8 @@ on available options."
       stack
     (cons
      (parseclj-ast-node (parseclj-lex-token-type token)
-                        (a-get token :pos)
-                        :form (a-get token :form)
+                        (map-elt token :pos)
+                        :form (map-elt token :form)
                         :value (parseclj-lex--leaf-token-value token))
      stack)))
 
@@ -100,12 +100,12 @@ on available options."
         (top (car stack)))
     (if (member token-type '(:whitespace :comment))
         ;; merge consecutive whitespace or comment tokens
-        (if (eq token-type (a-get top :node-type))
-            (cons (a-update top :form #'concat (a-get token :form))
+        (if (eq token-type (map-elt top :node-type))
+            (cons (parseclj-alist-update top :form #'concat (map-elt token :form))
                   (cdr stack))
           (cons (parseclj-ast-node (parseclj-lex-token-type token)
-                                   (a-get token :pos)
-                                   :form (a-get token :form))
+                                   (map-elt token :pos)
+                                   :form (map-elt token :form))
                 stack))
       (parseclj-ast--reduce-leaf stack token options))))
 
@@ -118,31 +118,31 @@ brace.
 CHILDREN is the collection of nodes to be reduced into the AST branch node.
 OPTIONS is an association list.  See `parseclj-parse' for more information
 on available options."
-  (let* ((pos (a-get opening-token :pos))
+  (let* ((pos (map-elt opening-token :pos))
          (type (parseclj-lex-token-type opening-token))
-         (type (cl-case type
-                 (:lparen :list)
-                 (:lbracket :vector)
-                 (:lbrace :map)
-                 (t type))))
-    (cl-case type
-      (:root (cons (parseclj-ast-node :root pos :children children) stack))
-      (:discard stack)
-      (:tag (cons (parseclj-ast-node :tag
-                                     pos
-                                     :tag (intern (substring (a-get opening-token :form) 1))
-                                     :children children)
-                  stack))
-      (:metadata (cons (parseclj-ast-node :with-meta
-                                          pos
-                                          :children children)
-                       stack))
-      (:map-prefix (cons (a-assoc (car children)
-                                  :map-prefix opening-token)
-                         stack))
-      (t (cons
-          (parseclj-ast-node type pos :children children)
-          stack)))))
+         (type (cond
+                ((eq :lparen type) :list)
+                ((eq :lbracket type) :vector)
+                ((eq :lbrace type) :map)
+                (t type))))
+    (cond
+     ((eq :root type) (cons (parseclj-ast-node :root pos :children children) stack))
+     ((eq :discard type) stack)
+     ((eq :tag type) (cons (parseclj-ast-node :tag
+                                              pos
+                                              :tag (intern (substring (map-elt opening-token :form) 1))
+                                              :children children)
+                           stack))
+     ((eq :metadata type) (cons (parseclj-ast-node :with-meta
+                                                   pos
+                                                   :children children)
+                                stack))
+     ((eq :map-prefix type) (cons (parseclj-alist-assoc (car children)
+                                                        :map-prefix opening-token)
+                                  stack))
+     (t (cons
+         (parseclj-ast-node type pos :children children)
+         stack)))))
 
 (defun parseclj-ast--reduce-branch-with-lexical-preservation (stack opening-token children options)
   "Reduce STACK with an AST branch node representing a collection of elements.
@@ -157,7 +157,7 @@ node.
 OPTIONS is an association list.  See `parseclj-parse' for more information
 on available options."
   (if (eq :discard (parseclj-lex-token-type opening-token))
-      (cons (parseclj-ast-node :discard (a-get opening-token :pos) :children children) stack)
+      (cons (parseclj-ast-node :discard (map-elt opening-token :pos) :children children) stack)
     (let* ((stack (funcall #'parseclj-ast--reduce-branch stack opening-token children options))
            (top (car stack)))
       (if (parseclj-ast-node-p top)
@@ -176,18 +176,18 @@ on available options."
 (defun parseclj-ast--unparse-collection (node)
   "Insert a string representation of the given AST branch NODE into buffer."
   (let* ((token-type (parseclj-ast-node-type node))
-         (delimiters (cl-case token-type
-                       (:root (cons "" ""))
-                       (:list (cons "(" ")"))
-                       (:vector (cons "[" "]"))
-                       (:set (cons "#{" "}"))
-                       (:map (cons "{" "}")))))
+         (delimiters (cond
+                      ((eq :root token-type) (cons "" ""))
+                      ((eq :list token-type) (cons "(" ")"))
+                      ((eq :vector token-type) (cons "[" "]"))
+                      ((eq :set token-type) (cons "#{" "}"))
+                      ((eq :map token-type) (cons "{" "}")))))
     (insert (car delimiters))
     (let ((nodes (alist-get ':children node)))
       (when-let (node (car nodes))
         (parseclj-unparse-clojure node))
       (seq-doseq (child (cdr nodes))
-        (when (not (a-get node :lexical-preservation))
+        (when (not (map-elt node :lexical-preservation))
           (insert " "))
         (parseclj-unparse-clojure child)))
     (insert (cdr delimiters))))
@@ -196,9 +196,9 @@ on available options."
   "Insert a string representation of the given AST tag NODE into buffer."
   (progn
     (insert "#")
-    (insert (symbol-name (a-get node :tag)))
+    (insert (symbol-name (map-elt node :tag)))
     (insert " ")
-    (parseclj-unparse-clojure (car (a-get node :children)))))
+    (parseclj-unparse-clojure (car (map-elt node :children)))))
 
 (provide 'parseclj-ast)
 

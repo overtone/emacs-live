@@ -1,6 +1,6 @@
 ;;; ob-C.el --- Babel Functions for C and Similar Languages -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2010-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2010-2021 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;;      Thierry Banel
@@ -426,7 +426,12 @@ of the same value."
 into a column number."
   (pcase org-babel-c-variant
     ((or `c `cpp)
-     "int get_column_num (int nbcols, const char** header, const char* column)
+     (concat
+      (if (eq org-babel-c-variant 'c)
+          "extern "
+	"extern \"C\" ")
+      "int strcmp (const char *, const char *);
+int get_column_num (int nbcols, const char** header, const char* column)
 {
   int c;
   for (c=0; c<nbcols; c++)
@@ -434,7 +439,7 @@ into a column number."
       return c;
   return -1;
 }
-")
+"))
     (`d
      "int get_column_num (string[] header, string column)
 {

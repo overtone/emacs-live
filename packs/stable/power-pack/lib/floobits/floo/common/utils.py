@@ -202,6 +202,7 @@ def _set_timeout(func, timeout, repeat, *args, **kwargs):
     timeout_ids.add(timeout_id)
     return timeout_id
 
+
 set_timeout._top_timeout_id = 0
 
 
@@ -519,7 +520,7 @@ def _unwind_generator(gen_expr, cb=None, res=None):
 
             try:
                 args = list(res)[1:]
-            except:
+            except Exception:
                 # assume not iterable
                 args = []
 

@@ -1,6 +1,6 @@
 ;;; ol-wl.el --- Links to Wanderlust messages
 
-;; Copyright (C) 2004-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2004-2021 Free Software Foundation, Inc.
 
 ;; Author: Tokuya Kameshima <kames at fa2 dot so-net dot ne dot jp>
 ;;         David Maus <dmaus at ictsoc dot de>
@@ -20,7 +20,7 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;; Commentary:
@@ -225,7 +225,7 @@ ENTITY is a message entity."
 		    (format
 		     (if (string-match-p "gmane\\." folder-name)
 			 "http://mid.gmane.org/%s"
-		       "http://groups.google.com/groups/search?as_umsgid=%s")
+                       "https://groups.google.com/groups/search?as_umsgid=%s")
 		     (url-encode-url message-id)))
 	      (org-store-link-props :type "http" :link link :description subject
 				    :from from :to to :message-id message-id

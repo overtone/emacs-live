@@ -15,6 +15,7 @@ FLOOTTY_SAFE = True
 
 ALERT_ON_MSG = True
 LOG_TO_CONSOLE = False
+HEARTBEAT_TIMEOUT = 60
 
 BASE_DIR = os.path.expanduser(os.path.join('~', 'floobits'))
 
@@ -57,3 +58,5 @@ IGNORE = None
 VIEW_TO_HASH = {}
 
 FLOORC_JSON_PATH = os.path.expanduser(os.path.join('~', '.floorc.json'))
+
+INSECURE_SSL = False  # Disable SSL cert valifation

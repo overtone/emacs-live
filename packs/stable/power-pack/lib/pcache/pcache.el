@@ -1,11 +1,11 @@
 ;;; pcache.el --- persistent caching for Emacs.
 
-;; Copyright (C) 2011  Yann Hodique
+;; Copyright (C) 2011-2020  Yann Hodique
 
 ;; Author: Yann Hodique <yann.hodique@gmail.com>
-;; Keywords:
-;; Version: 0.4.2
-;; Package-Requires: ((eieio "1.3"))
+;; Keywords: extensions
+;; Version: 0.5.1
+;; Package-Requires: ((emacs "25.1"))
 
 ;; This file is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -51,20 +51,18 @@
 
 ;;; Code:
 
-(require 'cl)
+(require 'cl-lib)
+(require 'cl-extra)
 (require 'eieio)
 (require 'eieio-base)
 
-(defvar pcache-directory
-  (let ((dir (concat user-emacs-directory "var/pcache/")))
-    (make-directory dir t)
-    dir))
+(defvar pcache-directory (concat user-emacs-directory "var/pcache/"))
 
 (defvar *pcache-repositories* (make-hash-table :test 'equal))
 
 (defconst pcache-default-save-delay 300)
 
-(defconst pcache-internal-version-constant "0.4")
+(defconst pcache-internal-version-constant "0.5")
 
 (defconst pcache-version-constant
   (format "%s/%s" emacs-version pcache-internal-version-constant))
@@ -82,11 +80,11 @@
 
 (defvar *pcache-repository-name* nil)
 
-(defmethod constructor :static ((cache pcache-repository) &rest args)
+(cl-defmethod make-instance ((cls (subclass pcache-repository)) &rest args)
   (let* ((newname (or (and (stringp (car args)) (car args))
 		      (plist-get args :object-name)
 		      *pcache-repository-name*
-		      (symbol-name cache)))
+		      (symbol-name cls)))
 	 (e (gethash newname *pcache-repositories*))
 	 (path (concat pcache-directory newname)))
     (setq args (append args (list :object-name newname)))
@@ -95,14 +93,14 @@
              (file-exists-p path)
              (condition-case nil
                  (let* ((pcache-avoid-recursion t)
-			(*pcache-repository-name* newname)
+			                  (*pcache-repository-name* newname)
                         (obj (eieio-persistent-read path 'pcache-repository t)))
                    (and (or (pcache-validate-repo obj)
                             (error "wrong version"))
                         (puthash newname obj *pcache-repositories*)
                         obj))
                (error nil)))
-        (let ((obj (call-next-method))
+        (let ((obj (cl-call-next-method))
               (dir (file-name-directory path)))
           (unless (file-exists-p dir)
             (make-directory dir t))
@@ -116,18 +114,21 @@
     (maphash (lambda (k v) (push v values)) h)
     values))
 
-(defun pcache-validate-repo (cache)
+;; force custom implementation.
+(cl-defmethod pcache-validate-repo ((cache t))
+  nil)
+
+(cl-defmethod pcache-validate-repo ((cache pcache-repository))
   (and
-   (equal (oref cache :version)
-          (oref-default (object-class cache) version-constant))
-   (hash-table-p (oref cache :entries))
-   (every
-    (lambda (entry)
-      (and (object-of-class-p entry (oref cache :entry-cls))
-           (or (null (oref entry :value-cls))
-               (object-of-class-p
-                (oref entry :value) (oref entry :value-cls)))))
-    (pcache-hash-table-values (oref cache :entries)))))
+   (equal (oref cache version)
+          (oref-default (eieio-object-class cache) version-constant))
+   (hash-table-p (oref cache entries))
+   (cl-every
+    (function
+     (lambda (entry)
+       (and (object-of-class-p entry (oref cache entry-cls))
+            (pcache-validate-entry entry))))
+    (pcache-hash-table-values (oref cache entries)))))
 
 (defclass pcache-entry ()
   ((timestamp :initarg :timestamp
@@ -136,52 +137,61 @@
    (value :initarg :value :initform nil)
    (value-cls :initarg :value-cls :initform nil)))
 
-(defmethod pcache-entry-valid-p ((entry pcache-entry))
-  (let ((ttl (oref entry :ttl)))
+;; force custom implementation.
+(cl-defmethod pcache-validate-entry ((entry t))
+  nil)
+
+(cl-defmethod pcache-validate-entry ((entry pcache-entry))
+  (or (null (oref entry value-cls))
+      (object-of-class-p
+       (oref entry value) (oref entry value-cls))))
+
+(cl-defmethod pcache-entry-valid-p ((entry pcache-entry))
+  (let ((ttl (oref entry ttl)))
     (or (null ttl)
         (let ((time (float-time (current-time))))
-          (< time (+ ttl (oref entry :timestamp)))))))
+          (< time (+ ttl (oref entry timestamp)))))))
 
-(defmethod pcache-get ((cache pcache-repository) key &optional default)
-  (let* ((table (oref cache :entries))
+(cl-defmethod pcache-get ((cache pcache-repository) key &optional default)
+  (let* ((table (oref cache entries))
          (entry (gethash key table)))
     (if entry
         (if (pcache-entry-valid-p entry)
-            (oref entry :value)
+            (oref entry value)
           (remhash key table)
           default)
       default)))
 
-(defmethod pcache-has ((cache pcache-repository) key)
+(cl-defmethod pcache-has ((cache pcache-repository) key)
   (let* ((default (make-symbol ":nil"))
-         (table (oref cache :entries))
+         (table (oref cache entries))
          (entry (gethash key table default)))
     (if (eq entry default) nil
       (if (pcache-entry-valid-p entry)
           t nil))))
 
-(defmethod pcache-put ((cache pcache-repository) key value &optional ttl)
-  (let ((table (oref cache :entries))
+(cl-defmethod pcache-put ((cache pcache-repository) key value &optional ttl)
+  (let ((table (oref cache entries))
         (entry (or (and (eieio-object-p value)
                         (object-of-class-p value 'pcache-entry)
                         value)
                    (make-instance
-                    (oref cache :entry-cls)
+                    (oref cache entry-cls)
                     :value value
-                    :value-cls (and (object-p value) (object-class value))))))
+                    :value-cls (and (eieio-object-p value) (eieio-object-class value))))))
     (when ttl
       (oset entry :ttl ttl))
     (prog1
         (puthash key entry table)
       (pcache-save cache))))
 
-(defmethod pcache-invalidate ((cache pcache-repository) key)
-  (let ((table (oref cache :entries)))
+(cl-defmethod pcache-invalidate ((cache pcache-repository) key)
+  (let ((table (oref cache entries)))
     (remhash key table)
     (pcache-save cache)))
 
-(defmethod pcache-clear ((cache pcache-repository))
-  (let* ((entries (oref cache :entries))
+(cl-defmethod pcache-clear ((cache pcache-repository))
+  (let* ((entries (oref cache entries))
          (test (hash-table-test entries))
          (resize (hash-table-rehash-size entries))
          (threshold (hash-table-rehash-threshold entries))
@@ -191,26 +201,26 @@
                                           :weakness weakness)))
   (pcache-save cache))
 
-(defmethod pcache-purge-invalid ((cache pcache-repository))
-  (let ((table (oref cache :entries)))
+(cl-defmethod pcache-purge-invalid ((cache pcache-repository))
+  (let ((table (oref cache entries)))
     (maphash #'(lambda (k e)
                  (unless (pcache-entry-valid-p e)
                    (remhash k table)))
              table)
     (pcache-save cache)))
 
-(defmethod pcache-save ((cache pcache-repository) &optional force)
-  (let ((timestamp (oref cache :timestamp))
-        (delay (oref cache :save-delay))
+(cl-defmethod pcache-save ((cache pcache-repository) &optional force)
+  (let ((timestamp (oref cache timestamp))
+        (delay (oref cache save-delay))
         (time (float-time (current-time))))
     (when (or force (> time (+ timestamp delay)))
       (oset cache :timestamp time)
       ;; make sure version is saved to file
-      (oset cache :version (oref-default (object-class cache) version-constant))
+      (oset cache :version (oref-default (eieio-object-class cache) version-constant))
       (eieio-persistent-save cache))))
 
-(defmethod pcache-map ((cache pcache-repository) func)
-  (let ((table (oref cache :entries)))
+(cl-defmethod pcache-map ((cache pcache-repository) func)
+  (let ((table (oref cache entries)))
     (maphash func table)))
 
 (defun pcache-kill-emacs-hook ()
@@ -235,7 +245,7 @@
 (let (to-clean)
   (maphash #'(lambda (k v)
                (condition-case nil
-                   (unless (eql (oref v :version)
+                   (unless (eql (oref v version)
                                 pcache-version-constant)
                      (signal 'error nil))
                  (error

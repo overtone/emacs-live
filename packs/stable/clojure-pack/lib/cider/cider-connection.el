@@ -1,9 +1,9 @@
 ;;; cider-connection.el --- Connection and session life-cycle management for CIDER -*- lexical-binding: t -*-
 ;;
-;; Copyright © 2019-2020 Artur Malabarba, Bozhidar Batsov, Vitalie Spinu and CIDER contributors
+;; Copyright © 2019-2021 Artur Malabarba, Bozhidar Batsov, Vitalie Spinu and CIDER contributors
 ;;
 ;; Author: Artur Malabarba <bruce.connor.am@gmail.com>
-;;         Bozhidar Batsov <bozhidar@batsov.com>
+;;         Bozhidar Batsov <bozhidar@batsov.dev>
 ;;         Vitalie Spinu <spinuvit@gmail.com>
 ;;
 ;; Keywords: languages, clojure, cider
@@ -85,7 +85,8 @@ PARAMS is a plist containing :host, :port, :server and other parameters for
     (plist-get params :port)
     (plist-get params :server)
     (lambda (_)
-      (cider-repl-create params)))))
+      (cider-repl-create params))
+    (plist-get params :socket-file))))
 
 (defun cider-sessions ()
   "Return a list of all active CIDER sessions."
@@ -201,7 +202,10 @@ FORMAT is a format string to compile with ARGS and display on the REPL."
 (defvar cider-minimum-clojure-version)
 (defun cider--check-clojure-version-supported ()
   "Ensure that we are meeting the minimum supported version of Clojure."
-  (if-let* ((clojure-version (cider--clojure-version)))
+  (if-let* ((clojure-version (cider--clojure-version))
+            ;; drop all qualifiers from the version string
+            ;; e.g. 1.10.0-master-SNAPSHOT becomes simply 1.10.0
+            (clojure-version (car (split-string clojure-version "-"))))
       (when (version< clojure-version cider-minimum-clojure-version)
         (cider-emit-manual-warning "basics/installation.html#prerequisites"
                                    "Clojure version (%s) is not supported (minimum %s). CIDER will not work."
@@ -261,7 +265,18 @@ See command `cider-mode'."
   (add-hook 'clojure-mode-hook #'cider-mode)
   (dolist (buffer (cider-util--clojure-buffers))
     (with-current-buffer buffer
-      (cider-mode +1))))
+      (cider-mode +1)
+      ;; In global-eldoc-mode, a new file-visiting buffer calls
+      ;; `turn-on-eldoc-mode' which enables eldoc-mode if it's supported in that
+      ;; buffer as determined by `eldoc--supported-p'.  Cider's eldoc support
+      ;; allows new buffers in cider-mode to enable eldoc-mode.  As of 2021-04,
+      ;; however, clojure-mode itself has no eldoc support, so old clojure
+      ;; buffers opened before cider started aren't necessarily in eldoc-mode.
+      ;; Here, we've enabled cider-mode for this old clojure buffer, and now, if
+      ;; global-eldoc-mode is enabled, try to enable eldoc-mode as if the buffer
+      ;; had just been created with cider-mode.
+      (when global-eldoc-mode
+        (turn-on-eldoc-mode)))))
 
 (declare-function cider--debug-mode "cider-debug")
 (defun cider-disable-on-existing-clojure-buffers ()
@@ -411,7 +426,7 @@ about this buffer (like variable `cider-repl-type')."
               (plist-get nrepl-endpoint :port))))))
 
 
-;;; Cider's Connection Management UI
+;;; Connection Management Commands
 
 (defun cider-quit (&optional repl)
   "Quit the CIDER connection associated with REPL.
@@ -460,7 +475,6 @@ REPL defaults to the current REPL."
                   (sesman-browser-get 'object)
                   (cider-current-repl nil 'ensure))))
     (message "%s" (cider--connection-info repl))))
-(define-obsolete-function-alias 'cider-display-connection-info 'cider-describe-connection "0.18.0")
 
 (defconst cider-nrepl-session-buffer "*cider-nrepl-session*")
 
@@ -532,7 +546,8 @@ REPL defaults to the current REPL."
                                   (let ((cp (thread-last classpath
                                               (seq-filter (lambda (path) (not (string-match-p "\\.jar$" path))))
                                               (mapcar #'file-name-directory)
-                                              (seq-remove  #'null))))
+                                              (seq-remove  #'null)
+                                              (seq-uniq))))
                                     (process-put proc :cached-classpath-roots cp)
                                     cp))))
         (or (seq-find (lambda (path) (string-prefix-p path file))
@@ -688,7 +703,7 @@ Session name can be customized with `cider-session-name-template'."
 ;;; REPL Buffer Init
 
 (defvar-local cider-cljs-repl-type nil
-  "The type of the ClojureScript runtime (Browser, Node, Figwheel, etc.)")
+  "The type of the ClojureScript runtime (Browser, Node, Figwheel, etc.).")
 
 (defvar-local cider-repl-type nil
   "The type of this REPL buffer, usually either clj or cljs.")
@@ -857,7 +872,7 @@ no linked session or there is no REPL of TYPE within the current session."
 
 (defun cider-repls (&optional type ensure)
   "Return cider REPLs of TYPE from the current session.
-If TYPE is nil or multi, return all repls.  If TYPE is a list of types,
+If TYPE is nil or multi, return all REPLs.  If TYPE is a list of types,
 return only REPLs of type contained in the list.  If ENSURE is non-nil,
 throw an error if no linked session exists."
   (let ((type (cond
@@ -912,55 +927,13 @@ session."
 (defalias 'cider-map-connections #'cider-map-repls)
 (defalias 'cider-connection-type-for-buffer #'cider-repl-type-for-buffer)
 
-
-;; Deprecation after #2324
+;; Deprecated after #2324 (introduction of sesman)
 
 (define-obsolete-function-alias 'cider-current-repl-buffer 'cider-current-repl "0.18")
 (define-obsolete-function-alias 'cider-repl-buffers 'cider-repls "0.18")
 (define-obsolete-function-alias 'cider-current-session 'cider-nrepl-eval-session "0.18")
 (define-obsolete-function-alias 'cider-current-tooling-session 'cider-nrepl-tooling-session "0.18")
-(define-obsolete-function-alias 'cider-display-connection-info 'cider-describe-connection "0.18")
 (define-obsolete-function-alias 'nrepl-connection-buffer-name 'nrepl-repl-buffer-name "0.18")
-(define-obsolete-function-alias 'cider-repl-set-type 'cider-set-repl-type "0.18")
-
-(make-obsolete 'cider-assoc-buffer-with-connection 'sesman-link-with-buffer "0.18")
-(make-obsolete 'cider-assoc-project-with-connection 'sesman-link-with-project "0.18")
-(make-obsolete 'cider-change-buffers-designation nil "0.18")
-(make-obsolete 'cider-clear-buffer-local-connection nil "0.18")
-(make-obsolete 'cider-close-nrepl-session 'cider-quit "0.18")
-(make-obsolete 'cider-create-sibling-cljs-repl 'cider-connect-sibling-cljs "0.18")
-(make-obsolete 'cider-current-messages-buffer nil "0.18")
-(make-obsolete 'cider-default-connection "see sesman." "0.18")
-(make-obsolete 'cider-extract-designation-from-current-repl-buffer nil "0.18")
-(make-obsolete 'cider-find-connection-buffer-for-project-directory 'sesman-current-sessions "0.18")
-(make-obsolete 'cider-find-reusable-repl-buffer nil "0.18")
-(make-obsolete 'cider-make-connection-default "see sesman." "0.18")
-(make-obsolete 'cider-other-connection nil "0.18")
-(make-obsolete 'cider-project-connections 'sesman-current-sessions "0.18")
-(make-obsolete 'cider-project-connections-types nil "0.18")
-(make-obsolete 'cider-prompt-for-project-on-connect nil "0.18")
-(make-obsolete 'cider-read-connection `sesman-ask-for-session "0.18")
-(make-obsolete 'cider-replicate-connection nil "0.18")
-(make-obsolete 'cider-request-dispatch "see sesman." "0.18")
-(make-obsolete 'cider-rotate-default-connection "see sesman." "0.18")
-(make-obsolete 'cider-toggle-buffer-connection nil "0.18")
-(make-obsolete 'cider-toggle-request-dispatch nil "0.18")
-(make-obsolete 'nrepl-connection-buffer-name-template 'nrepl-repl-buffer-name-template "0.18")
-(make-obsolete 'nrepl-create-client-buffer-function nil "0.18")
-(make-obsolete 'nrepl-post-client-callback nil "0.18")
-(make-obsolete 'nrepl-prompt-to-kill-server-buffer-on-quit nil "0.18")
-(make-obsolete 'nrepl-use-this-as-repl-buffer nil "0.18")
-
-;; connection manager
-(make-obsolete 'cider-client-name-repl-type "see sesman." "0.18")
-(make-obsolete 'cider-connection-browser "see sesman." "0.18")
-(make-obsolete 'cider-connections-buffer-mode "see sesman." "0.18")
-(make-obsolete 'cider-connections-buffer-mode-map "see sesman." "0.18")
-(make-obsolete 'cider-connections-close-connection "see sesman." "0.18")
-(make-obsolete 'cider-connections-goto-connection "see sesman." "0.18")
-(make-obsolete 'cider-connections-make-default "see sesman." "0.18")
-(make-obsolete 'cider-display-connected-message "see sesman." "0.18")
-(make-obsolete 'cider-project-name "see sesman." "0.18")
 
 (provide 'cider-connection)
 

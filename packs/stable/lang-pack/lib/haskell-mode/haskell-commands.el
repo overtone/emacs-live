@@ -359,7 +359,7 @@ position with `xref-pop-marker-stack'."
       (progn
         (haskell-mode-handle-generic-loc loc)
         (unless (equal initial-loc (point-marker))
-          (xref-push-marker-stack)))
+          (xref-push-marker-stack initial-loc)))
     (call-interactively 'haskell-mode-tag-find)))
 
 ;;;###autoload

@@ -1,7 +1,7 @@
 ;;; clojure-mode-font-lock-test.el --- Clojure Mode: Font lock test suite
 ;; -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2014-2020 Bozhidar Batsov <bozhidar@batsov.com>
+;; Copyright (C) 2014-2021 Bozhidar Batsov <bozhidar@batsov.dev>
 
 ;; This file is not part of GNU Emacs.
 
@@ -941,6 +941,22 @@ DESCRIPTION is the description of the spec."
 
     ("\\ク"
      (1 2 clojure-character-face)))
+
+  (when-fontifying-it "should handle characters not by themselves"
+    ("[\\,,]"
+     (1 1 nil)
+     (2 3 clojure-character-face)
+     (4 5 nil))
+
+    ("[\\[]"
+     (1 1 nil)
+     (2 3 clojure-character-face)
+     (4 4 nil)))
+
+  (when-fontifying-it "should handle % character literal"
+    ("#(str \\% %)"
+     (7 8 clojure-character-face)
+     (10 10 font-lock-variable-name-face)))
 
   (when-fontifying-it "should handle referred vars"
     ("foo/var"

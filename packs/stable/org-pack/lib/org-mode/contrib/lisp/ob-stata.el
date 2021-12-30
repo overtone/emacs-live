@@ -37,8 +37,8 @@
 ;; --Ista, 07/30/2014
 
 ;;; Requirements:
-;; Stata: http://stata.com
-;; ESS: http://ess.r-project.org
+;; Stata: https://stata.com
+;; ESS: https://ess.r-project.org
 
 ;;; Code:
 (require 'ob)

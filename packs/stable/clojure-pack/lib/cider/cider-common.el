@@ -1,6 +1,6 @@
 ;;; cider-common.el --- Common use functions         -*- lexical-binding: t; -*-
 
-;; Copyright © 2015-2020  Artur Malabarba
+;; Copyright © 2015-2021  Artur Malabarba
 
 ;; Author: Artur Malabarba <bruce.connor.am@gmail.com>
 
@@ -28,7 +28,7 @@
 (require 'cider-compat)
 (require 'nrepl-dict)
 (require 'cider-util)
-(require 'etags) ; for find-tags-marker-ring
+(require 'xref)
 (require 'tramp)
 
 (defcustom cider-prompt-for-symbol nil
@@ -151,7 +151,7 @@ If a symbol, `cider-jump-to' searches for something that looks like the
 symbol's definition in the file.
 If OTHER-WINDOW is non-nil don't reuse current window."
   (with-no-warnings
-    (ring-insert find-tag-marker-ring (point-marker)))
+    (xref-push-marker-stack))
   (if other-window
       (pop-to-buffer buffer 'display-buffer-pop-up-window)
     (pop-to-buffer buffer cider-jump-to-pop-to-buffer-actions))
@@ -277,7 +277,7 @@ otherwise, nil."
 (defcustom cider-path-translations nil
   "Alist of path prefixes to path prefixes.
 Useful to intercept the location of a path in a container (or virtual
-machine) and translate to the oringal location.  If your project is located
+machine) and translate to the original location.  If your project is located
 at \"~/projects/foo\" and the src directory of foo is mounted at \"/src\"
 in the container, the alist would be `((\"/src\" \"~/projects/foo/src\"))."
   :type '(alist :key-type string :value-type string)
@@ -382,7 +382,18 @@ found."
             (t
              (with-current-buffer (generate-new-buffer
                                    (file-name-nondirectory entry))
-               (archive-zip-extract path entry)
+               ;; Use appropriate coding system for bytes read from unzip cmd to
+               ;; display Emacs native newlines regardless of whether the file
+               ;; uses unix LF or dos CRLF line endings.
+               ;; It's important to avoid spurious CR characters, which may
+               ;; appear as `^M', because they can confuse clojure-mode's symbol
+               ;; detection, e.g. `clojure-find-ns', and break `cider-find-var'.
+               ;; `clojure-find-ns' uses Emacs' (thing-at-point 'symbol) as
+               ;; part of identifying a file's namespace, and when a file
+               ;; isn't decoded properly, namespaces can be reported as
+               ;; `my.lib^M' which `cider-find-var' won't know what to do with.
+               (let ((coding-system-for-read 'prefer-utf-8))
+                 (archive-zip-extract path entry))
                (set-visited-file-name name)
                (setq-local default-directory (file-name-directory path))
                (setq-local buffer-read-only t)

@@ -1,12 +1,14 @@
 ;;; magit-files.el --- finding files  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2010-2020  The Magit Project Contributors
+;; Copyright (C) 2010-2021  The Magit Project Contributors
 ;;
 ;; You should have received a copy of the AUTHORS.md file which
 ;; lists all contributors.  If not, see http://magit.vc/authors.
 
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
 ;; Maintainer: Jonas Bernoulli <jonas@bernoul.li>
+
+;; SPDX-License-Identifier: GPL-3.0-or-later
 
 ;; Magit is free software; you can redistribute it and/or modify it
 ;; under the terms of the GNU General Public License as published by
@@ -29,9 +31,6 @@
 ;; modes.
 
 ;;; Code:
-
-(eval-when-compile
-  (require 'subr-x))
 
 (require 'magit)
 
@@ -206,21 +205,25 @@ is done using `magit-find-index-noselect'."
     (unless (equal magit-buffer-refname "{index}")
       (user-error "%s isn't visiting the index" file))
     (if (y-or-n-p (format "Update index with contents of %s" (buffer-name)))
-        (let ((index (make-temp-file "index"))
+        (let ((index (make-temp-name (magit-git-dir "magit-update-index-")))
               (buffer (current-buffer)))
           (when magit-wip-before-change-mode
             (magit-wip-commit-before-change (list file) " before un-/stage"))
-          (let ((coding-system-for-write buffer-file-coding-system))
-            (with-temp-file index
-              (insert-buffer-substring buffer)))
-          (magit-with-toplevel
-            (magit-call-git "update-index" "--cacheinfo"
-                            (substring (magit-git-string "ls-files" "-s" file)
-                                       0 6)
-                            (magit-git-string "hash-object" "-t" "blob" "-w"
-                                              (concat "--path=" file)
-                                              "--" index)
-                            file))
+          (unwind-protect
+              (progn
+                (let ((coding-system-for-write buffer-file-coding-system))
+                  (with-temp-file index
+                    (insert-buffer-substring buffer)))
+                (magit-with-toplevel
+                  (magit-call-git
+                   "update-index" "--cacheinfo"
+                   (substring (magit-git-string "ls-files" "-s" file)
+                              0 6)
+                   (magit-git-string "hash-object" "-t" "blob" "-w"
+                                     (concat "--path=" file)
+                                     "--" (magit-convert-filename-for-git index))
+                   file)))
+            (ignore-errors (delete-file index)))
           (set-buffer-modified-p nil)
           (when magit-wip-after-apply-mode
             (magit-wip-commit-after-apply (list file) " after un-/stage")))
@@ -248,7 +251,7 @@ reading the FILENAME."
   (find-file filename wildcards))
 
 (defun magit-find-git-config-file-other-window (filename &optional wildcards)
-  "Edit a file located in the current repository's git directory, in another window.
+  "Edit a file located in the current repo's git directory, in another window.
 
 When \".git\", located at the root of the working tree, is a
 regular file, then that makes it cumbersome to open a file
@@ -264,7 +267,7 @@ directory, while reading the FILENAME."
   (find-file-other-window filename wildcards))
 
 (defun magit-find-git-config-file-other-frame (filename &optional wildcards)
-  "Edit a file located in the current repository's git directory, in another frame.
+  "Edit a file located in the current repo's git directory, in another frame.
 
 When \".git\", located at the root of the working tree, is a
 regular file, then that makes it cumbersome to open a file
@@ -297,7 +300,8 @@ to `magit-dispatch'."
     ("g" "Status"     magit-status-here)]
    [("L" "Log..."     magit-log)
     ("l" "Log"        magit-log-buffer-file)
-    ("t" "Trace"      magit-log-trace-definition)]
+    ("t" "Trace"      magit-log-trace-definition)
+    (7 "M" "Merged"   magit-log-merged)]
    [("B" "Blame..."   magit-blame)
     ("b" "Blame"      magit-blame-addition)
     ("r" "...removal" magit-blame-removal)
@@ -314,7 +318,7 @@ to `magit-dispatch'."
     (5 "C-c c" "Checkout file" magit-file-checkout)]]
   (interactive)
   (transient-setup
-   (if (or buffer-file-name magit-buffer-file-name)
+   (if (magit-file-relative-name)
        'magit-file-dispatch
      'magit-dispatch)))
 

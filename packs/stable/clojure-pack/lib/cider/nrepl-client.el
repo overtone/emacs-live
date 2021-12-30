@@ -1,11 +1,11 @@
 ;;; nrepl-client.el --- Client for Clojure nREPL -*- lexical-binding: t -*-
 
 ;; Copyright © 2012-2013 Tim King, Phil Hagelberg, Bozhidar Batsov
-;; Copyright © 2013-2020 Bozhidar Batsov, Artur Malabarba and CIDER contributors
+;; Copyright © 2013-2021 Bozhidar Batsov, Artur Malabarba and CIDER contributors
 ;;
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Phil Hagelberg <technomancy@gmail.com>
-;;         Bozhidar Batsov <bozhidar@batsov.com>
+;;         Bozhidar Batsov <bozhidar@batsov.dev>
 ;;         Artur Malabarba <bruce.connor.am@gmail.com>
 ;;         Hugo Duncan <hugo@hugoduncan.org>
 ;;         Steve Purcell <steve@sanityinc.com>
@@ -39,7 +39,7 @@
 ;; The nREPL communication process can be broadly represented as follows:
 ;;
 ;;    1) The server process is started as an Emacs subprocess (usually by
-;;       `cider-jack-in', which in turn fires up leiningen or boot).  Note that
+;;       `cider-jack-in', which in turn fires up an nREPL server).  Note that
 ;;       if a connection was established using `cider-connect' there won't be
 ;;       a server process.
 ;;
@@ -362,6 +362,11 @@ STACK is as in `nrepl--bdecode-1'.  Return a cons (INFO . STACK)."
             stack (cdr istack)))
     istack))
 
+(defun nrepl--ensure-fundamental-mode ()
+  "Enable `fundamental-mode' if it is not enabled already."
+  (when (not (eq 'fundamental-mode major-mode))
+    (fundamental-mode)))
+
 (defun nrepl-bdecode (string-q &optional response-q)
   "Decode STRING-Q and place the results into RESPONSE-Q.
 STRING-Q is either a queue of strings or a string.  RESPONSE-Q is a queue of
@@ -374,7 +379,10 @@ decoded.  RESPONSE-Q is the original queue with successfully decoded messages
 enqueued and with slot STUB containing a nested stack of an incompletely
 decoded message or nil if the strings were completely decoded."
   (with-current-buffer (get-buffer-create " *nrepl-decoding*")
-    (fundamental-mode)
+    ;; Don't needlessly call `fundamental-mode', to prevent needlessly firing
+    ;; hooks. This fixes an issue with evil-mode where the cursor loses its
+    ;; correct color.
+    (nrepl--ensure-fundamental-mode)
     (erase-buffer)
     (if (queue-p string-q)
         (while (queue-head string-q)
@@ -482,6 +490,26 @@ and kill the process buffer."
 
 
 ;;; Network
+
+(defun nrepl--unix-connect (socket-file &optional no-error)
+  "If SOCKET-FILE is given, try to `make-network-process'.
+If NO-ERROR is non-nil, show messages instead of throwing an error."
+  (if (not socket-file)
+      (unless no-error
+        (error "[nREPL] Socket file not provided"))
+    (message "[nREPL] Establishing unix socket connection to %s ..." socket-file)
+    (condition-case nil
+        (prog1 (list :proc (make-network-process :name "nrepl-connection" :buffer nil
+                                                 :family 'local :service socket-file)
+                     :host "local-unix-domain-socket"
+                     :port socket-file
+                     :socket-file socket-file)
+          (message "[nREPL] Unix socket connection to %s established" socket-file))
+      (error (let ((msg (format "[nREPL] Unix socket connection to %s failed" socket-file)))
+               (if no-error
+                   (message msg)
+                 (error msg))
+               nil)))))
 
 (defun nrepl-connect (host port)
   "Connect to the nREPL server identified by HOST and PORT.
@@ -621,14 +649,16 @@ Do not kill the server if there is a REPL connected to that server."
                            (buffer-list)))
         (nrepl-kill-server-buffer server-buf)))))
 
-(defun nrepl-start-client-process (&optional host port server-proc buffer-builder)
-  "Create new client process identified by HOST and PORT.
-In remote buffers, HOST and PORT are taken from the current tramp
-connection.  SERVER-PROC must be a running nREPL server process within
-Emacs.  BUFFER-BUILDER is a function of one argument (endpoint returned by
-`nrepl-connect') which returns a client buffer.  Return the newly created
-client process."
-  (let* ((endpoint (nrepl-connect host port))
+(defun nrepl-start-client-process (&optional host port server-proc buffer-builder socket-file)
+  "Create new client process identified by either HOST and PORT or SOCKET-FILE.
+If SOCKET-FILE is non-nil, it takes precedence.  In remote buffers, HOST
+and PORT are taken from the current tramp connection.  SERVER-PROC must be
+a running nREPL server process within Emacs.  BUFFER-BUILDER is a function
+of one argument (endpoint returned by `nrepl-connect') which returns a
+client buffer.  Return the newly created client process."
+  (let* ((endpoint (if socket-file
+                       (nrepl--unix-connect (expand-file-name socket-file))
+                     (nrepl-connect host port)))
          (client-proc (plist-get endpoint :proc))
          (builder (or buffer-builder (error "`buffer-builder' must be provided")))
          (client-buf (funcall builder endpoint)))
@@ -1035,6 +1065,20 @@ been determined."
                (propertize cmd 'face 'font-lock-keyword-face))
       serv-proc)))
 
+(defconst nrepl-listening-address-regexp
+  (rx (or
+       ;; standard
+       (and "nREPL server started on port " (group-n 1 (+ (any "0-9"))))
+       ;; babashka
+       (and "Started nREPL server at "
+            (group-n 2 (+? any)) ":" (group-n 1 (+ (any "0-9"))))))
+  "A regexp to search an nREPL's stdout for the address it is listening on.
+
+If it matches, the address components can be extracted using the following
+match groups:
+1  for the port, and
+2  for the host (babashka only).")
+
 (defun nrepl-server-filter (process output)
   "Process nREPL server output from PROCESS contained in OUTPUT."
   ;; In Windows this can be false:
@@ -1054,14 +1098,23 @@ been determined."
               (set-window-point win (point)))))
         ;; detect the port the server is listening on from its output
         (when (and (null nrepl-endpoint)
-                   (string-match "nREPL server started on port \\([0-9]+\\)" output))
-          (let ((port (string-to-number (match-string 1 output))))
-            (setq nrepl-endpoint (list :host (or (file-remote-p default-directory 'host)
-                                                 "localhost")
+                   (string-match nrepl-listening-address-regexp output))
+          (let ((host (or (match-string 2 output)
+                          (file-remote-p default-directory 'host)
+                          "localhost"))
+                (port (string-to-number (match-string 1 output))))
+            (setq nrepl-endpoint (list :host host
                                        :port port))
             (message "[nREPL] server started on %s" port)
             (when nrepl-on-port-callback
               (funcall nrepl-on-port-callback (process-buffer process)))))))))
+
+(defmacro emacs-bug-46284/when-27.1-windows-nt (&rest body)
+  "Only evaluate BODY when Emacs bug #46284 has been detected."
+  (when (and (eq system-type 'windows-nt)
+             (string= emacs-version "27.1"))
+    (cons 'progn body)))
+
 
 (declare-function cider--close-connection "cider-connection")
 (defun nrepl-server-sentinel (process event)
@@ -1075,6 +1128,19 @@ been determined."
                       (with-current-buffer server-buffer
                         (buffer-substring (point-min) (point-max)))
                     "")))
+    (emacs-bug-46284/when-27.1-windows-nt
+     ;; There is a bug in emacs 27.1 (since fixed) that sets all EVENT
+     ;; descriptions for signals to "unknown signal". We correct this by
+     ;; resetting it back to its canonical value.
+     (when (eq (process-status process) 'signal)
+       (cl-case (process-exit-status process)
+         ;; SIGHUP==1 emacs nt/inc/ms-w32.h
+         (1 (setq event "Hangup"))
+         ;; SIGINT==2 x86_64-w64-mingw32/include/signal.h
+         (2 (setq event "Interrupt"))
+         ;; SIGKILL==9 emacs nt/inc/ms-w32.h
+         (9 (setq event "Killed")))))
+
     (when server-buffer
       (kill-buffer server-buffer))
     (cond
@@ -1259,7 +1325,7 @@ FOREGROUND and BUTTON are as in `nrepl-log-pp-object'."
                (name-lengths (seq-map (lambda (pair) (length (car pair))) sorted-pairs))
                (longest-name (seq-max name-lengths))
                ;; Special entries are displayed first
-               (specialq (lambda (pair) (seq-contains-p '("id" "op" "session" "time-stamp") (car pair))))
+               (specialq (lambda (pair) (member (car pair) '("id" "op" "session" "time-stamp"))))
                (special-pairs (seq-filter specialq sorted-pairs))
                (not-special-pairs (seq-remove specialq sorted-pairs))
                (all-pairs (seq-concatenate 'list special-pairs not-special-pairs))
@@ -1332,7 +1398,7 @@ The default buffer name is *nrepl-error*."
       (let ((buffer (get-buffer-create nrepl-error-buffer-name)))
         (with-current-buffer buffer
           (buffer-disable-undo)
-          (fundamental-mode)
+          (nrepl--ensure-fundamental-mode)
           buffer))))
 
 (defun nrepl-log-error (msg)

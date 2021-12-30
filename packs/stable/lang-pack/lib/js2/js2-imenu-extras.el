@@ -35,6 +35,10 @@
 (require 'cl-lib)
 (require 'js2-mode)
 
+(eval-when-compile
+  (when (<= emacs-major-version 26)
+    (require 'subr-x)))
+
 (defvar js2-imenu-extension-styles
   `((:framework jquery
      :call-re   "\\_<\\(?:jQuery\\|\\$\\|_\\)\\.extend\\s-*("
@@ -59,6 +63,14 @@
     (:framework react
      :call-re "\\_<React\\.createClass\\s-*("
      :recorder js2-imenu-record-react-class)
+
+    (:framework mocha
+     :call-re ,(rx line-start
+                   (* (syntax whitespace))
+                   (or "describe" "fdescribe" "describe.only")
+                   (* (syntax whitespace))
+                   "(")
+     :recorder js2-imenu-record-mocha-describe)
 
     (:framework sencha
      :call-re "^\\s-*Ext\\.define\\s-*("
@@ -110,6 +122,21 @@ prefix any functions defined inside the IIFE with the module name."
   "When non-nil, split string identifiers on dots.
 Currently used for jQuery widgets, Dojo and Enyo declarations."
   :type 'boolean
+  :group 'js2-imenu)
+
+(defcustom js2-imenu-mocha-describe-node-names '("describe" "describe.only" "fdescribe")
+  "List of strings starting a describe() node."
+  :type '(repeat string)
+  :group 'js2-imenu)
+
+(defcustom js2-imenu-mocha-it-node-names '("it" "it.only" "fit")
+  "List of strings starting a it() node."
+  :type '(repeat string)
+  :group 'js2-imenu)
+
+(defcustom js2-imenu-mocha-hook-node-names '("beforeEach" "afterEach" "beforeAll" "afterAll")
+  "List of strings starting a hook node (e.g., before and after hooks)."
+  :type '(repeat string)
   :group 'js2-imenu)
 
 ;;;###autoload
@@ -220,6 +247,151 @@ Currently used for jQuery widgets, Dojo and Enyo declarations."
                                        (split-string name-value "\\." t)
                                      (list name-value))
                                    (js2-node-abs-pos methods))))))
+
+(defun js2-imenu-record-mocha-describe ()
+  "Populate `js2-imenu-recorder' with mocha-like describe/it/beforeEach/… nodes."
+  (let ((node (js2-node-at-point (1- (point)))))
+    (when (js2-imenu-extras--mocha-top-level-describe-p node)
+      (js2-imenu-extras--mocha-visit-node node (list)))))
+
+(defun js2-imenu-extras--mocha-visit-node (node qname)
+  "Search NODE and its children for mocha test blocks.
+
+If mocha test blocks are found (e.g., a describe() or it() block)
+they are added to `js2-imenu-recorder' with QNAME as prefix.
+
+QNAME is a list of nodes representing the qualified name of
+NODE's parent.  If NODE has no parent, QNAME is the empty list.
+The last item of QNAME is NODE's parent name while the item
+before that is NODE's grandparent name etc."
+  (js2-visit-ast
+   node
+   (lambda (child end-p)
+     (when (not end-p)
+       (js2-imenu-extras--mocha-check-unknown-node child qname)))))
+
+(defun js2-imenu-extras--mocha-check-unknown-node (node qname)
+  "If NODE is a mocha test block, populate `js2-imenu-recorder'.
+
+QNAME is the same as described in
+`js2-imenu-extras--mocha-visit-node'."
+  (cond
+   ((js2-imenu-extras--mocha-describe-node-p node)
+    (progn
+      (js2-imenu-extras--mocha-visit-describe-node node qname)
+      nil))
+   ((js2-imenu-extras--mocha-it-node-p node)
+    (progn
+      (js2-imenu-extras--mocha-visit-it-node node qname)
+      nil))
+   ((js2-imenu-extras--mocha-before-after-node-p node)
+    (progn
+      (js2-imenu-extras--mocha-visit-before-after-node node qname)
+      nil))
+   ((js2-imenu-extras--mocha-named-function-node-p node)
+    (progn
+      (js2-imenu-extras--mocha-visit-named-function-node node qname)
+      nil))
+   (t t)))
+
+(defun js2-imenu-extras--mocha-top-level-describe-p (node)
+  "Return non-nil if NODE is a top-level mocha describe() block.
+
+A top-level block is one which isn't included in another mocha
+describe() block."
+  (and (js2-imenu-extras--mocha-describe-node-p node)
+       (not (js2-imenu-extras--mocha-is-or-within-describe-block-p (js2-node-parent node)))))
+
+(defun js2-imenu-extras--mocha-within-describe-block-p (node)
+  "Return non-nil if NODE is within a mocha describe() block."
+  (js2-imenu-extras--mocha-is-or-within-describe-block-p (js2-node-parent node)))
+
+(defun js2-imenu-extras--mocha-is-or-within-describe-block-p (node)
+  "Return non-nil if NODE is a or within a mocha describe() block."
+  (when node
+    (or (js2-imenu-extras--mocha-describe-node-p node)
+        (js2-imenu-extras--mocha-within-describe-block-p node))))
+
+(defun js2-imenu-extras--mocha-describe-node-p (node)
+  "Return non-nil if NODE is a mocha describe() block."
+  (when-let ((name (js2-imenu-extras--call-target-name node)))
+    (member name js2-imenu-mocha-describe-node-names)))
+
+(defun js2-imenu-extras--mocha-it-node-p (node)
+  "Return non-nil if NODE is a mocha it() block."
+  (when-let ((name (js2-imenu-extras--call-target-name node)))
+    (member name js2-imenu-mocha-it-node-names)))
+
+(defun js2-imenu-extras--mocha-before-after-node-p (node)
+  "Return non-nil if NODE is a `{before,after}{Each,All}' block."
+  (when-let ((name (js2-imenu-extras--call-target-name node)))
+    (member name js2-imenu-mocha-hook-node-names)))
+
+(defun js2-imenu-extras--mocha-named-function-node-p (node)
+  "Return non-nil if NODE is a function definition."
+  (and (js2-function-node-p node)
+       (js2-function-name node)))
+
+(defun js2-imenu-extras--mocha-visit-describe-node (node qname)
+  "Record NODE, a mocha describe() block, in imenu.
+Also search and record other mocha blocks within NODE's body.
+
+QNAME is the same as described in
+`js2-imenu-extras--mocha-visit-node'."
+  (let* ((args (js2-call-node-args node))
+         (name (cl-first args))
+         (qname (append qname (list name)))
+         (body (car (last args)))
+         (position (js2-node-abs-pos node)))
+    (js2-record-imenu-entry body qname position)
+    (js2-imenu-extras--mocha-visit-node body qname)))
+
+(defun js2-imenu-extras--mocha-visit-it-node (node qname)
+  "Record NODE, a mocha it() block, in imenu.
+
+QNAME is the same as described in
+`js2-imenu-extras--mocha-visit-node'."
+  (let* ((args (js2-call-node-args node))
+         (name (cl-first args))
+         (qname (append qname (list name)))
+         (body (car (last args)))
+         (position (js2-node-abs-pos node)))
+    (js2-record-imenu-entry body qname position)))
+
+(defun js2-imenu-extras--mocha-visit-before-after-node (node qname)
+  "Record NODE, a mocha {before,after}{Each,All}() block, in imenu.
+
+QNAME is the same as described in
+`js2-imenu-extras--mocha-visit-node'."
+  (let* ((args (js2-call-node-args node))
+         (qname (append qname (list (js2-imenu-extras--call-target-name node))))
+         (body (car (last args)))
+         (position (js2-node-abs-pos node)))
+    (js2-record-imenu-entry body qname position)))
+
+(defun js2-imenu-extras--mocha-visit-named-function-node (node qname)
+  "Record NODE, a function declaration, in imenu.
+
+QNAME is the same as described in
+`js2-imenu-extras--mocha-visit-node'."
+  (let* ((qname (append qname (list (js2-function-name node))))
+         (position (js2-node-abs-pos node)))
+    (js2-record-imenu-entry node qname position)))
+
+(defun js2-imenu-extras--call-target-name (node)
+  "Return the function name, as string, called by NODE.
+If node is not a function call, return nil."
+  (when (js2-call-node-p node)
+    (js2-imenu-extras--string-content (js2-call-node-target node))))
+
+(defun js2-imenu-extras--string-content (node)
+  "Return a string representing the value of NODE."
+  (if (js2-string-node-p node)
+      (js2-string-node-value node)
+    (let ((start (js2-node-abs-pos node)))
+      (buffer-substring-no-properties
+       start
+       (+ start (js2-node-len node))))))
 
 (defun js2-imenu-walk-ast ()
   (js2-visit-ast

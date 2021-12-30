@@ -1,6 +1,6 @@
 ;;; git-rebase.el --- Edit Git rebase files  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2010-2020  The Magit Project Contributors
+;; Copyright (C) 2010-2021  The Magit Project Contributors
 ;;
 ;; You should have received a copy of the AUTHORS.md file which
 ;; lists all contributors.  If not, see http://magit.vc/authors.
@@ -8,7 +8,7 @@
 ;; Author: Phil Jackson <phil@shellarchive.co.uk>
 ;; Maintainer: Jonas Bernoulli <jonas@bernoul.li>
 
-;; This file is not part of GNU Emacs.
+;; SPDX-License-Identifier: GPL-3.0-or-later
 
 ;; This file is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -74,21 +74,13 @@
 
 ;;; Code:
 
-(require 'dash)
+(require 'magit)
+
 (require 'easymenu)
 (require 'server)
 (require 'with-editor)
-(require 'magit)
 
-(and (require 'async-bytecomp nil t)
-     (let ((pkgs (bound-and-true-p async-bytecomp-allowed-packages)))
-       (if (consp pkgs)
-           (cl-intersection '(all magit) pkgs)
-         (memq pkgs '(all t))))
-     (fboundp 'async-bytecomp-package-mode)
-     (async-bytecomp-package-mode 1))
-
-(eval-when-compile (require 'recentf))
+(defvar recentf-exclude)
 
 ;;; Options
 ;;;; Variables
@@ -120,32 +112,37 @@
   :group 'faces
   :group 'git-rebase)
 
-(defface git-rebase-hash '((t (:inherit magit-hash)))
+(defface git-rebase-hash '((t :inherit magit-hash))
   "Face for commit hashes."
   :group 'git-rebase-faces)
 
-(defface git-rebase-label '((t (:inherit magit-refname)))
+(defface git-rebase-label '((t :inherit magit-refname))
   "Face for labels in label, merge, and reset lines."
   :group 'git-rebase-faces)
 
-(defface git-rebase-description nil
+(defface git-rebase-description '((t nil))
   "Face for commit descriptions."
   :group 'git-rebase-faces)
 
+(defface git-rebase-action
+  '((t :inherit font-lock-keyword-face))
+  "Face for action keywords."
+  :group 'git-rebase-faces)
+
 (defface git-rebase-killed-action
-  '((t (:inherit font-lock-comment-face :strike-through t)))
+  '((t :inherit font-lock-comment-face :strike-through t))
   "Face for commented commit action lines."
   :group 'git-rebase-faces)
 
 (defface git-rebase-comment-hash
-  '((t (:inherit git-rebase-hash :weight bold)))
+  '((t :inherit git-rebase-hash :weight bold))
   "Face for commit hashes in commit message comments."
   :group 'git-rebase-faces)
 
 (defface git-rebase-comment-heading
   '((t :inherit font-lock-keyword-face))
   "Face for headings in rebase message comments."
-  :group 'git-commit-faces)
+  :group 'git-rebase-faces)
 
 ;;; Keymaps
 
@@ -451,7 +448,7 @@ current line."
     (when bounds
       (magit-section-make-overlay (car bounds) (cadr bounds)
                                   'magit-section-heading-selection))
-    (if (and bounds (not magit-keep-region-overlay))
+    (if (and bounds (not magit-section-keep-region-overlay))
         (funcall (default-value 'redisplay-unhighlight-region-function) rol)
       (funcall (default-value 'redisplay-highlight-region-function)
                start end window rol))))
@@ -739,25 +736,25 @@ running 'man git-rebase' at the command line) for details."
 (defun git-rebase-mode-font-lock-keywords ()
   "Font lock keywords for Git-Rebase mode."
   `((,(concat "^" (cdr (assq 'commit git-rebase-line-regexps)))
-     (1 'font-lock-keyword-face)
+     (1 'git-rebase-action)
      (3 'git-rebase-hash)
      (4 'git-rebase-description))
     (,(concat "^" (cdr (assq 'exec git-rebase-line-regexps)))
-     (1 'font-lock-keyword-face)
+     (1 'git-rebase-action)
      (3 'git-rebase-description))
     (,(concat "^" (cdr (assq 'bare git-rebase-line-regexps)))
-     (1 'font-lock-keyword-face))
+     (1 'git-rebase-action))
     (,(concat "^" (cdr (assq 'label git-rebase-line-regexps)))
-     (1 'font-lock-keyword-face)
+     (1 'git-rebase-action)
      (3 'git-rebase-label)
      (4 'font-lock-comment-face))
     ("^\\(m\\(?:erge\\)?\\) -[Cc] \\([^ \n]+\\) \\([^ \n]+\\)\\( #.*\\)?"
-     (1 'font-lock-keyword-face)
+     (1 'git-rebase-action)
      (2 'git-rebase-hash)
      (3 'git-rebase-label)
      (4 'font-lock-comment-face))
     ("^\\(m\\(?:erge\\)?\\) \\([^ \n]+\\)"
-     (1 'font-lock-keyword-face)
+     (1 'git-rebase-action)
      (2 'git-rebase-label))
     (,(concat git-rebase-comment-re " *"
               (cdr (assq 'commit git-rebase-line-regexps)))
@@ -826,8 +823,8 @@ By default, this is the same except for the \"pick\" command."
 (add-to-list 'with-editor-server-window-alist
              (cons git-rebase-filename-regexp 'switch-to-buffer))
 
-(eval-after-load 'recentf
-  '(add-to-list 'recentf-exclude git-rebase-filename-regexp))
+(with-eval-after-load 'recentf
+  (add-to-list 'recentf-exclude git-rebase-filename-regexp))
 
 (add-to-list 'with-editor-file-name-history-exclude git-rebase-filename-regexp)
 

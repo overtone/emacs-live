@@ -1,6 +1,6 @@
 ;;; org-indent.el --- Dynamic indentation for Org    -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2009-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2021 Free Software Foundation, Inc.
 ;;
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -85,15 +85,13 @@ it may be prettier to customize the `org-indent' face."
   :type 'character)
 
 (defcustom org-indent-mode-turns-off-org-adapt-indentation t
-  "Non-nil means setting the variable `org-indent-mode' will \
-turn off indentation adaptation.
+  "Non-nil means setting `org-indent-mode' will turn off indentation adaptation.
 For details see the variable `org-adapt-indentation'."
   :group 'org-indent
   :type 'boolean)
 
 (defcustom org-indent-mode-turns-on-hiding-stars t
-  "Non-nil means setting the variable `org-indent-mode' will \
-turn on `org-hide-leading-stars'."
+  "Non-nil means setting `org-indent-mode' will turn on `org-hide-leading-stars'."
   :group 'org-indent
   :type 'boolean)
 

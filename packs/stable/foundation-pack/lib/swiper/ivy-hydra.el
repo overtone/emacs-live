@@ -1,11 +1,11 @@
 ;;; ivy-hydra.el --- Additional key bindings for Ivy  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2015-2019  Free Software Foundation, Inc.
+;; Copyright (C) 2015-2021 Free Software Foundation, Inc.
 
 ;; Author: Oleh Krehel <ohwoeowho@gmail.com>
 ;; URL: https://github.com/abo-abo/swiper
-;; Version: 0.13.0
-;; Package-Requires: ((emacs "24.5") (ivy "0.13.0") (hydra "0.15.0"))
+;; Version: 0.13.5
+;; Package-Requires: ((emacs "24.5") (ivy "0.13.4") (hydra "0.14.0"))
 ;; Keywords: convenience
 
 ;; This file is part of GNU Emacs.

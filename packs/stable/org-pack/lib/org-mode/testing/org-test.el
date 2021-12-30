@@ -7,7 +7,7 @@
 ;;     David Maus, Brunswick, Germany, dmaus ictsoc de
 
 ;; Released under the GNU General Public License version 3
-;; see: http://www.gnu.org/licenses/gpl-3.0.html
+;; see: https://www.gnu.org/licenses/gpl-3.0.html
 
 ;; Definition of `special-mode' copied from Emacs23's simple.el to be
 ;; provide a testing environment for Emacs22.
@@ -286,7 +286,15 @@ setting `pp-escape-newlines' to nil manually."
 
 
 ;;; Navigation Functions
-(when (featurep 'jump)
+
+(defmacro org--compile-when (test &rest body)
+  (declare (debug t) (indent 1))
+  (let ((exp `(progn ,@body)))
+    (if (eval test t)
+        exp
+      `(when ,test (eval exp t)))))
+
+(org--compile-when (featurep 'jump)
   (defjump org-test-jump
     (("lisp/\\1.el" . "testing/lisp/test-\\1.el")
      ("lisp/\\1.el" . "testing/lisp/\\1.el/test.*.el")
@@ -305,7 +313,7 @@ setting `pp-escape-newlines' to nil manually."
 	 " " user-full-name "\n"
 	 ";; Authors: " user-full-name "\n\n"
 	 ";; Released under the GNU General Public License version 3\n"
-	 ";; see: http://www.gnu.org/licenses/gpl-3.0.html\n\n"
+	 ";; see: https://www.gnu.org/licenses/gpl-3.0.html\n\n"
 	 ";;;; Comments:\n\n"
 	 ";; Template test file for Org tests\n\n"
 	 "\n"
@@ -323,7 +331,8 @@ setting `pp-escape-newlines' to nil manually."
 	 "  (should-not nil)\n"
 	 "  (should-error (error \"errr...\")))\n\n\n"
 	 "(provide '" name ")\n\n"
-	 ";;; " file-name " ends here\n") full-path))
+	 ";;; " file-name " ends here\n")
+	full-path))
     (lambda () ((lambda (res) (if (listp res) (car res) res)) (which-function)))))
 
 (define-key emacs-lisp-mode-map "\M-\C-j" 'org-test-jump)

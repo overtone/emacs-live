@@ -1,6 +1,6 @@
 ;;; org-id.el --- Global identifiers for Org entries -*- lexical-binding: t; -*-
 ;;
-;; Copyright (C) 2008-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2008-2021 Free Software Foundation, Inc.
 ;;
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -693,21 +693,27 @@ optional argument MARKERP, return the position as a new marker."
 
 ;;;###autoload
 (defun org-id-store-link ()
-  "Store a link to the current entry, using its ID."
+  "Store a link to the current entry, using its ID.
+
+If before first heading store first title-keyword as description
+or filename if no title."
   (interactive)
   (when (and (buffer-file-name (buffer-base-buffer)) (derived-mode-p 'org-mode))
     (let* ((link (concat "id:" (org-id-get-create)))
 	   (case-fold-search nil)
 	   (desc (save-excursion
 		   (org-back-to-heading-or-point-min t)
-		   (or (and (org-before-first-heading-p)
-			    (file-name-nondirectory
-			     (buffer-file-name (buffer-base-buffer))))
-		       (and (looking-at org-complex-heading-regexp)
-			    (if (match-end 4)
-				(match-string 4)
-			      (match-string 0)))
-		       link))))
+                   (cond ((org-before-first-heading-p)
+                          (let ((keywords (org-collect-keywords '("TITLE"))))
+                            (if keywords
+                                (cadr (assoc "TITLE" keywords))
+                              (file-name-nondirectory
+			       (buffer-file-name (buffer-base-buffer))))))
+		         ((looking-at org-complex-heading-regexp)
+			  (if (match-end 4)
+			      (match-string 4)
+			    (match-string 0)))
+                         (t link)))))
       (org-link-store-props :link link :description desc :type "id")
       link)))
 

@@ -1,12 +1,13 @@
 ;;; org.el --- Outline-based notes management and organizer -*- lexical-binding: t; -*-
 
 ;; Carstens outline-mode for keeping track of everything.
-;; Copyright (C) 2004-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2004-2021 Free Software Foundation, Inc.
 ;;
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;; Maintainer: Bastien Guerry <bzg@gnu.org>
 ;; Keywords: outlines, hypermedia, calendar, wp
 ;; Homepage: https://orgmode.org
+;; Package-Requires: ((emacs "24.3"))
 
 ;; Version: 9.5-dev
 
@@ -144,7 +145,6 @@ Stars are put in group 1 and the trimmed body in group 2.")
 (declare-function org-clock-timestamps-down "org-clock" (&optional n))
 (declare-function org-clock-timestamps-up "org-clock" (&optional n))
 (declare-function org-clock-update-time-maybe "org-clock" ())
-(declare-function org-clocking-buffer "org-clock" ())
 (declare-function org-clocktable-shift "org-clock" (dir n))
 (declare-function org-columns-quit "org-colview" ())
 (declare-function org-columns-insert-dblock "org-colview" ())
@@ -1587,7 +1587,7 @@ When this variable is set to t, Org assumes that you write
 outlines by indenting text in each node to align with the
 headline (after the stars).
 
-When this variable is set to 'headline-data, only adapt the
+When this variable is set to `headline-data', only adapt the
 indentation of the data lines right below the headline, such as
 planning/clock lines and property/logbook drawers.
 
@@ -1613,9 +1613,9 @@ time in Emacs."
   :type '(choice
 	  (const :tag "Adapt indentation for all lines" t)
 	  (const :tag "Adapt indentation for headline data lines"
-		 'headline-data)
+		 headline-data)
 	  (const :tag "Do not adapt indentation at all" nil))
-  :safe #'booleanp)
+  :safe (lambda (x) (memq x '(t nil headline-data))))
 
 (defvaralias 'org-special-ctrl-a 'org-special-ctrl-a/e)
 
@@ -1851,7 +1851,7 @@ link types.  The types are:
 bracket   The recommended [[link][description]] or [[link]] links with hiding.
 angle     Links in angular brackets that may contain whitespace like
           <bbdb:Carsten Dominik>.
-plain     Plain links in normal text, no whitespace, like http://google.com.
+plain     Plain links in normal text, no whitespace, like https://gnu.org.
 radio     Text that is matched by a radio target, see manual for details.
 tag       Tag settings in a headline (link to tag search).
 date      Time stamps (link to calendar).
@@ -3828,10 +3828,11 @@ This is needed for font-lock setup.")
   "Marker recording the last clock-in, but the headline position.")
 (defvar org-clock-heading ""
   "The heading of the current clock entry.")
-(defun org-clock-is-active ()
+(defun org-clocking-buffer ()
   "Return the buffer where the clock is currently running.
 Return nil if no clock is running."
   (marker-buffer org-clock-marker))
+(defalias 'org-clock-is-active #'org-clocking-buffer)
 
 (defun org-check-running-clock ()
   "Check if the current buffer contains the running clock.
@@ -4118,7 +4119,8 @@ groups carry important information:
   "Regular expression to match a timestamp time or time range.
 After a match, the following groups carry important information:
 0  the full match
-1  date plus weekday, for back referencing to make sure both times are on the same day
+1  date plus weekday, for back referencing to make sure
+     both times are on the same day
 2  the first time, range or not
 4  the second time, if it is a range.")
 
@@ -4766,8 +4768,8 @@ This is for getting out of special buffers like capture.")
 ;; Other stuff we need.
 (require 'time-date)
 (unless (fboundp 'time-subtract) (defalias 'time-subtract 'subtract-time))
-(require 'easymenu)
-(require 'overlay)
+(when (< emacs-major-version 28)  ; preloaded in Emacs 28
+  (require 'easymenu))
 
 (require 'org-entities)
 (require 'org-faces)
@@ -5500,6 +5502,8 @@ highlighting was done, nil otherwise."
 	(while (and (< (point) limit)
 		    (re-search-forward org-latex-and-related-regexp nil t))
 	  (cond
+           ((>= (match-beginning 0) limit)
+	    (throw 'found nil))
 	   ((cl-some (lambda (f)
 		       (memq f '(org-code org-verbatim underline
 					  org-special-keyword)))
@@ -5532,7 +5536,7 @@ highlighting was done, nil otherwise."
 
 (defun org-restart-font-lock ()
   "Restart `font-lock-mode', to force refontification."
-  (when (and (boundp 'font-lock-mode) font-lock-mode)
+  (when font-lock-mode
     (font-lock-mode -1)
     (font-lock-mode 1)))
 
@@ -5854,7 +5858,7 @@ If TAG is a number, get the corresponding match group."
 
 (defun org-font-lock-add-priority-faces (limit)
   "Add the special priority faces."
-  (while (re-search-forward org-priority-regexp limit t)
+  (while (re-search-forward (concat "^\\*+" org-priority-regexp) limit t)
     (let ((beg (match-beginning 1))
 	  (end (1+ (match-end 2))))
       (add-face-text-property
@@ -7905,7 +7909,7 @@ with the original repeater."
 		"")))			;No time shift
 	 (doshift
 	  (and (org-string-nw-p shift)
-	       (or (string-match "\\`[ \t]*\\([+-]?[0-9]+\\)\\([dwmy]\\)[ \t]*\\'"
+	       (or (string-match "\\`[ \t]*\\([+-]?[0-9]+\\)\\([hdwmy]\\)[ \t]*\\'"
 				 shift)
 		   (user-error "Invalid shift specification %s" shift)))))
     (goto-char end-of-tree)
@@ -7915,6 +7919,7 @@ with the original repeater."
 	   (shift-n (and doshift (string-to-number (match-string 1 shift))))
 	   (shift-what (pcase (and doshift (match-string 2 shift))
 			 (`nil nil)
+			 ("h" 'hour)
 			 ("d" 'day)
 			 ("w" (setq shift-n (* 7 shift-n)) 'day)
 			 ("m" 'month)
@@ -8252,7 +8257,7 @@ function is being called interactively."
 	     ;; The clock marker is lost when using `sort-subr'; mark
 	     ;; the clock with temporary `:org-clock-marker-backup'
 	     ;; text property.
-	     (when (and (eq (org-clock-is-active) (current-buffer))
+	     (when (and (eq (org-clocking-buffer) (current-buffer))
 			(<= start (marker-position org-clock-marker))
 			(>= end (marker-position org-clock-marker)))
 	       (with-silent-modifications
@@ -8765,7 +8770,21 @@ If the file does not exist, throw an error."
 
       (save-window-excursion
 	(message "Running %s...done" cmd)
-	(start-process-shell-command cmd nil cmd)
+        ;; Handlers such as "gio open" and kde-open5 start viewer in background
+        ;; and exit immediately.  Avoid `start-process' since it assumes
+        ;; :connection-type 'pty and kills children processes with SIGHUP
+        ;; when temporary terminal session is finished.
+        (make-process
+         :name "org-open-file" :connection-type 'pipe :noquery t
+         :buffer nil ; use "*Messages*" for debugging
+         :sentinel (lambda (proc event)
+                     (when (and (memq (process-status proc) '(exit signal))
+                                (/= (process-exit-status proc) 0))
+                       (message
+                        "Command %s: %s."
+                        (mapconcat #'identity (process-command proc) " ")
+                        (substring event 0 -1))))
+         :command (list shell-file-name shell-command-switch cmd))
 	(and (boundp 'org-wait) (numberp org-wait) (sit-for org-wait))))
      ((or (stringp cmd)
 	  (eq cmd 'emacs))
@@ -12139,7 +12158,7 @@ Returns the new tags string, or nil to not change the current settings."
 				  fulltable))))
 	 (buf (current-buffer))
 	 (expert (eq org-fast-tag-selection-single-key 'expert))
-	 (buffer-tags nil)
+	 (tab-tags nil)
 	 (fwidth (+ maxlen 3 1 3))
 	 (ncol (/ (- (window-width) 4) fwidth))
 	 (i-face 'org-done)
@@ -12274,16 +12293,21 @@ Returns the new tags string, or nil to not change the current settings."
 		    (setq current nil)
 		    (when exit-after-next (setq exit-after-next 'now)))
 		   ((= c ?\t)
-		    (condition-case nil
-			(setq tg (completing-read
-				  "Tag: "
-				  (or buffer-tags
-				      (with-current-buffer buf
-					(setq buffer-tags
-					      (org-get-buffer-tags))))))
-		      (quit (setq tg "")))
+                    (condition-case nil
+                        (unless tab-tags
+                          (setq tab-tags
+                                (delq nil
+                                      (mapcar (lambda (x)
+                                                (let ((item (car-safe x)))
+                                                  (and (stringp item)
+                                                       (list item))))
+                                              (org--tag-add-to-alist
+                                               (with-current-buffer buf
+                                                 (org-get-buffer-tags))
+                                               table))))))
+                    (setq tg (completing-read "Tag: " tab-tags))
 		    (when (string-match "\\S-" tg)
-		      (cl-pushnew (list tg) buffer-tags :test #'equal)
+		      (cl-pushnew (list tg) tab-tags :test #'equal)
 		      (if (member tg current)
 			  (setq current (delete tg current))
 			(push tg current)))
@@ -20351,7 +20375,7 @@ unless optional argument NO-INHERITANCE is non-nil."
 
 (defun org-point-at-end-of-empty-headline ()
   "If point is at the end of an empty headline, return t, else nil.
-If the heading only contains a TODO keyword, it is still still considered
+If the heading only contains a TODO keyword, it is still considered
 empty."
   (let ((case-fold-search nil))
     (and (looking-at "[ \t]*$")

@@ -59,7 +59,7 @@
 ;;;###autoload
 (define-minor-mode elisp-slime-nav-mode
   "Enable Slime-style navigation of elisp symbols using M-. and M-,"
-  nil " SliNav" elisp-slime-nav-mode-map)
+  :lighter " SliNav" :keymap elisp-slime-nav-mode-map)
 
 ;;;###autoload
 (define-obsolete-function-alias 'turn-on-elisp-slime-nav-mode 'elisp-slime-nav-mode

@@ -18,7 +18,6 @@ sharedir ?= $(PREFIX)/share
 lispdir  ?= $(sharedir)/emacs/site-lisp/magit
 infodir  ?= $(sharedir)/info
 docdir   ?= $(sharedir)/doc/magit
-statsdir ?= $(TOP)/Documentation/stats
 
 CP       ?= install -p -m 644
 MKDIR    ?= install -p -m 755 -d
@@ -33,7 +32,10 @@ INSTALL_INFO     ?= $(shell command -v ginstall-info || printf install-info)
 MAKEINFO         ?= makeinfo
 MANUAL_HTML_ARGS ?= --css-ref /assets/page.css
 
-BUILD_MAGIT_LIBGIT ?= true
+GITSTATS_DIR  ?= $(TOP)docs/stats
+GITSTATS_ARGS ?= -c style=https://magit.vc/assets/stats.css -c max_authors=999
+
+BUILD_MAGIT_LIBGIT ?= false
 
 ## Files #############################################################
 
@@ -92,6 +94,7 @@ ELS += magit-submodule.el
 ELS += magit-subtree.el
 ELS += magit-ediff.el
 ELS += magit-gitignore.el
+ELS += magit-bundle.el
 ELS += magit-extras.el
 ELS += git-rebase.el
 ELS += magit-imenu.el
@@ -105,27 +108,28 @@ ELGS = magit-autoloads.el magit-version.el
 VERSION ?= $(shell \
   test -e $(TOP).git && \
   git describe --tags --abbrev=0 --always | cut -c2-)
+TIMESTAMP = 20211004
 
-ASYNC_VERSION       = 1.9.4
-DASH_VERSION        = 2.17.0
-GIT_COMMIT_VERSION  = 3.0.0
-LIBGIT_VERSION      = 0
-MAGIT_SECTION_VERSION = 3.0.0
-TRANSIENT_VERSION   = 0
-WITH_EDITOR_VERSION = 2.9.2
+DASH_VERSION          = 2.19.1
+GIT_COMMIT_VERSION    = $(VERSION)
+LIBGIT_VERSION        = 0
+MAGIT_VERSION         = $(VERSION)
+MAGIT_LIBGIT_VERSION  = $(VERSION)
+MAGIT_SECTION_VERSION = $(VERSION)
+TRANSIENT_VERSION     = 0.3.6
+WITH_EDITOR_VERSION   = 3.0.5
 
-ASYNC_MELPA_SNAPSHOT       = 20200113
-DASH_MELPA_SNAPSHOT        = 20200524
-GIT_COMMIT_MELPA_SNAPSHOT  = 20200516
-LIBGIT_MELPA_SNAPSHOT      = 0
-MAGIT_SECTION_MELPA_SNAPSHOT = 20200605
-TRANSIENT_MELPA_SNAPSHOT   = 20200601
-WITH_EDITOR_MELPA_SNAPSHOT = 20200522
+DASH_MELPA_SNAPSHOT          = 20210826
+GIT_COMMIT_MELPA_SNAPSHOT    = $(TIMESTAMP)
+LIBGIT_MELPA_SNAPSHOT        = 0
+MAGIT_MELPA_SNAPSHOT         = $(TIMESTAMP)
+MAGIT_LIBGIT_MELPA_SNAPSHOT  = $(TIMESTAMP)
+MAGIT_SECTION_MELPA_SNAPSHOT = $(TIMESTAMP)
+TRANSIENT_MELPA_SNAPSHOT     = 20210920
+WITH_EDITOR_MELPA_SNAPSHOT   = 20211001
 
-EMACS_VERSION = 25.1
-
+EMACS_VERSION        = 25.1
 LIBGIT_EMACS_VERSION = 26.1
-LIBGIT_MAGIT_VERSION = 0
 
 EMACSOLD := $(shell $(BATCH) --eval \
   "(and (version< emacs-version \"$(EMACS_VERSION)\") (princ \"true\"))")
@@ -172,8 +176,12 @@ WITH_EDITOR_DIR ?= $(shell \
   find -L $(ELPA_DIR) -maxdepth 1 -regex '.*/with-editor-[.0-9]*' 2> /dev/null | \
   sort | tail -n 1)
 ifeq "$(WITH_EDITOR_DIR)" ""
-  WITH_EDITOR_DIR = $(TOP)../with-editor
+  WITH_EDITOR_DIR = $(TOP)../with-editor/lisp
 endif
+
+MAGIT_SECTION_DIR ?= $(shell \
+  find -L $(ELPA_DIR) -maxdepth 1 -regex '.*/magit-section-[.0-9]*' 2> /dev/null | \
+  sort | tail -n 1)
 
 SYSTYPE := $(shell $(EMACSBIN) -Q --batch --eval "(princ system-type)")
 ifeq ($(SYSTYPE), windows-nt)
@@ -183,7 +191,7 @@ endif
 LOAD_PATH = -L $(TOP)lisp
 
 # When making changes here, then don't forget to adjust "Makefile",
-# ".travis.yml", ".github/ISSUE_TEMPLATE/bug_report.md",
+# ".github/workflows/test.yml", ".github/ISSUE_TEMPLATE/bug_report.md",
 # `magit-emacs-Q-command' and the "Installing from the Git Repository"
 # info node accordingly.  Also don't forget to "rgrep \b<pkg>\b".
 
@@ -192,11 +200,17 @@ ifdef CYGPATH
   LOAD_PATH += -L $(shell cygpath --mixed $(LIBGIT_DIR))
   LOAD_PATH += -L $(shell cygpath --mixed $(TRANSIENT_DIR))
   LOAD_PATH += -L $(shell cygpath --mixed $(WITH_EDITOR_DIR))
+  ifneq "$(MAGIT_SECTION_DIR)" ""
+    LOAD_PATH += -L $(shell cygpath --mixed $(MAGIT_SECTION_DIR))
+  endif
 else
   LOAD_PATH += -L $(DASH_DIR)
   LOAD_PATH += -L $(LIBGIT_DIR)
   LOAD_PATH += -L $(TRANSIENT_DIR)
   LOAD_PATH += -L $(WITH_EDITOR_DIR)
+  ifneq "$(MAGIT_SECTION_DIR)" ""
+    LOAD_PATH += -L $(MAGIT_SECTION_DIR)
+  endif
 endif
 
 endif # ifndef LOAD_PATH
@@ -204,11 +218,13 @@ endif # ifndef LOAD_PATH
 ifndef ORG_LOAD_PATH
 ORG_LOAD_PATH  = $(LOAD_PATH)
 ORG_LOAD_PATH += -L ../../org/lisp
-ORG_LOAD_PATH += -L ../../org/contrib/lisp
 ORG_LOAD_PATH += -L ../../ox-texinfo+
 endif
 
 ## Publish ###########################################################
+
+DOMAIN      ?= magit.vc
+CFRONT_DIST ?= E2LUHBKU1FBV02
 
 PUBLISH_TARGETS ?= html html-dir pdf epub
 

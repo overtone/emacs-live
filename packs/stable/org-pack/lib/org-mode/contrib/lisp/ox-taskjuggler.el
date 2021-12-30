@@ -1,6 +1,6 @@
 ;;; ox-taskjuggler.el --- TaskJuggler Back-End for Org Export Engine
 ;;
-;; Copyright (C) 2007-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2007-2021 Free Software Foundation, Inc.
 ;;
 ;; Emacs Lisp Archive Entry
 ;; Filename: ox-taskjuggler.el
@@ -23,7 +23,7 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 ;;
@@ -64,7 +64,7 @@
 ;; should end up with something similar to the example by Peter Jones
 ;; in:
 ;;
-;;   http://www.devalot.com/assets/articles/2008/07/project-planning/project-planning.org.
+;;   https://www.devalot.com/assets/articles/2008/07/project-planning/project-planning.org.
 ;;
 ;; Now mark the top node of your tasks with a tag named
 ;; "taskjuggler_project" (or whatever you customized

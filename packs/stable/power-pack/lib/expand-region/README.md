@@ -1,4 +1,9 @@
-# expand-region.el [![Build Status](https://secure.travis-ci.org/magnars/expand-region.el.png)](http://travis-ci.org/magnars/expand-region.el) [![Coverage Status](https://coveralls.io/repos/magnars/expand-region.el/badge.svg?branch=master&service=github)](https://coveralls.io/github/magnars/expand-region.el)
+[![Build Status](https://secure.travis-ci.org/magnars/expand-region.el.png)](http://travis-ci.org/magnars/expand-region.el) 
+[![Coverage Status](https://coveralls.io/repos/magnars/expand-region.el/badge.svg?branch=master&service=github)](https://coveralls.io/github/magnars/expand-region.el)
+[![MELPA](https://melpa.org/packages/expand-region-badge.svg)](https://melpa.org/#/expand-region)
+[![MELPA Stable](https://stable.melpa.org/packages/expand-region-badge.svg)](https://stable.melpa.org/#/expand-region)
+
+# expand-region.el
 
 Expand region increases the selected region by semantic units. Just keep
 pressing the key until it selects what you want.
@@ -48,6 +53,11 @@ I highly recommend installing expand-region through elpa.
 It's available on [MELPA](https://melpa.org/):
 
     M-x package-install expand-region
+
+Via [use-package](https://github.com/jwiegley/use-package):
+
+    (use-package expand-region
+      :bind ("C-=" . er/expand-region))
 
 ## Language support
 

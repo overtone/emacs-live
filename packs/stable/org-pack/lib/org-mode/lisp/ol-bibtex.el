@@ -1,6 +1,6 @@
 ;;; ol-bibtex.el --- Links to BibTeX entries        -*- lexical-binding: t; -*-
 ;;
-;; Copyright (C) 2007-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2007-2021 Free Software Foundation, Inc.
 ;;
 ;; Authors: Bastien Guerry <bzg@gnu.org>
 ;;       Carsten Dominik <carsten dot dominik at gmail dot com>
@@ -88,7 +88,7 @@
 ;;
 ;; - All Bibtex information is taken from the document compiled by
 ;;   Andrew Roberts from the Bibtex manual, available at
-;;   http://www.andy-roberts.net/res/writing/latex/bibentries.pdf
+;;   https://www.andy-roberts.net/res/writing/latex/bibentries.pdf
 ;;
 ;;; History:
 ;;

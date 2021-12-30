@@ -1,10 +1,14 @@
 import sys
-import base64
 import json
 import subprocess
 import traceback
 import os.path
 from functools import wraps
+
+try:
+    from base64 import encodebytes
+except ImportError:
+    from base64 import encodestring as encodebytes
 
 try:
     import ssl
@@ -48,7 +52,7 @@ def get_basic_auth(host):
     if username is None or secret is None:
         return
     basic_auth = ('%s:%s' % (username, secret)).encode('utf-8')
-    basic_auth = base64.encodestring(basic_auth)
+    basic_auth = encodebytes(basic_auth)
     return basic_auth.decode('ascii').replace('\n', '')
 
 
@@ -125,6 +129,8 @@ def hit_url(host, url, data, method):
     cafile = os.path.join(G.BASE_DIR, 'floobits.pem')
     with open(cafile, 'wb') as cert_fd:
         cert_fd.write(cert.CA_CERT.encode('utf-8'))
+    if G.INSECURE_SSL:
+        cafile = None
     return urlopen(r, timeout=10, cafile=cafile)
 
 

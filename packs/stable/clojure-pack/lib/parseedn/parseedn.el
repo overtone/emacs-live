@@ -1,11 +1,11 @@
 ;;; parseedn.el --- Clojure/EDN parser              -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2017-2018  Arne Brasseur
+;; Copyright (C) 2017-2021  Arne Brasseur
 
 ;; Author: Arne Brasseur <arne@arnebrasseur.net>
 ;; Keywords: lisp clojure edn parser
-;; Package-Requires: ((emacs "25") (a "0.1.0alpha4") (parseclj "0.1.0"))
-;; Version: 0.1.0
+;; Package-Requires: ((emacs "26") (parseclj "1.0.6") (map "2"))
+;; Version: 1.0.6
 
 ;; This file is not part of GNU Emacs.
 
@@ -47,18 +47,18 @@
 ;; Note that this is kind of broken, we don't correctly detect if \u or \o forms
 ;; don't have the right forms.
 
-(require 'a)
 (require 'cl-lib)
+(require 'map)
 (require 'parseclj-parser)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Reader
 
 (defvar parseedn-default-tag-readers
-  (a-list 'inst (lambda (s)
-                  (cl-list* 'edn-inst (date-to-time s)))
-          'uuid (lambda (s)
-                  (list 'edn-uuid s)))
+  (list (cons 'inst (lambda (s)
+                      (cl-list* 'edn-inst (date-to-time s))))
+        (cons 'uuid (lambda (s)
+                      (list 'edn-uuid s))))
   "Default reader functions for handling tagged literals in EDN.
 These are the ones defined in the EDN spec, #inst and #uuid.  It
 is not recommended you change this variable, as this globally
@@ -84,27 +84,27 @@ CHILDREN is a collection elisp values to be reduced into an elisp
 sequence.
 OPTIONS is an association list.  See `parseclj-parse' for more information
 on available options."
-  (let ((tag-readers (a-merge parseedn-default-tag-readers (a-get options :tag-readers)))
+  (let ((tag-readers (parseclj-alist-merge parseedn-default-tag-readers (alist-get :tag-readers options)))
         (token-type (parseclj-lex-token-type opening-token)))
     (if (eq token-type :discard)
         stack
       (cons
-       (cl-case token-type
-         (:root children)
-         (:lparen children)
-         (:lbracket (apply #'vector children))
-         (:set (list 'edn-set children))
-         (:lbrace (let* ((kvs (seq-partition children 2))
-                         (hash-map (make-hash-table :test 'equal :size (length kvs))))
-                    (seq-do (lambda (pair)
-                              (puthash (car pair) (cadr pair) hash-map))
-                            kvs)
-                    hash-map))
-         (:tag (let* ((tag (intern (substring (a-get opening-token :form) 1)))
-                      (reader (a-get tag-readers tag :missing)))
-                 (when (eq :missing reader)
-                   (user-error "No reader for tag #%S in %S" tag (a-keys tag-readers)))
-                 (funcall reader (car children)))))
+       (cond
+        ((eq :root token-type) children)
+        ((eq :lparen token-type) children)
+        ((eq :lbracket token-type) (apply #'vector children))
+        ((eq :set token-type) (list 'edn-set children))
+        ((eq :lbrace token-type) (let* ((kvs (seq-partition children 2))
+                                        (hash-map (make-hash-table :test 'equal :size (length kvs))))
+                                   (seq-do (lambda (pair)
+                                             (puthash (car pair) (cadr pair) hash-map))
+                                           kvs)
+                                   hash-map))
+        ((eq :tag token-type) (let* ((tag (intern (substring (alist-get :form opening-token) 1)))
+                                     (reader (alist-get tag tag-readers :missing)))
+                                (when (eq :missing reader)
+                                  (user-error "No reader for tag #%S in %S" tag (map-keys tag-readers)))
+                                (funcall reader (car children)))))
        stack))))
 
 (defun parseedn-read (&optional tag-readers)
@@ -116,7 +116,7 @@ identifying *tags*, and values are tag handler functions that receive one
 argument: *the tagged element*, and specify how to interpret it."
   (parseclj-parser #'parseedn-reduce-leaf
                    #'parseedn-reduce-branch
-                   (a-list :tag-readers tag-readers)))
+                   (list (cons :tag-readers tag-readers))))
 
 (defun parseedn-read-str (s &optional tag-readers)
   "Parse string S as EDN.
@@ -142,11 +142,12 @@ TAG-READERS is an optional association list.  For more information, see
       (parseedn-print-seq next))))
 
 (defun parseedn-print-hash-or-alist (map &optional ks)
-  "Insert hash table MAP or elisp a-list as an EDN map into the current buffer."
-  (let ((keys (or ks (a-keys map))))
+  "Insert hash table MAP or elisp alist as an EDN map into the current buffer."
+  (let ((alist? (listp map))
+        (keys (or ks (map-keys map))))
     (parseedn-print (car keys))
     (insert " ")
-    (parseedn-print (a-get map (car keys)))
+    (parseedn-print (map-elt map (car keys)))
     (let ((next (cdr keys)))
       (when (not (seq-empty-p next))
         (insert ", ")
@@ -161,6 +162,13 @@ TAG-READERS is an optional association list.  For more information, see
     (when (not (seq-empty-p next))
       (insert ", ")
       (parseedn-print-plist next))))
+
+(defun parseedn-print-inst (time)
+  "Insert an inst value into the current buffer.
+
+Take an encode-time style value and print it as a timestamp
+deliniated by double quotes."
+  (insert (format-time-string "\"%Y-%m-%dT%T\"" time)))
 
 (defun parseedn-alist-p (list)
   "Non-null if and only if LIST is an alist with simple keys."
@@ -190,14 +198,14 @@ DATUM can be any Emacs Lisp value."
    ((stringp datum)
     (insert "\"")
     (seq-doseq (char datum)
-      (insert (cl-case char
-                (?\t "\\t")
-                (?\f "\\f")
-                (?\" "\\\"")
-                (?\r "\\r")
-                (?\n"foo\t" "\\n")
-                (?\\ "\\\\")
-                (t (char-to-string char)))))
+      (insert (cond
+               ((eq ?\t char) "\\t")
+               ((eq ?\f char) "\\f")
+               ((eq ?\" char) "\\\"")
+               ((eq ?\r char) "\\r")
+               ((eq ?\n char) "\\n")
+               ((eq ?\\ char) "\\\\")
+               (t (char-to-string char)))))
     (insert "\""))
 
    ((eq t datum)
@@ -224,6 +232,10 @@ DATUM can be any Emacs Lisp value."
       (error "Don't know how to print: %s" datum))
      ((eq 'edn-set (car datum))
       (insert "#{") (parseedn-print-seq (cadr datum)) (insert "}"))
+     ((eq 'edn-uuid (car datum))
+      (insert "#uuid ") (parseedn-print-seq (cdr datum)))
+     ((eq 'edn-inst (car datum))
+      (insert "#inst ") (parseedn-print-inst (cdr datum)))
      (t (insert "(") (parseedn-print-seq datum) (insert ")"))))
 
    (t (error "Don't know how to print: %s" datum))))

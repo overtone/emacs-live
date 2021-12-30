@@ -173,11 +173,11 @@ bar
   (let ((git-gutter:diff-option "-a -b -c")
         (file "git-gutter.el"))
     (let ((got (git-gutter:git-diff-arguments file)))
-      (should (equal got '("-a" "-b" "-c" "git-gutter.el"))))
+      (should (equal got '("-a" "-b" "-c" "--" "git-gutter.el"))))
 
     (let* ((git-gutter:start-revision "HEAD")
            (got (git-gutter:git-diff-arguments file)))
-      (should (equal got '("-a" "-b" "-c" "HEAD" "git-gutter.el"))))))
+      (should (equal got '("-a" "-b" "-c" "HEAD" "--" "git-gutter.el"))))))
 
 (ert-deftest git-gutter-hg-diff-arguments ()
   "Command line options of `hg diff'"

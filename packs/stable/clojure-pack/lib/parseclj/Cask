@@ -8,5 +8,4 @@
        "parseclj-parser.el")
 
 (development
- (depends-on "a")
  (depends-on "ert-runner"))

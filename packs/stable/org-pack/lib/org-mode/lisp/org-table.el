@@ -1,6 +1,6 @@
 ;;; org-table.el --- The Table Editor for Org        -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2004-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2004-2021 Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -1994,7 +1994,7 @@ toggle `org-table-follow-field-mode'."
     (let ((b (save-excursion (skip-chars-backward "^|") (point)))
 	  (e (save-excursion (skip-chars-forward "^|\r\n") (point))))
       (remove-text-properties b e '(invisible t intangible t))
-      (if (and (boundp 'font-lock-mode) font-lock-mode)
+      (if font-lock-mode
 	  (font-lock-fontify-block))))
    (t
     (let ((pos (point-marker))
@@ -6089,7 +6089,7 @@ supported.  It is also possible to use the following ones:
 
   When non-nil, use \"ascii-art-to-unicode\" package to translate
   the table.  You can download it here:
-  http://gnuvola.org/software/j/aa2u/ascii-art-to-unicode.el.
+  https://gnuvola.org/software/j/aa2u/ascii-art-to-unicode.el.
 
 :narrow
 

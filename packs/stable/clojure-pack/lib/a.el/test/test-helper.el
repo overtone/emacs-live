@@ -1,6 +1,6 @@
 ;;; test-helper.el --- Associative data structure functions: unit test helper functions -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2017  Arne Brasseur
+;; Copyright (C) 2017-2021  Arne Brasseur
 
 ;; Author: Arne Brasseur <arne@arnebrasseur.net>
 

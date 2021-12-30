@@ -26,7 +26,7 @@ compile: elpa
 	$(CASK) build
 
 clean:
-	rm -f $(OBJS)
+	rm -f $(OBJS) clojure-mode-autoloads.el
 
 test: $(PKGDIR)
 	$(CASK) exec buttercup
@@ -39,4 +39,4 @@ test-bytecomp: $(SRCS:.el=.elc-test)
 
 %.elc-test: %.el elpa
 	$(CASK) exec $(EMACS) --no-site-file --no-site-lisp --batch \
-		-l test/clojure-mode-bytecomp-warnings.el $
+		-l test/clojure-mode-bytecomp-warnings.el $<

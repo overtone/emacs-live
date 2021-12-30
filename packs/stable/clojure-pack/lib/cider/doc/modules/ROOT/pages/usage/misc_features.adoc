@@ -291,3 +291,79 @@ type kbd:[e] when browsing a spec to generate an example that
 meets the spec.
 
 image::spec_browser_gen_example.png[Spec Browser Example]
+
+== Formatting Code with cljfmt
+
+While CIDER has it's own code formatting (indentation) engine, you can also
+use it together with `cljfmt` - that's useful if you're working on a team
+that uses different editors and IDEs.
+
+CIDER provides several commands to interact with `cljfmt`:
+
+* `cider-format-defun`
+* `cider-format-region`
+* `cider-format-buffer`
+
+Generally it's a good idea to add some hook like this one to make sure
+on each save operation your buffers are properly formatted:
+
+[source,lisp]
+----
+(add-hook 'before-save-hook 'cider-format-buffer t t)
+----
+
+Notice that you want to apply `cljfmt` **prior** to saving the buffer in question.
+
+You can supply additional configuration to `cljfmt` via the configuration variable
+`cider-format-code-options`. Here's an example:
+
+[source,lisp]
+----
+;; Let's assume you want to pass the following config
+;;
+;;   {:indents {org.me/foo [[:inner 0]]}
+;;    :alias-map {\"me\" \"org.me\"}}
+;;
+;; You'll need to encode it as an Emacs Lisp plist:
+
+(setq cider-format-code-options
+      '(("indents" (("org.me/foo" (("inner" 0)))))
+        ("alias-map" (("me" "org.me")))))
+----
+
+NOTE: CIDER doesn't shell out to `cljfmt` - it interacts with it via nREPL
+(there's `format` middleware in `cider-nrepl`), which is faster than
+shelling out.
+
+== Formatting EDN
+
+Similarly to the `cljfmt` integration, CIDER also provides a convenient interface
+to format EDN using `clojure.tools.reader.edn`. The following commands are provided:
+
+* `cider-format-edn-defun`
+* `cider-format-edn-region`
+* `cider-format-edn-buffer`
+
+== https://www.gnu.org/software/emacs/manual/html_node/emacs/Xref.html[Xref] integration
+
+Beginning with version 1.2.0, CIDER supports Emacs's built-in `xref`
+functionality, which means `M-.` will invoke `xref-find-definitions` instead of
+CIDER's own command `cider-find-var`. You can disable the use of CIDER's `xref` backend like this:
+
+[source,lisp]
+----
+(setq cider-use-xref nil)
+----
+
+NOTE: You'll have to disable and enable `cider-mode` for this setting to have effect.
+
+If you use other packages that also integrate with xref (e.g. `lsp-mode`), you may wish to customize the precedence of CIDER's xref backend. The precedence is controlled by the
+order in which backend functions appear in the `xref-backend-functions` hook. By default, the CIDER xref function will be added with a depth of -90, so it will (should?) come first.
+If you would prefer for it to have a lower precedence, you can change `cider-xref-fn-depth`:
+
+[source,lisp]
+----
+(setq cider-xref-fn-depth 90)
+----
+
+TIP: See https://www.gnu.org/software/emacs/manual/html_node/elisp/Setting-Hooks.html[Setting Hooks] for more information about depth.

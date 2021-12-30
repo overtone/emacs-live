@@ -1,6 +1,6 @@
 ;;; packed.el --- package manager agnostic Emacs Lisp package utilities  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2012-2020  Jonas Bernoulli
+;; Copyright (C) 2012-2021  Jonas Bernoulli
 
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
 ;; Homepage: https://github.com/emacscollective/packed
@@ -21,6 +21,8 @@
 
 ;; For a full copy of the GNU General Public License
 ;; see <http://www.gnu.org/licenses/>.
+
+;; SPDX-License-Identifier: GPL-3.0-or-later
 
 ;;; Commentary:
 
@@ -473,7 +475,12 @@ a library.  Not every Emacs lisp file has to provide a feature / be a
 library.  If a file lacks an expected feature then loading it using
 `require' still succeeds but causes an error."
   (let* ((file (expand-file-name file))
-         (sans (file-name-sans-extension (file-name-sans-extension file)))
+         ;; Cannot use `file-name-sans-extension' because
+         ;; the ".1" in "compat-28.1.el" isn't an extension.
+         (sans (save-match-data
+                 (if (string-match (regexp-opt (get-load-suffixes) t) file)
+                     (substring file 0 (match-beginning 1))
+                   file)))
          (last (file-name-nondirectory sans)))
     (cl-find-if (lambda (feature)
                   (setq feature (symbol-name feature))

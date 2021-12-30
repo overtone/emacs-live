@@ -1,14 +1,14 @@
 = Interacting with Test Result Reports
 :experimental:
 
-Shoud tests fail then CIDER displays a test result report in the
+Should tests fail then CIDER displays a test result report in the
 `+*cider-test-report*+` buffer. This buffer uses `cider-test-report-mode`,
 which makes it easy to review any failures that might have occurred
 and jump directly to the definition of failing tests.
 
 Calling test commands again will update the test report.
 
-TIP: You can also xref:testing/running_tests.html#display-test-report-on-success[configure test reports to be displayed on success].
+TIP: You can also xref:testing/running_tests.adoc#display-test-report-on-success[configure test reports to be displayed on success].
 
 |===
 | Keyboard shortcut | Description

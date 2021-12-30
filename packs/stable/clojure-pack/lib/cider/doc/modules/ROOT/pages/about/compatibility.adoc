@@ -2,7 +2,7 @@
 
 == Emacs
 
-CIDER supports Emacs 25.1+. More generally we try to support the last 3 major Emacs releases
+CIDER supports Emacs 26.1+. More generally we try to support the last 3 major Emacs releases
 when that's feasible and doesn't add a lot of maintenance overhead.
 
 NOTE: We pay special attention to supporting whatever Emacs is bundled with the current stable Debian
@@ -18,7 +18,7 @@ and Boot releases.
 == Java
 
 CIDER officially targets Java 8, Java 11 and the most recent rapid
-release version (e.g. Java 13).  More generally speaking - we aim
+release version (e.g. Java 15).  Generally speaking, we aim
 to support all Java releases that are currently officially supported
 by Oracle.
 
@@ -33,7 +33,7 @@ The minimum required Clojure version is currently derived using data
 from the
 https://clojure.org/news/2019/02/04/state-of-clojure-2020[State of
 Clojure] survey. In general we consider a Clojure release eligible for
-dropping once its usage drops bellow 5%, but we'd not drop support for
+dropping once its usage drops below 5%, but we'd not drop support for
 any release just for the sake of doing it. We'd do it only if
 this would lessen the maintenance burden or open up the possibility for
 big CIDER improvements.
@@ -85,6 +85,27 @@ Below you can find the official compatibility matrix for CIDER.
 | 0.26
 | 25.1
 | 0.6
+| 0.25
+| 8
+| 1.8
+
+| 1.0
+| 25.1
+| 0.6
+| 0.25
+| 8
+| 1.8
+
+| 1.1
+| 25.1
+| 0.6
+| 0.25
+| 8
+| 1.8
+
+| 1.2
+| 26.1
+| 0.9
 | 0.25
 | 8
 | 1.8

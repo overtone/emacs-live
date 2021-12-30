@@ -1,6 +1,6 @@
 ;;; ox-koma-letter.el --- KOMA Scrlttr2 Back-End for Org Export Engine
 
-;; Copyright (C) 2007-2020  Free Software Foundation, Inc.
+;; Copyright (C) 2007-2021  Free Software Foundation, Inc.
 
 ;; Author: Nicolas Goaziou <n.goaziou AT gmail DOT com>
 ;;         Alan Schmitt <alan.schmitt AT polytechnique DOT org>
@@ -19,7 +19,7 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 ;;

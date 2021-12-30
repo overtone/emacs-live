@@ -542,11 +542,13 @@ When MODULE-BUFFER is non-NIL, paint error overlays."
              (line (plist-get location :line))
              (col1 (plist-get location :col)))
         (when (and module-buffer haskell-process-show-overlays)
-          (haskell-check-paint-overlay
-           module-buffer
-           (string= (file-truename (buffer-file-name module-buffer))
-                    (file-truename file))
-           line error-msg file type nil col1))
+          ;; conform default-directory to session current-dir for 'file-truename'
+          (let ((default-directory (haskell-session-current-dir session)))
+            (haskell-check-paint-overlay
+             module-buffer
+             (string= (file-truename (buffer-file-name module-buffer))
+                      (file-truename file))
+             line error-msg file type nil col1)))
         (if return-only
             (list :file file :line line :col col1 :msg error-msg :type type)
           (progn (funcall (cl-case type

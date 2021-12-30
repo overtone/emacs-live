@@ -187,13 +187,10 @@ Format will be evaluated in `wc-generate-modeline'")
 
 (defvar wc-mode-hooks nil "Hooks to run upon entry to wc-mode")
 
-(defvar-local wc-timer-tracker nil
-  "Buffer-local timers for wc-count.  Each buffer where wc-mode
-is enabled has a timer, and this allows them to be found and
-cleaned up when their respective buffers are closed.
+(defvar wc-timer-tracker nil
+  "Global timer for wc-count.
 
-TODO: word-count stats should not be generated for
-inactive/hidden buffers.")
+Ensure functions on this timer are not run when wc-mode is false.")
 
 (defvar-local wc-buffer-stats nil
   "This variable holds the per-buffer word-count statistics used to
@@ -325,12 +322,8 @@ operate over the entire buffer.
       (run-with-idle-timer
        wc-idle-wait t
        '(lambda ()
-          (setq wc-buffer-stats (wc-mode-update)))))
-
-(add-hook 'kill-buffer-hook
-          (lambda ()
-            (when (timerp wc-timer-tracker)
-              (cancel-timer wc-timer-tracker))))
+          (when wc-mode
+            (setq wc-buffer-stats (wc-mode-update))))))
 
 ;;;###autoload
 (define-minor-mode wc-mode

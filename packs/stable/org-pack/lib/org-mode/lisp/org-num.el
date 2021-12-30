@@ -1,6 +1,6 @@
 ;;; org-num.el --- Dynamic Headlines Numbering  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2018-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2018-2021 Free Software Foundation, Inc.
 
 ;; Author: Nicolas Goaziou <mail@nicolasgoaziou.fr>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -63,6 +63,7 @@
 
 (require 'cl-lib)
 (require 'org-macs)
+(require 'org) ;Otherwise `org-num--comment-re' burps on `org-comment-string'
 
 (defvar org-comment-string)
 (defvar org-complex-heading-regexp)
@@ -90,7 +91,7 @@ output."
                  (face :tag "Use face"))
   :safe (lambda (val) (or (null val) (facep val))))
 
-(defcustom org-num-format-function 'org-num-default-format
+(defcustom org-num-format-function #'org-num-default-format
   "Function used to display numbering.
 It is called with one argument, a list of numbers, and should
 return a string, or nil.  When nil, no numbering is displayed.
