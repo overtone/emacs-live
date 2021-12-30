@@ -45,7 +45,7 @@ In order to be merged into emacs-elixir, contributions must have the following:
 * A solid patch that:
 
   * is clear.
-  * works across all supported versions of Emacs (24+).
+  * works across all supported versions of Emacs (25+).
   * follows the existing style of the code base.
   * comments included as needed.
 
@@ -58,91 +58,42 @@ substantial time for the all-volunteer team to get to.
 
 ## How to run tests
 
-There are two tools that helps us to test emacs-elixir:
+We use [Eldev](https://github.com/doublep/eldev) as the project management tool and its built-in ERT integration. Our build matrix can be seen in the workflow file in `.github/workflows/ci.yml`. This ensure we run tests in all of our build matrix.
 
-* [Cask](https://github.com/cask/cask) - a project management tool for Emacs that helps automate the package development cycle.
-* [Ert-runner](https://github.com/rejeep/ert-runner.el) - a tool for Emacs projects tested using Ert.
-
-### Emacs Version Manager
-
-Emacs has many versions and currently we support from version 24+. If you want to reproduce a bug/issue on a specific version of Emacs, there are some alternatives like EVM. Here is a setup for EVM. 
-
-To install [EVM](https://github.com/rejeep/evm), run:
-
-```bash
-$ sudo mkdir /usr/local/evm
-$ sudo chown $USER: /usr/local/evm
-$ curl -fsSkL https://raw.github.com/rejeep/evm/master/go | bash
-$ export PATH="~/.evm/bin:$PATH" # Add it to your .bashrc or analogue
-```
-
-To list all available Emacs versions you can install, run:
-
-```bash
-$ evm list
-```
-
-To install a version (for example `emacs-24.3-bin`), run:
-
-```bash
-$ evm install emacs-24.3-bin
-```
-
-Read more about [EVM](https://github.com/rejeep/evm).
-
-### Cask and ert-runner
-
-To install Cask, run:
-
-```bash
-$ curl -fsSL https://raw.githubusercontent.com/cask/cask/master/go | python
-$ export PATH="~/.cask/bin:$PATH" # Add it to your .bashrc or analogue
-```
-
-To install [Ert-runner](https://github.com/rejeep/ert-runner.el), run:
-
-```bash
-$ cd path/to/emacs-elixir
-$ cask install # install ert-runner
-$ EMACS=`evm bin emacs-24.3-bin` cask install # install ert-runner for Emacs 24.3
-```
+Read more about Eldev in its home page.
 
 #### Examples of usage
 
 * Run all tests:
 
 ```bash
-$ cask exec ert-runner
+$ eldev test
 ```
 
-* Run all tests for Emacs 24.3:
+* Check dependencies
 
 ```bash
-$ EMACS=`evm bin emacs-24.3-bin` cask exec ert-runner
+$ eldev deps
 ```
-
-Run all tests which are tagged `fontification`:
 
 ```bash
-$ cask exec ert-runner -t fontification
+$ eldev deps test
 ```
 
-Run all tests with `elixir-smie-verbose-p` equal to `t`:
+* Run linters
 
 ```bash
-$ cask exec ert-runner --verbose
+$ eldev lint
 ```
 
-Run all tests interactively:
+* Compile project (byte compilation)
 
 ```bash
-$ cask exec ert-runner --win
+$ eldev compile
 ```
 
-Run all tests which are tagged `fontification` for Emacs 24.3 interactively:
+* Clean-up, for example, after compilation
 
 ```bash
-$ EMACS=`evm bin emacs-24.3-bin` cask exec ert-runner -t fontification --win
+$ eldev clean
 ```
-
-Read more about [Cask](https://github.com/cask/cask) and [Ert-runner](https://github.com/rejeep/ert-runner.el).

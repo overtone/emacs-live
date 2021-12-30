@@ -5,9 +5,9 @@
 ;; clean load-path
 (setq load-path
       (delq nil (mapcar
-		 (function (lambda (p)
-			     (unless (string-match "lisp\\(/packages\\)?/org$" p)
-			       p)))
+		 (lambda (p)
+		   (unless (string-match "lisp\\(/packages\\)?/org$" p)
+		     p))
 		 load-path)))
 ;; remove property list to defeat cus-load and remove autoloads
 (mapatoms (function  (lambda (s)

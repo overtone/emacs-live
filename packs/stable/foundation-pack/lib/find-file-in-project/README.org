@@ -1,104 +1,262 @@
-* find-file-in-project (v4.8)
-Find files in a project quickly, on *any operating system*.
+* find-file-in-project
 
-This program provides a couple methods for quickly finding any file in a given project. It depends on [[http://www.gnu.org/software/findutils/][GNU Find]].
+[[https://github.com/redguardtoo/find-file-in-project/actions/workflows/test.yml][https://github.com/redguardtoo/find-file-in-project/actions/workflows/test.yml/badge.svg]]
+[[http://melpa.org/#/find-file-in-project][file:http://melpa.org/packages/find-file-in-project-badge.svg]] [[http://stable.melpa.org/#/find-file-in-project][file:http://stable.melpa.org/packages/find-file-in-project-badge.svg]]
 
-By default, it will *automatically* search file in directory managed by *git/subversion/mercurial*. But you can easily switch to other types of projects.
+Find file/directory and review Diff/Patch/Commit quickly everywhere.
 
-Features:
-- Only dependency is GNU Find
-- Works perfectly on any OS (Windows included)
-- It's quick. Tested with 50,000+ files
-- Tweaking of GNU find through flag =ffip-find-options= is possible
-- Versatile. For keyword "helloWorld", "HelloWorld.html" "hello-world.css", "HelloWorld.js" are searched
+*User Case One:*
+Find file/directory quickly in current project. The project root is detected *automatically* if Git/Subversion/Mercurial is used.
+
+*User Case Two:*
+Diff/patch files. Target files could be under any Version Control Software (VCS) or no VCS at all. Please check =ffip-diff-*= commands.
+
+*Features:*
+- Works on Windows64/Linux/macOS with minimum setup. Only dependency is =BSD/GNU Find=
+- Fast. Tested with 50,000+ files
+- Works flawlessly with [[https://www.emacswiki.org/emacs/TrampMode][Tramp Mode]]
+- Uses native API =completing-read= and supports [[https://www.gnu.org/software/emacs/manual/html_mono/ido.html][ido]]/[[https://github.com/emacs-helm/helm][helm]]/[[https://github.com/abo-abo/swiper][ivy]]/[[https://github.com/minad/consult][consult]]/[[https://github.com/raxod502/selectrum][selectrum]] out of box
+
+*Screenshot:*
+
+[[https://raw.githubusercontent.com/redguardtoo/find-file-in-project/master/ffip-screenshot-nq8.png]]
+
 * Install
-Please use [[http://melpa.org/#/find-file-in-project][melpa]].
+Place [[https://raw.githubusercontent.com/redguardtoo/find-file-in-project/master/find-file-in-project.el][find-file-in-project.el]] under [[https://www.emacswiki.org/emacs/LoadPath][Load Path]]. Then add =(require 'find-file-in-project)= to your configuration.
 
-[[https://github.com/abo-abo/swiper][Ivy-mode]] is the dependency which is installed automatically if you use melpa.
+It is also possible to use [[http://stable.melpa.org/#/find-file-in-project][melpa]]; however be aware that as of the time of this writing installation using =package.el= is [[https://glyph.twistedmatrix.com/2015/11/editor-malware.html][not recommended]] due to flaws in Emacs's TLS implementation.
 
-Since v3.7, Emacs 24.3 is required.
+Since =v3.7=, =Emacs 24.3= is required.
+
+Since =v5.7.5=, =Emacs 24.4= is required.
+
+Since =v6=, =Emacs 25.1= is required.
+
+Users of Debian ≥10 and derivatives can install this program with the following command:
+=sudo apt install elpa-find-file-in-project=
 * Setup
-** Windows
-Windows setup is as easy as *install [[http://cygwin.com][Cygwin]] or [[https://msys2.github.io/][MYSYS2]] at default directory of any driver*. =GNU Find= executable will be detected automatically.
+Since v6, ffip gives you freedom to choose your favorite completion framework. 
 
-You can also manually specify the location of find executable,
+It only uses builtin api =completing-read=.
+
+Ido setup,
 #+begin_src elisp
-(if (eq system-type 'windows-nt)
-    (setq ffip-find-executable "c:\\\\cygwin64\\\\bin\\\\find")
+(setq ffip-prefer-ido-mode t)
+#+end_src
+
+Helm setup,
+#+begin_src elisp
+(helm-mode 1)
+#+end_src
+
+Ivy setup,
+#+begin_src elisp
+(ivy-mode 1)
+#+end_src
+** Windows
+Windows setup is as easy as *installing [[http://cygwin.com][Cygwin]] or [[https://msys2.github.io/][MYSYS2]] at default directory of any driver*. =GNU Find= executable is detected automatically.
+
+You can also manually specify the executable path,
+#+begin_src elisp
+(when (eq system-type 'windows-nt) (setq ffip-find-executable "c:\\\\cygwin64\\\\bin\\\\find"))
 #+end_src
 
 ** Linux and OS X
 NO setup needed.
 * Usage
-Project root is *automatically* detected if Git/Mercurical/Subversion used.
+Project root is *automatically* detected if Git/Mercurial/Subversion is used.
 
-You can override the default root directory by set the variable =ffip-project-root=,
+You can override the default root directory by setting =ffip-project-root=,
 #+begin_src elisp
 (setq ffip-project-root "~/projs/PROJECT_DIR")
 #+end_src
-** =M-x find-file-in-project-by-selected=
-Use the *selected region as keyword to search file*. If no region selected, you need provide the keyword. Keyword could contain wildcard which passed to Find as value of =-name= option
+
+Per-project and per-directory setup is easy. Check "Tips" section for details.
+** =find-file-in-project-at-point=
+Guess the file path at point and try to find file.
+** =find-file-in-project-by-selected=
+Use the selected region as keyword to search file. If no region is active, you could provide the keyword which could contain wildcard.
+
+If keyword contains line number like "hello.txt:32" or "hello.txt:32:", we will move to that line in opened file.
 
 If parameter is passed , file will be opened in new window.
-** =M-x find-directory-in-project-by-selected=
-Use the *selected region as keyword to find directory*. If no region selected, you need provide the keyword. Keyword could contain wildcard which passed to Find as value of =-iwholname= option
+
+If =(setq ffip-match-path-instead-of-filename t)= is placed before  =M-x find-file-in-project-by-selected=, we try to match selected text with any part of full path before displaying candidates.
+
+It could replace old command =find-file-in-project= (or =ffip=) because it's faster. It was tested searching in 50K+ files without any performance issue.
+** =find-file-with-similar-name=
+Find file with similar name to current opened file.
+
+The regular expression =ffip-strip-file-name-regex= is also used by =find-file-with-similar-name=.
+** =find-directory-in-project-by-selected=
+Use the selected region as keyword to find directory. If no region is active, you could provide the keyword. Keyword could contain wildcard character which passed to Find as value of =-iwholename= option
 
 If parameter is passed , directory will be opened in new window.
-** =M-x find-file-in-project=
-Starts search immediately
-** =M-x ffip-create-project-file=
-Create .dir-locals.el which "[[http://www.gnu.org/software/emacs/manual/html_node/emacs/Directory-Variables.html][defines the same set of local variables to all the files in a certain directory and its subdirector]]".
+** =ffip-fix-file-path-at-point=
+It replaces path at point with correct relative/absolute path.
+** =find-file-in-project=
+Starts search immediately. This command is slow if there 10K+ files because it use ONLY Emacs Lisp to filter candidates. You should always use =find-file-in-project-by-selected= in big project..
+** =ffip-find-files-resume=
+File/directory searching actions are automatically stored into =ffip-find-files-history=.
 
-You can use it to setup find-file-in-project variable like "ffip-project-root".
+Use =ffip-find-files-resume= to replay any previous action.
+
+The maximum number of items of the history is set in =ffip-find-files-history-max-items=.
+** =ffip-lisp-find-file-in-project=
+By default it finds file in project. f its parameter is not nil, it find directory instead.
+
+It's written in pure Lisp and does not use any third party command line program. So it works in all environments.
+** =ffip-create-project-file=
+Create =.dir-locals.el= which "[[http://www.gnu.org/software/emacs/manual/html_node/emacs/Directory-Variables.html][defines the same set of local variables to all the files in a certain directory and its subdirectory]]".
+
+You can setup variables like =ffip-project-root= in this file.
+
+The original setup in =.dir-locals.el= is respected. This command will *merge* new setup with old content.
 
 See [[http://www.gnu.org/software/emacs/manual/html_node/emacs/Directory-Variables.html][Emacs manual]] for technical details.
-** =M-x find-file-in-current-directory= and =M-x find-file-in-current-directory-by-selected=
-Like =M-x find-file-in-project= and =M-x find-file-in-project-by-selected= but find only in current directory.
-* Tips
-Please note all tips are OPTIONAL. find-file-in-project works out of box in 99% cases.
-** You prefer ido-mode?
+** =find-file-in-current-directory=
+Like =find-file-in-project= but find file in current directory.
+** =find-file-in-current-directory-by-selected=
+Like =find-file-in-project-by-selected= but find file in current directory.
+** =ffip-show-diff=
+Execute backend from =ffip-diff-backends=.
+
+The output of backend execution is in [[http://www.gnu.org/software/diffutils/manual/html_node/Unified-Format.html][Unified Diff Format]] and is inserted into  =*ffip-diff*= buffer where you can press =o=, =C-c C-c=, =ENTER= , =M-x ffip-diff-find-file=  to open the corresponding file.
+
+=ffip-diff-find-file-before-hook= is called in =ffip-diff-find-file=. Two file names are passed to it as parameters. One name is returned by the hook as the file searching keyword.
+
+For example, you can =M-x ffip-show-diff= to view the git commit and open file inside patch.
+
+, =M-x 5 ffip-show-diff= executes 5th backend from =ffip-diff-backends=.
+
+Please press =C-h v ffip-diff-backends= to view available back-ends.
+
+Other key bindings defined in =*ffip-diff*= buffer,
+| key binding | command        |
+|-------------+----------------|
+| p           | diff-hunk-prev |
+| n           | diff-hunk-next |
+| P           | diff-file-prev |
+| N           | diff-file-next |
+
+Insert below code into =.emacs= if you use =evil-mode=,
 #+begin_src elisp
-(ido-mode 1)
-(setq ffip-prefer-ido-mode t)
+(defun ffip-diff-mode-hook-setup ()
+    (evil-local-set-key 'normal "K" 'diff-hunk-prev)
+    (evil-local-set-key 'normal "J" 'diff-hunk-next)
+    (evil-local-set-key 'normal "P" 'diff-file-prev)
+    (evil-local-set-key 'normal "N" 'diff-file-next)
+    (evil-local-set-key 'normal (kbd "RET") 'ffip-diff-find-file)
+    (evil-local-set-key 'normal "o" 'ffip-diff-find-file))
+(add-hook 'ffip-diff-mode-hook 'ffip-diff-mode-hook-setup)
 #+end_src
+
+You can customize the =ffip-diff-backends=,
+#+begin_src elisp
+(setq ffip-diff-backends
+      '(ffip-diff-backend-git-show-commit
+        "cd $(git rev-parse --show-toplevel) && git diff"
+        "cd $(git rev-parse --show-toplevel) && git diff --cached"
+        ffip-diff-backend-hg-show-commit
+        ("Diff from `kill-ring'" . (car kill-ring))
+        "cd $(hg root) && hg diff"
+        "svn diff"))
+#+end_src
+
+Please note some backends assume that the git cli program is added into environment variable PATH.
+** =find-relative-path=
+Find file/directory and copy its relative path into `kill-ring'.
+
+File's path is copied by default. =C-u M-x find-relative-path= copy directory's path.
+
+You can set =ffip-find-relative-path-callback= to format the string before copying.
+#+begin_src elisp
+;; (setq ffip-find-relative-path-callback 'ffip-copy-reactjs-import)
+(setq ffip-find-relative-path-callback 'ffip-copy-org-file-link)
+#+end_src
+** =ffip-diff-apply-hunk=
+Similar to =diff-apply-hunk=, it applies current hunk on the target file (please note =ffip-diff-mode= inherits from =diff-mode=).
+
+The target file could be found by searching =(ffip-project-root)=. You can also apply extra operation on the file in =ffip-diff-apply-hunk-hook= before hunk applying happens.
+
+For example, for files under [[https://www.perforce.com/][Perforce]] control,
+#+begin_src elisp
+(defun p4-edit-file-and-make-buffer-writable(file)
+  "p4 edit FILE and make corresponding buffer writable."
+  (shell-command (format "p4 edit %s" file))
+  ;; make sure the buffer is readable
+  (let* ((buf (get-file-buffer file)))
+    (if buf
+        (with-current-buffer buf
+          ;; turn off read-only since we've already `p4 edit'
+          (read-only-mode -1)))))
+(defun ffip-diff-apply-hunk-hook-setup (file)
+  (unless (featurep 'init-perforce) (require 'init-perforce))
+  (if (string-match-p "/myproject/" file)
+      (p4-edit-file-and-make-buffer-writable file)))
+(add-hook 'ffip-diff-apply-hunk-hook 'ffip-diff-apply-hunk-hook-setup)
+#+end_src
+** =ffip-diff-filter-hunks-by-file-name=
+It can filter hunks by their file names.
+
+For example, user input pattern "regex !exclude1 exclude1" means the hunk's file name does match "regex", but does not match "exclude1" or "exclude2".
+
+Please note in "regex", space represents any string.
+** =ffip-insert-file=
+Insert file content into current buffer.
+* Tips
+All tips are OPTIONAL. =find-file-in-project= works out of box in 99% cases.
+** Use fd (A simple, fast and user-friendly alternative to 'find')
+Please insert =(setq ffip-use-rust-fd t)= into =.emacs= to use [[https://github.com/sharkdp/fd][fd]] (alternative to GNU Find).
 ** APIs
-- "ffip-get-project-root-directory" return the full path of current project
+- =ffip-get-project-root-directory= return the full path of current project
 ** Per-project setup using Emacs lisp
-Here is complete setup you could insert into "~/.emacs.d/init.el",
+Here is complete setup you could insert into =.emacs==,
 #+begin_src elisp
 ;; if the full path of current file is under SUBPROJECT1 or SUBPROJECT2
 ;; OR if I'm reading my personal issue track document,
 (defun my-setup-develop-environment ()
   (interactive)
-  (when (ffip-current-full-filename-match-pattern-p "\\(/|/PROJECT_DIR\\|issue-track.org\\)")
+  (when (ffip-current-full-filename-match-pattern-p "\\(PROJECT_DIR\\|issue-track.org\\)")
     ;; Though PROJECT_DIR is team's project, I care only its sub-directory "subproj1""
     (setq-local ffip-project-root "~/projs/PROJECT_DIR/subproj1")
     ;; well, I'm not interested in concatenated BIG js file or file in dist/
     (setq-local ffip-find-options "-not -size +64k -not -iwholename '*/dist/*'")
     ;; for this project, I'm only interested certain types of files
     (setq-local ffip-patterns '("*.html" "*.js" "*.css" "*.java" "*.xml" "*.js"))
-    ;; exclude below directories and files
-    (setq-local ffip-prune-patterns '("*/.git/*" "*/node_modules/*" "*/index.js")))
+    ;; ignore files whose name match certain glob pattern
+    (setq-local ffip-ignore-filenames '("*.bmp" "*.jpg"))
+    ;; exclude `dist/' directory
+    (add-to-list 'ffip-prune-patterns "*/dist"))
   ;; insert more WHEN statements below this line for other projects
   )
 ;; most major modes inherit from prog-mode, so below line is enough
 (add-hook 'prog-mode-hook 'my-setup-develop-environment)
 #+end_src
-** Per-directory setup using .dir-locals.el
-All variables may be overridden on a per-directory basis in your .dir-locals.el. See (info "(Emacs) Directory Variables") for details.
+** Per-directory setup using =.dir-locals.el=
+All variables may be overridden on a per-directory basis in your =.dir-locals.el=. See (info "(Emacs) Directory Variables") for details.
 
-You only need place .dir-locals.el into your project root directory.
+You can place =.dir-locals.el= into your project root directory.
 
-Here is a sample .dir-locals.el,
+A sample =.dir-locals.el=,
 #+begin_src elisp
 ((nil . ((ffip-project-root . "~/projs/PROJECT_DIR")
+         ;; ignore files bigger than 64k and directory "dist/" when searching
          (ffip-find-options . "-not -size +64k -not -iwholename '*/dist/*'")
+         ;; only search files with following extensions
          (ffip-patterns . ("*.html" "*.js" "*.css" "*.java" "*.xml" "*.js"))
-         (ffip-prune-patterns . ("*/.git/*" "*/node_modules/*" "*/index.js"))
+         (eval . (progn
+                   (require 'find-file-in-project)
+                   ;; ignore directory ".tox/" when searching
+                   (setq ffip-prune-patterns `("*/.tox" ,@ffip-prune-patterns))
+                   ;; Do NOT ignore directory "bin/" when searching
+                   (setq ffip-prune-patterns `(delete "*/bin" ,@ffip-prune-patterns))))
          )))
 #+end_src
 
-Please use either per-directory setup or per-project setup, *NOT* both.
+As mentioned, =ffip-create-project-file= could create a minimum =.dir-locals.el=.
+
+BTW, please use either per-directory setup or per-project setup, *NOT* both.
 ** Specify root directory on Windows
 #+begin_src elisp
 (if (eq system-type 'windows-nt)
@@ -107,29 +265,13 @@ Please use either per-directory setup or per-project setup, *NOT* both.
   ;; Cygwin
   (setq ffip-project-root "~/projs/myprojs1"))
 #+end_src
-** Search multiple file name patterns
-The variable =ffip-filename-rules' create some extra file names for
-search when calling =find-file-in-project-by-selected'. For example,
-When file basename =helloWorld' provided, =HelloWorld', =hello-world'
-are added as the file name search patterns.
+** Search and grep files under Git control
+Install [[https://github.com/abo-abo/swiper][counsel]].
 
-=C-h v ffip-filename-rules' to see its default value.
-
-As other variables, it could be customized per project,
-#+begin_src elisp
-(setq-local ffip-filename-rules
-            '(ffip-filename-identity
-              (ffip-filename-dashes-to-camelcase ffip-filename-camelcase-to-dashes)))
-#+end_src
-
-That's especially useful when you are doing web frontend development.
-** Search files in a directory
-You could =(setq ffip-match-path-instead-of-filename t)= before =M-x find-file-in-project-by-selected=.
-
-For example, if you want to search files belonging to directory "elpa" or the file name containing "elpa", you can =M-x find-file-in-project-by-selected ENTER elpa=.
-** More keybinding tips
-=C-h i g (ivy) Enter' for more key-binding tips.
-* Development
-Please note *only =ivy-read= from ivy-mode is used*. DO NOT use other APIs from ivy-mode. The less APIs used, the more stable this package will be.
+Use =counsel-git= to find file and =counsel-git-grep= to grep.
 * Bug Report
-Check [[https://github.com/technomancy/find-file-in-project]]
+Check [[https://github.com/redguardtoo/find-file-in-project]].
+* License
+This program is free software: you can redistribute it and/or modify it under the terms of the [[file:LICENSE][GNU General Public License]] as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the [[file:LICENSE][GNU General Public License]] for more details.

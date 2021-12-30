@@ -17,11 +17,11 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Code:
 
-(require 'org-test)
+(require 'org-test "../testing/org-test")
 
 
 
@@ -57,6 +57,17 @@
     (should-error (org-edit-special))
     (goto-char (point-max))
     (should-error (org-edit-special))))
+
+(ert-deftest test-org-src/undo ()
+  "Undo-ing an edit buffer should not go back to empty state."
+  (org-test-with-temp-text "
+#+begin_src emacs-lisp<point>
+  (message hello)
+#+end_src
+"
+    (org-edit-special)
+    (should-error (undo))
+    (org-edit-src-exit)))
 
 (ert-deftest test-org-src/empty-block ()
   "Editing empty block."

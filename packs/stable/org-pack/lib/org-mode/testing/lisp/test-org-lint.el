@@ -15,7 +15,7 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Code:
 
@@ -205,6 +205,32 @@ Paragraph 2"
 
 (ert-deftest test-org-lint/obsolete-properties-drawer ()
   "Test `org-lint-obsolete-properties-drawer' checker."
+  (should-not
+   (org-test-with-temp-text "
+* H
+:PROPERTIES:
+:SOMETHING: foo
+:END:"
+     (org-lint '(obsolete-properties-drawer))))
+  (should-not
+   (org-test-with-temp-text "
+* H
+SCHEDULED: <2012-03-29>
+:PROPERTIES:
+:SOMETHING: foo
+:END:"
+     (org-lint '(obsolete-properties-drawer))))
+  (should-not
+   (org-test-with-temp-text ":PROPERTIES:
+:SOMETHING: foo
+:END:"
+     (org-lint '(obsolete-properties-drawer))))
+  (should-not
+   (org-test-with-temp-text "# Comment
+:PROPERTIES:
+:SOMETHING: foo
+:END:"
+     (org-lint '(obsolete-properties-drawer))))
   (should
    (org-test-with-temp-text "
 * H
@@ -218,6 +244,12 @@ Paragraph
 * H
 :PROPERTIES:
 This is not a node property
+:END:"
+     (org-lint '(obsolete-properties-drawer))))
+  (should
+   (org-test-with-temp-text "Paragraph
+:PROPERTIES:
+:FOO: bar
 :END:"
      (org-lint '(obsolete-properties-drawer)))))
 
@@ -360,6 +392,9 @@ SCHEDULED: <2012-03-29 thu.>"
   "Test `org-lint-incomplete-drawer' checker."
   (should
    (org-test-with-temp-text ":DRAWER:"
+     (org-lint '(incomplete-drawer))))
+  (should
+   (org-test-with-temp-text ":DRAWER:\n:ODD:\n:END:"
      (org-lint '(incomplete-drawer))))
   (should-not
    (org-test-with-temp-text ":DRAWER:\n:END:"

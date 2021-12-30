@@ -139,7 +139,7 @@ MKDIR	= install -m 755 -d
 MAKEINFO = makeinfo
 
 # How to create the HTML file
-TEXI2HTML = makeinfo --html --number-sections
+TEXI2HTML = makeinfo --html --number-sections --css-ref "https://www.gnu.org/software/emacs/manual.css"
 
 # How to find files
 FIND	= find

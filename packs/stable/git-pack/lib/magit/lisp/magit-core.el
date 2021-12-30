@@ -1,12 +1,14 @@
 ;;; magit-core.el --- core functionality  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2010-2016  The Magit Project Contributors
+;; Copyright (C) 2010-2021  The Magit Project Contributors
 ;;
 ;; You should have received a copy of the AUTHORS.md file which
 ;; lists all contributors.  If not, see http://magit.vc/authors.
 
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
 ;; Maintainer: Jonas Bernoulli <jonas@bernoul.li>
+
+;; SPDX-License-Identifier: GPL-3.0-or-later
 
 ;; Magit is free software; you can redistribute it and/or modify it
 ;; under the terms of the GNU General Public License as published by
@@ -34,13 +36,41 @@
 (require 'magit-section)
 (require 'magit-git)
 (require 'magit-mode)
-(require 'magit-popup)
+(require 'magit-margin)
 (require 'magit-process)
+(require 'magit-transient)
 (require 'magit-autorevert)
+
+(when (magit--libgit-available-p)
+  (condition-case err
+      (require 'magit-libgit)
+    (error
+     (setq magit-inhibit-libgit 'error)
+     (message "Error while loading `magit-libgit': %S" err)
+     (message "That is not fatal.  The `libegit2' module just won't be used."))))
 
 (defgroup magit nil
   "Controlling Git from Emacs."
+  :link '(url-link "https://magit.vc")
+  :link '(info-link "(magit)FAQ")
+  :link '(info-link "(magit)")
   :group 'tools)
+
+(defgroup magit-essentials nil
+  "Options that every Magit user should briefly think about.
+
+Each of these options falls into one or more of these categories:
+
+* Options that affect Magit's behavior in fundamental ways.
+* Options that affect safety.
+* Options that affect performance.
+* Options that are of a personal nature."
+  :link '(info-link "(magit)Essential Settings")
+  :group 'magit)
+
+(defgroup magit-miscellaneous nil
+  "Miscellaneous Magit options."
+  :group 'magit)
 
 (defgroup magit-commands nil
   "Options controlling behavior of certain commands."
@@ -50,28 +80,54 @@
   "Modes used or provided by Magit."
   :group 'magit)
 
-(defgroup magit-extensions nil
-  "Extensions to Magit."
+(defgroup magit-buffers nil
+  "Options concerning Magit buffers."
+  :link '(info-link "(magit)Modes and Buffers")
   :group 'magit)
+
+(defgroup magit-refresh nil
+  "Options controlling how Magit buffers are refreshed."
+  :link '(info-link "(magit)Automatic Refreshing of Magit Buffers")
+  :group 'magit
+  :group 'magit-buffers)
 
 (defgroup magit-faces nil
   "Faces used by Magit."
   :group 'magit
   :group 'faces)
 
-(custom-add-to-group 'magit-modes   'magit-popup       'custom-group)
-(custom-add-to-group 'magit-faces   'magit-popup-faces 'custom-group)
+(custom-add-to-group 'magit-faces 'diff-refine-added   'custom-face)
+(custom-add-to-group 'magit-faces 'diff-refine-removed 'custom-face)
+
+(defgroup magit-extensions nil
+  "Extensions to Magit."
+  :group 'magit)
+
 (custom-add-to-group 'magit-modes   'git-commit        'custom-group)
 (custom-add-to-group 'magit-faces   'git-commit-faces  'custom-group)
 (custom-add-to-group 'magit-modes   'git-rebase        'custom-group)
 (custom-add-to-group 'magit-faces   'git-rebase-faces  'custom-group)
+(custom-add-to-group 'magit         'magit-section     'custom-group)
+(custom-add-to-group 'magit-faces   'magit-section-faces 'custom-group)
 (custom-add-to-group 'magit-process 'with-editor       'custom-group)
 
-(custom-add-to-group 'magit 'vc-follow-symlinks 'custom-variable)
+(defgroup magit-related nil
+  "Options that are relevant to Magit but that are defined elsewhere."
+  :link '(custom-group-link vc)
+  :link '(custom-group-link smerge)
+  :link '(custom-group-link ediff)
+  :link '(custom-group-link auto-revert)
+  :group 'magit
+  :group 'magit-extensions
+  :group 'magit-essentials)
 
-;;; magit-core.el ends soon
+(custom-add-to-group 'magit-related     'auto-revert-check-vc-info 'custom-variable)
+(custom-add-to-group 'magit-auto-revert 'auto-revert-check-vc-info 'custom-variable)
+
+(custom-add-to-group 'magit-related 'ediff-window-setup-function 'custom-variable)
+(custom-add-to-group 'magit-related 'smerge-refine-ignore-whitespace 'custom-variable)
+(custom-add-to-group 'magit-related 'vc-follow-symlinks 'custom-variable)
+
+;;; _
 (provide 'magit-core)
-;; Local Variables:
-;; indent-tabs-mode: nil
-;; End:
 ;;; magit-core.el ends here

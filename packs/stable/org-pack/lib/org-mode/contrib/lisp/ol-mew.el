@@ -1,6 +1,6 @@
 ;;; ol-mew.el --- Links to Mew messages
 
-;; Copyright (C) 2008-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2008-2021 Free Software Foundation, Inc.
 
 ;; Author: Tokuya Kameshima <kames at fa2 dot so-net dot ne dot jp>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -19,7 +19,7 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;; Commentary:
@@ -191,7 +191,7 @@ with \"t\" key."
 	(let ((folder-or-path (mew-summary-folder-name)))
 	  (mew-folder-path-to-folder folder-or-path t))))))
 
-(defun org-mew-open (path)
+(defun org-mew-open (path _)
   "Follow the Mew message link specified by PATH."
   (let (folder message-id)
     (cond ((string-match "\\`\\(+.*\\)+\\+\\([0-9]+\\)\\'" path) ; for Bastien's

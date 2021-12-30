@@ -1,6 +1,6 @@
 ;;; ol-wl.el --- Links to Wanderlust messages
 
-;; Copyright (C) 2004-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2004-2021 Free Software Foundation, Inc.
 
 ;; Author: Tokuya Kameshima <kames at fa2 dot so-net dot ne dot jp>
 ;;         David Maus <dmaus at ictsoc dot de>
@@ -20,7 +20,7 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;; Commentary:
@@ -104,9 +104,10 @@ googlegroups otherwise."
 (defvar elmo-nntp-default-server)
 
 (defconst org-wl-folder-types
-  '(("%" . imap) ("-" . nntp) ("+" . mh) ("=" . spool)
-    ("$" . archive) ("&" . pop) ("@" . shimbun) ("[" . search)
-    ("*" . multi) ("/" . filter) ("|" . pipe) ("'" . internal))
+  '(("%" . imap) ("-" . nntp) ("+" . mh) ("." . maildir)
+    ("=" . spool) ("$" . archive) ("&" . pop) ("@" . shimbun)
+    ("rss" . rss) ("[" . search) ("*" . multi) ("/" . filter)
+    ("|" . pipe) ("'" . internal) )
   "List of folder indicators.  See Wanderlust manual, section 3.")
 
 ;; Install the link type
@@ -224,7 +225,7 @@ ENTITY is a message entity."
 		    (format
 		     (if (string-match-p "gmane\\." folder-name)
 			 "http://mid.gmane.org/%s"
-		       "http://groups.google.com/groups/search?as_umsgid=%s")
+                       "https://groups.google.com/groups/search?as_umsgid=%s")
 		     (url-encode-url message-id)))
 	      (org-store-link-props :type "http" :link link :description subject
 				    :from from :to to :message-id message-id
@@ -255,7 +256,7 @@ ENTITY is a message entity."
 	       (concat "@" (or (cdr server) (car server))))
 	     (if article (concat "#" article) "")))))
 
-(defun org-wl-open (path)
+(defun org-wl-open (path &rest _)
   "Follow the WL message link specified by PATH.
 When called with one prefix, open message in namazu search folder
 with `org-wl-namazu-default-index' as search index.  When called

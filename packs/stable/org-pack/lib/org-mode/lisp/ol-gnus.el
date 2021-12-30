@@ -1,6 +1,6 @@
 ;;; ol-gnus.el --- Links to Gnus Groups and Messages -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2004-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2004-2021 Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;;         Tassilo Horn <tassilo at member dot fsf dot org>
@@ -34,7 +34,8 @@
 (require 'gnus-sum)
 (require 'gnus-util)
 (require 'nnheader)
-(require 'nnir)
+(or (require 'nnselect nil t)           ; Emacs >= 28
+    (require 'nnir nil t))              ; Emacs < 28
 (require 'ol)
 
 
@@ -135,9 +136,15 @@ If `org-store-link' was called with a prefix arg the meaning of
 	       (`(nnvirtual . ,_)
 		(save-excursion
 		  (car (nnvirtual-map-article (gnus-summary-article-number)))))
-	       (`(nnir . ,_)
+	       (`(,(or `nnselect `nnir) . ,_)  ; nnir is for Emacs < 28.
 		(save-excursion
-		  (nnir-article-group (gnus-summary-article-number))))
+		  (cond
+		   ((fboundp 'nnselect-article-group)
+		    (nnselect-article-group (gnus-summary-article-number)))
+		   ((fboundp 'nnir-article-group)
+		    (nnir-article-group (gnus-summary-article-number)))
+		   (t
+		    (error "No article-group variant bound")))))
 	       (_ gnus-newsgroup-name)))
 	    (header (if (eq major-mode 'gnus-article-mode)
 			;; When in an article, first move to summary
@@ -191,11 +198,11 @@ If `org-store-link' was called with a prefix arg the meaning of
 	       (to (mail-fetch-field "To"))
 	       (from (mail-fetch-field "From"))
 	       (subject (mail-fetch-field "Subject"))
-	       newsgroup xarchive)	;those are always nil for gcc
+	       ) ;; newsgroup xarchive	;those are always nil for gcc
 	   (unless gcc (error "Can not create link: No Gcc header found"))
 	   (org-link-store-props :type "gnus" :from from :subject subject
 				 :message-id id :group gcc :to to)
-	   (let ((link (org-gnus-article-link gcc newsgroup id xarchive))
+	   (let ((link (org-gnus-article-link gcc nil id nil)) ;;newsgroup xarchive
 		 (description (org-link-email-description)))
 	     (org-link-add-props :link link :description description)
 	     link)))))))
@@ -210,7 +217,7 @@ If `org-store-link' was called with a prefix arg the meaning of
      (format "nntp+%s:%s" (or (cdr server) (car server)) group)
      article)))
 
-(defun org-gnus-open (path)
+(defun org-gnus-open (path _)
   "Follow the Gnus message or folder link specified by PATH."
   (unless (string-match "\\`\\([^#]+\\)\\(#\\(.*\\)\\)?" path)
     (error "Error in Gnus link %S" path))

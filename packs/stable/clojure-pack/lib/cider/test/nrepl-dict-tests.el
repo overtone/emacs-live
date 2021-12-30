@@ -1,9 +1,9 @@
 ;;; nrepl-dict-tests.el
 
-;; Copyright © 2012-2016 Tim King, Bozhidar Batsov
+;; Copyright © 2012-2021 Tim King, Bozhidar Batsov
 
 ;; Author: Tim King <kingtim@gmail.com>
-;;         Bozhidar Batsov <bozhidar@batsov.com>
+;;         Bozhidar Batsov <bozhidar@batsov.dev>
 ;;         Artur Malabarba <bruce.connor.am@gmail.com>
 
 ;; This file is NOT part of GNU Emacs.
@@ -59,7 +59,7 @@
     (setq input '(dict 1 "a" 2 "B" "3" "d" 4 nil sym yes nil nil-val))
     (expect (nrepl-dict-contains input nil) :to-be-truthy))
 
-  (it "returns `nil' if dict doesnt contain the element"
+  (it "returns `nil' if dict doesn't contain the element"
     (setq input '(dict 1 "a" 2 "B" "3" "d" 4 nil sym yes))
 
     (expect (nrepl-dict-contains input 11) :to-equal nil)

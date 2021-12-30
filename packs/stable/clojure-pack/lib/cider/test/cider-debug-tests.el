@@ -1,9 +1,9 @@
 ;;; cider-debug-tests.el
 
-;; Copyright © 2012-2016 Tim King, Bozhidar Batsov
+;; Copyright © 2012-2021 Tim King, Bozhidar Batsov
 
 ;; Author: Tim King <kingtim@gmail.com>
-;;         Bozhidar Batsov <bozhidar@batsov.com>
+;;         Bozhidar Batsov <bozhidar@batsov.dev>
 ;;         Artur Malabarba <bruce.connor.am@gmail.com>
 
 ;; This file is NOT part of GNU Emacs.
@@ -28,32 +28,56 @@
 ;;; Code:
 
 (require 'buttercup)
-(require 'cider)
+(require 'clojure-mode)
+(require 'cider-debug)
 
 (describe "cider--debug-prompt"
   (it "changes the font face to `cider-debug-prompt-face' for the first char"
-    (expect (equal-including-properties
-             (cider--debug-prompt (nrepl-dict "a" "a" "b" "b" "c" "c"))
-             #("a b c\n"
-               0 1 (face cider-debug-prompt-face)
-               1 2 (face default)
-               2 3 (face cider-debug-prompt-face)
-               3 4 (face default)
-               4 5 (face cider-debug-prompt-face)
-               5 6 (face default)))))
+    (let ((cider-debug-prompt-commands '((?a "abc" "abc") (?x "xyz" "xyz"))))
+      (cider--debug-propertize-prompt-commands)
+      (expect (equal-including-properties
+               (cider--debug-prompt '("abc" "xyz"))
+               #(" abc xyz\n"
+                 0 1 (face default)
+                 1 2 (face cider-debug-prompt-face)
+                 2 5 (face default)
+                 5 6 (face cider-debug-prompt-face)
+                 6 9 (face default))))))
 
-  (it "handles multiple chars not separated by spaces"
-    (expect (equal-including-properties
-             (cider--debug-prompt (nrepl-dict "a" "abc" "b" "cba"))
-             #("abc cba\n"
-               0 1 (face cider-debug-prompt-face)
-               1 5 (face default)
-               5 6 (face cider-debug-prompt-face)
-               6 8 (face default))))
+  (it "Uses the display name and handles multiple chars not separated by spaces"
+    (let ((cider-debug-prompt-commands '((?a "abc" "cba") (?x "xyz" "yxz"))))
+      (cider--debug-propertize-prompt-commands)
+      (expect (equal-including-properties
+               (cider--debug-prompt '("abc" "xyz"))
+               #(" cba yxz\n"
+                 0 3 (face default)
+                 3 4 (face cider-debug-prompt-face)
+                 4 6 (face default)
+                 6 7 (face cider-debug-prompt-face)
+                 7 9 (face default))))
+      (expect (equal-including-properties
+               (cider--debug-prompt '("abc"))
+               #(" cba\n"
+                 0 3 (face default)
+                 3 4 (face cider-debug-prompt-face)
+                 4 5 (face default))))))
 
-    (expect (equal-including-properties
-             (cider--debug-prompt (nrepl-dict "a" "abc"))
-             #("abc\n" 0 1 (face cider-debug-prompt-face) 1 4 (face default))))))
+  (it "filters and displays commands in the order specified by cider-debug-prompt-commands"
+    (let ((cider-debug-prompt-commands '((?a "abc" "abc")
+                                         (?z "xyz" "xyz")
+                                         (?d "def" nil)
+                                         (?g "ghi" "ghi"))))
+      (cider--debug-propertize-prompt-commands)
+      (expect (equal-including-properties
+               (cider--debug-prompt '("ghi" "def" "abc" "pqr" "xyz" ))
+               #(" abc xyz ghi\n"
+                 0 1 (face default)
+                 1 2 (face cider-debug-prompt-face)
+                 2 7 (face default)
+                 7 8 (face cider-debug-prompt-face)
+                 8 9 (face default)
+                 9 10 (face cider-debug-prompt-face)
+                 10 13 (face default)))))))
 
 (describe "cider--debug-move-point"
   (it "navigates the clojure sexp's guided by the given coordinates"
@@ -70,7 +94,7 @@
       (expect (looking-back (rx "[]")) :to-be-truthy)
       (goto-char (point-min))
       (cider--debug-move-point '(4 ":b"))
-      (message "%S" (point))
+      ;(message "%S" (point))
       (expect (thing-at-point 'symbol) :to-equal "2")))
 
   (it "handles the syntax quote"

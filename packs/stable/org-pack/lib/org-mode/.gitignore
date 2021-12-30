@@ -1,0 +1,84 @@
+# Don't bother tracking a bunch of stuff when building and installing
+# Org from the master git repository.
+
+# ...by ignoring everything created by 'make', 'make doc', `make info'
+#    `make html_manual', `make release'
+
+*.aux
+*.bak
+*.cp
+*.cps
+*.diff
+*.dvi
+*.elc
+*.fn
+*.fns
+*.html
+*.info
+*.ky
+*.kys
+*.log
+*.patch
+*.pdf
+*.pg
+*.pgs
+*.ps
+*.toc
+*.tp
+*.vr
+*.vrs
+orgcard_letter.tex
+orgcard.txt
+org
+orgguide
+org-loaddefs.el
+org-version.el
+doc/org.texi
+doc/orgguide.texi
+doc/org-version.inc
+doc/org-version.tex
+org-*.tar*
+orgplus-*.tar*
+org-*.zip
+version.mk
+manual
+org_dual_license.texi
+ORGWEBPAGE/Changes.txt
+local*.mk
+.gitattributes
+mk/x11idle
+ChangeLog
+
+# Files generated during `make packages/org` in a clone of `elpa.git`.
+
+/org-pkg.el
+/org-autoloads.el
+/lisp/org-autoloads.el
+
+# texi2pdf --tidy
+
+doc/*.t2d
+
+# aspell word and replacement lists
+
+.aspell.org.pws
+.aspell.org.prepl
+
+# allow tmp and test directories that will not be tracked
+
+test
+t
+auto
+tmp
+TODO
+
+# and collateral damage from Emacs
+
+*~
+.DS_Store
+*#
+.#*
+
+#
+# Local variables:
+# End:

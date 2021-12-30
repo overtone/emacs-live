@@ -29,7 +29,6 @@
 (eval-when-compile
   (require 'cl))
 
-;;;###autoload
 (require 'eieio)
 
 (require 'gh-profile)
@@ -67,7 +66,8 @@
                    (gh-config "password"))))
     (when (not pass)
       (setq pass (read-passwd "GitHub password: "))
-      (gh-set-config "password" pass))
+      (when remember
+        (gh-set-config "password" pass)))
     (when remember
       (gh-auth-remember profile :password pass))
     pass))
@@ -90,16 +90,14 @@
     (gh-auth-remember profile :token token)
     token))
 
-;;;###autoload
 (defclass gh-authenticator ()
   ((username :initarg :username :initform nil))
   "Abstract authenticator")
 
-(defmethod constructor :static ((auth gh-authenticator) &rest args)
-  (let ((obj (call-next-method)))
-    (or (oref obj :username)
-        (oset obj :username (gh-auth-get-username)))
-    obj))
+(defmethod initialize-instance ((auth gh-authenticator) &rest args)
+  (call-next-method)
+  (or (oref auth :username)
+      (oset auth :username (gh-auth-get-username))))
 
 (defmethod gh-auth-modify-request ((auth gh-authenticator) req)
   req)
@@ -123,7 +121,6 @@
                               (cons otp-header otp))
           (gh-url-run-request req resp))))))
 
-;;;###autoload
 (defclass gh-password-authenticator (gh-authenticator)
   ((password :initarg :password :protection :private :initform nil)
    (remember :allocation :class :initform t)
@@ -131,11 +128,10 @@
    (2fa-cls :initform gh-auth-2fa-callback :allocation :class))
   "Password-based authenticator")
 
-(defmethod constructor :static ((auth gh-password-authenticator) &rest args)
-  (let ((obj (call-next-method)))
-    (or (oref obj :password)
-        (oset obj :password (gh-auth-get-password (oref obj remember))))
-    obj))
+(defmethod initialize-instance ((auth gh-password-authenticator) &rest args)
+  (call-next-method)
+  (or (oref auth :password)
+      (oset auth :password (gh-auth-get-password (oref auth remember)))))
 
 (defmethod gh-auth-modify-request ((auth gh-password-authenticator) req)
   (object-add-to-list req :headers
@@ -149,21 +145,20 @@
                       (make-instance (oref auth 2fa-cls) :req req))
   req)
 
-;;;###autoload
 (defclass gh-oauth-authenticator (gh-authenticator)
   ((token :initarg :token :protection :private :initform nil))
   "Oauth-based authenticator")
 
-(defmethod constructor :static ((auth gh-oauth-authenticator) &rest args)
-  (let ((obj (call-next-method)))
-    (or (oref obj :token)
-        (oset obj :token (gh-auth-get-oauth-token)))
-    obj))
+(defmethod initialize-instance ((auth gh-oauth-authenticator) &rest args)
+  (call-next-method)
+  (or (oref auth :token)
+      (oset auth :token (gh-auth-get-oauth-token))))
 
 (defmethod gh-auth-modify-request ((auth gh-oauth-authenticator) req)
   (object-add-to-list req :headers
                       (cons "Authorization"
-                            (format "token %s" (oref auth :token))))
+                            (encode-coding-string
+                             (format "token %s" (oref auth :token)) 'utf-8)))
   req)
 
 (provide 'gh-auth)

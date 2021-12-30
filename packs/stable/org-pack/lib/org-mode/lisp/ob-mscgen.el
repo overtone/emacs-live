@@ -1,8 +1,9 @@
 ;;; ob-msc.el --- Babel Functions for Mscgen         -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2010-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2010-2021 Free Software Foundation, Inc.
 
 ;; Author: Juan Pechiar
+;; Maintainer: Justin Abrahms
 ;; Keywords: literate programming, reproducible research
 ;; Homepage: https://orgmode.org
 
@@ -28,7 +29,7 @@
 ;; sequence definition, and must therefore be installed in the system.
 ;;
 ;; Mscgen is available and documented at
-;; http://www.mcternan.me.uk/mscgen/index.html
+;; https://www.mcternan.me.uk/mscgen/index.html
 ;;
 ;; This code is directly inspired by Eric Schulte's ob-dot.el
 ;;
@@ -68,8 +69,7 @@ mscgen supported formats."
   (let* ((out-file (or (cdr (assq :file params)) "output.png" ))
          (filetype (or (cdr (assq :filetype params)) "png" )))
     (unless (cdr (assq :file params))
-      (error "
-ERROR: no output file specified.  Add \":file name.png\" to the src header"))
+      (error "ERROR: no output file specified.  Add \":file name.png\" to the src header"))
     (org-babel-eval (concat "mscgen -T " filetype " -o " out-file) body)
     nil)) ;; signal that output has already been written to file
 
@@ -78,7 +78,5 @@ ERROR: no output file specified.  Add \":file name.png\" to the src header"))
   (error "Mscgen does not support sessions"))
 
 (provide 'ob-mscgen)
-
-
 
 ;;; ob-msc.el ends here

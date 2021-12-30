@@ -3,6 +3,7 @@
 ;; Copyright (C) 2004, 2005, 2007, 2009  Free Software Foundation, Inc.
 ;; Copyright (C) 1997-1998  Graeme E Moss
 ;; Copyright (C) 2016  Chris Gregory
+;; Copyright (C) 2020  Jacob Ilsø
 
 ;; Author: 1997-1998 Graeme E Moss <gem@cs.york.ac.uk>
 ;; Maintainer: Stefan Monnier <monnier@gnu.org>
@@ -542,17 +543,12 @@ datatypes) in a Haskell file for the `imenu' package."
          (index-imp-alist '())   ;; Imports
          (index-inst-alist '())  ;; Instances
          (index-type-alist '())  ;; Datatypes
-         ;; Variables for showing progress.
-         (bufname (buffer-name))
-         (divisor-of-progress (max 1 (/ (buffer-size) 100)))
          ;; The result we wish to return.
          result)
     (goto-char (point-min))
     ;; Loop forwards from the beginning of the buffer through the
     ;; starts of the top-level declarations.
     (while (< (point) (point-max))
-      (message "Scanning declarations in %s... (%3d%%)" bufname
-               (/ (- (point) (point-min)) divisor-of-progress))
       ;; Grab the next declaration.
       (setq result (haskell-ds-generic-find-next-decl bird-literate))
       (if result
@@ -580,7 +576,6 @@ datatypes) in a Haskell file for the `imenu' package."
                     (setq index-inst-alist
                           (cl-acons name start-pos index-inst-alist)))))))
     ;; Now sort all the lists, label them, and place them in one list.
-    (message "Sorting declarations in %s..." bufname)
     (when index-type-alist
       (push (cons "Datatypes"
                   (sort index-type-alist 'haskell-ds-imenu-label-cmp))
@@ -604,7 +599,6 @@ datatypes) in a Haskell file for the `imenu' package."
                 index-alist)
         (setq index-alist (append index-alist
                                   (sort index-var-alist 'haskell-ds-imenu-label-cmp)))))
-    (message "Sorting declarations in %s...done" bufname)
     ;; Return the alist.
     index-alist))
 

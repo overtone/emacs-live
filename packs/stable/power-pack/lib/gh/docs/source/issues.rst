@@ -40,14 +40,14 @@ further `oref` those to get data. Putting it all together we might have::
        (insert
         (format
          "#%s %s -- %s\n%s\n\n"
-         (oref it number) ; the issue number
-         (oref it created_at) ; the data
-         (fill-string (oref it title)) ; the title, filled
+         (oref issue number) ; the issue number
+         (oref issue created-at) ; the data
+         (fill-string (oref issue title)) ; the title, filled
          (fill-string
            (replace-regexp-in-string
-              "\r" "\n" (oref it body)))))  ; the body filled
-       (oref
-        (gh-issues-issue-list ghcon "sigma" "gh.el")
-        data)))
+              "\r" "\n" (oref issue body))))))  ; the body filled
+     (oref
+       (gh-issues-issue-list ghcon "sigma" "gh.el")
+       data))
 
 

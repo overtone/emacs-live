@@ -1,26 +1,26 @@
-;;; gitattributes-mode.el --- Major mode for editing .gitattributes files -*- lexical-binding: t -*-
+;;; gitattributes-mode.el --- Major mode for editing .gitattributes files  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2013-2016  The Magit Project Contributors
+;; Copyright (C) 2013-2015  Rüdiger Sonderfeld
+;; Copyright (C) 2013-2021  The Magit Project Contributors
 
 ;; Author: Rüdiger Sonderfeld <ruediger@c-plusplus.net>
 ;; Maintainer: Jonas Bernoulli <jonas@bernoul.li>
 ;; Homepage: https://github.com/magit/git-modes
 ;; Keywords: convenience vc git
+;; SPDX-License-Identifier: GPL-3.0-or-later
 
-;; This file is NOT part of GNU Emacs.
+;; This file is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published
+;; by the Free Software Foundation; either version 3 of the License,
+;; or (at your option) any later version.
 
-;; This program is free software: you can redistribute it and/or modify
-;; it under the terms of the GNU General Public License as published by
-;; the Free Software Foundation, either version 3 of the License, or
-;; (at your option) any later version.
-
-;; This program is distributed in the hope that it will be useful,
+;; This file is distributed in the hope that it will be useful,
 ;; but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;; along with this file.  If not, see <http://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 
@@ -132,6 +132,8 @@ If NO-STATE is non-nil then do not print state."
     (modify-syntax-entry ?- "_." table)
     (modify-syntax-entry ?! "." table)
     (modify-syntax-entry ?= "." table)
+    (modify-syntax-entry ?# "<" table)
+    (modify-syntax-entry ?\n ">" table)
     table)
   "Syntax table for `gitattributes-mode'.")
 
@@ -153,8 +155,7 @@ If NO-STATE is non-nil then do not print state."
              (gitattributes-mode--highlight-1st-field old-limit)))))))
 
 (defvar gitattributes-mode-font-lock-keywords
-  `(("^\\s-*#.*" . 'font-lock-comment-face)
-    ("^\\[attr]" . 'font-lock-function-name-face)
+  `(("^\\[attr]" . 'font-lock-function-name-face)
     ("\\s-+\\(-\\|!\\)[[:word:]]+" (1 'font-lock-negation-char-face))
     ("\\s-+\\(?:-\\|!\\)?\\(\\sw\\(?:\\sw\\|\\s_\\)*\\)=?"
      (1 'font-lock-variable-name-face))
@@ -208,6 +209,8 @@ If ARG is omitted or nil, move point backward one field."
   :group 'gitattributes-mode
   :syntax-table gitattributes-mode-syntax-table
   (setq font-lock-defaults '(gitattributes-mode-font-lock-keywords))
+  (setq-local comment-start "# ")
+  (setq-local comment-start-skip "#+\\s-*")
   (setq-local eldoc-documentation-function #'gitattributes-mode-eldoc)
   (setq-local forward-sexp-function #'gitattributes-mode-forward-field)
   (when (and gitattributes-mode-enable-eldoc
@@ -220,6 +223,9 @@ If ARG is omitted or nil, move point backward one field."
                    "/git/attributes\\'"))
   (add-to-list 'auto-mode-alist (cons pattern #'gitattributes-mode)))
 
+;;; _
 (provide 'gitattributes-mode)
-
+;; Local Variables:
+;; indent-tabs-mode: nil
+;; End:
 ;;; gitattributes-mode.el ends here

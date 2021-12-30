@@ -488,3 +488,16 @@ nil
 #+BEGIN_SRC emacs-lisp :output-dir xxx :file foo.bar
 nil
 #+END_SRC
+* detangle
+** false positive
+The =[[= causes a false positive which ~org-babel-detangle~ should handle properly
+#+begin_src emacs-lisp :tangle yes
+(string-match-p "^#[[:digit:]]+$" "#123")
+#+end_src
+** linked content to detangle
+:PROPERTIES:
+:ID:       73115FB0-6565-442B-BB95-50195A499EF4
+:END:
+#+begin_src emacs-lisp :tangle yes :comments link
+  ;; detangle
+#+end_src

@@ -1,0 +1,9 @@
+/config.mk
+/docs/*.html
+/docs/*.pdf
+/docs/dir
+/docs/stats/
+/lisp/*-autoloads.el
+/lisp/*.elc
+
+/docs/transient/

@@ -1,3 +1,47 @@
+## v2.5.0 - Unreleased
+
+## v2.4.0 - 2021-10-05
+* [#485](https://github.com/elixir-editors/emacs-elixir/pull/485) - Add require for cl-lib
+* [#482](https://github.com/elixir-editors/emacs-elixir/pull/482) - Remove pkg-info dependency
+* [#481](https://github.com/elixir-editors/emacs-elixir/pull/481) - Enable elixir-mode by default when opening mix.lock file.
+* [#475](https://github.com/elixir-editors/emacs-elixir/pull/475) - Backport ppss accessors, use setq-local & more
+* [#472](https://github.com/elixir-editors/emacs-elixir/pull/472) - chore: update guides with new build system
+* [#471](https://github.com/elixir-editors/emacs-elixir/pull/471) - feat: switch CI and build system
+* [#470](https://github.com/elixir-editors/emacs-elixir/pull/470) - Highlight atom map keys that end with a newline
+* [#468](https://github.com/elixir-editors/emacs-elixir/pull/468) - Sigil heredoc support
+* [#459](https://github.com/elixir-editors/emacs-elixir/pull/459) - Customizable face for numbers
+
+## v2.3.2 - 2020-11-16
+* [#460](https://github.com/elixir-editors/emacs-elixir/pull/460) - @typedoc recognized as heredoc
+* [#454](https://github.com/elixir-editors/emacs-elixir/pull/454) - Add ~L, ~E, and ~e sigils for EEx and LiveView
+* [#449](https://github.com/elixir-editors/emacs-elixir/pull/449) - Disable smie-blink-matching-inners-locally
+* [#448](https://github.com/elixir-editors/emacs-elixir/pull/448) - make usable again in Emacs 27
+* [#438](https://github.com/elixir-editors/emacs-elixir/pull/438) - Run mix directly
+* [#442](https://github.com/elixir-editors/emacs-elixir/pull/442) - Add support for ~U sigil
+* [#441](https://github.com/elixir-editors/emacs-elixir/pull/441) - Inherit faces from appropriate built-in ones
+* [#433](https://github.com/elixir-editors/emacs-elixir/pull/433) - Special case for indentation of fat arrow in map literals
+* [#420](https://github.com/elixir-editors/emacs-elixir/pull/420) - change to mix.exs directory before format
+* [#425](https://github.com/elixir-editors/emacs-elixir/pull/425) - fontify defguard and defguardp
+* [#418](https://github.com/elixir-editors/emacs-elixir/pull/418) - locate closest formatter.exs on save
+* [#406](https://github.com/elixir-editors/emacs-elixir/pull/406) - add elixir-format function
+* [#381](https://github.com/elixir-editors/emacs-elixir/pull/381) - Fontify ~N and ~T sigils
+* [#383](https://github.com/elixir-editors/emacs-elixir/pull/383) - Fix @dox highlight
+* [#386](https://github.com/elixir-editors/emacs-elixir/pull/387) - Fix a broken command name
+* [#374](https://github.com/elixir-editors/emacs-elixir/pull/374) - Fix highlighting ignored variable in pattern match
+* [#373](https://github.com/elixir-editors/emacs-elixir/pull/373) - Fontify ~D sigil
+* [#368](https://github.com/elixir-editors/emacs-elixir/pull/368) - Implement moving defun command
+* [#364](https://github.com/elixir-editors/emacs-elixir/pull/364) - Fix issue that emacs hangs after def? statement
+* [#307](https://github.com/elixir-editors/emacs-elixir/pull/307) - Include - in punctuation class
+* [#357](https://github.com/elixir-editors/emacs-elixir/pull/357) - remove elixir-negation-face in favor of font-lock
+* [#358](https://github.com/elixir-editors/emacs-elixir/pull/358) - remove ignore-var-face in favor of comment-face
+* [#350](https://github.com/elixir-editors/emacs-elixir/pull/350) - Correct implementation for with keyword
+* [#345](https://github.com/elixir-editors/emacs-elixir/pull/345) - Correct default indent after match
+* [#343](https://github.com/elixir-editors/emacs-elixir/pull/343) - Fix for do oneline blocks
+* [#342](https://github.com/elixir-editors/emacs-elixir/pull/342) - Complex comment indentation
+* [#340](https://github.com/elixir-editors/emacs-elixir/pull/340) - Fix invalid highlighting question quote
+* [#339](https://github.com/elixir-editors/emacs-elixir/pull/339) - Fix heredoc indentation on first line inside block
+* [#338](https://github.com/elixir-editors/emacs-elixir/pull/338) - Fix "variable binding depth exceeds max-specpdl-size" error
+
 ## v2.3.1 - 2016/04/19
 * [#337](https://github.com/elixir-editors/emacs-elixir/pull/337) - Fix indentation issue after COMMA token
 * [#333](https://github.com/elixir-editors/emacs-elixir/pull/333) - Fix indentation of second element inside list of tuples

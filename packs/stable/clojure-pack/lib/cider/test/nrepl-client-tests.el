@@ -1,9 +1,9 @@
 ;;; nrepl-client-tests.el
 
-;; Copyright © 2012-2016 Tim King, Bozhidar Batsov
+;; Copyright © 2012-2021 Tim King, Bozhidar Batsov
 
 ;; Author: Tim King <kingtim@gmail.com>
-;;         Bozhidar Batsov <bozhidar@batsov.com>
+;;         Bozhidar Batsov <bozhidar@batsov.dev>
 ;;         Artur Malabarba <bruce.connor.am@gmail.com>
 
 ;; This file is NOT part of GNU Emacs.
@@ -28,41 +28,38 @@
 ;;; Code:
 
 (require 'buttercup)
-(require 'cider)
-
-(describe "nrepl-connection-buffer-name"
-  :var (nrepl-hide-special-buffers nrepl-endpoint)
-  (before-all (setq-local nrepl-endpoint '("localhost" 1)))
-
-  (describe "when nrepl-hide-special-buffers is nil"
-    (it "returns the name of the connection buffer, which would make it visible in buffer changing commands"
-      (expect (nrepl-connection-buffer-name)
-              :to-equal "*nrepl-connection localhost*")))
-
-  (describe "when nrepl-hide-special-buffers is t"
-    (it "returns the name of the connection buffer, which hides it in buffer changing commands"
-      (setq nrepl-hide-special-buffers t)
-      (expect (nrepl-connection-buffer-name)
-              :to-equal " *nrepl-connection localhost*"))))
+(require 'nrepl-client)
+(require 'nrepl-tests-utils)
 
 (describe "nrepl-server-buffer-name"
-  :var (nrepl-hide-special-buffers nrepl-endpoint)
-  (before-all (setq-local nrepl-endpoint '("localhost" 1)))
+  :var (nrepl-hide-special-buffers params default-directory-backup
+                                   cider-session-name-template)
+  (before-all
+    (setq default-directory-backup default-directory)
+    (setq default-directory (expand-file-name "/path/to/dirA/"))
+    (setq params '(:host "localhost" :port 1))
+    (setq cider-session-name-template "%J:%h:%p"))
 
-  (describe "when nrepl-hide-special-buffers is nil"
-    (it "returns the name of the server buffer, which would make it visible in buffer changing commands"
-      (setq nrepl-hide-special-buffers nil)
-      (expect (nrepl-server-buffer-name)
-              :to-equal "*nrepl-server localhost*")))
+  (after-all
+   (setq default-directory default-directory-backup))
 
   (describe "when nrepl-hide-special-buffers is t"
     (it "returns the name of the server buffer, which hides it in buffer changing commands"
-      (setq nrepl-hide-special-buffers t)
-      (expect (nrepl-server-buffer-name)
-              :to-equal " *nrepl-server localhost*"))))
+      (setq nrepl-hide-special-buffers t
+            nrepl-server-buffer-name-template "*nrepl-server %h:%p*")
+      (expect (nrepl-server-buffer-name params)
+              :to-equal " *nrepl-server localhost:1*"))
+    (it "creates two separate server processes if needed"
+      (setq nrepl-hide-special-buffers t
+            nrepl-server-buffer-name-template "*cider-test-buffer-names*")
+      (let ((first-buffer (nrepl-server-buffer-name params)))
+        (expect first-buffer :to-equal " *cider-test-buffer-names*")
+        (get-buffer-create first-buffer)
+        (expect (nrepl-server-buffer-name params)
+                :not :to-equal first-buffer)))))
 
 
-(describe "nrepl-dbing-response"
+(describe "nrepl-dbind-response"
   (it "destructures a nREPL response dict and binds values to given vars"
     (expect (nrepl-dbind-response
                 '(dict
@@ -75,108 +72,123 @@
             :to-equal
             '("2" "39f630b9-9545-4ea0-860e-9846681d0741" ("done")))))
 
-(describe "nrepl-format-buffer-name-template"
-  :var (nrepl-buffer-name-separator)
-  ;; TODO
-  (it "returns the string after applying the designation to the template"
-    (expect (nrepl-format-buffer-name-template "*template%s*" "designation-foo")
-            :to-equal "*template designation-foo*"))
-
-  (it "respects the value of `nrepl-buffer-name-separator'"
-    (setq-local nrepl-buffer-name-separator "_")
-    (expect (nrepl-format-buffer-name-template "*template%s*" "designation-foo")
-            :to-equal "*template_designation-foo*"))
-
-  (it "handles nil designation in template"
-    (expect (nrepl-format-buffer-name-template "*template%s*" nil)
-            :to-equal "*template*"))
-
-  (it "handles empty designation in template"
-    (expect (nrepl-format-buffer-name-template "*template%s*" "")
-            :to-equal "*template*")))
-
 (describe "nrepl-make-buffer-name"
+  :var (default-directory-backup cider-session-name-template)
+  (before-all
+    (setq default-directory-backup default-directory)
+    (setq default-directory (expand-file-name "/path/to/dirA/"))
+    (setq cider-session-name-template "%J:%h:%p"))
+
+  (after-all
+   (setq default-directory default-directory-backup))
+
   (it "generates a buffer name from the given template"
-    (with-temp-buffer
-      (setq-local nrepl-endpoint '("localhost" 1))
-      (expect (nrepl-make-buffer-name "*buff-name%s*")
-              :to-equal "*buff-name localhost*")))
+    (let ((params '(:host "localhost" :port 1)))
+      (expect (nrepl-make-buffer-name "*buff-name %s*" params)
+              :to-equal "*buff-name to/dirA:localhost:1*")))
 
-  (it "respects the value of `nrepl-project-dir'"
+  (it "respects the value of param `:project-dir'"
     (with-temp-buffer
-      (setq-local nrepl-project-dir "proj")
-      (expect (nrepl-make-buffer-name "*buff-name%s*")
-              :to-equal "*buff-name proj*")))
+      (let ((params '(:project-dir "path/to/dirB" :host "localhost" :port 1)))
+        (expect (nrepl-make-buffer-name "*buff-name %s*" params)
+                :to-equal "*buff-name to/dirB:localhost:1*"))))
 
-  (it "respects the value of `nrepl-buffer-name-separator'"
+  (it "understands all formats"
     (with-temp-buffer
-      (setq-local nrepl-project-dir "proj")
-      (setq-local nrepl-buffer-name-separator "X")
-      (expect (nrepl-make-buffer-name "*buff-name%s*")
-              :to-equal "*buff-nameXproj*")))
+      (let ((params '(:project-dir "path/to/dirB" :host "localhost" :port 100
+                                   :repl-type cljs :cljs-repl-type "node")))
+        (expect (nrepl-make-buffer-name "*buff-name %j:%J:%h:%H:%p:%r:%S*" params)
+                :to-equal "*buff-name dirB:to/dirB:localhost:100:cljs:node*"))))
 
-  (it "can include nREPL port in the buffer name"
+  (it "strips trailing separators"
     (with-temp-buffer
-      (setq-local nrepl-buffer-name-show-port t)
-      (setq-local nrepl-endpoint '("localhost" 4009))
-      (expect (nrepl-make-buffer-name "*buff-name%s*")
-              :to-equal "*buff-name localhost:4009*")))
+      (let ((params '(:project-dir "path/to/dirB" :host "localhost" :port 100
+                                   :repl-type cljs :cljs-repl-type nil)))
+        (expect (nrepl-make-buffer-name "*buff-name [%r:%S]*" params)
+                :to-equal "*buff-name [cljs]*")
+        (expect (nrepl-make-buffer-name "*buff-name (%r:%S)*" params)
+                :to-equal "*buff-name (cljs)*")
+        (expect (nrepl-make-buffer-name "*buff-name %r:%S*" params)
+                :to-equal "*buff-name cljs*")))))
 
-  (it "can ignore the nREPL port in the buffer name"
-    (with-temp-buffer
-      (setq-local nrepl-buffer-name-show-port nil)
-      (setq-local nrepl-endpoint '("localhost" 4009))
-      (expect (nrepl-make-buffer-name "*buff-name%s*")
-              :to-equal "*buff-name localhost*")))
+(describe "nrepl-parse-port"
+  (it "standard"
+      (let ((msg "nREPL server started on port 58882 on host kubernetes.docker.internal - nrepl://kubernetes.docker.internal:58882"))
+        (expect (string-match nrepl-listening-address-regexp msg)
+                :not :to-be nil)
+        (expect (match-string 1 msg)
+                :to-equal "58882")
+        (expect (match-string 2 msg)
+                :to-be nil)))
+  (it "babashka"
+      (let ((msg "Started nREPL server at 127.0.0.1:1667"))
+        (expect (string-match nrepl-listening-address-regexp msg)
+                :not :to-be nil)
+        (expect (match-string 1 msg)
+                :to-equal "1667")
+        (expect (match-string 2 msg)
+                :to-equal "127.0.0.1")))
+    (it "shadow"
+      (let ((msg "shadow-cljs - nREPL server started on port 50999"))
+        (expect (string-match nrepl-listening-address-regexp msg)
+                :not :to-be nil)
+        (expect (match-string 1 msg)
+                :to-equal "50999")
+        (expect (match-string 2 msg)
+                :to-be nil))))
 
-  (it "handles the project name and nREPL port given together"
-    (with-temp-buffer
-      (setq-local nrepl-buffer-name-show-port t)
-      (setq-local nrepl-project-dir "proj")
-      (setq-local nrepl-endpoint '("localhost" 4009))
-      (expect (nrepl-make-buffer-name "*buff-name%s*")
-              :to-equal "*buff-name proj:4009*")))
+(describe "nrepl-client-lifecycle"
+  (it "start and stop nrepl client process"
 
-  (it "handles two buffers for the same project"
-    (with-temp-buffer
-      (setq-local nrepl-project-dir "proj")
-      (let* ((cider-new-buffer (nrepl-make-buffer-name "*buff-name%s*")))
-        (get-buffer-create cider-new-buffer)
-        (expect cider-new-buffer :to-equal "*buff-name proj*")
-        (with-temp-buffer
-          (setq-local nrepl-project-dir "proj")
-          (expect (nrepl-make-buffer-name "*buff-name%s*")
-                  :to-match "buff-name proj\\*<1\\|2>")
-          ;; We accept either 1 or 2 as the suffix for duplicate buffers
-          ;; This is due to a potential bug in emacs25 in the fn generate-new-buffer-name
-          ;; Refer http://lists.gnu.org/archive/html/bug-gnu-emacs/2016-04/msg01253.html for details
-          (kill-buffer cider-new-buffer)))))
+      ;; start mock server
+      (let* ((server-buffer (get-buffer-create ":nrepl-lifecycle/server"))
+             (server-endpoint nil)
+             (server-process (nrepl-start-server-process
+                              default-directory
+                              (nrepl-server-mock-invocation-string)
 
-  (it "handles duplicate project port"
-    (with-temp-buffer
-      (setq-local nrepl-buffer-name-show-port t)
-      (setq-local nrepl-project-dir "proj")
-      (setq-local nrepl-endpoint '("localhost" 4009))
-      (let* ((cider-new-buffer (nrepl-make-buffer-name "*buff-name%s*")))
-        (get-buffer-create cider-new-buffer)
-        (expect cider-new-buffer :to-equal "*buff-name proj:4009*")
-        (with-temp-buffer
-          (setq-local nrepl-buffer-name-show-port t)
-          (setq-local nrepl-project-dir "proj")
-          (setq-local nrepl-endpoint '("localhost" 4009))
-          (expect (nrepl-make-buffer-name "*buff-name%s*")
-                  :to-match "buff-name proj:4009\\*<1\\|2>")
-          (kill-buffer cider-new-buffer))))))
+                              (lambda (endpoint)
+                                (setq server-endpoint nrepl-endpoint)
+                                server-buffer))))
 
-(describe "cider-clojure-buffer-name"
-  (it "returns a buffer name using `nrepl-repl-buffer-name-template'"
-    (with-temp-buffer
-      (setq-local nrepl-endpoint '("localhost" 1))
-      (expect (nrepl-make-buffer-name nrepl-repl-buffer-name-template)
-              :to-equal "*cider-repl localhost*")))
+        ;; server up and running
+        (nrepl-tests-sleep-until 2 (eq (process-status server-process) 'run))
+        (expect (process-status server-process)
+                :to-equal 'run)
 
-  (it "respects the value of `nrepl-project-dir'"
-    (with-temp-buffer
-      (setq-local nrepl-project-dir "/a/test/directory/project")
-      (expect (nrepl-make-buffer-name nrepl-repl-buffer-name-template)
-              :to-equal "*cider-repl project*"))))
+        ;; server has reported its endpoint
+        (nrepl-tests-sleep-until 2 server-endpoint)
+        (expect server-endpoint :not :to-be nil)
+
+        (condition-case error-details
+            ;; start client process
+            (let* ((client-buffer (get-buffer-create ":nrepl-lifecycle/client"))
+                   (process-client (nrepl-start-client-process
+                                    (plist-get server-endpoint :host)
+                                    (plist-get server-endpoint :port)
+                                    server-process
+                                    (lambda (client-endpoint)
+                                      client-buffer)
+                                    (plist-get params :socket-file))))
+
+              ;; client connection is open
+              (expect (process-status process-client)
+                      :to-equal 'open)
+
+              ;; provide some slack for server process to settle down
+              (sleep-for 0.2)
+
+              ;; exit client
+              (delete-process process-client)
+
+              ;; server process has been signalled
+              (nrepl-tests-sleep-until 4 (eq (process-status server-process)
+                                             'signal))
+              (expect (process-status server-process)
+                      :to-equal 'signal))
+          (error
+           ;; there may be some useful information in the nrepl buffer on error
+           (when-let ((nrepl-error-buffer (get-buffer "*nrepl-error*")))
+             (with-current-buffer nrepl-error-buffer
+               (message ":nrepl-lifecycle/error %s" (buffer-string))))
+           (error error-details))))))

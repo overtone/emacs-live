@@ -5,6 +5,7 @@
 ;; Author: Magnar Sveen <magnars@gmail.com>
 ;; Version: 1.4.0
 ;; Keywords: editing cursors
+;; Homepage: https://github.com/magnars/multiple-cursors.el
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -191,12 +192,10 @@
   :group 'editing)
 
 (require 'mc-edit-lines)
-(require 'mc-cycle-cursors)
 (require 'mc-mark-more)
 (require 'mc-mark-pop)
 (require 'rectangular-region-mode)
 (require 'mc-separate-operations)
-(require 'mc-hide-unmatched-lines-mode)
 
 (provide 'multiple-cursors)
 

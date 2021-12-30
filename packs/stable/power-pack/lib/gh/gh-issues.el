@@ -1,5 +1,7 @@
 ;;; gh-issues.el --- issues api for github
 
+;; Copyright (C) 2014-2015  Yann Hodique
+;; Copyright (C) 2014 Travis Thieman
 ;; Copyright (C) 2012  Raimon Grau
 
 ;; Author: Raimon Grau <raimonster@gmail.com>
@@ -23,118 +25,79 @@
 ;; Basic usage:
 
 ;; (setf api (gh-issues-api "api" :sync nil :cache nil :num-retries 1))
-;; (setf issues (gh-issues-list api "user" "repo"))
+;; (setf issues (gh-issues-issue-list api "user" "repo"))
 ;; (last (oref issues data)) ; get one issue
 ;; (setq mi (make-instance 'gh-issues-issue :body "issue body" :title "issue title"))
 ;; (gh-issues-issue-new api "user" "repo" mi)
+;; (setf comments (gh-issues-comments-list api "user" "repo" "issue id"))
+;; (setq my-comment (make-instance 'gh-issues-comment :body "This is great!"))
+;; (gh-issues-comments-new api "user" "repo" "issue id" my-comment)
 
 ;;; Code:
 
 (eval-when-compile
   (require 'cl))
 
-;;;###autoload
 (require 'eieio)
 
 (require 'gh-api)
 (require 'gh-auth)
+(require 'gh-comments)
 (require 'gh-common)
 
 (require 'gh-repos)
 
-(defclass gh-issues-api (gh-api-v3)
+(defclass gh-issues-api (gh-api-v3 gh-comments-api-mixin)
   ((issue-cls :allocation :class :initform gh-issues-issue)
    (milestone-cls :allocation :class :initform gh-issues-milestone)
-   (label-cls :allocation :class :initform gh-issues-label))
+   (label-cls :allocation :class :initform gh-issues-label)
+   (comment-cls :allocation :class :initform gh-issues-comment))
   "Github Issues api")
 
-(defclass gh-issues-issue (gh-object)
-  ((url :initarg :url)
-   (html-url :initarg :html-url)
-   (number :initarg :number)
+(gh-defclass gh-issues-issue (gh-ref-object)
+  ((number :initarg :number)
    (state :initarg :state)
    (title :initarg :title)
    (body :initarg :body)
-   (user :initarg :user :initform nil)
-   (labels :initarg :labels :initform nil)
-   (assignee :initarg :assignee :initform nil)
-   (milestone :initarg :milestone :initform nil)
-   (open_issues :initarg :open_issues)
-   (closed_issues :initarg :closed_issues)
-   (created_at :initarg :created_at)
-   (due_on :initarg :due_on)
-
-   (user-cls :allocation :class :initform gh-user)
-   (milestone-cls :allocation :class :initform gh-issues-milestone))
+   (user :initarg :user :initform nil :marshal-type gh-user)
+   (labels :initarg :labels :initform nil :marshal-type (list gh-issues-label))
+   (assignees :initarg :assignees :initform nil :marshal-type (list gh-user))
+   (assignee :initarg :assignee :initform nil :marshal-type gh-user)
+   (milestone :initarg :milestone :initform nil :marshal-type gh-issues-milestone)
+   (comments :initarg :comments :initform 0)
+   (pull-request :initarg :pull-request :marshal-type gh-issues-pull-request)
+   (closed-at :initarg :closed-at)
+   (created-at :initarg :created-at)
+   (updated-at :initarg :updated-at))
   "issues request")
 
-(defclass gh-issues-label (gh-object)
-  ((url :initarg :url)
-   (name :initarg :name)
+(gh-defclass gh-issues-pull-request (gh-object)
+  ((html-url :initarg :html-url)
+   (diff-url :initarg :diff-url)
+   (patch-url :initarg :patch-url)))
+
+(gh-defclass gh-issues-label (gh-ref-object)
+  ((name :initarg :name)
    (color :initarg :color)))
 
-(defclass gh-issues-milestone (gh-object)
-  ((url :initarg :url)
-   (number :initarg :number)
+(defmethod gh-issues-label-req-to-update ((label gh-issues-label))
+  `(("name" . ,(oref label :name))
+    ("color" . ,(oref label :color))))
+
+(gh-defclass gh-issues-milestone (gh-ref-object)
+  ((number :initarg :number)
    (state :initarg :state)
    (title :initarg :title)
    (description :initarg :description)
-   (creator :initarg :creator :initform nil)
-   (open_issues :initarg :open_issues)
-   (closed_issues :initarg :closed_issues)
-   (created_at :initarg :created_at)
-   (due_on :initarg :due_on)
-
-   (user-cls :allocation :class :initform gh-user))
+   (creator :initarg :creator :initform nil :marshal-type gh-user)
+   (open-issues :initarg :open-issues )
+   (closed-issues :initarg :closed-issues)
+   (created-at :initarg :created-at)
+   (due-on :initarg :due-on))
   "github milestone")
 
-(defmethod gh-object-read-into ((issue gh-issues-issue) data)
-  (call-next-method)
-  (with-slots (url html-url number state title body
-                   user labels assignee milestone open_issues
-                   closed_issues created_at due_on)
-      issue
-    (setq url (gh-read data 'url)
-          html-url (gh-read data 'html_url)
-          number (gh-read data 'number)
-          state (gh-read data 'state)
-          title (gh-read data 'title)
-          body (gh-read data 'body)
-          user (gh-object-read  (or (oref issue :user)
-                                    (oref issue user-cls))
-                                (gh-read data 'user))
-          labels (gh-read data 'labels)
-          assignee (gh-object-read  (or (oref issue :assignee)
-                                        (oref issue user-cls))
-                                    (gh-read data 'assignee))
-          milestone (gh-object-read (or (oref issue :milestone)
-                                        (oref issue milestone-cls))
-                                    (gh-read data 'milestone))
-          open_issues (gh-read data 'open_issues)
-          closed_issues (gh-read data 'closed_issues)
-          created_at (gh-read data 'created_at)
-          due_on (gh-read data 'due_on))))
-
-
-(defmethod gh-object-read-into ((milestone gh-issues-milestone) data)
-  (call-next-method)
-  (with-slots (url number state title description creator
-                   open_issues closed_issues
-                   created_at due_on)
-      milestone
-    (setq url (gh-read data 'url)
-          number (gh-read data 'number)
-          state (gh-read data 'state)
-          title (gh-read data 'title)
-          description (gh-read data 'description)
-          creator (gh-object-read (or (oref milestone :creator)
-                                      (oref milestone user-cls))
-                                  (gh-read data 'creator))
-
-          open_issues (gh-read data 'open_issues)
-          closed_issues (gh-read data 'closed_issues)
-          created_at (gh-read data 'created_at)
-          due_on (gh-read data 'due_on))))
+(gh-defclass gh-issues-comment (gh-comment)
+  ())
 
 (defmethod gh-issues-issue-list ((api gh-issues-api) user repo)
   (gh-api-authenticated-request
@@ -165,13 +128,13 @@
    (gh-issues-milestone-req-to-update milestone)))
 
 (defmethod gh-issues-milestone-req-to-update ((milestone gh-issues-milestone))
-  (let ((state (oref milestone state)  )
-        (description (oref milestone description))
-        (due_on (oref milestone due_on))
-        (to-update `(("title" . ,(oref milestone title)))))
+  (let ((state (oref milestone :state))
+        (description (oref milestone :description))
+        (due-on (oref milestone :due-on))
+        (to-update `(("title" . ,(oref milestone :title)))))
     (when state (nconc to-update `(("state" . ,state))))
     (when description (nconc to-update `(("description" . ,description))))
-    (when due_on (nconc to-update `(("due_on" . ,due_on))))
+    (when due-on (nconc to-update `(("due_on" . ,due-on))))
     to-update))
 
 (defmethod gh-issues-issue-get ((api gh-issues-api) user repo id)
@@ -180,18 +143,18 @@
    (format "/repos/%s/%s/issues/%s" user repo id)))
 
 (defmethod gh-issues-issue-req-to-update ((req gh-issues-issue))
-  (let ((assignee (oref req assignee))
+  (let ((assignee (oref req :assignee))
         ;; (labels (oref req labels))
-        (milestone (oref req milestone))
-        (to-update `(("title" . ,(oref req title))
-                     ("state" . ,(oref req state))
-                     ("body" . ,(oref req body)))))
+        (milestone (oref req :milestone))
+        (to-update `(("title" . ,(oref req :title))
+                     ("state" . ,(oref req :state))
+                     ("body" . ,(oref req :body)))))
 
     ;; (when labels (nconc to-update `(("labels" . ,(oref req labels) ))))
     (when milestone
-      (nconc to-update `(("milestone" . ,(oref milestone number)))))
+      (nconc to-update `(("milestone" . ,(oref milestone :number)))))
     (when assignee
-      (nconc to-update `(("assignee" . ,(oref assignee login) ))))
+      (nconc to-update `(("assignee" . ,(oref assignee :login)))))
     to-update))
 
 (defmethod gh-issues-issue-update ((api gh-issues-api) user repo id req)
@@ -206,23 +169,7 @@
    (format "/repos/%s/%s/issues" user repo)
    (gh-issues-issue-req-to-update issue)))
 
-;;; labels
-(defclass gh-issues-label (gh-object)
-  ((url :initarg :url)
-   (name :initarg :name)
-   (color :initarg :color)))
-
-(defmethod gh-object-read-into ((label gh-issues-label) data)
-  (call-next-method)
-  (with-slots (url name color)
-      label
-    (setq url (gh-read data 'url)
-          name (gh-read data 'name)
-          color (gh-read data 'color))))
-
-(defmethod gh-issues-label-req-to-update ((label gh-issues-label))
-  `(("name" . ,(oref label name))
-    ("color" . ,(oref label color))))
+;;; Labels
 
 (defmethod gh-issues-label-get ((api gh-issues-api) user repo name)
   (gh-api-authenticated-request
@@ -243,7 +190,7 @@
 (defmethod gh-issues-label-update ((api gh-issues-api) user repo req)
   (gh-api-authenticated-request
    api (gh-object-reader (oref api label-cls)) "POST"
-   (format "/repos/%s/%s/labels/%s" user repo (oref req name))
+   (format "/repos/%s/%s/labels/%s" user repo (oref req :name))
    (gh-issues-label-req-to-update req)))
 
 (defmethod gh-issues-label-delete ((api gh-issues-api) user repo name)
@@ -281,22 +228,42 @@
     api (gh-object-list-reader (oref api label-cls)) "GET"
     (format "/repos/%s/%s/milestones/%s/labels" user repo milestone-id))))
 
+;;; Comments
+
+(defmethod gh-issues-comments-list ((api gh-issues-api) user repo issue-id)
+  (gh-comments-list api (format "/repos/%s/%s/issues/%s" user repo issue-id)))
+
+(defmethod gh-issues-comments-get ((api gh-issues-api) user repo comment-id)
+  (gh-comments-get api (format "/repos/%s/%s/issues" user repo) comment-id))
+
+(defmethod gh-issues-comments-update ((api gh-issues-api)
+                                      user repo comment-id comment)
+  (gh-comments-update api (format "/repos/%s/%s/issues" user repo)
+                      comment-id comment))
+
+(defmethod gh-issues-comments-new ((api gh-issues-api)
+                                   user repo issue-id comment)
+  (gh-comments-new api (format "/repos/%s/%s/issues/%s" user repo issue-id)
+                   comment))
+
+(defmethod gh-issues-comments-delete ((api gh-issues-api) user repo comment-id)
+  (gh-comments-delete api (format "/repos/%s/%s/issues" user repo) comment-id))
 
 ;;; helpers
 
 (defun gh-issues--issue-id (issue-or-issue-id)
   (if (eieio-object-p issue-or-issue-id)
-      (oref issue-or-issue-id id)
+      (oref issue-or-issue-id :id)
     issue-or-issue-id))
 
 (defun gh-issues--milestone-id (milestone-or-milestone-id)
   (if (eieio-object-p milestone-or-milestone-id)
-      (oref milestone-or-milestone-id id)
+      (oref milestone-or-milestone-id :id)
     milestone-or-milestone-id))
 
 (defun gh-issues--label-name (label-or-label-name)
   (if (eieio-object-p label-or-label-name)
-      (oref label-or-label-name name)
+      (oref label-or-label-name :name)
     label-or-label-name))
 
 

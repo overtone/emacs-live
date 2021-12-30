@@ -1,6 +1,6 @@
 ;;; org-learn.el --- Implements SuperMemo's incremental learning algorithm
 
-;; Copyright (C) 2009-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2021 Free Software Foundation, Inc.
 
 ;; Author: John Wiegley <johnw at gnu dot org>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -20,15 +20,15 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;; Commentary:
 
 ;; The file implements the learning algorithm described at
-;; http://supermemo.com/english/ol/sm5.htm, which is a system for reading
+;; https://supermemo.com/english/ol/sm5.htm, which is a system for reading
 ;; material according to "spaced repetition".  See
-;; http://en.wikipedia.org/wiki/Spaced_repetition for more details.
+;; https://en.wikipedia.org/wiki/Spaced_repetition for more details.
 ;;
 ;; To use, turn on state logging and schedule some piece of information you
 ;; want to read.  Then in the agenda buffer type

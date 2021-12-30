@@ -1,13 +1,14 @@
 ;;; undo-tree.el --- Treat undo history as a tree  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2009-2020  Free Software Foundation, Inc
+;; Copyright (C) 2009-2021  Free Software Foundation, Inc
 
-;; Author: Toby Cubitt <toby-undo-tree@dr-qubit.org>
+;; Author: Toby Cubitt <toby+undo-tree@dr-qubit.org>
 ;; Maintainer: Toby Cubitt <toby-undo-tree@dr-qubit.org>
-;; Version: 0.7.4
+;; Version: 0.8.2
 ;; Keywords: convenience, files, undo, redo, history, tree
-;; URL: http://www.dr-qubit.org/emacs.php
-;; Repository: http://www.dr-qubit.org/git/undo-tree.git
+;; Package-Requires: ((queue "0.2"))
+;; URL: https://www.dr-qubit.org/undo-tree.html
+;; Repository: https://gitlab.com/tsc25/undo-tree
 
 ;; This file is part of Emacs.
 ;;
@@ -755,6 +756,7 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'queue)
 (require 'diff)
 (require 'gv)
 
@@ -939,7 +941,7 @@ within the current region."
   :type 'boolean)
 
 
-(defcustom undo-tree-auto-save-history nil
+(defcustom undo-tree-auto-save-history t
   "When non-nil, `undo-tree-mode' will save undo history to file
 when a buffer is saved to file.
 
@@ -1340,6 +1342,26 @@ in visualizer."
                   (timestamp (current-time))
                   (branch 0)))
    (:constructor undo-tree-make-empty-node ())
+   (:constructor undo-tree-copy-node-save-data
+		 (node
+		  &aux
+		  (undo (let ((changeset (undo-tree-node-undo node)))
+			  (run-hook-wrapped
+			   'undo-tree-pre-save-element-functions
+			   (lambda (fun)
+			     (setq changeset (delq nil (mapcar fun changeset)))
+			     nil))
+			  changeset))
+		  (redo (let ((changeset (undo-tree-node-redo node)))
+			  (run-hook-wrapped
+			   'undo-tree-pre-save-element-functions
+			   (lambda (fun)
+			     (setq changeset (delq nil (mapcar fun changeset)))
+			     nil))
+			  changeset))
+		  (timestamp (undo-tree-node-timestamp node))
+		  (branch (undo-tree-node-branch node))
+		  (meta-data (undo-tree-node-meta-data node))))
    (:copier nil))
   previous next undo redo timestamp branch meta-data)
 
@@ -1349,7 +1371,7 @@ in visualizer."
     `(and (vectorp ,n) (= (length ,n) ,len))))
 
 (defun undo-tree-node-copy (node &optional tree current)
-  ;; Return a copy of undo-tree NODE, sans previous link or meta-data.
+  ;; Return a deep copy of undo-tree NODE, sans previous link or meta-data.
   ;; If TREE and CURRENT are supplied, set (undo-tree-current TREE) to the
   ;; copy of CURRENT node, if found.
   (let* ((new (undo-tree-make-empty-node))
@@ -1825,7 +1847,7 @@ Comparison is done with `eq'."
     (while undo-tree-gc-flag
       (setq undo-tree-gc-flag nil
 	    undo-list (copy-tree buffer-undo-list)))
-    (setq buffer-undo-list '(nil undo-tree-canary))
+    (setq buffer-undo-list (list nil 'undo-tree-canary))
 
     ;; create new node from first changeset in `undo-list', save old
     ;; `buffer-undo-tree' current node, and make new node the current node
@@ -1859,8 +1881,7 @@ Comparison is done with `eq'."
 	  (setq node (undo-tree-grow-backwards node nil))
 	  (setf (undo-tree-root buffer-undo-tree) node)
 	  (setf (undo-tree-size buffer-undo-tree) size)
-	  (setf (undo-tree-count buffer-undo-tree) count)
-	  (setq undo-list '(nil undo-tree-canary))))))
+	  (setf (undo-tree-count buffer-undo-tree) count)))))
 
   ;; discard undo history if necessary
   (undo-tree-discard-history))
@@ -2205,16 +2226,14 @@ which is defined in the `warnings' library.\n")
   ;; Return non-nil if NODE corresponds to a buffer state that once upon a
   ;; time was unmodified. If a file modification time MTIME is specified,
   ;; return non-nil if the corresponding buffer state really is unmodified.
-  (let (changeset ntime)
-    (setq changeset
+  (let* ((changeset
 	  (or (undo-tree-node-redo node)
 	      (and (setq changeset (car (undo-tree-node-next node)))
-		   (undo-tree-node-undo changeset)))
-	  ntime
-	  (catch 'found
-	    (dolist (elt changeset)
-	      (when (and (consp elt) (eq (car elt) t) (consp (cdr elt))
-			 (throw 'found (cdr elt)))))))
+		   (undo-tree-node-undo changeset))))
+	 (ntime
+	  (let ((elt (car (last changeset))))
+	    (and (consp elt) (eq (car elt) t) (consp (cdr elt))
+		 (cdr elt)))))
     (and ntime
 	 (or (null mtime)
 	     ;; high-precision timestamps
@@ -3217,6 +3236,10 @@ Argument is a character, naming the register."
 ;;; =====================================================================
 ;;;                    Persistent storage commands
 
+(defvar undo-tree-save-format-version 1
+  "Undo-tree history file format version.")
+
+
 (defun undo-tree-make-history-save-file-name (file)
   "Create the undo history file name for FILE.
 Normally this is the file's name with \".\" prepended and
@@ -3229,6 +3252,111 @@ directory for the backup doesn't exist, it is created."
 	 (name (make-backup-file-name-1 file)))
     (concat (file-name-directory name) "." (file-name-nondirectory name)
 	    ".~undo-tree~")))
+
+
+(defun undo-tree-serialize (tree)
+  "Serialise undo-tree TREE to current buffer."
+  ;; write root
+  (let ((data (undo-tree-copy-node-save-data (undo-tree-root tree))))
+    (when (eq (undo-tree-root tree) (undo-tree-current tree))
+      (setf (undo-tree-node-next data) 'current))
+    (prin1 data (current-buffer)))
+  (terpri (current-buffer))
+  ;; Note: We serialise in breadth-first order, as undo-trees are typically
+  ;;       much deeper than they are wide, so this is more memory-efficient.
+  (let ((queue (make-queue)))
+    (queue-enqueue queue (undo-tree-root tree))
+    (while (not (queue-empty queue))
+      (prin1 (mapcar
+	      (lambda (n)
+		(queue-enqueue queue n)
+		(let ((data (undo-tree-copy-node-save-data n)))
+		  ;; use empty next field to mark current node
+		  (when (eq n (undo-tree-current tree))
+		    (setf (undo-tree-node-next data) 'current))
+		  data))
+	      (undo-tree-node-next (queue-dequeue queue)))
+	     (current-buffer))
+      (terpri (current-buffer)))))
+
+
+(defun undo-tree-deserialize ()
+  "Deserialize and return undo-tree from current buffer."
+  (let ((tree (make-undo-tree))
+	(queue (make-queue))
+	node)
+    ;; read root
+    (setf (undo-tree-root tree) (read (current-buffer)))
+    (queue-enqueue queue (undo-tree-root tree))
+    ;; reconstruct tree in breadth-first order
+    (while (not (queue-empty queue))
+      (setq node (queue-dequeue queue))
+      (when (eq (undo-tree-node-next node) 'current)
+	(setf (undo-tree-current tree) node))
+      (setf (undo-tree-node-next node) (read (current-buffer)))
+      (mapc (lambda (n) (queue-enqueue queue n))
+	    (undo-tree-node-next node)))
+    ;; restore parent links
+    (undo-tree-recircle tree)
+    tree))
+
+
+(defun undo-tree-serialize-old-format (tree)
+  ;; make tmp copy of TREE
+  (setq tree (undo-tree-copy tree))
+  ;; decircle and discard object pool before saving
+  (undo-tree-decircle tree)
+  (setf (undo-tree-object-pool tree) nil)
+  ;; run pre-save transformer functions
+  (when undo-tree-pre-save-element-functions
+    (undo-tree-mapc
+     (lambda (node)
+       (let ((changeset (undo-tree-node-undo node)))
+	 (run-hook-wrapped
+	  'undo-tree-pre-save-element-functions
+	  (lambda (fun)
+	    (setq changeset (delq nil (mapcar fun changeset)))
+	    nil))
+	 (setf (undo-tree-node-undo node) changeset))
+       (let ((changeset (undo-tree-node-redo node)))
+	 (run-hook-wrapped
+	  'undo-tree-pre-save-element-functions
+	  (lambda (fun)
+	    (setq changeset (delq nil (mapcar fun changeset)))
+	    nil))
+	 (setf (undo-tree-node-redo node) changeset)))
+     (undo-tree-root tree)))
+  ;; write tree
+  (let ((print-circle t)) (prin1 tree (current-buffer))))
+
+
+(defun undo-tree-deserialize-old-format ()
+  ;; read tree
+  (let ((tree (read (current-buffer))))
+    ;; run post-load transformer functions
+    (when undo-tree-post-load-element-functions
+      (undo-tree-mapc
+       (lambda (node)
+	 (let ((changeset (undo-tree-node-undo node)))
+	   (run-hook-wrapped
+	    'undo-tree-post-load-element-functions
+	    (lambda (fun)
+	      (setq changeset (delq nil (mapcar fun changeset)))))
+	   (setf (undo-tree-node-undo node) changeset))
+	 (let ((changeset (undo-tree-node-redo node)))
+	   (run-hook-wrapped
+	    'undo-tree-post-load-element-functions
+	    (lambda (fun)
+	      (setq changeset (delq nil (mapcar fun changeset)))))
+	   (setf (undo-tree-node-redo node) changeset)))
+       (undo-tree-root tree)))
+    ;; initialise empty undo-tree object pool
+    (setf (undo-tree-object-pool tree)
+	  (make-hash-table :test 'eq :weakness 'value))
+    ;; restore parent links
+    (undo-tree-recircle tree)
+    tree))
+
 
 
 (defun undo-tree-save-history (&optional filename overwrite)
@@ -3247,12 +3375,12 @@ without asking for confirmation."
     (user-error "No undo information in this buffer"))
   (undo-list-transfer-to-tree)
   (when (and buffer-undo-tree (not (eq buffer-undo-tree t)))
-    (undo-tree-kill-visualizer)
-    ;; should be cleared already by killing the visualizer, but writes
-    ;; unreasable data if not for some reason, so just in case...
-    (undo-tree-clear-visualizer-data buffer-undo-tree)
+    ;; (undo-tree-kill-visualizer)
+    ;; ;; should be cleared already by killing the visualizer, but writes
+    ;; ;; unreasable data if not for some reason, so just in case...
+    ;; (undo-tree-clear-visualizer-data buffer-undo-tree)
     (let ((buff (current-buffer))
-	  tree)
+	  (tree buffer-undo-tree))
       ;; get filename
       (unless filename
 	(setq filename
@@ -3262,41 +3390,39 @@ without asking for confirmation."
       (when (or (not (file-exists-p filename))
 		overwrite
 		(yes-or-no-p (format "Overwrite \"%s\"? " filename)))
-	;; transform undo-tree into non-circular structure, and make tmp copy
-	(setq tree (undo-tree-copy buffer-undo-tree))
-	(undo-tree-decircle tree)
-	;; discard undo-tree object pool before saving
-	(setf (undo-tree-object-pool tree) nil)
-	;; run pre-save transformer functions
-	(when undo-tree-pre-save-element-functions
-	  (undo-tree-mapc
-	   (lambda (node)
-	     (let ((changeset (undo-tree-node-undo node)))
-	       (run-hook-wrapped
-		'undo-tree-pre-save-element-functions
-		(lambda (fun)
-		  (setq changeset (delq nil (mapcar fun changeset)))))
-		(setf (undo-tree-node-undo node) changeset))
-	     (let ((changeset (undo-tree-node-redo node)))
-	       (run-hook-wrapped
-		'undo-tree-pre-save-element-functions
-		(lambda (fun)
-		  (setq changeset (delq nil (mapcar fun changeset)))))
-	       (setf (undo-tree-node-redo node) changeset)))
-	   (undo-tree-root tree)))
+
 	;; print undo-tree to file
-	;; NOTE: We use `with-temp-buffer' instead of `with-temp-file' to
+	;; Note: We use `with-temp-buffer' instead of `with-temp-file' to
 	;;       allow `auto-compression-mode' to take effect, in case user
 	;;       has overridden or advised the default
 	;;       `undo-tree-make-history-save-file-name' to add a compressed
 	;;       file extension.
-	(with-auto-compression-mode
-	  (with-temp-buffer
-	    (prin1 (sha1 buff) (current-buffer))
-	    (terpri (current-buffer))
-	    (let ((print-circle t)) (prin1 tree (current-buffer)))
+	(with-temp-buffer
+	  ;; write version number; (original save file format (version 0) has no version string)
+	  (unless (= undo-tree-save-format-version 0)
+	    (prin1 (cons 'undo-tree-save-format-version undo-tree-save-format-version)
+		   (current-buffer))
+	    (terpri (current-buffer)))
+	  ;; write hash
+	  (prin1 (sha1 buff) (current-buffer))
+	  (terpri (current-buffer))
+	  ;; write tree
+	  (cl-case undo-tree-save-format-version
+	    (0 (undo-tree-serialize-old-format tree))
+	    (1 (undo-tree-serialize tree))
+	    (t (error "Unknown `undo-tree-save-format-version'; undo-tree history *not* saved")))
+	  ;; write file
+	  (with-auto-compression-mode
 	    (write-region nil nil filename)))))))
 
+
+(defmacro undo-tree--catch-load-history-error (error-fmt &rest body)
+  `(condition-case nil
+       (progn ,@body)
+     (error
+      (kill-buffer nil)
+      (funcall (if noerror #'message #'user-error) ,error-fmt filename)
+      (throw 'load-error nil))))
 
 
 (defun undo-tree-load-history (&optional filename noerror)
@@ -3320,65 +3446,54 @@ Note this will overwrite any existing undo history."
 	      (undo-tree-make-history-save-file-name buffer-file-name)
 	    (expand-file-name (read-file-name "File to load from: ") nil))))
 
-  ;; attempt to read undo-tree from FILENAME
+  ;; attempt to read undo-tree
   (catch 'load-error
     (unless (file-exists-p filename)
       (if noerror
 	  (throw 'load-error nil)
-	(error "File \"%s\" does not exist; could not load undo-tree history"
-	       filename)))
-    (let (buff hash tree)
-      (setq buff (current-buffer))
-      (with-auto-compression-mode
+	(user-error "File \"%s\" does not exist; could not load undo-tree history"
+		    filename)))
+
+    ;; read file contents
+    (let ((buff (current-buffer))
+	  version hash tree)
 	(with-temp-buffer
-	  (insert-file-contents filename)
+	  (with-auto-compression-mode (insert-file-contents filename))
 	  (goto-char (point-min))
-	  (condition-case nil
-	      (setq hash (read (current-buffer)))
-	    (error
-	     (kill-buffer nil)
-	     (funcall (if noerror #'message #'user-error)
-		      "Error reading undo-tree history from \"%s\"" filename)
-	     (throw 'load-error nil)))
-	  (unless (string= (sha1 buff) hash)
-	    (kill-buffer nil)
-	    (funcall (if noerror 'message 'user-error)
-		     "Buffer has been modified; could not load undo-tree history")
-	    (throw 'load-error nil))
-	  (condition-case nil
-	      (setq tree (read (current-buffer)))
-	    (error
-	     (kill-buffer nil)
-	     (funcall (if noerror #'message #'error)
-		      "Error reading undo-tree history from \"%s\"" filename)
-	     (throw 'load-error nil)))
-	  (kill-buffer nil)))
-	;; run post-load transformer functions
-	(when undo-tree-post-load-element-functions
-	  (undo-tree-mapc
-	   (lambda (node)
-	     (let ((changeset (undo-tree-node-undo node)))
-	       (run-hook-wrapped
-		'undo-tree-post-load-element-functions
-		(lambda (fun)
-		  (setq changeset (delq nil (mapcar fun changeset)))))
-		(setf (undo-tree-node-undo node) changeset))
-	     (let ((changeset (undo-tree-node-redo node)))
-	       (run-hook-wrapped
-		'undo-tree-post-load-element-functions
-		(lambda (fun)
-		  (setq changeset (delq nil (mapcar fun changeset)))))
-	       (setf (undo-tree-node-redo node) changeset)))
-	   (undo-tree-root tree)))      ;; initialise empty undo-tree object pool
-      (setf (undo-tree-object-pool tree)
-	    (make-hash-table :test 'eq :weakness 'value))
-      ;; restore circular undo-tree data structure
-      (undo-tree-recircle tree)
-      ;; create undo-tree object pool
-      (setf (undo-tree-object-pool tree)
-	    (make-hash-table :test 'eq :weakness 'value))
-      (setq buffer-undo-tree tree
-	    buffer-undo-list '(nil undo-tree-canary)))))
+
+	  (undo-tree--catch-load-history-error
+	   "Error reading undo-tree history from \"%s\""
+	   ;; read version number
+	   (setq version (read (current-buffer)))
+	   ;; read hash
+	   (cond
+	    ((eq (car-safe version) 'undo-tree-save-format-version)
+	     (setq version (cdr version))
+	     (setq hash (read (current-buffer))))
+	    ;; original save file format (version 0) has no version string
+	    ((stringp version)
+	     (setq hash version
+		   version 0))
+	    (t (error "Error"))))
+
+	  ;; check hash
+	  (undo-tree--catch-load-history-error
+	    "Buffer has been modified since undo-tree history was saved to
+	  \"%s\"; could not load undo-tree history"
+	    (unless (string= (sha1 buff) hash) (error "Error")))
+
+	  ;; read tree
+	  (undo-tree--catch-load-history-error
+	   "Error reading undo-tree history from \"%s\""
+	   (setq tree
+		 (cl-case version
+		   (0 (undo-tree-deserialize-old-format))
+		   (1 (undo-tree-deserialize))
+		   (t (error "Error")))))
+	  (kill-buffer nil))
+
+	(setq buffer-undo-tree tree
+	      buffer-undo-list (list nil 'undo-tree-canary)))))
 
 
 
@@ -3446,11 +3561,8 @@ Note this will overwrite any existing undo history."
     (setq undo-tree-visualizer-initial-node (undo-tree-current undo-tree))
     (setq undo-tree-visualizer-spacing
 	  (undo-tree-visualizer-calculate-spacing))
-    (make-local-variable 'undo-tree-visualizer-timestamps)
-    (make-local-variable 'undo-tree-visualizer-diff)
     (setq buffer-undo-tree undo-tree)
     (undo-tree-visualizer-mode)
-    ;; FIXME; don't know why `undo-tree-visualizer-mode' clears this
     (setq buffer-undo-tree undo-tree)
     (set (make-local-variable 'undo-tree-visualizer-lazy-drawing)
 	 (or (eq undo-tree-visualizer-lazy-drawing t)
@@ -3734,9 +3846,9 @@ Note this will overwrite any existing undo history."
 	  undo-tree-insert-face
 	    (nconc
 	     (cond
-	      (current    '(undo-tree-visualizer-current-face))
-	      (unmodified '(undo-tree-visualizer-unmodified-face))
-	      (register   '(undo-tree-visualizer-register-face)))
+	      (current    (list 'undo-tree-visualizer-current-face))
+	      (unmodified (list 'undo-tree-visualizer-unmodified-face))
+	      (register   (list 'undo-tree-visualizer-register-face)))
 	     undo-tree-insert-face))
     ;; draw node and link it to its representation in visualizer
     (undo-tree-insert node-string)
@@ -4083,7 +4195,9 @@ Within the undo-tree visualizer, the following keys are available:
   :abbrev-table nil
   (setq truncate-lines t)
   (setq cursor-type nil)
-  (setq undo-tree-visualizer-selected-node nil))
+  (setq undo-tree-visualizer-selected-node nil)
+  (make-local-variable 'undo-tree-visualizer-timestamps)
+  (make-local-variable 'undo-tree-visualizer-diff))
 
 
 (define-minor-mode undo-tree-visualizer-selection-mode

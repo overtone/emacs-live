@@ -19,7 +19,7 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;; Commentary:
@@ -177,7 +177,7 @@
 (global-set-key "\C-cj" 'org-sec-tag-entry)
 
 (defun join (lst sep &optional pre post)
-  (mapconcat (function (lambda (x) (concat pre x post))) lst sep))
+  (mapconcat (lambda (x) (concat pre x post)) lst sep))
 
 (defun org-sec-get-with ()
   (if org-sec-with

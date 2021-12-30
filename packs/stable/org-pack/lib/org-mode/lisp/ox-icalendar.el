@@ -1,6 +1,6 @@
 ;;; ox-icalendar.el --- iCalendar Back-End for Org Export Engine -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2004-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2004-2021 Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;;      Nicolas Goaziou <n dot goaziou at gmail dot com>
@@ -32,6 +32,7 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'org-agenda)
 (require 'ox-ascii)
 (declare-function org-bbdb-anniv-export-ical "ol-bbdb" nil)
 
@@ -281,7 +282,6 @@ re-read the iCalendar file.")
 		     (inlinetask . ignore)
 		     (planning . ignore)
 		     (section . ignore)
-		     (inner-template . (lambda (c i) c))
 		     (template . org-icalendar-template))
   :options-alist
   '((:exclude-tags
@@ -367,9 +367,9 @@ A headline is blocked when either
 (defun org-icalendar-use-UTC-date-time-p ()
   "Non-nil when `org-icalendar-date-time-format' requires UTC time."
   (char-equal (elt org-icalendar-date-time-format
-		   (1- (length org-icalendar-date-time-format))) ?Z))
+		   (1- (length org-icalendar-date-time-format)))
+	      ?Z))
 
-(defvar org-agenda-default-appointment-duration) ; From org-agenda.el.
 (defun org-icalendar-convert-timestamp (timestamp keyword &optional end tz)
   "Convert TIMESTAMP to iCalendar format.
 
@@ -763,10 +763,10 @@ Return VTODO component as a string."
 	     "SEQUENCE:1\n"
 	     (format "PRIORITY:%d\n"
 		     (let ((pri (or (org-element-property :priority entry)
-				    org-default-priority)))
-		       (floor (- 9 (* 8. (/ (float (- org-lowest-priority pri))
-					    (- org-lowest-priority
-					       org-highest-priority)))))))
+				    org-priority-default)))
+		       (floor (- 9 (* 8. (/ (float (- org-priority-lowest pri))
+					    (- org-priority-lowest
+					       org-priority-highest)))))))
 	     (format "STATUS:%s\n"
 		     (if (eq (org-element-property :todo-type entry) 'todo)
 			 "NEEDS-ACTION"

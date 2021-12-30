@@ -1,6 +1,6 @@
 ;;; ol-vm.el --- Links to VM messages
 
-;; Copyright (C) 2004-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2004-2021 Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -23,7 +23,7 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;; Commentary:
@@ -95,7 +95,7 @@
 	(org-add-link-props :link link :description desc)
 	link))))
 
-(defun org-vm-open (path)
+(defun org-vm-open (path _)
   "Follow a VM message link specified by PATH."
   (let (folder article)
     (if (not (string-match "\\`\\([^#]+\\)\\(#\\(.*\\)\\)?" path))
@@ -127,7 +127,7 @@
     (when article
       (org-vm-select-message (org-link-add-angle-brackets article)))))
 
-(defun org-vm-imap-open (path)
+(defun org-vm-imap-open (path _)
   "Follow a VM link to an IMAP folder."
   (require 'vm-imap)
   (when (string-match "\\([^:]+\\):\\([^#]+\\)#?\\(.+\\)?" path)

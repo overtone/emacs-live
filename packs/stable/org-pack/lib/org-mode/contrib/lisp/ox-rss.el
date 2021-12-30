@@ -1,6 +1,6 @@
 ;;; ox-rss.el --- RSS 2.0 Back-End for Org Export Engine
 
-;; Copyright (C) 2013-2015  Bastien Guerry
+;; Copyright (C) 2013-2021 Free Software Foundation, Inc.
 
 ;; Author: Bastien Guerry <bzg@gnu.org>
 ;; Keywords: org, wp, blog, feed, rss
@@ -18,7 +18,7 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 
@@ -34,8 +34,8 @@
 ;; This backend understands three new option keywords:
 ;;
 ;; #+RSS_EXTENSION: xml
-;; #+RSS_IMAGE_URL: http://myblog.org/mypicture.jpg
-;; #+RSS_FEED_URL: http://myblog.org/feeds/blog.xml
+;; #+RSS_IMAGE_URL: https://myblog.org/mypicture.jpg
+;; #+RSS_FEED_URL: https://myblog.org/feeds/blog.xml
 ;;
 ;; It uses #+HTML_LINK_HOME: to set the base url of the feed.
 ;;

@@ -1,5 +1,5 @@
 [![License GPL 3][badge-license]](http://www.gnu.org/licenses/gpl-3.0.txt)
-[![Build Status](https://travis-ci.org/elixir-editors/emacs-elixir.svg?branch=master)](https://travis-ci.org/elixir-editors/emacs-elixir)
+[![Build Status](https://github.com/elixir-editors/emacs-elixir/actions/workflows/ci.yml/badge.svg)](https://github.com/elixir-editors/emacs-elixir/actions)
 [![MELPA Stable](http://stable.melpa.org/packages/elixir-mode-badge.svg)](http://stable.melpa.org/#/elixir-mode)
 [![MELPA](http://melpa.org/packages/elixir-mode-badge.svg)](http://melpa.org/#/elixir-mode)
 
@@ -56,15 +56,6 @@ obtaining `Elixir-Mode`, as the `master` branch is normally quite stable and
 
 With the most recent builds of Emacs, you can pin `Elixir-Mode` to always
 use MELPA Stable by adding this to your Emacs initialization:
-
-```el
-(add-to-list 'package-pinned-packages '(elixir-mode . "melpa-stable") t)
-```
-
-### Via el-get
-
-[el-get](https://github.com/dimitri/el-get) is another popular package manager for Emacs. If you're an el-get
-user just do <kbd>M-x el-get-install [RET] elixir-mode [RET]</kbd>.
 
 ### Manual
 

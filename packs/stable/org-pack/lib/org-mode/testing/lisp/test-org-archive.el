@@ -15,7 +15,7 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Code:
 
@@ -56,6 +56,44 @@
       (org-archive-to-archive-sibling)
       (forward-line -1)
       (org-element-property :title (org-element-at-point))))))
+
+(ert-deftest test-org-archive/datetree ()
+  "Test `org-archive-subtree' with a datetree target."
+  (org-test-at-time "<2020-07-05 Sun>"
+    ;; Test in buffer target with no additional subheadings...
+    (should
+     (string-match-p
+      (regexp-quote (format-time-string "*** 2020-07-05 %A\n**** a"))
+      (org-test-with-temp-text-in-file "* a\n"
+	(let ((org-archive-location "::datetree/"))
+	  (org-archive-subtree)
+	  (buffer-string)))))
+    ;; ... and with `org-odd-levels-only' non-nil.
+    (should
+     (string-match-p
+      (regexp-quote (format-time-string "***** 2020-07-05 %A\n******* a"))
+      (org-test-with-temp-text-in-file "* a\n"
+	(let ((org-archive-location "::datetree/")
+	      (org-odd-levels-only t))
+	  (org-archive-subtree)
+	  (buffer-string)))))
+    ;; Test in buffer target with an additional subheading...
+    (should
+     (string-match-p
+      (regexp-quote (format-time-string "*** 2020-07-05 %A\n**** a\n***** b"))
+      (org-test-with-temp-text-in-file "* b\n"
+	(let ((org-archive-location "::datetree/* a"))
+	  (org-archive-subtree)
+	  (buffer-string)))))
+    ;; ... and with `org-odd-levels-only' non-nil.
+    (should
+     (string-match-p
+      (regexp-quote (format-time-string "***** 2020-07-05 %A\n******* a\n********* b"))
+      (org-test-with-temp-text-in-file "* b\n"
+	(let ((org-archive-location "::datetree/* a")
+	      (org-odd-levels-only t))
+	  (org-archive-subtree)
+	  (buffer-string)))))))
 
 (ert-deftest test-org-archive/to-archive-sibling ()
   "Test `org-archive-to-archive-sibling' specifications."

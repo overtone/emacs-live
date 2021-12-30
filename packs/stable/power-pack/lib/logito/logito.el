@@ -3,9 +3,9 @@
 ;; Copyright (C) 2012  Yann Hodique
 
 ;; Author: Yann Hodique <yann.hodique@gmail.com>
-;; Keywords: lisp, tool
+;; Keywords: lisp, extensions
 ;; Version: 0.1
-;; Package-Requires: ((eieio "1.3"))
+;; Package-Requires: ((emacs "25.1"))
 
 ;; This file is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -28,27 +28,24 @@
 
 ;;; Code:
 
-(eval-when-compile
-  (require 'cl))
-
 (require 'eieio)
 
 (defclass logito-object ()
   ((level :initarg :level :initform nil)))
 
-(defmethod logito-insert-log ((log logito-object) format &rest objects)
+(cl-defmethod logito-insert-log ((log logito-object) format &rest objects)
   "Base implementation, do nothing")
 
-(defmethod logito-should-log ((log logito-object) level)
-  (let ((l (oref log :level)))
+(cl-defmethod logito-should-log ((log logito-object) level)
+  (let ((l (oref log level)))
     (and (integerp l)
          (<= level l))))
 
-(defmethod logito-log ((log logito-object) level tag string &rest objects)
+(cl-defmethod logito-log ((log logito-object) level tag string &rest objects)
   (when (logito-should-log log level)
     (apply 'logito-insert-log log (format "[%s] %s" tag string) objects)))
 
-(defmethod logito-log (log level tag string &rest objects)
+(cl-defmethod logito-log (log level tag string &rest objects)
   "Fallback implementation, do nothing. This allows in particular
   to pass nil as the log object."
   nil)
@@ -56,25 +53,25 @@
 (defclass logito-message-object (logito-object)
   ())
 
-(defmethod logito-insert-log ((log logito-message-object) format &rest objects)
+(cl-defmethod logito-insert-log ((log logito-message-object) format &rest objects)
   (apply 'message format objects))
 
 (defclass logito-buffer-object (logito-object)
   ((buffer :initarg :buffer :initform nil)))
 
-(defmethod logito-should-log ((log logito-buffer-object) level)
-  (and (oref log :buffer)
-       (call-next-method)))
+(cl-defmethod logito-should-log ((log logito-buffer-object) level)
+  (and (oref log buffer)
+       (cl-call-next-method)))
 
-(defmethod logito-insert-log ((log logito-buffer-object) format &rest objects)
-  (let ((buffer (get-buffer-create (oref log :buffer))))
+(cl-defmethod logito-insert-log ((log logito-buffer-object) format &rest objects)
+  (let ((buffer (get-buffer-create (oref log buffer))))
     (with-current-buffer buffer
       (goto-char (point-max))
       (insert (apply 'format format objects) "\n\n"))))
 
 (defmacro logito-def-level (sym val &optional pkg)
-  "Define a constant logito-<SYM>-level and a macro logito:<SYM>
-associated with this level."
+  "Define a constant <PKG>-<SYM>-level and a macro <PKG>:<SYM>
+associated with this level. PKG defaults to `logito'"
   (let* ((pkg (or pkg 'logito))
          (const (intern (format "%s:%s-level"
                                 (symbol-name pkg) (symbol-name sym))))

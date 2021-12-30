@@ -29,11 +29,11 @@
 (eval-when-compile
   (require 'cl))
 
-;;;###autoload
 (require 'eieio)
 
 (require 'gh-api)
 (require 'gh-auth)
+(require 'gh-comments)
 (require 'gh-common)
 
 (require 'gh-repos)
@@ -43,17 +43,34 @@
                        :initform '(("^/repos/.*/.*/pulls$" . "\0")
                                    ("^/repos/.*/.*/pulls/.*$" . "\0")))))
 
-;;;###autoload
-(defclass gh-pulls-api (gh-api-v3)
+(defclass gh-pulls-api (gh-api-v3 gh-comments-api-mixin)
   ((cache-cls :allocation :class :initform gh-pulls-cache)
 
-   (req-cls :allocation :class :initform gh-pulls-request))
+   (req-cls :allocation :class :initform gh-pulls-request)
+   (comment-cls :allocation :class :initform gh-pulls-comment))
   "Git pull requests API")
 
-(defclass gh-pulls-request-stub (gh-object)
-  ((url :initarg :url)
-   (html-url :initarg :html-url)
-   (diff-url :initarg :diff-url)
+(gh-defclass gh-pulls-comment (gh-comment)
+  ((path :initarg :path)
+   (diff-hunk :initarg :diff-hunk)
+   (position :initarg :position)
+   (original-position :initarg :original-position)
+   (commit-id :initarg :commit-id)
+   (original-commit-id :initarg :original-commit-id)
+   (in-reply-to :initarg :in-reply-to :initform nil)))
+
+(defmethod gh-pulls-comment-req-to-create ((req gh-pulls-comment))
+  (let ((in-reply-to (oref req in-reply-to))
+	(to-update `(("body" . ,(oref req body)))))
+    (if in-reply-to
+	(nconc to-update `(("in_reply_to" . ,in-reply-to)))
+      (nconc to-update `(("commit_id" . ,(oref req commit-id))
+			 ("path" . ,(oref req path))
+			 ("position" . ,(oref req position)))))
+    to-update))
+
+(gh-defclass gh-pulls-request-stub (gh-ref-object)
+  ((diff-url :initarg :diff-url)
    (patch-url :initarg :patch-url)
    (issue-url :initarg :issue-url)
    (number :initarg :number)
@@ -64,70 +81,20 @@
    (updated-at :initarg :updated-at)
    (closed-at :initarg :closed-at)
    (merged-at :initarg :merged-at)
-   (head :initarg :head :initform nil)
-   (base :initarg :base :initform nil)
+   (head :initarg :head :initform nil :marshal-type gh-repos-ref)
+   (base :initarg :base :initform nil :marshal-type gh-repos-ref)))
 
-   (ref-cls :allocation :class :initform gh-repos-ref)))
-
-(defmethod gh-object-read-into ((stub gh-pulls-request-stub) data)
-  (call-next-method)
-  (with-slots (url html-url diff-url patch-url issue-url number
-                   state title body created-at updated-at
-                   closed-at merged-at head base)
-      stub
-    (setq url (gh-read data 'url)
-          html-url (gh-read data 'html_url)
-          diff-url (gh-read data 'diff_url)
-          patch-url (gh-read data 'patch_url)
-          issue-url (gh-read data 'issue_url)
-          number (gh-read data 'number)
-          state (gh-read data 'state)
-          title (gh-read data 'title)
-          body (gh-read data 'body)
-          created-at (gh-read data 'created_at)
-          updated-at (gh-read data 'updated_at)
-          closed-at (gh-read data 'closed_at)
-          merged-at (gh-read data 'merged_at)
-          head (gh-object-read (or (oref stub :head)
-                                   (oref stub ref-cls))
-                                (gh-read data 'head))
-          base (gh-object-read (or (oref stub :base)
-                                   (oref stub ref-cls))
-                                (gh-read data 'base)))))
-
-;;;###autoload
-(defclass gh-pulls-request (gh-pulls-request-stub)
+(gh-defclass gh-pulls-request (gh-pulls-request-stub)
   ((merged :initarg :merged)
    (mergeable :initarg :mergeable)
    (merged-by :initarg :merged-by)
    (comments :initarg :comments)
-   (user :initarg :user :initform nil)
+   (user :initarg :user :initform nil :marshal-type gh-user)
    (commits :initarg :commits)
    (additions :initarg :additions)
    (deletions :initarg :deletions)
-   (changed-files :initarg :changed-files)
-
-   (ref-cls :allocation :class :initform gh-repos-ref)
-   (user-cls :allocation :class :initform gh-user))
+   (changed-files :initarg :changed-files))
   "Git pull requests API")
-
-(defmethod gh-object-read-into ((req gh-pulls-request) data)
-  (call-next-method)
-  (with-slots (merged mergeable
-                      merged-by comments user commits additions
-                      deletions changed-files)
-      req
-    (setq merged (gh-read data 'merged)
-          mergeable (gh-read data 'mergeable)
-          merged-by (gh-read data 'merged_by)
-          comments (gh-read data 'comments)
-          user (gh-object-read (or (oref req :user)
-                                   (oref req user-cls))
-                               (gh-read data 'user))
-          commits (gh-read data 'commits)
-          additions (gh-read data 'additions)
-          deletions (gh-read data 'deletions)
-          changed-files (gh-read data 'changed_files))))
 
 (defmethod gh-pulls-req-to-new ((req gh-pulls-request))
   (let ((head (oref req :head))
@@ -163,6 +130,27 @@
    api (gh-object-reader (oref api req-cls)) "PATCH"
    (format "/repos/%s/%s/pulls/%s" user repo id)
    (gh-pulls-req-to-update req)))
+
+;;; Comments
+
+(defmethod gh-pulls-comments-list ((api gh-pulls-api) user repo pull-id)
+  (gh-comments-list api (format "/repos/%s/%s/pulls/%s" user repo pull-id)))
+
+(defmethod gh-pulls-comments-get ((api gh-pulls-api) user repo comment-id)
+  (gh-comments-get api (format "/repos/%s/%s/pulls" user repo) comment-id))
+
+(defmethod gh-pulls-comments-update ((api gh-pulls-api)
+                                      user repo comment-id comment)
+  (gh-comments-update api (format "/repos/%s/%s/pulls" user repo)
+                      comment-id (gh-comment-req-to-update comment)))
+
+(defmethod gh-pulls-comments-new ((api gh-pulls-api)
+                                   user repo pull-id comment)
+  (gh-comments-new api (format "/repos/%s/%s/pulls/%s" user repo pull-id)
+                   (gh-pulls-comment-req-to-create comment)))
+
+(defmethod gh-pulls-comments-delete ((api gh-pulls-api) user repo comment-id)
+  (gh-comments-delete api (format "/repos/%s/%s/pulls" user repo) comment-id))
 
 (provide 'gh-pulls)
 ;;; gh-pulls.el ends here

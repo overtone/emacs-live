@@ -3,6 +3,7 @@
 ;; Copyright (C) 2010-2014 Julien Danjou <julien@danjou.info>
 
 ;; Author: Julien Danjou <julien@danjou.info>
+;; Maintainer: stardiviner <numbchild@gmail.com>
 ;; Keywords: outlines, hypermedia, calendar
 ;;
 ;; This file is NOT part of GNU Emacs.
@@ -18,7 +19,7 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;; Commentary:
@@ -49,7 +50,14 @@
 ;; :ADDRESS:
 ;; :BIRTHDAY:
 ;; :END:")))
-;;
+
+;;;; Usage:
+
+;;; How to search?
+;;;
+;;; You can use `org-sparse-tree' [C-c / p] to filter based on a
+;;; specific property. Or other matcher on `org-sparse-tree'.
+
 ;;; Code:
 
 (require 'cl-lib)
@@ -915,11 +923,11 @@ address."
              (email-list (org-entry-get pom org-contacts-email-property))
              (gravatar
               (when email-list
-                (loop for email in (org-contacts-split-property email-list)
-                      for gravatar = (gravatar-retrieve-synchronously (org-contacts-strip-link email))
-                      if (and gravatar
-                              (not (eq gravatar 'error)))
-                      return gravatar))))
+                (cl-loop for email in (org-contacts-split-property email-list)
+                         for gravatar = (gravatar-retrieve-synchronously (org-contacts-strip-link email))
+                         if (and gravatar
+                                 (not (eq gravatar 'error)))
+                         return gravatar))))
         (when gravatar (throw 'icon gravatar))))))
 
 (defun org-contacts-irc-buffer (&optional pom)
@@ -957,10 +965,10 @@ address."
 
 (defun erc-nicknames-list ()
   "Return all nicknames of all ERC buffers."
-  (loop for buffer in (erc-buffer-list)
-	nconc (with-current-buffer buffer
-		(loop for user-entry in (mapcar 'car (erc-get-channel-user-list))
-		      collect (elt user-entry 1)))))
+  (cl-loop for buffer in (erc-buffer-list)
+	   nconc (with-current-buffer buffer
+		   (cl-loop for user-entry in (mapcar 'car (erc-get-channel-user-list))
+		            collect (elt user-entry 1)))))
 
 (add-to-list 'org-property-set-functions-alist
              `(,org-contacts-nickname-property . org-contacts-completing-read-nickname))
@@ -968,7 +976,7 @@ address."
 (defun org-contacts-vcard-escape (str)
   "Escape ; , and \n in STR for the VCard format."
   ;; Thanks to this library for the regexp:
-  ;; http://www.emacswiki.org/cgi-bin/wiki/bbdb-vcard-export.el
+  ;; https://www.emacswiki.org/cgi-bin/wiki/bbdb-vcard-export.el
   (when str
     (replace-regexp-in-string
      "\n" "\\\\n"
@@ -1071,8 +1079,8 @@ is created and the VCard is written into that buffer."
     (fundamental-mode)
     (when (fboundp 'set-buffer-file-coding-system)
       (set-buffer-file-coding-system coding-system-for-write))
-    (loop for contact in (org-contacts-filter name)
-	  do (insert (org-contacts-vcard-format contact)))
+    (cl-loop for contact in (org-contacts-filter name)
+	     do (insert (org-contacts-vcard-format contact)))
     (if to-buffer
 	(current-buffer)
       (progn (save-buffer) (kill-buffer)))))
@@ -1145,6 +1153,90 @@ are effectively trimmed).  If nil, all zero-length substrings are retained."
             (setq proplist (cons (org-trim linkstring) proplist)))
         (setq proplist (cons bufferstring proplist))))
     (cdr (reverse proplist))))
+
+;;; Add an Org link type `org-contact:' for easy jump to or searching org-contacts headline.
+;;; link spec: [[org-contact:query][desc]]
+(org-link-set-parameters "org-contact"
+			 :follow 'org-contacts-link-open
+			 :complete 'org-contacts-link-complete
+			 :store 'org-contacts-link-store
+			 :face 'org-contacts-link-face)
+
+(defun org-contacts-link-store ()
+  "Store the contact in `org-contacts-files' with a link."
+  (when (and (eq major-mode 'org-mode)
+	     (member (buffer-file-name) (mapcar 'expand-file-name org-contacts-files)))
+    (if (bound-and-true-p org-id-link-to-org-use-id)
+	(org-id-store-link)
+      (let ((headline-str (substring-no-properties (org-get-heading t t t t))))
+	(org-store-link-props
+	 :type "org-contact"
+	 :link headline-str
+	 :description headline-str)
+        (setq desc headline-str)
+        (setq link (concat "org-contact:" headline-str))
+        (org-add-link-props :link link :description desc)
+        link))))
+
+(defun org-contacts--all-contacts ()
+  "Return an alist (name . (file . position)) of all contacts in `org-contacts-files'."
+  (car (mapcar
+	(lambda (file)
+	  (unless (buffer-live-p (get-buffer (file-name-nondirectory file)))
+	    (find-file file))
+	  (with-current-buffer (get-buffer (file-name-nondirectory file))
+	    (org-map-entries
+	     (lambda ()
+	       (let ((name (substring-no-properties (org-get-heading t t t t)))
+		     (file (buffer-file-name))
+		     (position (point)))
+		 `(:name ,name :file ,file :position ,position))))))
+	org-contacts-files)))
+
+(defun org-contacts-link-open (path)
+  "Open contacts: link type with jumping or searching."
+  (let ((query path))
+    (cond
+     ;; /query/ format searching
+     ((string-match "/.*/" query)
+      (let* ((f (car org-contacts-files))
+	     (buf (get-buffer (file-name-nondirectory f))))
+	(unless (buffer-live-p buf) (find-file f))
+	(with-current-buffer buf
+	  (string-match "/\\(.*\\)/" query)
+	  (occur (match-string 1 query)))))
+     ;; jump to contact headline directly
+     (t
+      (let* ((f (car org-contacts-files))
+	     (buf (get-buffer (file-name-nondirectory f))))
+	(unless (buffer-live-p buf) (find-file f))
+	(with-current-buffer buf
+	  (goto-char (marker-position (org-find-exact-headline-in-buffer query))))
+        (display-buffer buf '(display-buffer-below-selected)))
+      ;; FIXME
+      ;; (let* ((contact-entry (plist-get (org-contacts--all-contacts) query))
+      ;; 	     (contact-name (plist-get contact-entry :name))
+      ;; 	     (file (plist-get contact-entry :file))
+      ;; 	     (position (plist-get contact-entry :position))
+      ;; 	     (buf (get-buffer (file-name-nondirectory file))))
+      ;; 	(unless (buffer-live-p buf) (find-file file))
+      ;; 	(with-current-buffer buf (goto-char position)))
+      ))))
+
+(defun org-contacts-link-complete (&optional arg)
+  "Create a org-contacts link using completion."
+  (let ((name (completing-read "org-contact Name: "
+			       (mapcar
+				(lambda (plist) (plist-get plist :name))
+				(org-contacts--all-contacts)))))
+    (concat "org-contact:" name)))
+
+(defun org-contacts-link-face (path)
+  "Different face color for different org-contacts link query."
+  (cond
+   ((string-match "/.*/" path)
+    '(:background "sky blue" :overline t :slant 'italic))
+   (t '(:inherit 'org-link))))
 
 (provide 'org-contacts)
 

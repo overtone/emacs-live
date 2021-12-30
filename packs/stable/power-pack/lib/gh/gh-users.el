@@ -29,20 +29,17 @@
 (eval-when-compile
   (require 'cl))
 
-;;;###autoload
 (require 'eieio)
 
 (require 'gh-api)
 (require 'gh-auth)
 (require 'gh-common)
 
-;;;###autoload
 (defclass gh-users-api (gh-api-v3)
   ((users-cls :allocation :class :initform gh-users-user))
   "Users API")
 
-;;;###autoload
-(defclass gh-users-user (gh-user)
+(gh-defclass gh-users-user (gh-user)
   ((gravatar-id :initarg :gravatar-id)
    (html-url :initarg :html-url)
    (followers-url :initarg :followers-url)
@@ -69,40 +66,6 @@
    (following :initarg :following)
    (created-at :initarg :created-at)
    (update-at :initarg :update-at)))
-
-(defmethod gh-object-read-into ((user gh-users-user) data)
-  (call-next-method)
-  (with-slots (gravatar-id html-url followers-url following-url
-               gists-url starred-url subscriptions-url organizations-url
-               repos-url events-url received-events-url type site-admin name
-               company blog location email hireable bio public-repos
-               public-gists followers following created-at update-at)
-      user
-    (setq gravatar-id (gh-read data 'gravatar_id)
-          html-url (gh-read data 'html_url)
-          following-url (gh-read data 'following_url)
-          gists-url (gh-read data 'gists_url)
-          starred-url (gh-read data 'starred_url)
-          subscriptions-url (gh-read data 'subscriptions_url)
-          organizations-url (gh-read data 'organizations_url)
-          repos-url (gh-read data 'repos_url)
-          events-url (gh-read data 'events_url)
-          received-events-url (gh-read data 'received_events_url)
-          type (gh-read data 'type)
-          site-admin (gh-read data 'site_admin)
-          name (gh-read data 'name)
-          company (gh-read data 'company)
-          blog (gh-read data 'blog)
-          location (gh-read data 'location)
-          email (gh-read data 'email)
-          hireable (gh-read data 'hireable)
-          bio (gh-read data 'bio)
-          public-repos (gh-read data 'public_repos)
-          public-gists (gh-read data 'public_gists)
-          followers (gh-read data 'followers)
-          following (gh-read data 'following)
-          created-at (gh-read data 'created_at)
-          update-at (gh-read data 'update_at))))
 
 (defmethod gh-users-get ((api gh-users-api) &optional username)
   (gh-api-authenticated-request

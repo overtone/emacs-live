@@ -6,8 +6,14 @@
 #+TEXINFO_DIR_CATEGORY: Emacs
 #+TEXINFO_DIR_TITLE: Ivy: (ivy).
 #+TEXINFO_DIR_DESC: Using Ivy for completion.
-#+SETUPFILE: ~/git/org-html-themes/setup/theme-readtheorg.setup
-#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="kbd-style.css"/>
+
+#+HTML_HEAD: <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+#+HTML_HEAD: <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+#+HTML_HEAD: <script type="text/javascript" src="https://fniessen.github.io/org-html-themes/styles/lib/js/jquery.stickytableheaders.min.js"></script>
+#+HTML_HEAD: <script type="text/javascript" src="https://fniessen.github.io/org-html-themes/styles/readtheorg/js/readtheorg.js"></script>
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="css/htmlize.css"/>
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="css/readtheorg.css"/>
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="css/kbd-style.css"/>
 #+OPTIONS: H:6 num:6 toc:4
 #+STARTUP: indent
 * Setup                                                                               :noexport:
@@ -41,13 +47,18 @@ Set =CUSTOM_ID= property to name each heading. For example, =worf='s
 
 Keep one empty line before each source block for proper Texinfo
 exports.
+
+** Exporting to texinfo
+
+ivy.texi is generated from ivy.org. To update the .texi file, eval
+ivy-ox.el then ~C-c C-e i t~ in the ivy.org buffer.
 * Copying
 :PROPERTIES:
 :COPYING:  t
 :CUSTOM_ID: copying
 :END:
 #+TEXINFO: @ifnottex
-Ivy manual, version 0.7.0
+Ivy manual, version 0.13.4
 
 Ivy is an interactive interface for completion in Emacs. Emacs uses
 completion mechanism in a variety of contexts: code, menus, commands,
@@ -59,18 +70,15 @@ final candidate is either through simple keyboard character inputs or
 through powerful regular expressions.
 #+TEXINFO: @end ifnottex
 
-Copyright (C) 2015 Free Software Foundation, Inc.
+Copyright (C) 2015--2021 Free Software Foundation, Inc.
 
 #+BEGIN_QUOTE
 Permission is granted to copy, distribute and/or modify this document
-under the terms of the GNU Free Documentation License, Version 1.3 or
-any later version published by the Free Software Foundation; with no
-Invariant Sections, with the Front-Cover Texts being ``A GNU Manual,''
-and with the Back-Cover Texts as in (a) below.  A copy of the license
-is included in the section entitled ``GNU Free Documentation License.''
-
-(a) The FSF's Back-Cover Text is: ``You have the freedom to copy and
-modify this GNU manual.''
+under the terms of the GNU Free Documentation License, Version 1.3
+or any later version published by the Free Software Foundation;
+with no Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.
+A copy of the license is included in the section entitled "GNU
+Free Documentation License".
 #+END_QUOTE
 
 #+HTML: <a href="https://github.com/abo-abo/swiper/blob/master/doc/ivy.org">This manual source</a>
@@ -105,13 +113,14 @@ discoverability.
      Customizability is about being able to use different methods and
      interfaces of completion to tailor the selection process. For
      example, adding a custom display function that points to a
-     selected candidate with =->=, instead of highlighting the
-     selected candidate with the =ivy-current-match= face. Or take the
-     customization of actions, say after the candidate function is
-     selected. ~RET~ uses =counsel-describe-function= to describe the
-     function, whereas ~M-o d~ jumps to that function's definition in
-     the code. The ~M-o~ prefix can be uniformly used with characters
-     like ~d~ to group similar actions.
+     selected candidate with =>=, instead of highlighting the selected
+     candidate with the =ivy-current-match= face (see
+     =ivy-format-functions-alist=). Or take the customization of actions, say
+     after the candidate function is selected. ~RET~ uses
+     =counsel-describe-function= to describe the function, whereas
+     ~M-o d~ jumps to that function's definition in the code. The
+     ~M-o~ prefix can be uniformly used with characters like ~d~ to
+     group similar actions.
 
 - Discoverability ::
      Ivy displays easily discoverable commands through the hydra
@@ -131,32 +140,37 @@ discoverability.
 Install Ivy automatically through Emacs's package manager, or manually
 from Ivy's development repository.
 
-Emacs 24.3.1 is the oldest version to run Ivy. Emacs 24.5.1 is the
-oldest version that runs Ivy with fancy faces display.
+Emacs 24.3 is the oldest version to run Ivy. Emacs 24.4 is the oldest
+version that runs Ivy with fancy faces display.
 
 ** Installing from Emacs Package Manager
 :PROPERTIES:
 :CUSTOM_ID: installing-from-emacs-package-manager
 :END:
 
-~M-x~ =package-install= ~RET~ =swiper= ~RET~
+~M-x~ =package-install= ~RET~ =counsel= ~RET~
 
-Ivy is installed as part of =swiper= package. =swiper= is available
-from two different package archives, GNU ELPA and MELPA. For the
-latest stable version, use the GNU ELPA archives using the above M-x
-command.
+Ivy is installed alongside the =counsel= package, which is available
+from two different package archives, GNU ELPA and MELPA.  For the
+latest stable version, use the GNU ELPA archive.  For the latest
+development snaphshot, use the GNU-devel ELPA archive.
 
-For current hourly builds, use the MELPA archives. See the code below
-for adding MELPA to the list of package archives:
+Ivy is split into three packages: =ivy=, =swiper= and =counsel=; by
+installing =counsel=, the other two are brought in as dependencies.
+If you are not interested in the extra functionality provided by
+=swiper= and =counsel=, you can install only =ivy=.
+
+See the code below for adding GNU-devel ELPA to your list of package
+archives:
 
 #+begin_src elisp
 (require 'package)
 (add-to-list 'package-archives
-             '("melpa" . "http://melpa.org/packages/"))
+             '("gnu-devel" . "https://elpa.gnu.org/devel/"))
 #+end_src
 
-After this do ~M-x~ =package-refresh-contents= ~RET~, followed by
-~M-x~ =package-install= ~RET~ =swiper= ~RET~.
+After this do ~M-x~ =package-refresh-contents= ~RET~, followed by ~M-x~
+=package-install= ~RET~ =counsel= ~RET~.
 
 For package manager details, see [[info:emacs#Packages]].
 
@@ -167,7 +181,7 @@ For package manager details, see [[info:emacs#Packages]].
 
 - Why install from Git? ::
 
-    - No need to wait for MELPA's hourly builds
+    - No need to wait for GNU ELPA / MELPA builds
     - Easy to revert to previous versions
     - Contribute to Ivy's development; send patches; pull requests
 
@@ -213,7 +227,6 @@ Here are some basic settings particularly useful for new Ivy users:
 
 #+begin_src elisp
 (setq ivy-use-virtual-buffers t)
-(setq ivy-height 10)
 (setq ivy-count-format "(%d/%d) ")
 #+end_src
 
@@ -233,29 +246,41 @@ documentation.
 :PROPERTIES:
 :CUSTOM_ID: global-key-bindings
 :END:
-The recommended key bindings are:
+Here is a list of commands that are useful to be bound globally, along
+with some sample bindings:
 
 - Ivy-based interface to standard commands ::
 
      #+begin_src elisp
-     (global-set-key (kbd "C-s") 'swiper)
+     (global-set-key (kbd "C-s") 'swiper-isearch)
      (global-set-key (kbd "M-x") 'counsel-M-x)
      (global-set-key (kbd "C-x C-f") 'counsel-find-file)
+     (global-set-key (kbd "M-y") 'counsel-yank-pop)
      (global-set-key (kbd "<f1> f") 'counsel-describe-function)
      (global-set-key (kbd "<f1> v") 'counsel-describe-variable)
-     (global-set-key (kbd "<f1> l") 'counsel-load-library)
+     (global-set-key (kbd "<f1> l") 'counsel-find-library)
      (global-set-key (kbd "<f2> i") 'counsel-info-lookup-symbol)
      (global-set-key (kbd "<f2> u") 'counsel-unicode-char)
+     (global-set-key (kbd "<f2> j") 'counsel-set-variable)
+     (global-set-key (kbd "C-x b") 'ivy-switch-buffer)
+     (global-set-key (kbd "C-c v") 'ivy-push-view)
+     (global-set-key (kbd "C-c V") 'ivy-pop-view)
      #+end_src
 
 - Ivy-based interface to shell and system tools ::
 
      #+begin_src elisp
+     (global-set-key (kbd "C-c c") 'counsel-compile)
      (global-set-key (kbd "C-c g") 'counsel-git)
      (global-set-key (kbd "C-c j") 'counsel-git-grep)
-     (global-set-key (kbd "C-c k") 'counsel-ag)
+     (global-set-key (kbd "C-c L") 'counsel-git-log)
+     (global-set-key (kbd "C-c k") 'counsel-rg)
+     (global-set-key (kbd "C-c m") 'counsel-linux-app)
+     (global-set-key (kbd "C-c n") 'counsel-fzf)
      (global-set-key (kbd "C-x l") 'counsel-locate)
+     (global-set-key (kbd "C-c J") 'counsel-file-jump)
      (global-set-key (kbd "C-S-o") 'counsel-rhythmbox)
+     (global-set-key (kbd "C-c w") 'counsel-wmctrl)
      #+end_src
 
 - Ivy-resume and other commands ::
@@ -264,7 +289,15 @@ The recommended key bindings are:
 
      #+begin_src elisp
      (global-set-key (kbd "C-c C-r") 'ivy-resume)
+     (global-set-key (kbd "C-c b") 'counsel-bookmark)
+     (global-set-key (kbd "C-c d") 'counsel-descbinds)
+     (global-set-key (kbd "C-c g") 'counsel-git)
+     (global-set-key (kbd "C-c o") 'counsel-outline)
+     (global-set-key (kbd "C-c t") 'counsel-load-theme)
+     (global-set-key (kbd "C-c F") 'counsel-org-file)
      #+end_src
+
+You can also enable =counsel-mode= to make some global key binding remapping for you.
 
 ** Minibuffer key bindings
 :PROPERTIES:
@@ -302,7 +335,7 @@ where the familiar ~C-a~, ~C-f~, ~M-d~, ~M-DEL~, ~M-b~, ~M-w~, ~C-k~,
      =ivy-wrap= is set to =t=, =ivy-next-line= and =ivy-previous-line=
      will cycle past the last and the first candidates respectively.
 
-     Warp-around behavior is off by default.
+     Wrap-around behavior is off by default.
 
 - User Option =ivy-height= ::
      Use this option to adjust the minibuffer height, which also
@@ -347,8 +380,8 @@ extends usability of lists in Emacs.
      (should
       (equal (ivy-with
               '(progn
-                (ivy-read "Test: " '("can do" "can't, sorry" "other"))
-                ivy-text)
+                 (ivy-read "Test: " '("can do" "can't, sorry" "other"))
+                 ivy-text)
               "c <tab>")
              "can"))
      #+end_src
@@ -373,12 +406,16 @@ extends usability of lists in Emacs.
 :END:
 
 For repeatedly applying multiple actions or acting on multiple
-candidates, Ivy does not close the minibuffer between commands. It
+candidates, Ivy does not close the minibuffer between commands.  It
 keeps the minibuffer open for applying subsequent actions.
 
 Adding an extra meta key to the normal key chord invokes the special
 version of the regular commands that enables applying multiple
 actions.
+
+Note that these operations are supported only by completion sessions
+that use the =ivy-read= API, rather than the built-in
+=completing-read=.
 
 - ~C-M-m~ (=ivy-call=) ::
      Is the non-exiting version of ~C-m~ (=ivy-done=).
@@ -398,11 +435,10 @@ actions.
      the default one after ~C-M-o~.
 
 - ~C-M-n~ (=ivy-next-line-and-call=) ::
-     Combines ~C-n~ and ~C-M-m~. Applies an action and moves to next
-     line.
+     Combines ~C-n~ and ~C-M-m~. Moves to next line and applies an action.
 
      Comes in handy when opening multiple files from
-     =counsel-find-file=, =counsel-git-grep=, =counsel-ag=, or
+     =counsel-find-file=, =counsel-git-grep=, =counsel-ag=, =counsel-rg=, or
      =counsel-locate= lists. Just hold ~C-M-n~ for rapid-fire default
      action on each successive element of the list.
 
@@ -417,6 +453,7 @@ actions.
      exit.
 
      Useful after an accidental ~C-m~ (=ivy-done=).
+     Use it with =universal-argument= to resume any previous session.
 
 *** Key bindings that alter the minibuffer input
 :PROPERTIES:
@@ -443,8 +480,9 @@ actions.
 - ~M-j~ (=ivy-yank-word=) ::
      Inserts the sub-word at point into the minibuffer.
 
-     This is similar to ~C-s C-w~ with =isearch=. Ivy reserves ~C-w~
-     for =kill-region=.
+     This is similar to ~C-s C-w~ with =isearch=.  Ivy reserves ~C-w~
+     for =kill-region=.  See also =ivy-yank-symbol= and
+     =ivy-yank-char=.
 
 - ~S-SPC~ (=ivy-restrict-to-matches=) ::
      Deletes the current input, and resets the candidates list to the
@@ -481,29 +519,29 @@ actions.
 When Hydra is active, minibuffer editing is disabled and menus
 display short aliases:
 
-| Short | Normal    | Command name              |
-|-------+-----------+---------------------------|
-| ~o~   | ~C-g~     | =keyboard-escape-quit=    |
-| ~j~   | ~C-n~     | =ivy-next-line=           |
-| ~k~   | ~C-p~     | =ivy-previous-line=       |
-| ~h~   | ~M-<~     | =ivy-beginning-of-buffer= |
-| ~l~   | ~M->~     | =ivy-end-of-buffer=       |
-| ~d~   | ~C-m~     | =ivy-done=                |
-| ~f~   | ~C-j~     | =ivy-alt-done=            |
-| ~g~   | ~C-M-m~   | =ivy-call=                |
-| ~u~   | ~C-c C-o~ | =ivy-occur=               |
+| Short | Normal  | Command name            |
+|-------+---------+-------------------------|
+| ~o~     | ~C-g~     | =keyboard-escape-quit=    |
+| ~j~     | ~C-n~     | =ivy-next-line=           |
+| ~k~     | ~C-p~     | =ivy-previous-line=       |
+| ~h~     | ~M-<~     | =ivy-beginning-of-buffer= |
+| ~l~     | ~M->~     | =ivy-end-of-buffer=       |
+| ~d~     | ~C-m~     | =ivy-done=                |
+| ~f~     | ~C-j~     | =ivy-alt-done=            |
+| ~g~     | ~C-M-m~   | =ivy-call=                |
+| ~u~     | ~C-c C-o~ | =ivy-occur=               |
 
 Hydra reduces key strokes, for example: ~C-n C-n C-n C-n~ is ~C-o
 jjjj~ in Hydra.
 
-Hydra menu offers these additioanl bindings:
+Hydra menu offers these additional bindings:
 
 - ~c~ (=ivy-toggle-calling=) ::
      Toggle calling the action after each candidate change. It
      modifies ~j~ to ~jg~, ~k~ to ~kg~ etc.
 
-- ~m~ (=ivy-toggle-fuzzy=) ::
-     Toggle the current regexp matcher.
+- ~M~ (=ivy-rotate-preferred-builders=) ::
+     Rotate the current regexp matcher.
 
 - ~>~ (=ivy-minibuffer-grow=) ::
      Increase =ivy-height= for the current minibuffer.
@@ -524,6 +562,17 @@ Hydra menu offers these additioanl bindings:
      Toggle case folding (match both upper and lower case
      characters for lower case input).
 
+Hydra menu also offers bindings for marking multiple candidates:
+
+| Key | Command name        |
+|-----+---------------------|
+| ~m~   | =ivy-mark=            |
+| ~u~   | =ivy-unmark=          |
+| ~DEL~ | =ivy-unmark-backward= |
+| ~t~   | =ivy-toggle-marks=    |
+
+The action is called on each marked candidate one by one.
+
 *** Saving the current completion session to a buffer
 :PROPERTIES:
 :CUSTOM_ID: saving-the-current-completion-session-to-a-buffer
@@ -535,7 +584,7 @@ Hydra menu offers these additioanl bindings:
 
 The new buffer is read-only and has a few useful bindings defined.
 
-- ~RET~ or ~j~ (=ivy-occur-press=) ::
+- ~RET~ or ~f~ (=ivy-occur-press=) ::
      Call the current action on the selected candidate.
 
 - ~mouse-1~ (=ivy-occur-click=) ::
@@ -673,7 +722,6 @@ installed.
 
 ~C-o m~ toggles the current regexp builder.
 
-
 * Customization
 :PROPERTIES:
 :CUSTOM_ID: customization
@@ -735,6 +783,14 @@ installed.
      #+begin_src elisp
      (setq ivy-use-virtual-buffers t)
      #+end_src
+
+- =ivy-modified-buffer= ::
+     Highlights modified buffers when switching buffer.
+- =ivy-modified-outside-buffer= ::
+     Highlights buffers modified outside Emacs when switching buffer.
+
+     This takes precedence over =ivy-modified-buffer=.
+
 ** Defcustoms
 :PROPERTIES:
 :CUSTOM_ID: defcustoms
@@ -764,16 +820,20 @@ installed.
 - User Option =ivy-display-style= ::
      Specifies highlighting candidates in the minibuffer.
 
-     The default setting is ='fancy= and valid only in Emacs versions
-     24.5 or newer.
+     The default setting is ='fancy= in Emacs versions 24.4 or newer.
 
      Set =ivy-display-style= to =nil= for a plain minibuffer.
 
 - User Option =ivy-on-del-error-function= ::
-     Specify what when ~DEL~ (=ivy-backward-delete-char=) throws.
+     Specifies what to do when ~DEL~ (=ivy-backward-delete-char=) fails.
+
+     This is usually the case when there is no text left to delete,
+     i.e., when ~DEL~ is typed at the beginning of the minibuffer.
 
      The default behavior is to quit the completion after ~DEL~ -- a
      handy key to invoke after mistakenly triggering a completion.
+
+     Another common option is =ignore=, which does nothing.
 
 ** Actions
 :PROPERTIES:
@@ -929,25 +989,25 @@ To examine each action with each candidate in a key-efficient way, try:
      =completing-read-function= (which =ivy-mode= sets). Try refiling
      headings with similar names to appreciate =ivy-mode=.
 - =magit= ::
-     Magit requries this setting for ivy completion:
-
-     #+begin_src elisp
-     (setq magit-completing-read-function 'ivy-completing-read)
-     #+end_src
+     Uses ivy by default if Ivy is installed.
 - =find-file-in-project= ::
-     It uses ivy by default if Ivy is installed.
+     Uses ivy by default if Ivy is installed.
 - =projectile= ::
-     Projectile requires this seeting for ivy completion:
+     Projectile requires this setting for ivy completion:
 
      #+begin_src elisp
      (setq projectile-completion-system 'ivy)
      #+end_src
 - =helm-make= ::
-     Helm-make requires this seeting for ivy completion.
+     Helm-make requires this setting for ivy completion.
 
      #+begin_src elisp
      (setq helm-make-completion-method 'ivy)
      #+end_src
+
+- automatically integrated packages ::
+     Ivy re-uses the following packages if they are installed:
+     =avy=, =amx= or =smex=, =flx=, and =wgrep=.
 
 * Commands
 :PROPERTIES:
@@ -957,7 +1017,7 @@ To examine each action with each candidate in a key-efficient way, try:
 :PROPERTIES:
 :CUSTOM_ID: file-name-completion
 :END:
-Since file name completion is ubiquitious, Ivy provides extra
+Since file name completion is ubiquitous, Ivy provides extra
 bindings that work here:
 
 
@@ -975,7 +1035,9 @@ bindings that work here:
 - ~/~ (=self-insert-command=) ::
      If the current input matches an existing directory name exactly,
      switch the completion to that directory.
-- ~M-q~ (=ivy-toggle-regexp-quote=) ::
+- ~C-M-y~ (=ivy-insert-current-full=) ::
+     Insert the current full path, in case you want to edit a part of it.
+- ~M-r~ (=ivy-toggle-regexp-quote=) ::
      Toggle between input as regexp or not.
 
      Switch to matching literally since file names include =.=, which
@@ -992,19 +1054,48 @@ bindings that work here:
 
      Likewise, =./= can be removed.
 
-- Using TRAMP ::
-     From any directory, with the empty input, inputting =/ssh:= and
-     pressing ~C-j~ (or ~RET~, which is the same thing) completes for
-     host and user names.
-
-     For =/ssh:user@= input, completes the domain name.
-
-     ~C-i~ works in a similar way to the default completion.
-
 - History ::
      File history works the same with ~M-p~, ~M-n~, and ~C-r~, but
      uses a custom code for file name completion that cycles through
      files previously opened. It also works with TRAMP files.
+
+*** Using TRAMP
+:PROPERTIES:
+:CUSTOM_ID: using-tramp
+:END:
+- ~~~ (tilde) ::
+     Move to the home directory. Either the local or the remote one, depending on the
+     current directory. The boolean option =ivy-magic-tilde= decides whether the binding to
+     do this is ~~~ or ~~/~.
+
+- ~//~ (double slash) ::
+     Move to the root directory. Either the local or the remote one, depending on the
+     current directory. Here, you can also select a TRAMP connection method, such as =ssh=
+     or =scpx=.
+
+- ~/ C-j~ ::
+     Move the the local root directory.
+
+- ~~~~ ::
+     Move to the local home directory.
+
+
+From any directory, with the empty input, inputting =/ssh:= and pressing
+~C-j~ (or ~RET~, which is the same thing) completes for host and user
+names.
+
+For =/ssh:user@= input, completes the domain name.
+
+~C-i~ works in a similar way to the default completion.
+
+You can also get sudo access for the current directory by inputting
+=/sudo::= ~RET~. Using =/sudo:= (i.e. single colon instead of double) will
+result in a completion session for the desired user.
+
+Multi-hopping is possible, although a bit complex.
+
+- Example : connect to a remote host =cloud= and open a file with =sudo= there ::
+  - ~C-x C-f~ =/ssh:cloud|sudo:root:/=.
 
 ** Buffer Name Completion
 :PROPERTIES:
@@ -1019,7 +1110,7 @@ bindings that work here:
      #+begin_src elisp
      (setq ivy-use-virtual-buffers t)
      #+end_src
-     will add additional virual buffers to the buffers list for recent
+     will add additional virtual buffers to the buffers list for recent
      files. Selecting such virtual buffers, which are highlighted with
      =ivy-virtual= face, will open the corresponding file.
 
@@ -1052,11 +1143,8 @@ features such as multi-actions, non-exiting actions, =ivy-occur= and
 :CUSTOM_ID: required-arguments-for-ivy-read
 :END:
 - =prompt= ::
-     A format string normally ending in a colon and a space.
-
-     =%d= anywhere in the string is replaced by the current number of
-     matching candidates. To use a literal =%= character, escape it as
-     =%%=. See also =ivy-count-format=.
+     A prompt string normally ending in a colon and a space.
+     =ivy-count-format= is prepended to it during completion.
 
 - =collection= ::
      Either a list of strings, a function, an alist or a hash table.
@@ -1070,7 +1158,9 @@ features such as multi-actions, non-exiting actions, =ivy-occur= and
 :END:
 - =predicate= ::
      Is a function to filter the initial collection. It has to be
-     compatible with =all-completions=.
+     compatible with =all-completions=. Tip: most of the time, it's
+     simpler to just apply this filter to the =collection= argument
+     itself, e.g. =(cl-remove-if-not predicate collection)=.
 - =require-match= ::
      When set to a non-nil value, input must match one of the
      candidates. Custom input is not accepted.
@@ -1082,13 +1172,17 @@ features such as multi-actions, non-exiting actions, =ivy-occur= and
 - =history= ::
      Name of the symbol to store history. See =completing-read=.
 - =preselect= ::
-     When set to a string value, select the first candidate matching
-     this value.
+     Determines which one of the candidates to initially select.
 
      When set to an integer value, select the candidate with that
      index value.
 
-     Every time the input becomes empty, the item corresponding to to
+     When set to any other non-nil value, select the first candidate
+     matching this value.  Comparison is first done with =equal=.
+     If this fails, and when applicable, match =preselect= as a
+     regular expression.
+
+     Every time the input becomes empty, the item corresponding to
      =preselect= is selected.
 - =keymap= ::
      A keymap to be composed with =ivy-minibuffer-map=. This keymap
@@ -1116,7 +1210,7 @@ features such as multi-actions, non-exiting actions, =ivy-occur= and
 - =matcher= ::
      Is a function that takes a regex string and a list of strings and
      returns a list of strings matching the regex. Any ordinary Emacs
-     matching function will suffice, yet finely tuned mathing
+     matching function will suffice, yet finely tuned matching
      functions can be used. See =counsel-find-file= for an example
      usage.
 - =dynamic-collection= ::
@@ -1155,10 +1249,9 @@ later use yourself. However, it's recommended that you use the
                    (push (symbol-name x) cands))))
               cands)
             :keymap counsel-describe-map
-            :preselect (counsel-symbol-at-point)
+            :preselect (ivy-thing-at-point)
             :history 'counsel-describe-symbol-history
             :require-match t
-            :sort t
             :action (lambda (x)
                       (describe-function
                        (intern x)))
@@ -1170,7 +1263,7 @@ Here are the interesting features of the above function, in the order that they 
 - The =prompt= argument is a simple string ending in ": ".
 - The =collection= argument evaluates to a (large) list of strings.
 - The =keymap= argument is for a custom keymap to supplement =ivy-minibuffer-map=.
-- The =preselect= is provided by =counsel-symbol-at-point=, which
+- The =preselect= is provided by =ivy-thing-at-point=, which
   returns a symbol near the point. Ivy then selects the first
   candidate from the collection that matches this symbol. To select
   this pre-selected candidate, a ~RET~ will suffice. No further user
@@ -1179,13 +1272,6 @@ Here are the interesting features of the above function, in the order that they 
   separate from the common history in =ivy-history=.
 - The =require-match= is set to =t= since it doesn't make sense to
   call =describe-function= on an un-interned symbol.
-- The =sort= argument is set to =t= so choosing between similar
-  candidates becomes easier. Sometimes, the collection size will
-  exceed =ivy-sort-max-size=, which is 30000 by default. In that case
-  the sorting will not happen to avoid delays.
-
-  Adjust this variable to choose between sorting time and completion
-  start-up time.
 - The =action= argument calls =describe-function= on the interned
   selected candidate.
 - The =caller= argument identifies this completion session. This is
@@ -1218,14 +1304,15 @@ narrowing) or select a candidate from the visible collection.
 
 #+begin_src elisp
 (defun counsel-locate-function (str)
-  (if (< (length str) 3)
-      (counsel-more-chars 3)
-    (counsel--async-command
-     (format "locate %s '%s'"
-             (mapconcat #'identity counsel-locate-options " ")
-             (counsel-unquote-regex-parens
-              (ivy--regex str))))
-    '("" "working...")))
+  (or
+   (ivy-more-chars)
+   (progn
+     (counsel--async-command
+      (format "locate %s '%s'"
+              (mapconcat #'identity counsel-locate-options " ")
+              (counsel--elisp-to-pcre
+               (ivy--regex str))))
+     '("" "working..."))))
 
 ;;;###autoload
 (defun counsel-locate (&optional initial-input)
@@ -1251,7 +1338,7 @@ that they appear:
   of strings. Note that it's not compatible with =all-completions=,
   but since we're not using that here, might as well use one argument
   instead of three.
-- =counsel-more-chars= is a simple function that returns e.g.
+- =ivy-more-chars= is a simple function that returns e.g.
   ='("2 chars more")= asking the user for more input.
 - =counsel--async-command= is a very easy API simplification that
   takes a single string argument suitable for
@@ -1269,6 +1356,38 @@ that they appear:
   we want to kill the running process created by
   =counsel--async-command=.
 - =caller= argument identifies this command for easier customization.
+** Example - =ivy-read-with-extra-properties=
+:PROPERTIES:
+:CUSTOM_ID: example---ivy-read-with-extra-properties
+:END:
+This is another example to show how to associate additional values to each
+displayed strings.
+
+#+BEGIN_SRC elisp
+(defun find-candidates-function (str pred _)
+  (let ((props '(1 2))
+        (strs '("foo" "foo2")))
+    (cl-mapcar (lambda (s p) (propertize s 'property p))
+               strs
+               props)))
+
+(defun find-candidates ()
+  (interactive)
+  (ivy-read "Find symbols: "
+            #'find-candidates-function
+            :action (lambda (x)
+                      (message "Value: %s"
+                               (get-text-property 0 'property x)))))
+#+END_SRC
+
+Here are the interesting features of the above function:
+
+- =find-candidates-function= builds up a list of strings and associates "foo" with
+  the value 1 and "foo2" with 2.
+- =find-candidates= is an interactive function.
+- =#'find-candidates= is passed as the =collection= argument.
+- =action= gets passed the selected string with the associated value. It
+  then retrieves that value and displays it.
 
 * Variable Index
 :PROPERTIES:

@@ -1,6 +1,6 @@
 ;;; ob-io.el --- Babel Functions for Io              -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2012-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2012-2021 Free Software Foundation, Inc.
 
 ;; Author: Andrzej Lichnerowicz
 ;; Keywords: literate programming, reproducible research
@@ -27,7 +27,7 @@
 ;; :results output repl -- runs in repl mode
 
 ;;; Requirements:
-;; - Io language :: http://iolanguage.org/
+;; - Io language :: https://iolanguage.org/
 ;; - Io major mode :: Can be installed from Io sources
 ;;  https://github.com/stevedekorte/io/blob/master/extras/SyntaxHighlighters/Emacs/io-mode.el
 
@@ -90,7 +90,6 @@ in BODY as elisp."
 		  raw
 		  (org-babel-script-escape raw)))))))
 
-
 (defun org-babel-prep-session:io (_session _params)
   "Prepare SESSION according to the header arguments specified in PARAMS."
   (error "Sessions are not (yet) supported for Io"))
@@ -102,7 +101,5 @@ supported in Io."
   nil)
 
 (provide 'ob-io)
-
-
 
 ;;; ob-io.el ends here

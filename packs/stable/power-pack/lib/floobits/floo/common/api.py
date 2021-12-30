@@ -1,9 +1,14 @@
 import sys
-import base64
 import json
 import subprocess
 import traceback
+import os.path
 from functools import wraps
+
+try:
+    from base64 import encodebytes
+except ImportError:
+    from base64 import encodestring as encodebytes
 
 try:
     import ssl
@@ -32,8 +37,9 @@ except (AttributeError, ImportError, ValueError):
 
 try:
     from .. import editor
-    from . import msg, shared as G, utils
+    from . import cert, msg, shared as G, utils
 except ImportError:
+    import cert
     import editor
     import msg
     import shared as G
@@ -46,7 +52,7 @@ def get_basic_auth(host):
     if username is None or secret is None:
         return
     basic_auth = ('%s:%s' % (username, secret)).encode('utf-8')
-    basic_auth = base64.encodestring(basic_auth)
+    basic_auth = encodebytes(basic_auth)
     return basic_auth.decode('ascii').replace('\n', '')
 
 
@@ -110,6 +116,7 @@ def user_agent():
 def hit_url(host, url, data, method):
     if data:
         data = json.dumps(data).encode('utf-8')
+    msg.debug('url: ', url, ' method: ', method, ' data: ', data)
     r = Request(url, data=data)
     r.method = method
     r.get_method = lambda: method
@@ -119,7 +126,12 @@ def hit_url(host, url, data, method):
     r.add_header('Accept', 'application/json')
     r.add_header('Content-type', 'application/json')
     r.add_header('User-Agent', user_agent())
-    return urlopen(r, timeout=5)
+    cafile = os.path.join(G.BASE_DIR, 'floobits.pem')
+    with open(cafile, 'wb') as cert_fd:
+        cert_fd.write(cert.CA_CERT.encode('utf-8'))
+    if G.INSECURE_SSL:
+        cafile = None
+    return urlopen(r, timeout=10, cafile=cafile)
 
 
 def api_request(host, url, data=None, method=None):

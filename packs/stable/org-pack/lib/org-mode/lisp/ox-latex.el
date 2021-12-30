@@ -1,6 +1,6 @@
 ;;; ox-latex.el --- LaTeX Back-End for Org Export Engine -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2011-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2011-2021 Free Software Foundation, Inc.
 
 ;; Author: Nicolas Goaziou <n.goaziou at gmail dot com>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -29,6 +29,8 @@
 (require 'cl-lib)
 (require 'ox)
 (require 'ox-publish)
+
+;;; Function Declarations
 
 (defvar org-latex-default-packages-alist)
 (defvar org-latex-packages-alist)
@@ -736,8 +738,9 @@ environment."
   :safe #'stringp)
 
 (defcustom org-latex-inline-image-rules
-  `(("file" . ,(regexp-opt
-		'("pdf" "jpeg" "jpg" "png" "ps" "eps" "tikz" "pgf" "svg"))))
+  `(("file" . ,(rx "."
+		   (or "pdf" "jpeg" "jpg" "png" "ps" "eps" "tikz" "pgf" "svg")
+		   eos)))
   "Rules characterizing image files that can be inlined into LaTeX.
 
 A rule consists in an association whose key is the type of link
@@ -750,8 +753,7 @@ pdflatex, pdf, jpg and png images are OK.  When processing
 through dvi to Postscript, only ps and eps are allowed.  The
 default we use here encompasses both."
   :group 'org-export-latex
-  :version "24.4"
-  :package-version '(Org . "8.0")
+  :package-version '(Org . "9.4")
   :type '(alist :key-type (string :tag "Type")
 		:value-type (regexp :tag "Path")))
 
@@ -930,7 +932,7 @@ using customize, or with
   (add-to-list \\='org-latex-packages-alist \\='(\"newfloat\" \"minted\"))
 
 In addition, it is necessary to install pygments
-\(URL `http://pygments.org>'), and to configure the variable
+\(URL `https://pygments.org>'), and to configure the variable
 `org-latex-pdf-process' so that the -shell-escape option is
 passed to pdflatex.
 
@@ -954,7 +956,7 @@ URL `https://orgmode.org/worg/org-tutorials/org-latex-preview.html'."
     (tex "TeX") (latex "[LaTeX]TeX")
     (shell-script "bash")
     (gnuplot "Gnuplot")
-    (ocaml "Caml") (caml "Caml")
+    (ocaml "[Objective]Caml") (caml "Caml")
     (sql "SQL") (sqlite "sql")
     (makefile "make")
     (R "r"))
@@ -1239,7 +1241,7 @@ calling `org-latex-compile'."
   :package-version '(Org . "8.3")
   :type '(repeat
 	  (cons
-	   (string :tag "Regexp")
+	   (regexp :tag "Regexp")
 	   (string :tag "Message"))))
 
 
@@ -1519,21 +1521,22 @@ INFO is a plist used as a communication channel.  See
 		 separator
 		 (replace-regexp-in-string "\n" " " text)
 		 separator)))
-      ;; Handle the `protectedtexttt' special case: Protect some
-      ;; special chars and use "\texttt{%s}" format string.
-      (protectedtexttt
-       (format "\\texttt{%s}"
-	       (replace-regexp-in-string
-		"--\\|[\\{}$%&_#~^]"
-		(lambda (m)
-		  (cond ((equal m "--") "-{}-")
-			((equal m "\\") "\\textbackslash{}")
-			((equal m "~") "\\textasciitilde{}")
-			((equal m "^") "\\textasciicircum{}")
-			(t (org-latex--protect-text m))))
-		text nil t)))
+      (protectedtexttt (org-latex--protect-texttt text))
       ;; Else use format string.
       (t (format fmt text)))))
+
+(defun org-latex--protect-texttt (text)
+  "Protect special chars, then wrap TEXT in \"\\texttt{}\"."
+  (format "\\texttt{%s}"
+          (replace-regexp-in-string
+           "--\\|[\\{}$%&_#~^]"
+           (lambda (m)
+             (cond ((equal m "--") "-{}-")
+                   ((equal m "\\") "\\textbackslash{}")
+                   ((equal m "~") "\\textasciitilde{}")
+                   ((equal m "^") "\\textasciicircum{}")
+                   (t (org-latex--protect-text m))))
+           text nil t)))
 
 (defun org-latex--delayed-footnotes-definitions (element info)
   "Return footnotes definitions in ELEMENT as a string.
@@ -1886,10 +1889,11 @@ CONTENTS is nil.  INFO is a plist holding contextual information."
 		(org-export-get-footnote-definition footnote-reference info)
 		info t)))
       ;; Use \footnotemark if reference is within another footnote
-      ;; reference, footnote definition, table cell or item's tag.
+      ;; reference, footnote definition, table cell, verse block, or
+      ;; item's tag.
       ((or (org-element-lineage footnote-reference
 				'(footnote-reference footnote-definition
-						     table-cell))
+						     table-cell verse-block))
 	   (eq 'item (org-element-type
 		      (org-export-get-parent-element footnote-reference))))
        "\\footnotemark")
@@ -1901,7 +1905,8 @@ CONTENTS is nil.  INFO is a plist holding contextual information."
 		  ;; Only insert a \label if there exist another
 		  ;; reference to def.
 		  (cond ((not label) "")
-			((org-element-map (plist-get info :parse-tree) 'footnote-reference
+			((org-element-map (plist-get info :parse-tree)
+			     'footnote-reference
 			   (lambda (f)
 			     (and (not (eq f footnote-reference))
 				  (equal (org-element-property :label f) label)
@@ -1950,10 +1955,16 @@ holding contextual information."
 	   ;; Create a temporary export back-end that hard-codes
 	   ;; "\underline" within "\section" and alike.
 	   (section-back-end
-	    (org-export-create-backend
-	     :parent 'latex
-	     :transcoders
-	     '((underline . (lambda (o c i) (format "\\underline{%s}" c))))))
+            (org-export-create-backend
+             :parent 'latex
+             :transcoders
+             '((underline . (lambda (o c i) (format "\\underline{%s}" c)))
+               ;; LaTeX isn't happy when you try to use \verb inside the argument of other
+               ;; commands (like \section, etc.), and this causes compilation to fail.
+               ;; So, within headings it's a good idea to replace any instances of \verb
+               ;; with \texttt.
+               (code . (lambda (_ c _) (org-latex--protect-texttt c)))
+               (verbatim . (lambda (_ c _) (org-latex--protect-texttt c))))))
 	   (text
 	    (org-export-data-with-backend
 	     (org-element-property :title headline) section-back-end info))
@@ -2387,8 +2398,11 @@ used as a communication channel."
 	      (format "[%s]" (plist-get info :latex-default-figure-position)))
 	     (t ""))))
 	 (center
-	  (if (plist-member attr :center) (plist-get attr :center)
-	    (plist-get info :latex-images-centered)))
+	  (cond
+	   ;; If link is an image link, do not center.
+	   ((eq 'link (org-element-type (org-export-get-parent link))) nil)
+	   ((plist-member attr :center) (plist-get attr :center))
+	   (t (plist-get info :latex-images-centered))))
 	 (comment-include (if (plist-get attr :comment-include) "%" ""))
 	 ;; It is possible to specify scale or width and height in
 	 ;; the ATTR_LATEX line, and also via default variables.
@@ -2523,15 +2537,16 @@ INFO is a plist holding contextual information.  See
 	 (imagep (org-export-inline-image-p
 		  link (plist-get info :latex-inline-image-rules)))
 	 (path (org-latex--protect-text
-		(cond ((member type '("http" "https" "ftp" "mailto" "doi"))
-		       (concat type ":" raw-path))
-		      ((string= type "file")
-		       (org-export-file-uri raw-path))
-		      (t
-		       raw-path)))))
+		(pcase type
+		  ((or "http" "https" "ftp" "mailto" "doi")
+		   (concat type ":" raw-path))
+		  ("file"
+		   (org-export-file-uri raw-path))
+		  (_
+		   raw-path)))))
     (cond
      ;; Link type is handled by a special function.
-     ((org-export-custom-protocol-maybe link desc 'latex))
+     ((org-export-custom-protocol-maybe link desc 'latex info))
      ;; Image file.
      (imagep (org-latex--inline-image link info))
      ;; Radio link: Transcode target's contents and use them as link's
@@ -3498,21 +3513,25 @@ channel."
   "Transcode a VERSE-BLOCK element from Org to LaTeX.
 CONTENTS is verse block contents.  INFO is a plist holding
 contextual information."
-  (org-latex--wrap-label
-   verse-block
-   ;; In a verse environment, add a line break to each newline
-   ;; character and change each white space at beginning of a line
-   ;; into a space of 1 em.  Also change each blank line with
-   ;; a vertical space of 1 em.
-   (format "\\begin{verse}\n%s\\end{verse}"
-	   (replace-regexp-in-string
-	    "^[ \t]+" (lambda (m) (format "\\hspace*{%dem}" (length m)))
+  (concat
+   (org-latex--wrap-label
+    verse-block
+    ;; In a verse environment, add a line break to each newline
+    ;; character and change each white space at beginning of a line
+    ;; into a space of 1 em.  Also change each blank line with
+    ;; a vertical space of 1 em.
+    (format "\\begin{verse}\n%s\\end{verse}"
 	    (replace-regexp-in-string
-	     "^[ \t]*\\\\\\\\$" "\\vspace*{1em}"
+	     "^[ \t]+" (lambda (m) (format "\\hspace*{%dem}" (length m)))
 	     (replace-regexp-in-string
-	      "\\([ \t]*\\\\\\\\\\)?[ \t]*\n" "\\\\\n"
-	      contents nil t) nil t) nil t))
-   info))
+	      "^[ \t]*\\\\\\\\$" "\\vspace*{1em}"
+	      (replace-regexp-in-string
+	       "\\([ \t]*\\\\\\\\\\)?[ \t]*\n" "\\\\\n"
+	       contents nil t) nil t) nil t))
+    info)
+   ;; Insert footnote definitions, if any, after the environment, so
+   ;; the special formatting above is not applied to them.
+   (org-latex--delayed-footnotes-definitions verse-block info)))
 
 
 
@@ -3654,12 +3673,12 @@ produced."
 		     (match-string 0)))
 	      "pdflatex"))
 	 (process (if (functionp org-latex-pdf-process) org-latex-pdf-process
-		    ;; Replace "%latex" and "%bibtex" with,
-		    ;; respectively, "%L" and "%B" so as to adhere to
-		    ;; `format-spec' specifications.
+		    ;; Replace "%latex" with "%L" and "%bib" and
+		    ;; "%bibtex" with "%B" to adhere to `format-spec'
+		    ;; specifications.
 		    (mapcar (lambda (command)
 			      (replace-regexp-in-string
-			       "%\\(?:bib\\|la\\)tex\\>"
+                               "%\\(?:\\(?:bib\\|la\\)tex\\|bib\\)\\>"
 			       (lambda (m) (upcase (substring m 0 2)))
 			       command))
 			    org-latex-pdf-process)))

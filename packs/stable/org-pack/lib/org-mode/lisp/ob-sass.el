@@ -1,6 +1,6 @@
 ;;; ob-sass.el --- Babel Functions for the Sass CSS generation language -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2009-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2021 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;; Keywords: literate programming, reproducible research
@@ -23,7 +23,7 @@
 
 ;;; Commentary:
 
-;; For more information on sass see http://sass-lang.com/
+;; For more information on sass see https://sass-lang.com/
 ;;
 ;; This accepts a 'file' header argument which is the target of the
 ;; compiled sass.  The default output type for sass evaluation is
@@ -35,7 +35,7 @@
 
 ;;; Requirements:
 
-;; - sass-mode :: http://github.com/nex3/haml/blob/master/extra/sass-mode.el
+;; - sass-mode :: https://github.com/nex3/haml/blob/master/extra/sass-mode.el
 
 ;;; Code:
 (require 'ob)
@@ -64,7 +64,5 @@ This function is called by `org-babel-execute-src-block'."
   (error "Sass does not support sessions"))
 
 (provide 'ob-sass)
-
-
 
 ;;; ob-sass.el ends here

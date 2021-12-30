@@ -1,3 +1,5 @@
+import time
+
 try:
     from ... import editor
 except ValueError:
@@ -11,10 +13,12 @@ class BaseHandler(event_emitter.EventEmitter):
     def __init__(self):
         super(BaseHandler, self).__init__()
         self.joined_workspace = False
+        self.last_ack_time = None
         G.AGENT = self
         # TODO: removeme?
         utils.reload_settings()
         self.req_ids = {}
+        self.cbs = {}
 
     def build_protocol(self, *args):
         self.proto = self.PROTOCOL(*args)
@@ -22,8 +26,17 @@ class BaseHandler(event_emitter.EventEmitter):
         self.proto.on('connect', self.on_connect)
         return self.proto
 
-    def send(self, d):
+    def send(self, d, cb=None):
         """@return the request id"""
+        if self.last_ack_time:
+            now = time.time()
+            since_last_ack = now - self.last_ack_time
+            if since_last_ack > G.HEARTBEAT_TIMEOUT:
+                msg.error('%s since last ack/ping. Reconnecting...' % since_last_ack)
+                self.last_ack_time = None
+                self.proto.reconnect()
+                return
+
         if not d:
             return
         req_id = self.proto.put(d)
@@ -32,6 +45,8 @@ class BaseHandler(event_emitter.EventEmitter):
         if name != "pong":
             self.req_ids[req_id] = name
 
+        if cb:
+            self.cbs[req_id] = cb
         return req_id
 
     def on_data(self, name, data):
@@ -41,7 +56,11 @@ class BaseHandler(event_emitter.EventEmitter):
                 del self.req_ids[req_id]
             except KeyError:
                 msg.warn('No outstanding req_id ', req_id)
-
+            cb = self.cbs.get(req_id)
+            if cb:
+                del self.cbs[req_id]
+                # TODO: squelch exceptions here?
+                cb(data)
         handler = getattr(self, '_on_%s' % name, None)
         if handler:
             return handler(data)
@@ -57,6 +76,7 @@ class BaseHandler(event_emitter.EventEmitter):
 
     def _on_ack(self, data):
         msg.debug('Ack ', data)
+        self.last_ack_time = time.time()
 
     def _on_error(self, data):
         message = 'Error from Floobits server: %s' % str(data.get('msg'))
@@ -75,6 +95,7 @@ class BaseHandler(event_emitter.EventEmitter):
         if self.req_ids:
             msg.warn("Unresponded msgs", self.req_ids)
             self.req_ids = {}
+        self.cbs = {}
         reactor.reactor.stop_handler(self)
         if G.AGENT is self:
             G.AGENT = None

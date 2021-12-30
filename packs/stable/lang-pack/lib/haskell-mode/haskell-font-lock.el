@@ -417,11 +417,12 @@ on an uppercase identifier."
 
             ;; Special case for `as', `hiding', `safe' and `qualified', which are
             ;; keywords in import statements but are not otherwise reserved.
-            ("\\<import[ \t]+\\(?:\\(safe\\>\\)[ \t]*\\)?\\(?:\\(qualified\\>\\)[ \t]*\\)?\\(?:\"[^\"]*\"[\t ]*\\)?[^ \t\n()]+[ \t]*\\(?:\\(\\<as\\>\\)[ \t]*[^ \t\n()]+[ \t]*\\)?\\(\\<hiding\\>\\)?"
+            ("\\<import[ \t]+\\(?:\\(safe\\>\\)[ \t]*\\)?\\(?:\\(qualified\\>\\)[ \t]*\\)?\\(?:\"[^\"]*\"[\t ]*\\)?[^ \t\n()]+[ \t]*\\(?:\\(qualified\\>\\)[ \t]*\\)?\\(?:\\(\\<as\\>\\)[ \t]*[^ \t\n()]+[ \t]*\\)?\\(\\<hiding\\>\\)?"
              (1 'haskell-keyword-face nil lax)
              (2 'haskell-keyword-face nil lax)
              (3 'haskell-keyword-face nil lax)
-             (4 'haskell-keyword-face nil lax))
+             (4 'haskell-keyword-face nil lax)
+             (5 'haskell-keyword-face nil lax))
 
             ;; Special case for `foreign import'
             ;; keywords in foreign import statements but are not otherwise reserved.

@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    paths-ignore:
+    - '**/*.md'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        emacs_version:
+          - 23.4
+          - 24.5
+          - 25.3
+          - 26.3
+          - 27.2
+          - snapshot
+    env:
+      EMACS_VERSION: ${{ matrix.emacs_version }}
+    steps:
+    - uses: purcell/setup-emacs@master
+      with:
+        version: ${{ matrix.emacs_version }}
+    - uses: actions/checkout@v2
+    - name: Run tests
+      run: './run-tests.sh'

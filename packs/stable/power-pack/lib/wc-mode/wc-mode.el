@@ -1,12 +1,17 @@
-;;; wc-mode.el --- Running word count with goals (minor mode)
-;;
+;;; wc-mode.el --- Running word count with goals (minor mode) -*- lexical-binding: t -*-
+
+;; Copyright: 2010-2017  Benjamin Beckwith
+;;            2019  Nicholas D Steeves (willing to assign to FSF for GNU Emacs)
+
 ;; Author: Benjamin Beckwith
 ;; Created: 2010-6-19
-;; Version: 1.3
-;; Last-Updated: 2010-6-19
+;; Version: 1.4
+;; Last-Updated: 2019-06-28
 ;; URL: https://github.com/bnbeckwith/wc-mode
+;; Package-Requires: ((emacs "24.1"))
 ;; Keywords:
-;; Compatability:
+;; Compatibility:
+;; License: GPL-3.0-or-later
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -22,6 +27,10 @@
 ;;
 ;;; Change Log:
 ;;
+;; 1.4 Switch to lexical binding.
+;;     Add configurable timer, which, if set to a positive value
+;;     defers CPU intensive stat counting to idle periods.
+;;     Wc-mode now requires Emacs >= 24.1
 ;; 1.3 Goal functions now perform reset by default
 ;; 1.2 Reset functions added
 ;; 1.1 Counting functions tied to buffer-local variables
@@ -92,6 +101,19 @@ It will looks something like WC[742+360/1100] in the modeline.
   :type 'hook
   :group 'wc)
 
+(defcustom wc-idle-wait 0
+  "This variable configures how many idle seconds wc-mode will
+wait before initiating wc-count.  0 and negative numbers provide
+a continuously updating word-count in the modeline.  Set this to
+a positive integer or float to defend against the lag and
+potential distraction of a continuously updating modeline.  A
+high value may enhance battery life, because large buffers will
+not be processed until one takes a break from work.
+
+Defaults to 0 for backwards compatibility."
+  :type 'number
+  :group 'wc)
+
 (defface wc-goal-face
   '((t (:inherit highlight)))
   "Face for modeline when goal is reached"
@@ -122,7 +144,7 @@ It will looks something like WC[742+360/1100] in the modeline.
 
 (defvar wc-word-goal nil "Goal for number of words added")
 (defvar wc-line-goal nil "Goal for number of lines added")
-(defvar wc-char-goal nil "Goal for numger of chars added")
+(defvar wc-char-goal nil "Goal for number of chars added")
 (make-variable-buffer-local 'wc-word-goal)
 (make-variable-buffer-local 'wc-line-goal)
 (make-variable-buffer-local 'wc-char-goal)
@@ -164,6 +186,15 @@ RSTART and REND."
 Format will be evaluated in `wc-generate-modeline'")
 
 (defvar wc-mode-hooks nil "Hooks to run upon entry to wc-mode")
+
+(defvar wc-timer-tracker nil
+  "Global timer for wc-count.
+
+Ensure functions on this timer are not run when wc-mode is false.")
+
+(defvar-local wc-buffer-stats nil
+  "This variable holds the per-buffer word-count statistics used to
+update the modeline.")
 
 (defun wc-format-modeline-string (fmt)
   "Format the modeline string according to specification and return result"
@@ -287,6 +318,14 @@ operate over the entire buffer.
     (setq wc-chars-delta (- (nth 2 stats) wc-orig-chars))
     (wc-generate-modeline)))
 
+(setq wc-timer-tracker
+      (run-with-idle-timer
+       wc-idle-wait t
+       '(lambda ()
+          (when wc-mode
+            (setq wc-buffer-stats (wc-mode-update))))))
+
+;;;###autoload
 (define-minor-mode wc-mode
   "Toggle wc mode With no argument, this command toggles the
 mode.  Non-null prefix argument turns on the mode.  Null prefix
@@ -308,7 +347,7 @@ value is non-nil."
   ;; initial value (off)
   :init-value nil
   ;; The indicator for the mode line
-  :lighter (:eval (wc-mode-update))
+  :lighter (:eval wc-buffer-stats)
   ;; The customization group
   :group 'wc
   ;; The local keymap to use
@@ -320,4 +359,3 @@ value is non-nil."
 (provide 'wc-mode)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; wc-mode.el ends here
-

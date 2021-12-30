@@ -1,19 +1,18 @@
-;;; gitconfig-mode.el --- Major mode for editing .gitconfig files -*- lexical-binding: t; -*-
+;;; gitconfig-mode.el --- Major mode for editing .gitconfig files  -*- lexical-binding: t -*-
 
 ;; Copyright (c) 2012-2013  Sebastian Wiesner
-;; Copyright (C) 2012-2016  The Magit Project Contributors
+;; Copyright (C) 2012-2021  The Magit Project Contributors
 
 ;; Author: Sebastian Wiesner <lunaryorn@gmail.com>
 ;; Maintainer: Jonas Bernoulli <jonas@bernoul.li>
 ;; Homepage: https://github.com/magit/git-modes
 ;; Keywords: convenience vc git
-
-;; This file is not part of GNU Emacs.
+;; SPDX-License-Identifier: GPL-3.0-or-later
 
 ;; This file is free software; you can redistribute it and/or modify
-;; it under the terms of the GNU General Public License as published by
-;; the Free Software Foundation; either version 3, or (at your option)
-;; any later version.
+;; it under the terms of the GNU General Public License as published
+;; by the Free Software Foundation; either version 3 of the License,
+;; or (at your option) any later version.
 
 ;; This file is distributed in the hope that it will be useful,
 ;; but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -94,11 +93,12 @@
                     (group (syntax string-quote)
                            (minimal-match (one-or-more not-newline))
                            (syntax string-quote)))
-          "]" (zero-or-more (syntax whitespace)) line-end)
+          "]" (zero-or-more not-newline) line-end)
      (1 'font-lock-type-face t nil)
      (2 'font-lock-function-name-face t t))
     (,(rx line-start (zero-or-more (syntax whitespace)) symbol-start
-          (group (one-or-more (or (syntax word) (syntax symbol))))
+          (group alphanumeric
+                 (zero-or-more (or (syntax word) (syntax symbol))))
           symbol-end (zero-or-more (syntax whitespace))
           (optional "=" (zero-or-more not-newline)) line-end)
      (1 'font-lock-variable-name-face))
@@ -120,8 +120,7 @@
   ;; .gitconfig is indented with tabs only
   (conf-mode-initialize "#" gitconfig-mode-font-lock-keywords)
   (setq indent-tabs-mode t)
-  (set (make-local-variable 'indent-line-function)
-       'gitconfig-indent-line))
+  (setq-local indent-line-function 'gitconfig-indent-line))
 
 ;;;###autoload
 (dolist (pattern '("/\\.gitconfig\\'"      "/\\.git/config\\'"
@@ -129,6 +128,7 @@
                    "/\\.gitmodules\\'"     "/etc/gitconfig\\'"))
   (add-to-list 'auto-mode-alist (cons pattern 'gitconfig-mode)))
 
+;;; _
 (provide 'gitconfig-mode)
 ;; Local Variables:
 ;; indent-tabs-mode: nil

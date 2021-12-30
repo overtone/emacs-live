@@ -1,6 +1,6 @@
 ;;; test-ob-clojure.el
 
-;; Copyright (c) 2018-2020 Free Software Foundation, Inc.
+;; Copyright (c) 2018-2021 Free Software Foundation, Inc.
 ;; Authors: stardiviner
 
 ;; This file is not part of GNU Emacs.
@@ -16,7 +16,7 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Comments:
 

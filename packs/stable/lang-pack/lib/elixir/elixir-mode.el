@@ -1,4 +1,4 @@
-;;; elixir-mode.el --- Major mode for editing Elixir files
+;;; elixir-mode.el --- Major mode for editing Elixir files -*- lexical-binding: t -*-
 
 ;; Copyright 2011-2015 secondplanet
 ;;           2013-2015 Samuel Tonini, Matt DeBoard, Andreas Fuchs
@@ -10,8 +10,8 @@
 ;; URL: https://github.com/elixir-editors/emacs-elixir
 ;; Created: Mon Nov 7 2011
 ;; Keywords: languages elixir
-;; Version: 2.3.1
-;; Package-Requires: ((emacs "24") (pkg-info "0.4"))
+;; Version: 2.4.0
+;; Package-Requires: ((emacs "25"))
 
 ;; This file is not a part of GNU Emacs.
 
@@ -38,7 +38,6 @@
 
 (require 'easymenu)           ; Elixir Mode menu definition
 (require 'elixir-smie)        ; Syntax and indentation support
-(require 'pkg-info)           ; Display Elixir Mode package version
 (require 'elixir-format)      ; Elixir Format functions
 
 (defgroup elixir nil
@@ -48,13 +47,17 @@
   :link '(url-link :tag "Github" "https://github.com/elixir-editors/emacs-elixir")
   :link '(emacs-commentary-link :tag "Commentary" "elixir-mode"))
 
-(defvar elixir-mode-website-url "http://elixir-lang.org"
-  "Official url of Elixir programming website.")
+(defcustom elixir-mode-website-url "http://elixir-lang.org"
+  "Official url of Elixir programming website."
+  :type 'string)
 
-(defvar elixir-mode-doc-url "https://hexdocs.pm/elixir"
-  "Official documentation for the Elixir programming language.")
+(defcustom elixir-mode-doc-url "https://hexdocs.pm/elixir"
+  "Official documentation for the Elixir programming language."
+  :type 'string)
 
-(defvar elixir-mode-hook nil)
+(defcustom elixir-mode-hook nil
+  "Hook that runs when switching to major mode"
+  :type 'hook)
 
 (defvar elixir-mode-map
   (let ((map (make-sparse-keymap)))
@@ -72,21 +75,36 @@
     ("Tests" "^\\s-*test[ \t\n]+\"?\\(:?[a-z0-9_@+() \t-]+\\)\"?[ \t\n]+.*" 1))
   "Imenu pattern for `elixir-mode'.")
 
-(defvar elixir-basic-offset 2)
-(defvar elixir-key-label-offset 0)
-(defvar elixir-match-label-offset 2)
+(defcustom elixir-basic-offset 2
+  "Basic offset."
+  :type 'integer)
+(defcustom elixir-key-label-offset 0
+  "Offset used for key label."
+  :type 'integer)
+(defcustom elixir-match-label-offset 2
+  "Offset for a match label."
+  :type 'integer)
+
+(defgroup elixir-faces nil
+  "Font-lock faces for `elixir'."
+  :group 'elixir
+  :group 'faces)
 
 (defvar elixir-attribute-face 'elixir-attribute-face)
 (defface elixir-attribute-face
   '((t (:inherit font-lock-preprocessor-face)))
-  "For use with module attribute tokens."
-  :group 'font-lock-faces)
+  "For use with module attribute tokens.")
 
 (defvar elixir-atom-face 'elixir-atom-face)
 (defface elixir-atom-face
   '((t (:inherit font-lock-builtin-face)))
-  "For use with atoms & map keys."
-  :group 'font-lock-faces)
+  "For use with atoms & map keys.")
+
+(defvar elixir-number-face 'elixir-number-face)
+(defface elixir-number-face
+  '((t (:inherit default)))
+  "For use with numbers.")
+
 
 (eval-when-compile
   (defconst elixir-rx-constituents
@@ -107,6 +125,11 @@
                       (zero-or-more (any "a-z" "A-Z" "0-9" "_" "\"" "'" "!" "@" "?")))
                      (and "\"" (one-or-more (not (any "\""))) "\"")
                      (and "'" (one-or-more (not (any "'"))) "'"))))
+      (numbers . ,(rx (and symbol-start
+                           (? "-")
+                           (+ digit)
+                           (0+ (and "_" (= 3 digit)))
+                           symbol-end)))
       (builtin . ,(rx symbol-start
                       (or "case" "cond" "for" "if" "quote" "raise" "receive" "send"
                           "super" "throw" "try" "unless" "unquote" "unquote_splicing"
@@ -176,7 +199,7 @@
              (rx-to-string (car sexps) t))))))
 
 (defsubst elixir-syntax-in-string-or-comment-p ()
-  (nth 8 (syntax-ppss)))
+  (elixir-ppss-comment-or-string-start (syntax-ppss)))
 
 (defsubst elixir-syntax-count-quotes (quote-char &optional point limit)
   "Count number of quotes around point (max is 3).
@@ -193,13 +216,12 @@ is used to limit the scan."
 (defun elixir-syntax-stringify ()
   "Put `syntax-table' property correctly on single/triple quotes."
   (let* ((num-quotes (length (match-string-no-properties 1)))
-         (ppss (prog2
-                   (backward-char num-quotes)
-                   (syntax-ppss)
-                 (forward-char num-quotes)))
-         (string-start (and (not (nth 4 ppss)) (nth 8 ppss)))
          (quote-starting-pos (- (point) num-quotes))
          (quote-ending-pos (point))
+         (ppss (save-excursion
+                 (syntax-ppss quote-starting-pos)))
+         (string-start (and (not (elixir-ppss-comment-depth ppss))
+                            (elixir-ppss-comment-or-string-start ppss)))
          (num-closing-quotes
           (and string-start
                (elixir-syntax-count-quotes
@@ -229,7 +251,8 @@ is used to limit the scan."
          (context (save-excursion (save-match-data (syntax-ppss beg)))))
     (put-text-property beg (1+ beg) 'syntax-table (string-to-syntax "w"))
     (put-text-property beg (1+ beg) 'elixir-interpolation
-                       (cons (nth 3 context) (match-data)))))
+                       (cons (elixir-ppss-string-terminator context)
+                             (match-data)))))
 
 (defconst elixir-sigil-delimiter-pair
   '((?\( . ")")
@@ -241,7 +264,7 @@ is used to limit the scan."
   (unless (elixir-syntax-in-string-or-comment-p)
     (let ((heredoc-p (save-excursion
                        (goto-char (match-beginning 0))
-                       (looking-at-p "~[sS]\\(?:'''\\|\"\"\"\\)"))))
+                       (looking-at-p "~[BCDELNRSTUbcersw]\\(?:'''\\|\"\"\"\\)"))))
       (unless heredoc-p
         (forward-char 1)
         (let* ((start-delim (char-after (1- (point))))
@@ -270,7 +293,9 @@ is used to limit the scan."
     (funcall
      (syntax-propertize-rules
       ("\\(\\?\\)[\"']"
-       (1 (if (save-excursion (nth 3 (syntax-ppss (match-beginning 0))))
+       (1 (if (save-excursion
+                (elixir-ppss-string-terminator
+                 (syntax-ppss (match-beginning 0))))
               ;; Within a string, skip.
               (ignore
                (goto-char (match-end 1)))
@@ -382,6 +407,10 @@ is used to limit the scan."
                  (optional "="))
      1 elixir-atom-face)
 
+    ;; Numbers
+    (,(elixir-rx (group numbers))
+     1 elixir-number-face)
+
     ;; Gray out variables starting with "_"
     (,(elixir-rx symbol-start
                  (group (and "_"
@@ -399,7 +428,7 @@ is used to limit the scan."
      1 font-lock-variable-name-face)
 
     ;; Map keys
-    (,(elixir-rx (group (and identifiers ":")) space)
+    (,(elixir-rx (group (and identifiers ":")) (or space "\n"))
      1 elixir-atom-face)
 
     ;; Pseudovariables
@@ -434,6 +463,19 @@ is used to limit the scan."
   (interactive)
   (browse-url elixir-mode-doc-url))
 
+(defconst elixir--version
+  (eval-when-compile
+    (require 'lisp-mnt)
+    (let ((file (or byte-compile-current-file
+		    load-file-name
+		    (buffer-file-name))))
+      (if file
+	  (with-temp-buffer
+	    (insert-file-contents file)
+	    (lm-version))
+	"Unknown")))
+  "The current version of `elixir-mode'.")
+
 ;;;###autoload
 (defun elixir-mode-version (&optional show-version)
   "Get the Elixir-Mode version as string.
@@ -448,10 +490,9 @@ If the version number could not be determined, signal an error,
 if called interactively, or if SHOW-VERSION is non-nil, otherwise
 just return nil."
   (interactive (list t))
-  (let ((version (pkg-info-version-info 'elixir-mode)))
-    (when show-version
-      (message "Elixir-Mode version: %s" version))
-    version))
+  (when show-version
+    (message "Elixir-Mode version: %s" elixir--version))
+  elixir--version)
 
 (defun elixir-mode-fill-doc-string ()
   (interactive)
@@ -490,17 +531,19 @@ just return nil."
         (forward-line 1)))))
 
 (defun elixir--docstring-p (&optional pos)
-  "Check to see if there is a docstring at pos."
-  (let ((pos (or pos (nth 8 (parse-partial-sexp (point-min) (point))))))
+  "Check to see if there is a docstring at POS."
+  (let ((pos (or pos (elixir-ppss-comment-or-string-start
+                      (parse-partial-sexp (point-min) (point))))))
     (when pos
       (save-excursion
         (goto-char pos)
-        (and (looking-at "\"\"\"")(looking-back (rx "@" (or "moduledoc" "typedoc" "doc") (+ space))
-                                                (line-beginning-position)))))))
+        (and (looking-at "\"\"\"")
+             (looking-back (rx "@" (or "moduledoc" "typedoc" "doc") (+ space))
+                           (line-beginning-position)))))))
 
 (defun elixir-font-lock-syntactic-face-function (state)
-  (if (nth 3 state)
-      (if (elixir--docstring-p (nth 8 state))
+  (if (elixir-ppss-string-terminator state)
+      (if (elixir--docstring-p (elixir-ppss-comment-or-string-start state))
           font-lock-doc-face
         font-lock-string-face)
     font-lock-comment-face))
@@ -519,29 +562,27 @@ just return nil."
   "Major mode for editing Elixir code.
 
 \\{elixir-mode-map}"
-  (set (make-local-variable 'font-lock-defaults)
-       '(elixir-font-lock-keywords
-         nil nil nil nil
-         (font-lock-syntactic-face-function
-          . elixir-font-lock-syntactic-face-function)))
-  (set (make-local-variable 'comment-start) "# ")
-  (set (make-local-variable 'comment-end) "")
-  (set (make-local-variable 'comment-start-skip) "#+ *")
-  (set (make-local-variable 'comment-use-syntax) t)
-  (set (make-local-variable 'syntax-propertize-function)
-       #'elixir-syntax-propertize-function)
-  (set (make-local-variable 'imenu-generic-expression)
-       elixir-imenu-generic-expression)
+  (setq-local font-lock-defaults
+              '(elixir-font-lock-keywords
+                nil nil nil nil
+                (font-lock-syntactic-face-function
+                 . elixir-font-lock-syntactic-face-function)))
+  (setq-local comment-start "# ")
+  (setq-local comment-end "")
+  (setq-local comment-start-skip "#+ *")
+  (setq-local comment-use-syntax t)
+  (setq-local syntax-propertize-function #'elixir-syntax-propertize-function)
+  (setq-local imenu-generic-expression elixir-imenu-generic-expression)
 
-  (set (make-local-variable 'beginning-of-defun-function) #'elixir-beginning-of-defun)
-  (set (make-local-variable 'end-of-defun-function) #'elixir-end-of-defun)
+  (setq-local beginning-of-defun-function #'elixir-beginning-of-defun)
+  (setq-local end-of-defun-function #'elixir-end-of-defun)
 
   (smie-setup elixir-smie-grammar 'verbose-elixir-smie-rules
               :forward-token 'elixir-smie-forward-token
               :backward-token 'elixir-smie-backward-token)
   ;; https://github.com/elixir-editors/emacs-elixir/issues/363
   ;; http://debbugs.gnu.org/cgi/bugreport.cgi?bug=35496
-  (set (make-local-variable 'smie-blink-matching-inners) nil))
+  (setq-local smie-blink-matching-inners nil))
 
 ;; Invoke elixir-mode when appropriate
 
@@ -549,7 +590,8 @@ just return nil."
 (progn
   (add-to-list 'auto-mode-alist '("\\.elixir\\'" . elixir-mode))
   (add-to-list 'auto-mode-alist '("\\.ex\\'" . elixir-mode))
-  (add-to-list 'auto-mode-alist '("\\.exs\\'" . elixir-mode)))
+  (add-to-list 'auto-mode-alist '("\\.exs\\'" . elixir-mode))
+  (add-to-list 'auto-mode-alist '("mix\\.lock" . elixir-mode)))
 
 (provide 'elixir-mode)
 

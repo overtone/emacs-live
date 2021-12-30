@@ -14,7 +14,7 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Comments:
 
@@ -146,7 +146,6 @@ p2
 *************** p3
 p4
 *************** END
-
 "
      (org-flag-subtree t)
      (org-cycle)

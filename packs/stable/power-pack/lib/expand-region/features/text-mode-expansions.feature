@@ -82,19 +82,6 @@ Feature: Text-mode expansions
 
     """
 
-  Scenario: Mark a page
-    When I place the cursor after "Baker."
-    And I press "C-u 4 C-@ C-x C-x C-u 2 C-b"
-    Then the region should be:
-    """
-    Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-    Here is a sentence.  Here is another.  And one with Dr. Baker.
-
-    Another paragraph.  With 2 sentences.
-    """
-    # trailing blank lines aren't captured for some reason.  That's
-    # why all the C-x ... C-b stuff
-
   Scenario: Sentence endings
     When I place the cursor before "Dr."
     And I set sentence-end-double-space to nil

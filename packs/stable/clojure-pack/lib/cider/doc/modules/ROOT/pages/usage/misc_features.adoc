@@ -1,0 +1,369 @@
+= Miscellaneous Features
+:experimental:
+
+As the infomercials always say, "But wait, there's more!" If
+simultaneous Clojure and ClojureScript REPLs, interactive programming,
+code completion, stacktrace navigation, test running, and debugging
+weren't enough for you, CIDER delivers several additional
+features.
+
+== Using a Scratchpad
+
+CIDER provides a simple way to create a Clojure scratchpad via the
+kbd:[M-x] `cider-scratch` command. This is a great way to play
+around with some code without having to create source files or pollute
+the REPL buffer and is very similar to Emacs's own `+*scratch*+` buffer.
+
+== Find References
+
+NOTE: The functionality is based on https://metaredux.com/posts/2019/12/11/hard-cider-find-usages.html[ideas from this article] and was
+introduced in CIDER 0.22.
+
+There are two ways to use find references in CIDER:
+
+* `cider-xref-fn-refs` (kbd:[C-c C-? r]) shows the usages of the function at point in a dedicated buffer
+* `cider-xref-fn-refs-select` (kbd:[C-c C-? C-r]) shows the usages in the minibuffer
+
+Here's how they look in action:
+
+image::cider_find_usages.gif[CIDER Find References]
+
+Keep in mind the following limitations:
+
+- This works only for Clojure
+- It's powered by runtime state analysis, which means it will show only data for loaded namespaces (like most of CIDER's functionality)
+- It doesn't (currently) find usages in lambdas
+- It doesn't give us the precise locations where something is used, we only know that it's used
+
+On the bright side:
+
+- It's super fast
+- It doesn't require any static code analysis
+- It's still more reliable than `grep`
+
+The functionality is not perfect, but at least it's there if you need it. As a bonus you get a quick way to navigate to
+all of the functions used by some function using `cider-xref-fn-deps` (kbd:[C-c C-? d]) and `cider-xref-fn-deps-select` (kbd:[C-c C-? C-d]).
+Those are pretty handy if you don't want to jump to the source of some function to see what functions it refers to (uses) internally.
+
+Don't forget you also have a couple of third-party alternative:
+
+- The much more sophisticated AST-powered "find usages" provided by `clj-refactor.el`
+- https://github.com/bbatsov/projectile[Projectile's] "grep in project" (`projectile-grep`, typically bound to kbd:[C-c p g])
+
+== Reloading Code
+
+While Clojure's and CIDER's interactive programming style means you'll
+restart your application far less often than with other languages and
+development environments, sometimes you'll want to clean everything up
+and reload one or more namespaces to ensure that they are up to date
+and there are no temporary definitions hanging around.
+
+Typing kbd:[C-c M-n r] or kbd:[C-c M-n M-r] will invoke
+`cider-ns-refresh` and reload all modified Clojure files on the
+classpath.
+
+Adding a prefix argument, kbd:[C-u C-c M-n r], will reload all
+the namespaces on the classpath unconditionally, regardless of their
+modification status.
+
+Adding a double prefix argument, kbd:[C-u C-u M-n r], will first
+clear the state of the namespace tracker before reloading. This is
+useful for recovering from some classes of error that normal reloads
+would otherwise not recover from. A good example is circular
+dependencies. The trade-off is that stale code from any deleted files
+may not be completely unloaded.
+
+`cider-ns-refresh` wraps
+https://github.com/clojure/tools.namespace[clojure.tools.namespace], and as
+such the same
+https://github.com/clojure/tools.namespace#reloading-code-motivation[benefits]
+and
+https://github.com/clojure/tools.namespace#reloading-code-preparing-your-application[caveats]
+regarding writing reloadable code also apply.
+
+The above three operations are analogous to
+http://clojure.github.io/tools.namespace/#clojure.tools.namespace.repl/refresh[`clojure.tools.namespace.repl/refresh`],
+http://clojure.github.io/tools.namespace/#clojure.tools.namespace.repl/refresh-all[`clojure.tools.namespace.repl/refresh-all`]
+and
+http://clojure.github.io/tools.namespace/#clojure.tools.namespace.repl/clear[`clojure.tools.namespace.repl/clear`]
+(followed by a normal refresh), respectively.
+
+You can define Clojure functions to be called before reloading, and after a
+successful reload, when using `cider-ns-refresh`:
+
+[source,lisp]
+----
+(setq cider-ns-refresh-before-fn "user/stop-system!"
+      cider-ns-refresh-after-fn "user/start-system!")
+----
+
+These must be set to the namespace-qualified names of vars bound to
+functions of no arguments. The functions must be synchronous
+(blocking), and are expected to be side-effecting - they will always
+be executed serially, without retries.
+
+By default, messages regarding the status of the in-progress reload
+will be displayed in the echo area after you call
+`cider-ns-refresh`. The same information will also be recorded in the
+`+*cider-ns-refresh-log*+` buffer, along with anything printed to
+`+*out*+` or `+*err*+` by `cider-ns-refresh-before-fn` and
+`cider-ns-refresh-start-fn`.
+
+You can make the `+*cider-ns-refresh-log*+` buffer display automatically
+after you call `cider-ns-refresh` by setting the
+`cider-ns-refresh-show-log-buffer` variable to a non-nil value. This
+will also prevent any related messages from also being displayed in
+the echo area.
+
+[source,lisp]
+----
+(setq cider-ns-refresh-show-log-buffer t)
+----
+
+By default, CIDER will prompt for whether to save all modified `clojure-mode`
+buffers visiting files on the classpath. You can customize this behavior with
+`cider-ns-save-files-on-refresh` and `cider-ns-save-files-on-refresh-modes`.
+
+Sometimes, `cider-ns-refresh` may not work for you. If you're looking
+for a bit more forceful reloading the `cider-ns-reload`
+and `cider-ns-reload-all` commands can be used instead. These commands
+invoke Clojure's `+(require ... :reload)+` and `+(require
+... :reload-all)+` commands at the REPL.
+
+== CIDER Selector
+
+The `cider-selector` (kbd:[C-c M-s]) command allows you to quickly navigate to
+important buffers in the context of a Clojure project - e.g. the REPL, the
+stacktrace buffer, the doc buffer, the most recently visited Clojure file, etc.
+The usage of the command is extremely simple - after invoking it you need to type a
+single key identifying the target buffer (e.g. `r` for the REPL).
+
+[TIP]
+====
+One thing to keep in mind about the default keybinding kbd:[C-c M-s] is that it's available only
+in buffers where `cider-mode` is enabled (e.g. Clojure source buffers) and in the CIDER REPL.
+If you want to have it available everywhere it might be a good idea to add a global
+binding in your Emacs config:
+
+[source,lisp]
+----
+(global-set-key (kbd "C-c s") #'cider-selector)
+----
+====
+
+Here's a list of all of ``cider-selector``'s keybindings:
+
+|===
+| Keyboard shortcut | Description
+
+| kbd:[c]
+| Most recently visited Clojure buffer.
+
+| kbd:[e]
+| Most recently visited Emacs Lisp buffer.
+
+| kbd:[r]
+| Current REPL buffer or most recently visited REPL buffer.
+
+| kbd:[m]
+| `+*nrepl-messages*+` buffer.
+
+| kbd:[x]
+| `+*cider-error*+` buffer.
+
+| kbd:[d]
+| `+*cider-doc*+` buffer.
+
+| kbd:[p]
+| `+*cider-profile*+` buffer.
+
+| kbd:[s]
+| `+*cider-scratch*+` buffer.
+
+| kbd:[q]
+| Abort.
+
+| kbd:[?]
+| Show help.
+|===
+
+[TIP]
+====
+Any of those keys can be prefixed with a `4` to make the target buffer open in a
+different window (as opposed to the current one).
+====
+
+You can easily extend the selector with new commands using `def-cider-selector-method`:
+
+[source,lisp]
+----
+(def-cider-selector-method ?z
+  "CIDER foo buffer."
+  cider-foo-buffer)
+----
+
+== Browsing the Classpath
+
+You can easily browse the items on your classpath with the command
+kbd:[M-x] `cider-classpath`.
+
+Here you can see it in action:
+
+image::classpath_browser.png[Classpath Browser]
+
+Press kbd:[RET] on a classpath entry to navigate into it.
+
+== Browsing Namespaces
+
+You can browse the contents of any loaded namespace with the command
+kbd:[M-x] `cider-browse-ns`. CIDER will prompt you for the namespace
+to browse.
+
+image::ns_browser.png[Namespace Browser]
+
+You can also browse all available namespaces with kbd:[M-x]
+`cider-browse-ns-all`.
+
+There are a bunch of useful keybindings that are defined in browser buffers.
+
+|===
+| Keyboard shortcut | Description
+
+| kbd:[d]
+| Display documentation for item at point.
+
+| kbd:[RET]
+| Browse ns or display documentation for item at point.
+
+| kbd:[s]
+| Go to definition for item at point.
+
+| kbd:[^]
+| Browse all namespaces.
+
+| kbd:[n]
+| Go to next line.
+
+| kbd:[p]
+| Go to previous line.
+|===
+
+== Browsing the Clojure Spec Registry
+
+If you are using Clojure 1.9 or newer you can browse the Clojure spec registry.
+
+If you already know which spec you're looking for, you can type
+kbd:[M-x] `cider-browse-spec` and CIDER will prompt you for a
+spec name and then drop you into the spec browser.
+
+image::spec_browser.png[Spec Browser]
+
+If you aren't quite sure which spec you want, you can type
+kbd:[M-x] `cider-browse-spec-all`. CIDER will then prompt you for
+a regex and will filter out all the spec names that don't match.
+
+image::spec_browser_all.png[Spec Browser]
+
+Once in the browser you can use your mouse or the keybindings below to
+navigate deeper.
+
+|===
+| Keyboard shortcut | Description
+
+| kbd:[RET]
+| Browse the spec at point.
+
+| kbd:[^]
+| Go up in the navigation stack.
+
+| kbd:[n]
+| Go to next spec.
+
+| kbd:[p]
+| Go to previous spec.
+
+| kbd:[e]
+| Generate an example for the current browser spec.
+|===
+
+If your project includes the `org.clojure/test.check` library, you can
+type kbd:[e] when browsing a spec to generate an example that
+meets the spec.
+
+image::spec_browser_gen_example.png[Spec Browser Example]
+
+== Formatting Code with cljfmt
+
+While CIDER has it's own code formatting (indentation) engine, you can also
+use it together with `cljfmt` - that's useful if you're working on a team
+that uses different editors and IDEs.
+
+CIDER provides several commands to interact with `cljfmt`:
+
+* `cider-format-defun`
+* `cider-format-region`
+* `cider-format-buffer`
+
+Generally it's a good idea to add some hook like this one to make sure
+on each save operation your buffers are properly formatted:
+
+[source,lisp]
+----
+(add-hook 'before-save-hook 'cider-format-buffer t t)
+----
+
+Notice that you want to apply `cljfmt` **prior** to saving the buffer in question.
+
+You can supply additional configuration to `cljfmt` via the configuration variable
+`cider-format-code-options`. Here's an example:
+
+[source,lisp]
+----
+;; Let's assume you want to pass the following config
+;;
+;;   {:indents {org.me/foo [[:inner 0]]}
+;;    :alias-map {\"me\" \"org.me\"}}
+;;
+;; You'll need to encode it as an Emacs Lisp plist:
+
+(setq cider-format-code-options
+      '(("indents" (("org.me/foo" (("inner" 0)))))
+        ("alias-map" (("me" "org.me")))))
+----
+
+NOTE: CIDER doesn't shell out to `cljfmt` - it interacts with it via nREPL
+(there's `format` middleware in `cider-nrepl`), which is faster than
+shelling out.
+
+== Formatting EDN
+
+Similarly to the `cljfmt` integration, CIDER also provides a convenient interface
+to format EDN using `clojure.tools.reader.edn`. The following commands are provided:
+
+* `cider-format-edn-defun`
+* `cider-format-edn-region`
+* `cider-format-edn-buffer`
+
+== https://www.gnu.org/software/emacs/manual/html_node/emacs/Xref.html[Xref] integration
+
+Beginning with version 1.2.0, CIDER supports Emacs's built-in `xref`
+functionality, which means `M-.` will invoke `xref-find-definitions` instead of
+CIDER's own command `cider-find-var`. You can disable the use of CIDER's `xref` backend like this:
+
+[source,lisp]
+----
+(setq cider-use-xref nil)
+----
+
+NOTE: You'll have to disable and enable `cider-mode` for this setting to have effect.
+
+If you use other packages that also integrate with xref (e.g. `lsp-mode`), you may wish to customize the precedence of CIDER's xref backend. The precedence is controlled by the
+order in which backend functions appear in the `xref-backend-functions` hook. By default, the CIDER xref function will be added with a depth of -90, so it will (should?) come first.
+If you would prefer for it to have a lower precedence, you can change `cider-xref-fn-depth`:
+
+[source,lisp]
+----
+(setq cider-xref-fn-depth 90)
+----
+
+TIP: See https://www.gnu.org/software/emacs/manual/html_node/elisp/Setting-Hooks.html[Setting Hooks] for more information about depth.

@@ -1,0 +1,61 @@
+= Interactive Programming
+:experimental:
+
+== Overview
+
+Traditional programming languages and development environments often
+use a http://wiki.c2.com/?EditCompileLinkRun[Edit, Compile, Run
+Cycle]. In this environment,
+the programmer modifies the code, compiles it, and then runs it to see
+if it does what she wants. The program is then terminated, and the
+programmer goes back to editing the program further. This cycle is
+repeated over and over until the program behavior conforms to what the
+programmer desires. While modern IDEs have optimized this process to
+be quick and relatively painless, it's still a slow way to work.
+
+Clojure and CIDER offer a better way to work called _interactive
+programming_. Indeed, this idea is at the very heart of CIDER.
+
+Using CIDER's interactive programming environment, a programmer works
+in a very dynamic and incremental manner. Instead of repeatedly
+editing, compiling, and restarting an application, the programmer
+starts the application once and then adds and updates individual
+Clojure definitions as the program continues to run. Using the CIDER
+REPL, the programmer can access the value of different definitions and
+invoke program functions with test data, immediately seeing the
+result. This methodology is far more efficient than the typical Edit,
+Compile, and Run Cycle because the program continues to run and keeps
+its state intact while the programmer interacts with it. Indeed, some
+Clojure programmers have been known to keep a CIDER session running
+for weeks or even months as they continue to write code.
+
+== Implementation
+
+CIDER's interactive programming environment is partially implemented
+using an Emacs minor mode called `cider-mode`. `cider-mode`
+complements `clojure-mode` and allows you to evaluate Clojure code
+from your source file buffers and send it directly to your running
+program through the CIDER REPL. Using the functions offered by
+`cider-mode` will improve your productivity and make you a more
+efficient Clojure programmer.
+
+== Demos
+
+[quote, Clorpheus]
+____
+Unfortunately, no one can be told what interactive programming is. You have
+to see it for yourself.
+____
+
+The above description might sound a bit too "meta", so probably checking out
+some demos illustrating the interactive programming workflow will help you
+understand the key concepts better. Here are a few ideas:
+
+* https://www.youtube.com/watch?v=aYA4AAjLfT0[Deep Dive into CIDER] - an overview of CIDER's essential features
+* https://www.youtube.com/watch?v=O6g5C4jUCUc[Emacs & Clojure, A Lispy Love Affair] - an overview of all popular Emacs packages for Clojure development (including CIDER)
+* https://www.youtube.com/watch?v=4ecC3jqHooc[Clojure Development Workflow with Spacemacs and CIDER]
+
+NOTE: As CIDER is evolving rapidly, some of the information in those videos would likely be outdated by the time you get to watch them. Still,
+the core ideas of interactive programming are immutable, so whatever differences you come to observe and experience will likely be superficial.
+
+You can find more CIDER demos on the xref:additional_resources["Additional Resources"] page.

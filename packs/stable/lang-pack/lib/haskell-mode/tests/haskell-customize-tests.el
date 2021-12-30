@@ -62,7 +62,7 @@
    (progn
      (should (eq 'cabal-repl (haskell-process-type))))))
 
-(ert-deftest haskell-process-type-test-3 ()
+(ert-deftest haskell-process-type-test-4 ()
   (with-temp-dir-structure
    (("README.md" . "Hello world")
     ("Main.hs" . "-- Empty file")
@@ -72,17 +72,3 @@
                 ("test2.hs" . "-- Empty file"))))
    (progn
      (should (eq 'ghci (haskell-process-type))))))
-
-(ert-deftest haskell-process-type-test-4 ()
-  :expected-result :failed
-  (with-temp-dir-structure
-   (("README.md" . "Hello world")
-    ("Main.hs" . "-- Empty file")
-    ("abc.cabal" . "-- Empty file")
-    ("cabal.project" . "-- Empty file")
-    ("src" . (("moduleA.hs" . "-- Empty file")
-              ("moduleB.hs" . "-- Empty file")))
-    ("tests" . (("test1.hs" . "-- Empty file")
-                ("test2.hs" . "-- Empty file"))))
-   (progn
-     (should (eq 'cabal-new-repl (haskell-process-type))))))

@@ -47,7 +47,7 @@
   (js2-navigation-helper "var p1 = 4; function aFunction(p1, p2) {p1};" 32 4))
 
 (ert-deftest js2-jump-to-object-property ()
-  (js2-navigation-helper "var aObject = {prop1: 3, prop2: \"hello\"}; aObject.prop1" 16))
+  (js2-navigation-helper "var aObject = {prop1: 3, prop2: \"hello\"}; this.prop1 = 4; aObject.prop1" 16))
 
 (ert-deftest js2-no-jump-to-object-property ()
   (js2-navigation-helper "var aObject = {prop1: 3, prop2: \"hello\"}; anotherObject.prop1"
@@ -76,6 +76,10 @@
 
 (ert-deftest js2-jump-to-function-inside-property-value-syntax ()
   (js2-navigation-helper "function aFunction(p1, p2) {return p1+p2}; module.exports = {aFunction};" 1 6))
+
+(ert-deftest js2-jump-to-this-inside-same-class ()
+  (js2-navigation-helper "class App { something() { return \"s\" } render() { this.something"
+                         13))
 
 
 ;; forward-sexp

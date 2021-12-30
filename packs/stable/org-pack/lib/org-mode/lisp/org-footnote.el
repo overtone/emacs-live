@@ -1,6 +1,6 @@
 ;;; org-footnote.el --- Footnote support in Org      -*- lexical-binding: t; -*-
 ;;
-;; Copyright (C) 2009-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2021 Free Software Foundation, Inc.
 ;;
 ;; Author: Carsten Dominik <carsten at orgmode dot org>
 ;; Keywords: outlines, hypermedia, calendar, wp
@@ -37,6 +37,7 @@
 (declare-function org-at-comment-p "org" ())
 (declare-function org-at-heading-p "org" (&optional ignored))
 (declare-function org-back-over-empty-lines "org" ())
+(declare-function org-end-of-meta-data "org" (&optional full))
 (declare-function org-edit-footnote-reference "org-src" ())
 (declare-function org-element-at-point "org-element" ())
 (declare-function org-element-class "org-element" (datum &optional parent))
@@ -704,7 +705,7 @@ function doesn't move point."
 	   (concat "^\\*+[ \t]+" (regexp-quote org-footnote-section) "[ \t]*$")
 	   nil t))
 	(goto-char (match-end 0))
-	(forward-line)
+        (org-end-of-meta-data t)
 	(unless (bolp) (insert "\n")))
        (t (org-footnote--clear-footnote-section)))
       (when (zerop (org-back-over-empty-lines)) (insert "\n"))

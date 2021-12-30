@@ -1,9 +1,10 @@
 ;;; ob-R.el --- Babel Functions for R                -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2009-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2021 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;;	Dan Davison
+;; Maintainer: Jeremie Juste
 ;; Keywords: literate programming, reproducible research, R, statistics
 ;; Homepage: https://orgmode.org
 
@@ -193,7 +194,8 @@ This function is called by `org-babel-execute-src-block'."
     (org-babel-comint-in-buffer session
       (mapc (lambda (var)
               (end-of-line 1) (insert var) (comint-send-input nil t)
-              (org-babel-comint-wait-for-output session)) var-lines))
+              (org-babel-comint-wait-for-output session))
+	    var-lines))
     session))
 
 (defun org-babel-load-session:R (session body params)
@@ -347,7 +349,7 @@ Each member of this list is a list with three members:
                         {
                             tfile<-tempfile()
                             write.table(object, file=tfile, sep=\"\\t\",
-                                        na=\"nil\",row.names=%s,col.names=%s,
+                                        na=\"\",row.names=%s,col.names=%s,
                                         quote=FALSE)
                             file.rename(tfile,transfer.file)
                         },
@@ -360,7 +362,7 @@ Each member of this list is a list with three members:
             )
     }
 }(object=%s,transfer.file=\"%s\")"
-  "A template for an R command to evaluate a block of code and write the result to a file.
+  "Template for an R command to evaluate a block of code and write result to file.
 
 Has four %s escapes to be filled in:
 1. Row names, \"TRUE\" or \"FALSE\"
@@ -459,11 +461,11 @@ last statement in BODY, as elisp."
   "R-specific processing of return value.
 Insert hline if column names in output have been requested."
   (if column-names-p
-      (cons (car result) (cons 'hline (cdr result)))
+      (condition-case nil
+	  (cons (car result) (cons 'hline (cdr result)))
+	(error "Could not parse R result"))
     result))
 
 (provide 'ob-R)
-
-
 
 ;;; ob-R.el ends here

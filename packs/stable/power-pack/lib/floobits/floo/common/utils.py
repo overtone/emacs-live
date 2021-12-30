@@ -136,15 +136,20 @@ def validate_auth(auth):
     if type(auth) != dict:
         msg.error('floorc.json validation error: Auth section is not an object!')
         return False
+    to_delete = []
     for k, v in auth.items():
         if type(v) != dict:
             msg.error('floorc.json validation error: host "', k, '" has invalid auth credentials. Did you put a setting in the auth section?')
-            return False
+            to_delete.append(k)
+            break
         for key in ['username', 'api_key', 'secret']:
             if not v.get(key):
                 msg.error('floorc.json validation error: host "', k, '" missing "', key, '"')
-                return False
-    return True
+                to_delete.append(k)
+                break
+    for k in to_delete:
+        del auth[k]
+    return len(to_delete) == 0
 
 
 def can_auth(host=None):
@@ -196,6 +201,7 @@ def _set_timeout(func, timeout, repeat, *args, **kwargs):
     editor.set_timeout(timeout_func, timeout)
     timeout_ids.add(timeout_id)
     return timeout_id
+
 
 set_timeout._top_timeout_id = 0
 
@@ -328,8 +334,11 @@ def update_floo_file(path, data):
     except Exception:
         floo_json = data
 
-    with open(path, 'w') as floo_fd:
-        floo_fd.write(json.dumps(floo_json, indent=4, sort_keys=True, separators=(',', ': ')))
+    try:
+        with open(path, 'w') as floo_fd:
+            floo_fd.write(json.dumps(floo_json, indent=4, sort_keys=True, separators=(',', ': ')))
+    except Exception as e:
+        msg.warn('Couldn\'t update .floo file: ', floo_json, ': ', str_e(e))
 
 
 def read_floo_file(path):
@@ -511,7 +520,7 @@ def _unwind_generator(gen_expr, cb=None, res=None):
 
             try:
                 args = list(res)[1:]
-            except:
+            except Exception:
                 # assume not iterable
                 args = []
 

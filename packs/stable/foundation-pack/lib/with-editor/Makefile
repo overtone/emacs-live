@@ -1,55 +1,51 @@
-ELS = with-editor.el
+-include config.mk
+include default.mk
 
-DEPS = dash
+.PHONY: lisp docs
 
-INFOPAGES = with-editor.info
-
-ELCS    = $(ELS:.el=.elc)
-DFLAGS  = $(addprefix -L ../,$(DEPS))
-EFLAGS ?= $(DFLAGS)
-EMACS  ?= emacs
-BATCH   = $(EMACS) -batch -Q -L . $(EFLAGS)
-
-MAKEINFO     ?= makeinfo
-INSTALL_INFO ?= $(shell command -v ginstall-info || printf install-info)
-
-.PHONY: help clean AUTHORS.md
+all: lisp docs
 
 help:
-	$(info make all       - compile elisp and manual)
-	$(info make lisp      - compile elisp)
-	$(info make info      - generate info manual)
-	$(info make authors   - generate AUTHORS.md)
-	$(info make clean     - remove generated files)
+	$(info make all          - generate lisp and manual)
+	$(info make lisp         - generate byte-code and autoloads)
+	$(info make docs         - generate most manual formats)
+	$(info make texi         - generate texi manual (see comments))
+	$(info make info         - generate info manual)
+	$(info make html         - generate html manual file)
+	$(info make html-dir     - generate html manual directory)
+	$(info make pdf          - generate pdf manual)
+	$(info make authors      - generate AUTHORS.md)
+	$(info make stats        - generate statistics)
+	$(info make publish      - publish snapshot manuals)
+	$(info make release      - publish release manuals)
+	$(info make clean        - remove most generated files)
 	@printf "\n"
 
-all: lisp info
+lisp:
+	@$(MAKE) -C lisp lisp
 
-lisp: $(ELCS)
-%.elc: %.el
-	@printf "Compiling %s\n" $<
-	@$(BATCH)\
-	  --eval '(setq with-editor-emacsclient-executable nil)'\
-	  -f batch-byte-compile $<
+docs:
+	@$(MAKE) -C docs docs
+texi:
+	@$(MAKE) -C docs texi
+info:
+	@$(MAKE) -C docs info
+html:
+	@$(MAKE) -C docs html
+html-dir:
+	@$(MAKE) -C docs html-dir
+pdf:
+	@$(MAKE) -C docs pdf
+authors:
+	@$(MAKE) -C docs authors
+stats:
+	@$(MAKE) -C docs stats
 
-info: $(INFOPAGES) dir
-%.info: %.texi
-	@printf "Generating $@\n"
-	@$(MAKEINFO) --no-split $< -o $@
-
-dir: $(INFOPAGES)
-	@printf "Generating dir\n"
-	@echo $^ | xargs -n 1 $(INSTALL_INFO) --dir=$@
-
-authors: AUTHORS.md
-AUTHORS.md:
-	@ printf "Authors\n=======\n\n" > $@
-	@ ( printf "%s\n" "- Barak A. Pearlmutter <barak+git@pearlmutter.net>" && \
-	    printf "%s\n" "- Lele Gaifax <lele@metapensiero.it>" && \
-	    printf "%s\n" "- Rémi Vanicat <vanicat@debian.org>" && \
-	    git log --pretty=format:'- %aN <%aE>' \
-	  ) | sort -u >> $@
+publish:
+	@$(MAKE) -C docs publish
+release:
+	@$(MAKE) VERSION=$(VERSION) -C docs release
 
 clean:
-	@printf "Cleaning...\n"
-	@rm -f $(ELCS)
+	@$(MAKE) -C lisp clean
+	@$(MAKE) -C docs clean

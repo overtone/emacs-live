@@ -1,6 +1,6 @@
 ;;; cider-classpath.el --- Basic Java classpath browser
 
-;; Copyright © 2014-2016 Bozhidar Batsov and CIDER contributors
+;; Copyright © 2014-2021 Bozhidar Batsov and CIDER contributors
 
 ;; This program is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -25,11 +25,10 @@
 
 (require 'cider-client)
 (require 'cider-popup)
+(require 'subr-x)
 (require 'cider-compat)
 
 (defvar cider-classpath-buffer "*cider-classpath*")
-
-(push cider-classpath-buffer cider-ancillary-buffers)
 
 (defvar cider-classpath-mode-map
   (let ((map (make-sparse-keymap)))
@@ -48,9 +47,10 @@
   "Major mode for browsing the entries in Java's classpath.
 
 \\{cider-classpath-mode-map}"
-  (setq buffer-read-only t)
   (setq-local electric-indent-chars nil)
-  (setq-local truncate-lines t))
+  (setq-local sesman-system 'CIDER)
+  (when cider-special-mode-truncate-lines
+    (setq-local truncate-lines t)))
 
 (defun cider-classpath-list (buffer items)
   "Populate BUFFER with ITEMS."
@@ -91,20 +91,18 @@
   "List all classpath entries."
   (interactive)
   (cider-ensure-connected)
-  (cider-ensure-op-supported "classpath")
-  (with-current-buffer (cider-popup-buffer cider-classpath-buffer t)
+  (with-current-buffer (cider-popup-buffer cider-classpath-buffer 'select nil 'ancillary)
     (cider-classpath-list (current-buffer)
                           (mapcar (lambda (name)
                                     (cider-classpath-properties name))
-                                  (cider-sync-request:classpath)))))
+                                  (cider-classpath-entries)))))
 
 ;;;###autoload
 (defun cider-open-classpath-entry ()
   "Open a classpath entry."
   (interactive)
   (cider-ensure-connected)
-  (cider-ensure-op-supported "classpath")
-  (when-let ((entry (completing-read "Classpath entries: " (cider-sync-request:classpath))))
+  (when-let* ((entry (completing-read "Classpath entries: " (cider-classpath-entries))))
     (find-file-other-window entry)))
 
 (provide 'cider-classpath)

@@ -15,7 +15,7 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Code:
 
@@ -102,6 +102,35 @@
   (should-not
    (org-test-with-temp-text "xx abc<point> xx"
      (org-in-regexp "abc" nil t))))
+
+
+;;; Time
+
+(ert-deftest test-org-matcher-time ()
+  "Test `org-matcher-time'."
+  (let ((system-time-locale "en_US"))
+    (org-test-at-time "<2021-01-11 Mon 13:00>"
+      (should (equal (list 0 0 13 11 1 2021)
+                     (butlast (org-decode-time (org-matcher-time "<now>"))
+                              3)))
+      (should (equal (list 0 0 0 14 1 2021)
+                     (butlast (org-decode-time (org-matcher-time "<+3d>"))
+                              3)))
+      (should (equal (list 0 0 0 9 1 2021)
+                     (butlast (org-decode-time (org-matcher-time "<-2d>"))
+                              3)))
+      (should (equal (list 0 0 0 18 1 2021)
+                     (butlast (org-decode-time (org-matcher-time "<+1w>"))
+                              3)))
+      (should (equal (list 0 0 17 11 1 2021)
+                     (butlast (org-decode-time (org-matcher-time "<+4h>"))
+                              3)))
+      (should (equal (list 0 0 11 11 1 2021)
+                     (butlast (org-decode-time (org-matcher-time "<-2h>"))
+                              3)))
+      (should (equal (list 0 0 3 12 1 2021)
+                     (butlast (org-decode-time (org-matcher-time "<+14h>"))
+                              3))))))
 
 (provide 'test-org-macs)
 ;;; test-org-macs.el ends here

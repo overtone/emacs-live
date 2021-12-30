@@ -5,9 +5,10 @@
 ;; Author: Yoshiki Kurihara <clouder@gmail.com>
 ;;         Marshall T. Vandegrift <llasram@gmail.com>
 ;; Maintainer: Vasilij Schneidermann <mail@vasilij.de>
+;; URL: https://github.com/yoshiki/yaml-mode
 ;; Package-Requires: ((emacs "24.1"))
 ;; Keywords: data yaml
-;; Version: 0.0.14
+;; Version: 0.0.15
 
 ;; This file is not part of Emacs
 
@@ -117,7 +118,7 @@ that key is pressed to begin a block literal."
 
 ;; Constants
 
-(defconst yaml-mode-version "0.0.14" "Version of `yaml-mode'.")
+(defconst yaml-mode-version "0.0.15" "Version of `yaml-mode'.")
 
 (defconst yaml-blank-line-re "^ *$"
   "Regexp matching a line containing only (valid) whitespace.")
@@ -322,6 +323,8 @@ artificially limited to the value of
           (unless (looking-at yaml-blank-line-re)
             (setq min-level (min min-level (current-indentation))))
           (forward-line -1))
+        (when (looking-at-p " *- ")
+          (setq min-level (- min-level 2)))
         (cond
          ((and (< (current-indentation) min-level)
                (looking-at yaml-block-literal-re))
@@ -480,6 +483,10 @@ this will do usual adaptive fill behaviors."
 
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.\\(e?ya?\\|ra\\)ml\\'" . yaml-mode))
+
+;;;###autoload
+(add-to-list 'magic-mode-alist
+             '("^%YAML\\s-+[0-9]+\\.[0-9]+\\(\\s-+#\\|\\s-*$\\)" . yaml-mode))
 
 (provide 'yaml-mode)
 

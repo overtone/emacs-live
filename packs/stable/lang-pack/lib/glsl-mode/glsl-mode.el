@@ -181,7 +181,7 @@ are added to the `glsl-builtin-list' and are fontified using the
   "Function used to display GLSL man pages. E.g. browse-url, eww, w3m, etc"
   :type 'function
   :group 'glsl)
-  
+
 (defcustom glsl-man-pages-base-url "http://www.opengl.org/sdk/docs/man/html/"
   "Location of GL man pages."
   :type 'string
@@ -204,7 +204,7 @@ are added to the `glsl-builtin-list' and are fontified using the
       "dmat2x3" "dmat2x4" "mat3x2" "mat3x3" "mat3x4" "dmat3x2" "dmat3x3"
       "dmat3x4" "mat4x2" "mat4x3" "mat4x4" "dmat4x2" "dmat4x3" "dmat4x4" "vec2"
       "vec3" "vec4" "ivec2" "ivec3" "ivec4" "bvec2" "bvec3" "bvec4" "dvec2"
-      "dvec3" "dvec4" "uint" "uvec2" "uvec3" "uvec4" "atomic_uint" 
+      "dvec3" "dvec4" "uint" "uvec2" "uvec3" "uvec4" "atomic_uint"
       "sampler1D" "sampler2D" "sampler3D" "samplerCube" "sampler1DShadow"
       "sampler2DShadow" "samplerCubeShadow" "sampler1DArray" "sampler2DArray"
       "sampler1DArrayShadow" "sampler2DArrayShadow" "isampler1D" "isampler2D"
@@ -227,19 +227,19 @@ are added to the `glsl-builtin-list' and are fontified using the
     '("attribute" "const" "uniform" "varying" "buffer" "shared" "coherent"
     "volatile" "restrict" "readonly" "writeonly" "layout" "centroid" "flat"
     "smooth" "noperspective" "patch" "sample" "in" "out" "inout"
-    "invariant" "lowp" "mediump" "highp")) 
+    "invariant" "lowp" "mediump" "highp"))
 
   (defvar glsl-keyword-list
     '("break" "continue" "do" "for" "while" "if" "else" "subroutine"
       "discard" "return" "precision" "struct" "switch" "default" "case"))
 
   (defvar glsl-reserved-list
-    '("input" "output" "asm" "class" "union" "enum" "typedef" "template" "this" 
+    '("input" "output" "asm" "class" "union" "enum" "typedef" "template" "this"
       "packed" "resource" "goto" "inline" "noinline"
       "common" "partition" "active" "long" "short" "half" "fixed" "unsigned" "superp"
-      "public" "static" "extern" "external" "interface" 
+      "public" "static" "extern" "external" "interface"
       "hvec2" "hvec3" "hvec4" "fvec2" "fvec3" "fvec4"
-      "filter" "sizeof" "cast" "namespace" "using" 
+      "filter" "sizeof" "cast" "namespace" "using"
       "sampler3DRect"))
 
   (defvar glsl-deprecated-qualifier-list
@@ -352,10 +352,10 @@ are added to the `glsl-builtin-list' and are fontified using the
 
    (when glsl-additional-types
      (list
-      (cons (glsl-ppre glsl-additional-types) glsl-type-face))) 
+      (cons (glsl-ppre glsl-additional-types) glsl-type-face)))
    (when glsl-additional-keywords
      (list
-      (cons (glsl-ppre glsl-additional-keywords) glsl-keyword-face))) 
+      (cons (glsl-ppre glsl-additional-keywords) glsl-keyword-face)))
    (when glsl-additional-qualifiers
      (list
       (cons (glsl-ppre glsl-additional-qualifiers) glsl-qualifier-face)))

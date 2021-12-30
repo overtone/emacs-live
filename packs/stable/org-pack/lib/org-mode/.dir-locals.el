@@ -6,6 +6,8 @@
   (tab-width . 8)
   (fill-column . 70)
   (sentence-end-double-space . t))
+ (emacs-lisp-mode
+  (indent-tabs-mode))
  (org-mode
   (indent-tabs-mode)
   (org-adapt-indentation)

@@ -1,9 +1,9 @@
 ;;; cider-eldoc-tests.el
 
-;; Copyright © 2012-2016 Tim King, Bozhidar Batsov
+;; Copyright © 2012-2021 Tim King, Bozhidar Batsov
 
 ;; Author: Tim King <kingtim@gmail.com>
-;;         Bozhidar Batsov <bozhidar@batsov.com>
+;;         Bozhidar Batsov <bozhidar@batsov.dev>
 ;;         Artur Malabarba <bruce.connor.am@gmail.com>
 
 ;; This file is NOT part of GNU Emacs.
@@ -39,7 +39,7 @@
 
 (describe "cider--eldoc-format-class-names"
   :var (class-names)
-  (before-all
+  (before-each
     (setq class-names '("java.lang.String" "java.lang.StringBuffer" "java.lang.CharSequence" "java.lang.StringBuilder")))
 
   (it "returns a formatted class names prefix string"
@@ -71,7 +71,7 @@
 
 (describe "cider-eldoc-format-thing"
   :var (class-names)
-  (before-all
+  (before-each
     (setq class-names '("java.lang.String" "java.lang.StringBuffer" "java.lang.CharSequence" "java.lang.StringBuilder")))
 
   (describe "when ns is given and it exists"
@@ -79,7 +79,7 @@
       (expect (cider-eldoc-format-thing "clojure.core" "map" "map" 'function)
               :to-equal "clojure.core/map"))
 
-    (describe "when the given ns doesnt exist"
+    (describe "when the given ns doesn't exist"
       (it "returns eldoc formatted symbol"
         (let ((cider-eldoc-ns-function (lambda (ns) nil)))
           (expect (cider-eldoc-format-thing "non-existent-ns" "" "my-map" 'function)
@@ -159,7 +159,7 @@
             :to-equal "map")))
 
 (describe "cider-eldoc-info-in-current-sexp"
-  (before-all
+  (before-each
     (spy-on 'cider-connected-p :and-return-value t)
     (spy-on 'cider-eldoc-info :and-call-fake
             (lambda (thing)
@@ -209,7 +209,7 @@
                 '("eldoc-info" ("clojure.core" "map" (("f") ("f" "coll"))) "thing" "map" "pos" 2)))))
 
   (describe "interop forms"
-    (before-all
+    (before-each
       (spy-on 'cider-connected-p :and-return-value t)
       (spy-on 'cider-eldoc-info :and-call-fake
               (lambda (thing)
@@ -237,10 +237,10 @@
 
 (describe "cider-eldoc-format-sym-doc"
   :var (eldoc-echo-area-use-multiline-p)
-  (before-all
+  (before-each
     (spy-on 'window-width :and-return-value 177))
 
-  (it "returns the formated eldoc string"
+  (it "returns the formatted eldoc string"
     (expect (cider-eldoc-format-sym-doc "kubaru.core/plane" "kubaru.core" "Simple docstring.")
             :to-equal "kubaru.core/plane: Simple docstring."))
 
@@ -300,3 +300,11 @@
         (it "returns tries to display the var with the first line"
           (expect (cider-eldoc-format-sym-doc "kubaru.core/plane" "kubaru.core" "Line 1.\nLine 2.\nLine 3.")
                   :to-equal "kubaru.core/plane: Line 1."))))))
+
+(describe "cider--eldoc-add-datomic-query-inputs-to-arglists"
+  (it "adds the datomic query inputs of the query at point to the arglist"
+    (spy-on 'cider-second-sexp-in-list :and-return-value t)
+    (spy-on 'cider-sync-request:eldoc-datomic-query
+              :and-return-value '(dict "inputs" (("$" "?first-name"))))
+    (expect (cider--eldoc-add-datomic-query-inputs-to-arglists '(("query" "&" "inputs")))
+            :to-equal '(("query" "$" "?first-name")))))

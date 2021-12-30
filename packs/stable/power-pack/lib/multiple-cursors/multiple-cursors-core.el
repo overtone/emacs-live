@@ -40,6 +40,18 @@
   "The face used for fake cursors if the cursor-type is bar"
   :group 'multiple-cursors)
 
+(defcustom mc/match-cursor-style t
+  "If non-nil, attempt to match the cursor style that the user
+has selected.  Namely, use vertical bars the user has configured
+Emacs to use that cursor.
+
+If nil, just use standard rectangle cursors for all fake cursors.
+
+In some modes/themes, the bar fake cursors are either not
+rendered or shift text."
+  :type '(boolean)
+  :group 'multiple-cursors)
+
 (defface mc/region-face
   '((t :inherit region))
   "The face used for fake regions"
@@ -125,7 +137,7 @@
 (defun mc/make-cursor-overlay-at-eol (pos)
   "Create overlay to look like cursor at end of line."
   (let ((overlay (make-overlay pos pos nil nil nil)))
-    (if (mc/cursor-is-bar)
+    (if (and mc/match-cursor-style (mc/cursor-is-bar))
 	(overlay-put overlay 'before-string (propertize "|" 'face 'mc/cursor-bar-face))
       (overlay-put overlay 'after-string (propertize " " 'face 'mc/cursor-face)))
     overlay))
@@ -133,7 +145,7 @@
 (defun mc/make-cursor-overlay-inline (pos)
   "Create overlay to look like cursor inside text."
   (let ((overlay (make-overlay pos (1+ pos) nil nil nil)))
-    (if (mc/cursor-is-bar)
+    (if (and mc/match-cursor-style (mc/cursor-is-bar))
 	(overlay-put overlay 'before-string (propertize "|" 'face 'mc/cursor-bar-face))
       (overlay-put overlay 'face 'mc/cursor-face))
     overlay))
@@ -421,7 +433,7 @@ the original cursor, to inform about the lack of support."
   (unless mc--executing-command-for-fake-cursor
 
     (if (eq 1 (mc/num-cursors)) ;; no fake cursors? disable mc-mode
-        (multiple-cursors-mode 0)
+        (mc/disable-multiple-cursors-mode)
       (when this-original-command
         (let ((original-command (or mc--this-command
                                     (command-remapping this-original-command)
@@ -475,7 +487,7 @@ you should disable multiple-cursors-mode."
   "Deactivate mark if there are any active, otherwise exit multiple-cursors-mode."
   (interactive)
   (if (not (use-region-p))
-      (multiple-cursors-mode 0)
+      (mc/disable-multiple-cursors-mode)
     (deactivate-mark)))
 
 (defun mc/repeat-command ()
@@ -576,13 +588,18 @@ They are temporarily disabled when multiple-cursors are active.")
     (mc/enable-temporarily-disabled-minor-modes)
     (run-hooks 'multiple-cursors-mode-disabled-hook)))
 
-(add-hook 'after-revert-hook #'(lambda () (multiple-cursors-mode 0)))
+(defun mc/disable-multiple-cursors-mode ()
+  "Disable multiple-cursors-mode and run the corresponding hook."
+  (multiple-cursors-mode 0)
+  (run-hooks 'multiple-cursors-mode-disabled-hook))
+
+(add-hook 'after-revert-hook 'mc/disable-multiple-cursors-mode)
 
 (defun mc/maybe-multiple-cursors-mode ()
   "Enable multiple-cursors-mode if there is more than one currently active cursor."
   (if (> (mc/num-cursors) 1)
       (multiple-cursors-mode 1)
-    (multiple-cursors-mode 0)))
+    (mc/disable-multiple-cursors-mode)))
 
 (defmacro unsupported-cmd (cmd msg)
   "Adds command to list of unsupported commands and prevents it
@@ -844,6 +861,8 @@ for running commands with multiple cursors."
   "Commands to run for all cursors in multiple-cursors-mode")
 
 (provide 'multiple-cursors-core)
+(require 'mc-cycle-cursors)
+(require 'mc-hide-unmatched-lines-mode)
 
 ;; Local Variables:
 ;; coding: utf-8

@@ -41,7 +41,6 @@
 (live-load-config-file "window-number-conf.el")
 (live-load-config-file "recentf-conf.el")
 (live-load-config-file "elisp-slime-nav-conf.el")
-(live-load-config-file "popwin-conf.el")
 (live-load-config-file "shell-conf.el")
 (live-load-config-file "spelling-conf.el")
 (live-load-config-file "lisp-conf.el")
@@ -49,6 +48,7 @@
 (live-load-config-file "zone-conf.el")
 (live-load-config-file "monkey-patch.el")
 (live-load-config-file "live.el")
+(live-load-config-file "with-editor.el")
 
 
 (when (eq system-type 'darwin)

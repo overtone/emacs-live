@@ -16,7 +16,7 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Comments:
 
@@ -74,6 +74,21 @@
       (pcomplete)
       (buffer-string))
     t)))
+
+(ert-deftest test-org-pcomplete/src-block ()
+  "Test Babel source block header arguments completion."
+  (should
+   (string-prefix-p
+    "#+begin_src emacs-lisp"
+    (org-test-with-temp-text "#+begin_src emac<point>"
+      (pcomplete)
+      (buffer-string))))
+  (should
+   (string-prefix-p
+    "#+begin_src emacs-lisp :session"
+    (org-test-with-temp-text "#+begin_src emacs-lisp :sess<point>"
+      (pcomplete)
+      (buffer-string)))))
 
 (ert-deftest test-org-pcomplete/link ()
   "Test link completion"

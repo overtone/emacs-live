@@ -18,7 +18,7 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 ;;
@@ -60,7 +60,10 @@
 		     (template . org-confluence-template)
 		     (timestamp . org-confluence-timestamp)
 		     (underline . org-confluence-underline)
-		     (verbatim . org-confluence-verbatim)))
+		     (verbatim . org-confluence-verbatim))
+  :menu-entry
+  '(?f "Export to Confluence"
+       ((?f "As Confluence buffer" org-confluence-export-as-confluence))))
 
 (defcustom org-confluence-lang-alist
   '(("sh" . "bash"))

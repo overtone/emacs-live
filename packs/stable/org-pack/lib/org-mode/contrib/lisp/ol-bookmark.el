@@ -1,5 +1,5 @@
 ;;; ol-bookmark.el - Links to bookmarks
-;; Copyright (C) 2008-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2008-2021 Free Software Foundation, Inc.
 ;;
 ;; Author: Tokuya Kameshima <kames AT fa2.so-net.ne.jp>
 ;; Version: 1.0
@@ -52,7 +52,7 @@ Otherwise prompt the user for the right bookmark to use."
 			 :follow #'org-bookmark-open
 			 :store #'org-bookmark-store-link)
 
-(defun org-bookmark-open (bookmark)
+(defun org-bookmark-open (bookmark _)
   "Visit the bookmark BOOKMARK."
   (bookmark-jump bookmark))
 

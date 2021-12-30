@@ -1,0 +1,56 @@
+= Support
+
+CIDER currently has several official & unofficial support channels.
+For questions, suggestions and support refer to one of them.
+
+IMPORTANT: Please, don't
+use the support channels to report issues, as this makes them harder to track.
+
+The various support channels are listed below in the order of their importance from
+the perspective of the maintainers.
+
+== GitHub Discussions
+
+These days our primary discussion board is
+https://github.com/clojure-emacs/cider/discussions[here].
+
+It's a great place to share ideas, help other CIDER users and just be up-to-date
+with interesting developments.
+
+== Discord
+
+CIDER has its own Discord chat server, created by CIDER's
+author Bozhidar. You can join the Discord server
+https://discord.com/invite/nFPpynQPME[here].
+
+NOTE: As of 2021, Discord is Bozhidar's preferred chat for CIDER.
+
+== Slack
+
+We've got an official https://clojurians.slack.com/[Clojurians
+Slack] - `#cider`. The channel is very active and is a great way to
+get a handle on some of the maintainers and interact with other CIDER
+users. If you need an invite you can go http://clojurians.net/[here].
+
+There's also another channel named `#emacs` for generic Emacs discussions.
+
+NOTE: Bozhidar Slack handle is `bozhidar`, instead of `bbatsov`.
+
+== StackOverflow
+
+We're also encouraging users to ask CIDER-related questions on StackOverflow.
+
+When doing so you should use the
+http://stackoverflow.com/questions/tagged/cider[cider] tag (ideally combined
+with the tags `emacs` and `clojure`).
+
+== Mailing list
+
+The https://groups.google.com/forum/#!forum/cider-emacs[official mailing list] is
+hosted at Google Groups. It's a low-traffic list, so don't be too hesitant to subscribe.
+
+== Freenode
+
+We've got an unofficial Freenode channel - `#clojure-emacs`. It's not actively
+monitored by the CIDER maintainers themselves, but still you can get support
+from other CIDER users there.

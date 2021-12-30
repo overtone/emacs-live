@@ -1,0 +1,25 @@
+= Release Policy
+
+We're following http://semver.org/[SemVer].
+
+NOTE: Prior to CIDER 1.0, bumps of the minor (second) version number
+were considered major releases (e.g. 0.25 and 0.26 were major
+releases).
+
+The development cycle for the next major
+release starts immediately after the previous one has been
+shipped. Bugfix/point releases (if any) address only serious bugs and
+never contain new features or public API changes.
+
+Here are a few examples:
+
+* 1.1.0 - Feature release
+* 1.1.1 - Bug-fix release
+* 1.1.2 - Bug-fix release
+* 1.2.0 - Feature release
+
+CIDER and cider-nrepl are released independently, but follow the same release policy overall.footnote:[Keep in mind, though, that cider-nrepl has yet to make it to version 1.0]
+CIDER contains references to the cider-nrepl version it supports and would normally inject
+the newest cider-nrepl version possible.
+
+Commands that were made obsolete will be removed in the next major release.

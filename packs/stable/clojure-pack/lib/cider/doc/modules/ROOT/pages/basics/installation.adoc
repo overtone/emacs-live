@@ -1,0 +1,120 @@
+= Installation
+:experimental:
+
+The canonical way to install CIDER is via `package.el` (Emacs's built-in package
+manager), but it can be installed manually or via alternative package managers such
+as `el-get`.
+
+== Prerequisites
+
+You'll need to have Emacs installed, preferably the latest stable
+release. If you're new to Emacs you might want to go through
+https://www.gnu.org/software/emacs/tour/index.html[the guided tour of Emacs]
+and the built-in tutorial (just press kbd:[C-h t]).
+
+CIDER officially supports Emacs 26.1+, Java 8+ and Clojure(Script)
+1.8+.  CIDER 0.17 (Andalucía) was the final release which supported
+Java 7 and Clojure(Script) 1.7.
+
+You'll also need a recent version of either the Clojure CLI tools or your
+favorite build tool (Leiningen, Boot, or Gradle) to be able to start CIDER via
+`cider-jack-in`. Generally it's a good idea to use the latest stable versions.
+
+WARNING: CIDER does not support ClojureCLR.
+
+== Installation via package.el
+
+CIDER is available on the two major `package.el` community
+maintained repos -
+http://stable.melpa.org[MELPA Stable]
+and http://melpa.org[MELPA].
+
+You can install CIDER with the following command:
+
+kbd:[M-x package-install <RET> cider <RET>]
+
+or by adding this bit of Emacs Lisp code to your Emacs initialization file
+(`.emacs` or `init.el`):
+
+[source,lisp]
+----
+(unless (package-installed-p 'cider)
+  (package-install 'cider))
+----
+
+If the installation doesn't work try refreshing the package list:
+
+kbd:[M-x package-refresh-contents <RET>]
+
+It's important to note that MELPA packages are built automatically
+from the `master` branch, and that means you'll be right on the
+leading edge of development. This has upsides and downsides; you'll
+see new features first, but you might experience some bugs from
+time to time. Nevertheless, installing from MELPA is a reasonable way
+to obtain CIDER. The `master` branch is normally quite stable
+and serious regressions there are usually fixed quickly.
+
+If you have concerns about living on the leading edge of CIDER
+deveopment, you can always pin CIDER to use MELPA Stable like this:
+
+[source,lisp]
+----
+(add-to-list 'package-pinned-packages '(cider . "melpa-stable") t)
+----
+
+TIP: If you don't want to (or can't) wait for MELPA to rebuild CIDER,
+you can easily build and install an up-to-date MELPA package locally yourself. Check out
+http://emacsredux.com/blog/2015/05/10/building-melpa-packages-locally/[this article]
+for details on the subject.
+
+NOTE: CIDER has dependencies (e.g. `queue` & `seq`) that are only available in the
+https://elpa.gnu.org/[GNU ELPA repository]. It's the only package repository
+enabled by default in Emacs and you should not disable it!
+
+== Installation via use-package
+
+`use-package` can be used to install CIDER via the ``package.el``'s repositories
+http://stable.melpa.org[MELPA Stable] and http://melpa.org[MELPA].
+
+If you wanted to install the version of CIDER which is what is to be found in
+the `master` branch, declare the following in your Emacs initialization file
+(`.emacs` or `init.el`):
+
+[source,lisp]
+----
+(use-package cider
+  :ensure t)
+----
+
+However, if you wanted to be a bit more conservative and only use the stable
+releases of CIDER, you'd declare the following:
+
+[source,lisp]
+----
+(use-package cider
+  :ensure t
+  :pin melpa-stable)
+----
+
+After placing one of the above s-expressions, evaluate it, for it to take effect
+by entering: kbd:[C-x C-e].
+
+For further configuration options with `use-package`, consult the
+official https://github.com/jwiegley/use-package[use-package repository].
+
+== Installation via el-get
+
+CIDER is also available for installation from
+the https://github.com/dimitri/el-get[el-get] package manager.
+
+Provided you've already installed `el-get` you can install CIDER with the
+following command:
+
+kbd:[M-x el-get-install <RET> cider <RET>]
+
+== Manual Installation
+
+Installing CIDER manually is discouraged unless you plan to work with CIDER's
+codebase. The manual installation is relatively involved as it requires manual
+installation of the dependencies. Check out the section
+xref:contributing/hacking.adoc[Hacking on CIDER] for more details.

@@ -1079,7 +1079,7 @@ provided compared to Emacs' basic Compilation mode are:
 @itemize
 @item
 DWIM-style auto-detection of compile command (including support for
-CABAL projects)
+stack and cabal projects)
 @item
 Support for GHC's compile messages and recognizing error, warning and
 info source locations (including @option{-ferror-spans} syntax)
@@ -1106,39 +1106,55 @@ initialization to bind @code{haskell-compile} to @kbd{C-c C-c}.
 The following description assumes that @code{haskell-compile} has been
 bound to @kbd{C-c C-c}.
 
-@vindex haskell-compile-cabal-build-command
-@vindex haskell-compile-cabal-build-command-alt
-@vindex haskell-compile-command
+When invoked, @code{haskell-compile} decides what build tool to run by
+consulting the value of @code{haskell-compiler-type}.
 
-When invoked, @code{haskell-compile} tries to guess how to compile the
-Haskell program your currently visited buffer belongs to, by searching
-for a @file{.cabal} file in the current of enclosing parent folders. If
-a @file{.cabal} file was found, the command defined in the
-@code{haskell-compile-cabal-build-command} option is used. Note that to
-compile a @code{stack} based project you will need to set this variable to
-@code{stack build}. As usual you can do it using @code{M-x customize-variable}
-or with:
+@itemize
 
-@lisp
-(setq haskell-compile-cabal-build-command "stack build")
-@end lisp
+@item
+If this is the symbol @code{cabal}, then @code{cabal} is run, using the
+command defined by @code{haskell-compile-cabal-build-command}.
+@code{haskell-compile} looks for a @file{.cabal} file in the current directory
+or its closet ancestor.
 
-Moreover, when requesting to compile a @file{.cabal}-file is detected and
-a negative prefix argument (e.g. @kbd{C-- C-c C-c}) was given, the
-alternative @code{haskell-compile-cabal-build-command-alt} is
-invoked. By default, @code{haskell-compile-cabal-build-command-alt}
-contains a @samp{cabal clean -s} command in order to force a full
-rebuild.
+@item
+If @code{haskell-compiler-type} is the symbol @code{stack}, then @code{stack}
+is run, using the command @code{haskell-compile-stack-build-command}, and
+looking for the closest @file{stack.yaml} file.
 
-Otherwise if no @file{.cabal} could be found, a single-module
-compilation is assumed and @code{haskell-compile-command} is used
-(@emph{if} the currently visited buffer contains Haskell source code).
+@item
+If @code{haskell-compiler-type} is the symbol @code{ghc}, then @code{ghc} is
+run, using the command @code{haskell-compile-command}.
+
+@item
+But if @code{haskell-compiler-type} is the symbol @code{auto} (the default),
+then emacs tries to choose which build tool to use by looking for the closest
+@file{stack.yaml} or @file{.cabal} file. (This is similar to the way
+@code{haskell-interactive-mode} uses the variable
+@code{haskell-process-type}.)
+@end itemize
+
+Moreover, when a negative prefix argument is supplied (e.g. @kbd{C-- C-c C-c}),
+the alternative build command is used, that is,
+  @code{haskell-compile-cabal-build-command-alt} or
+  @code{haskell-compile-stack-build-command-alt}.
+By default, the alternative build commands force a full rebuild.
+(Note this does not affect  @code{haskell-compile-command}.)
+
+As usual you can change any of these variables using @code{M-x customize-variable}.
 
 You can also inspect and modify the compile command to be invoked
 temporarily by invoking @code{haskell-compile} with a prefix argument
 (e.g. @kbd{C-u C-c C-c}). If later-on you want to recompile using the
 same customized compile command, invoke @code{recompile} (bound to
 @kbd{g}) inside the @samp{*haskell-compilation*} buffer.
+
+@vindex haskell-compiler-type
+@vindex haskell-compile-command
+@vindex haskell-compile-stack-build-command
+@vindex haskell-compile-cabal-build-command
+@vindex haskell-compile-stack-build-alt-command
+@vindex haskell-compile-cabal-build-alt-command
 
 @section Keybindings
 
@@ -1275,24 +1291,27 @@ for the current GHCi session.
 
 @cindex customizing
 What kind of Haskell REPL @code{haskell-interactive-mode} will start up
-depends on the value of @code{haskell-process-type}. This can be one of the
-symbols @code{auto}, @code{ghci}, @code{cabal-repl}, @code{cabal-new-repl}, or
-@code{stack-ghci}. If it's @code{auto}, the directory contents and available
-programs will be used to make a best guess at the process type. The actual
-process type will then determine which variables
-@code{haskell-interactive-mode} will access to determine the program to start
-and its arguments:
+depends on the value of @code{haskell-process-type}. This can be one of
+the symbols @code{auto}, @code{ghci}, @code{stack-ghci},
+@code{cabal-repl}, or @code{cabal-new-repl}.
+
+(@code{cabal-new-repl} is allowed but obsolete, like the cabal command
+@code{new-build} that it selected. Emacs actually runs the equivalent
+cabal command @code{build}.)
+
+If it's @code{auto}, the directory contents and available programs will
+be used to make a best guess at the process type. The actual process
+type will then determine which variables @code{haskell-interactive-mode}
+will access to determine the program to start and its arguments:
 
 @itemize
 @item
 If it's @code{ghci}, @code{haskell-process-path-ghci} and
 @code{haskell-process-args-ghci} will be used.
 @item
-If it's @code{cabal-repl}, @code{haskell-process-path-cabal} and
-@code{haskell-process-args-cabal-repl}.
-@item
-If it's @code{cabal-new-repl}, @code{haskell-process-path-cabal} and
-@code{haskell-process-args-cabal-new-repl}.
+If it's @code{cabal-repl} or @code{cabal-new-repl},
+@code{haskell-process-path-cabal} and
+@code{haskell-process-args-cabal-repl} are used.
 @item
 If it's @code{stack-ghci}, @code{haskell-process-path-stack} and
 @code{haskell-process-args-stack-ghci} will be used.
@@ -1310,7 +1329,6 @@ strings specifying (further) command-line arguments.
 @vindex haskell-process-path-stack
 @vindex haskell-process-args-ghci
 @vindex haskell-process-args-cabal-repl
-@vindex haskell-process-args-cabal-new-repl
 @vindex haskell-process-args-stack-ghci
 
 @section Haskell Interactive Mode Setup
@@ -1398,8 +1416,6 @@ Here is a list of available process types:
 @item ghci
 @item cabal-repl
 @item cabal-new-repl
-@item cabal-dev
-@item cabal-ghci
 @item stack-ghci
 @end itemize
 
@@ -2774,14 +2790,14 @@ if the @code{haskell-process-type} is @code{'auto}, the directories are searched
 @code{cabal.sandbox.config} or @code{stack.yaml} or  @code{*.cabal} file.
 If the file is present, then appropriate process is started.
 
-When @code{cabal.sandbox.config} is found @code{haskell-process-type} is @code{'cabal-repl}.
+When @code{cabal.project} or @code{cabal.sandbox.config} is found,
+@code{haskell-process-type} is @code{'cabal-repl}.
 Similarly, when @code{stack.yaml} is found @code{haskell-process-type} is @code{'stack-ghci}.
 Similarly, when @code{xyz.cabal} is found @code{haskell-process-type} is @code{'cabal-repl}.
 When nothing is found @code{haskell-process-type} is @code{'ghci}. When more than one
 file such as @code{cabal.sandbox.config} and @code{stack.yaml} are found the following
-preference is followed.
-
-@code{cabal.sandbox.config} > @code{stack.yaml} >  @code{*.cabal}
+preference is followed:
+@code{cabal.project} > @code{stack.yaml} >  @code{*.cabal}
 
 @node Collapsing Haskell code
 @chapter Collapsing Haskell code

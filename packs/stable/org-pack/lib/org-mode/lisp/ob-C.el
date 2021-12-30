@@ -1,9 +1,10 @@
 ;;; ob-C.el --- Babel Functions for C and Similar Languages -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2010-2020 Free Software Foundation, Inc.
+;; Copyright (C) 2010-2021 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;;      Thierry Banel
+;; Maintainer: Thierry Banel
 ;; Keywords: literate programming, reproducible research
 ;; Homepage: https://orgmode.org
 
@@ -182,7 +183,7 @@ or `org-babel-execute:C++' or `org-babel-execute:D'."
 		       cmdline)))
 	    "")))
       (when results
-	(setq results (org-trim (org-remove-indentation results)))
+	(setq results (org-remove-indentation results))
 	(org-babel-reassemble-table
 	 (org-babel-result-cond (cdr (assq :result-params params))
 	   (org-babel-read results t)
@@ -232,7 +233,13 @@ its header arguments."
 	       (list
 		;; includes
 		(mapconcat
-		 (lambda (inc) (format "#include %s" inc))
+		 (lambda (inc)
+		   ;; :includes '(<foo> <bar>) gives us a list of
+		   ;; symbols; convert those to strings.
+		   (when (symbolp inc) (setq inc (symbol-name inc)))
+		   (if (string-prefix-p "<" inc)
+		       (format "#include %s" inc)
+		     (format "#include \"%s\"" inc)))
 		 includes "\n")
 		;; defines
 		(mapconcat
@@ -419,7 +426,12 @@ of the same value."
 into a column number."
   (pcase org-babel-c-variant
     ((or `c `cpp)
-     "int get_column_num (int nbcols, const char** header, const char* column)
+     (concat
+      (if (eq org-babel-c-variant 'c)
+          "extern "
+	"extern \"C\" ")
+      "int strcmp (const char *, const char *);
+int get_column_num (int nbcols, const char** header, const char* column)
 {
   int c;
   for (c=0; c<nbcols; c++)
@@ -427,7 +439,7 @@ into a column number."
       return c;
   return -1;
 }
-")
+"))
     (`d
      "int get_column_num (string[] header, string column)
 {

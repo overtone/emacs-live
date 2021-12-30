@@ -16,7 +16,7 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Code:
 (unless (featurep 'ob-C)
@@ -32,60 +32,67 @@
 		      (org-babel-next-src-block 1)
 		      (should (= 42 (org-babel-execute-src-block))))))
 
+(ert-deftest ob-C/symbol-include ()
+  "Hello world program with unquoted :includes."
+  (if (executable-find org-babel-C++-compiler)
+      (org-test-at-id "fa6db330-e960-4ea2-ac67-94bb845b8577"
+		      (org-babel-next-src-block 2)
+		      (should (= 42 (org-babel-execute-src-block))))))
+
 (ert-deftest ob-D/simple-program ()
   "Hello world program."
   (if (executable-find org-babel-D-compiler)
       (org-test-at-id "fa6db330-e960-4ea2-ac67-94bb845b8577"
-		      (org-babel-next-src-block 2)
+		      (org-babel-next-src-block 3)
 		      (should (= 42 (org-babel-execute-src-block))))))
 
 (ert-deftest ob-C/integer-var ()
   "Test of an integer variable."
   (if (executable-find org-babel-C++-compiler)
       (org-test-at-id "fa6db330-e960-4ea2-ac67-94bb845b8577"
-		      (org-babel-next-src-block 3)
+		      (org-babel-next-src-block 4)
 		      (should (= 12 (org-babel-execute-src-block))))))
 
 (ert-deftest ob-D/integer-var ()
   "Test of an integer variable."
   (if (executable-find org-babel-D-compiler)
       (org-test-at-id "fa6db330-e960-4ea2-ac67-94bb845b8577"
-		      (org-babel-next-src-block 4)
+		      (org-babel-next-src-block 5)
 		      (should (= 12 (org-babel-execute-src-block))))))
 
 (ert-deftest ob-C/two-integer-var ()
   "Test of two input variables"
   (if (executable-find org-babel-C++-compiler)
       (org-test-at-id "fa6db330-e960-4ea2-ac67-94bb845b8577"
-		      (org-babel-next-src-block 5)
+		      (org-babel-next-src-block 6)
 		      (should (= 22 (org-babel-execute-src-block))))))
 
 (ert-deftest ob-D/two-integer-var ()
   "Test of two input variables"
   (if (executable-find org-babel-D-compiler)
       (org-test-at-id "fa6db330-e960-4ea2-ac67-94bb845b8577"
-		      (org-babel-next-src-block 6)
+		      (org-babel-next-src-block 7)
 		      (should (= 22 (org-babel-execute-src-block))))))
 
 (ert-deftest ob-C/string-var ()
   "Test of a string input variable"
   (if (executable-find org-babel-C++-compiler)
       (org-test-at-id "fa6db330-e960-4ea2-ac67-94bb845b8577"
-		      (org-babel-next-src-block 7)
+		      (org-babel-next-src-block 8)
 		      (should (equal "word 4" (org-babel-execute-src-block))))))
 
 (ert-deftest ob-D/string-var ()
   "Test of a string input variable"
   (if (executable-find org-babel-D-compiler)
       (org-test-at-id "fa6db330-e960-4ea2-ac67-94bb845b8577"
-		      (org-babel-next-src-block 8)
+		      (org-babel-next-src-block 9)
 		      (should (equal "word 4" (org-babel-execute-src-block))))))
 
 (ert-deftest ob-C/preprocessor ()
   "Test of a string variable"
   (if (executable-find org-babel-C++-compiler)
       (org-test-at-id "fa6db330-e960-4ea2-ac67-94bb845b8577"
-		      (org-babel-next-src-block 9)
+		      (org-babel-next-src-block 10)
 		      (should (= 42 (org-babel-execute-src-block))))))
 
 (ert-deftest ob-C/table ()
