@@ -183,4 +183,5 @@
 				 ("Friday" "friday"))
 			       (org-babel-execute-src-block))))))
 
+(provide 'test-ob-C)
 ;;; test-ob-C.el ends here

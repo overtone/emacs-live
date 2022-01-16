@@ -1,8 +1,8 @@
 ;;; org-colview.el --- Column View in Org            -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2004-2021 Free Software Foundation, Inc.
+;; Copyright (C) 2004-2022 Free Software Foundation, Inc.
 
-;; Author: Carsten Dominik <carsten at orgmode dot org>
+;; Author: Carsten Dominik <carsten.dominik@gmail.com>
 ;; Keywords: outlines, hypermedia, calendar, wp
 ;; Homepage: https://orgmode.org
 ;;
@@ -162,20 +162,20 @@ See `org-columns-summary-types' for details.")
   (org-overview)
   (org-content))
 
-(org-defkey org-columns-map "c" 'org-columns-content)
-(org-defkey org-columns-map "o" 'org-overview)
-(org-defkey org-columns-map "e" 'org-columns-edit-value)
-(org-defkey org-columns-map "\C-c\C-t" 'org-columns-todo)
-(org-defkey org-columns-map "\C-c\C-c" 'org-columns-toggle-or-columns-quit)
-(org-defkey org-columns-map "\C-c\C-o" 'org-columns-open-link)
-(org-defkey org-columns-map "v" 'org-columns-show-value)
-(org-defkey org-columns-map "q" 'org-columns-quit)
-(org-defkey org-columns-map "r" 'org-columns-redo)
-(org-defkey org-columns-map "g" 'org-columns-redo)
-(org-defkey org-columns-map [left] 'backward-char)
-(org-defkey org-columns-map "\M-b" 'backward-char)
-(org-defkey org-columns-map "a" 'org-columns-edit-allowed)
-(org-defkey org-columns-map "s" 'org-columns-edit-attributes)
+(org-defkey org-columns-map "c"        #'org-columns-content)
+(org-defkey org-columns-map "o"        #'org-overview)
+(org-defkey org-columns-map "e"        #'org-columns-edit-value)
+(org-defkey org-columns-map "\C-c\C-t" #'org-columns-todo)
+(org-defkey org-columns-map "\C-c\C-c" #'org-columns-toggle-or-columns-quit)
+(org-defkey org-columns-map "\C-c\C-o" #'org-columns-open-link)
+(org-defkey org-columns-map "v"        #'org-columns-show-value)
+(org-defkey org-columns-map "q"        #'org-columns-quit)
+(org-defkey org-columns-map "r"        #'org-columns-redo)
+(org-defkey org-columns-map "g"        #'org-columns-redo)
+(org-defkey org-columns-map [left]     #'backward-char)
+(org-defkey org-columns-map "\M-b"     #'backward-char)
+(org-defkey org-columns-map "a"        #'org-columns-edit-allowed)
+(org-defkey org-columns-map "s"        #'org-columns-edit-attributes)
 (org-defkey org-columns-map "\M-f"
 	    (lambda () (interactive) (goto-char (1+ (point)))))
 (org-defkey org-columns-map [right]
@@ -187,7 +187,7 @@ See `org-columns-summary-types' for details.")
 		(while (and (org-invisible-p2) (not (eobp)))
 		  (beginning-of-line 2))
 		(move-to-column col)
-		(if (eq major-mode 'org-agenda-mode)
+		(if (derived-mode-p 'org-agenda-mode)
 		    (org-agenda-do-context-action)))))
 (org-defkey org-columns-map [up]
 	    (lambda () (interactive)
@@ -198,22 +198,22 @@ See `org-columns-summary-types' for details.")
 		(move-to-column col)
 		(if (eq major-mode 'org-agenda-mode)
 		    (org-agenda-do-context-action)))))
-(org-defkey org-columns-map [(shift right)] 'org-columns-next-allowed-value)
-(org-defkey org-columns-map "n" 'org-columns-next-allowed-value)
-(org-defkey org-columns-map [(shift left)] 'org-columns-previous-allowed-value)
-(org-defkey org-columns-map "p" 'org-columns-previous-allowed-value)
-(org-defkey org-columns-map "<" 'org-columns-narrow)
-(org-defkey org-columns-map ">" 'org-columns-widen)
-(org-defkey org-columns-map [(meta right)] 'org-columns-move-right)
-(org-defkey org-columns-map [(meta left)] 'org-columns-move-left)
-(org-defkey org-columns-map [(shift meta right)] 'org-columns-new)
-(org-defkey org-columns-map [(shift meta left)] 'org-columns-delete)
+(org-defkey org-columns-map [(shift right)] #'org-columns-next-allowed-value)
+(org-defkey org-columns-map "n" #'org-columns-next-allowed-value)
+(org-defkey org-columns-map [(shift left)] #'org-columns-previous-allowed-value)
+(org-defkey org-columns-map "p" #'org-columns-previous-allowed-value)
+(org-defkey org-columns-map "<" #'org-columns-narrow)
+(org-defkey org-columns-map ">" #'org-columns-widen)
+(org-defkey org-columns-map [(meta right)] #'org-columns-move-right)
+(org-defkey org-columns-map [(meta left)]  #'org-columns-move-left)
+(org-defkey org-columns-map [(shift meta right)] #'org-columns-new)
+(org-defkey org-columns-map [(shift meta left)]  #'org-columns-delete)
 (dotimes (i 10)
   (org-defkey org-columns-map (number-to-string i)
-	      `(lambda () (interactive)
-		 (org-columns-next-allowed-value nil ,i))))
+	      (lambda () (interactive)
+		(org-columns-next-allowed-value nil i))))
 
-(easy-menu-define org-columns-menu org-columns-map "Org Column Menu"
+(easy-menu-define org-columns-menu org-columns-map "Org Column Menu."
   '("Column"
     ["Edit property" org-columns-edit-value t]
     ["Next allowed value" org-columns-next-allowed-value t]
@@ -490,7 +490,7 @@ for the duration of the command.")
 	   (org-add-props " " nil 'display `(space :align-to ,linum-offset))
 	   (org-add-props (substring title 0 -1) nil 'face 'org-column-title)))
     (setq org-columns-previous-hscroll -1)
-    (add-hook 'post-command-hook 'org-columns-hscroll-title nil 'local)))
+    (add-hook 'post-command-hook #'org-columns-hscroll-title nil 'local)))
 
 (defun org-columns-hscroll-title ()
   "Set the `header-line-format' so that it scrolls along with the table."
@@ -519,7 +519,7 @@ for the duration of the command.")
     (when (local-variable-p 'org-previous-header-line-format)
       (setq header-line-format org-previous-header-line-format)
       (kill-local-variable 'org-previous-header-line-format)
-      (remove-hook 'post-command-hook 'org-columns-hscroll-title 'local))
+      (remove-hook 'post-command-hook #'org-columns-hscroll-title 'local))
     (set-marker org-columns-begin-marker nil)
     (when (markerp org-columns-top-level-marker)
       (set-marker org-columns-top-level-marker nil))
@@ -782,7 +782,7 @@ around it."
       (setq time-after (copy-sequence time))
       (setf (nth 3 time-before) (1- (nth 3 time)))
       (setf (nth 3 time-after) (1+ (nth 3 time)))
-      (mapcar (lambda (x) (format-time-string fmt (apply 'encode-time x)))
+      (mapcar (lambda (x) (format-time-string fmt (apply #'encode-time x)))
 	      (list time-before time time-after)))))
 
 (defun org-columns-open-link (&optional arg)
@@ -836,12 +836,11 @@ Also sets `org-columns-top-level-marker' to the new position."
 (defun org-columns (&optional global columns-fmt-string)
   "Turn on column view on an Org mode file.
 
-Column view applies to the whole buffer if point is before the
-first headline.  Otherwise, it applies to the first ancestor
-setting \"COLUMNS\" property.  If there is none, it defaults to
-the current headline.  With a `\\[universal-argument]' prefix \
-argument, turn on column
-view for the whole buffer unconditionally.
+Column view applies to the whole buffer if point is before the first
+headline.  Otherwise, it applies to the first ancestor setting
+\"COLUMNS\" property.  If there is none, it defaults to the current
+headline.  With a `\\[universal-argument]' prefix \ argument, GLOBAL,
+turn on column view for the whole buffer unconditionally.
 
 When COLUMNS-FMT-STRING is non-nil, use it as the column format."
   (interactive "P")
@@ -867,9 +866,8 @@ When COLUMNS-FMT-STRING is non-nil, use it as the column format."
 	(let ((cache
 	       ;; Collect contents of columns ahead of time so as to
 	       ;; compute their maximum width.
-	       (org-map-entries
-		(lambda () (cons (point) (org-columns--collect-values)))
-		nil nil (and org-columns-skip-archived-trees 'archive))))
+               (org-scan-tags
+		(lambda () (cons (point) (org-columns--collect-values))) t org--matcher-tags-todo-only)))
 	  (when cache
 	    (org-columns--set-widths cache)
 	    (org-columns--display-here-title)
@@ -879,7 +877,8 @@ When COLUMNS-FMT-STRING is non-nil, use it as the column format."
 	    (unless (local-variable-p 'org-colview-initial-truncate-line-value)
 	      (setq-local org-colview-initial-truncate-line-value
 			  truncate-lines))
-	    (setq truncate-lines t)
+            (if (not global-visual-line-mode)
+                (setq truncate-lines t))
 	    (dolist (entry cache)
 	      (goto-char (car entry))
 	      (org-columns--display-here (cdr entry)))))))))
@@ -1165,7 +1164,11 @@ properties drawers."
 	 (last-level lmax)
 	 (property (car spec))
 	 (printf (nth 4 spec))
-	 (operator (nth 3 spec))
+         ;; Special properties cannot be collected nor summarized, as
+         ;; they have their own way to be computed.  Therefore, ignore
+         ;; any operator attached to them.
+	 (operator (and (not (member property org-special-properties))
+                        (nth 3 spec)))
 	 (collect (and operator (org-columns--collect operator)))
 	 (summarize (and operator (org-columns--summarize operator))))
     (org-with-wide-buffer
@@ -1269,7 +1272,7 @@ When PRINTF is non-nil, use it to format the result."
   "Summarize CHECK-BOXES with a check-box cookie."
   (format "[%d/%d]"
 	  (cl-count-if (lambda (b) (or (equal b "[X]")
-				   (string-match-p "\\[\\([1-9]\\)/\\1\\]" b)))
+				       (string-match-p "\\[\\([1-9]\\)/\\1\\]" b)))
 		       check-boxes)
 	  (length check-boxes)))
 
@@ -1395,8 +1398,9 @@ other rows.  Each row is a list of fields, as strings, or
 				  (org-get-tags))))
 	     (push (cons (org-reduced-level (org-current-level)) (nreverse row))
 		   table)))))
-     (or (and maxlevel (format "LEVEL<=%d" maxlevel))
-	 (and match match))
+     (if match
+         (concat match (and maxlevel (format "+LEVEL<=%d" maxlevel)))
+       (and maxlevel (format "LEVEL<=%d" maxlevel)))
      (and local 'tree)
      'archive 'comment)
     (org-columns-quit)
@@ -1691,7 +1695,7 @@ This will add overlays to the date lines, to show the summary for each day."
 			       (delq nil
 				     (mapcar
 				      (lambda (e) (org-string-nw-p
-					      (nth 1 (assoc spec e))))
+					           (nth 1 (assoc spec e))))
 				      entries)))
 			      (final (if values
 					 (funcall summarize values printf)

@@ -1,6 +1,6 @@
-;;; nrepl-client-tests.el
+;;; nrepl-client-tests.el  -*- lexical-binding: t; -*-
 
-;; Copyright © 2012-2021 Tim King, Bozhidar Batsov
+;; Copyright © 2012-2022 Tim King, Bozhidar Batsov
 
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Bozhidar Batsov <bozhidar@batsov.dev>
@@ -29,7 +29,7 @@
 
 (require 'buttercup)
 (require 'nrepl-client)
-(require 'nrepl-tests-utils)
+(require 'nrepl-tests-utils "test/utils/nrepl-tests-utils")
 
 (describe "nrepl-server-buffer-name"
   :var (nrepl-hide-special-buffers params default-directory-backup
@@ -169,7 +169,7 @@
                                     server-process
                                     (lambda (client-endpoint)
                                       client-buffer)
-                                    (plist-get params :socket-file))))
+                                    (plist-get server-endpoint :socket-file))))
 
               ;; client connection is open
               (expect (process-status process-client)

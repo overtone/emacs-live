@@ -27,6 +27,7 @@
 (require 'clojure-mode)
 (require 'cl-lib)
 (require 'buttercup)
+(require 'test-helper "test/utils/test-helper")
 
 
 ;;;; Utilities
@@ -36,7 +37,7 @@
   (declare (debug t)
            (indent 1))
   `(with-clojure-buffer ,content
-     (font-lock-fontify-buffer)
+     (font-lock-ensure)
      (goto-char (point-min))
      ,@body))
 

@@ -1,5 +1,6 @@
 [![Build Status](https://secure.travis-ci.org/magnars/expand-region.el.png)](http://travis-ci.org/magnars/expand-region.el) 
 [![Coverage Status](https://coveralls.io/repos/magnars/expand-region.el/badge.svg?branch=master&service=github)](https://coveralls.io/github/magnars/expand-region.el)
+[![GNU ELPA](https://elpa.gnu.org/packages/expand-region.svg)](https://elpa.gnu.org/packages/expand-region.html)
 [![MELPA](https://melpa.org/packages/expand-region-badge.svg)](https://melpa.org/#/expand-region)
 [![MELPA Stable](https://stable.melpa.org/packages/expand-region-badge.svg)](https://stable.melpa.org/#/expand-region)
 

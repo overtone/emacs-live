@@ -1,6 +1,6 @@
 # History of user-visible changes
 
-## Next
+## 2021-12-29
 
 * Imenu support for mocha-like (includes Jasmine and Cypress) test
   files: i.e., `M-x imenu` will now list test blocks defined with

@@ -1,8 +1,8 @@
 ;;; org-table.el --- The Table Editor for Org        -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2004-2021 Free Software Foundation, Inc.
+;; Copyright (C) 2004-2022 Free Software Foundation, Inc.
 
-;; Author: Carsten Dominik <carsten at orgmode dot org>
+;; Author: Carsten Dominik <carsten.dominik@gmail.com>
 ;; Keywords: outlines, hypermedia, calendar, wp
 ;; Homepage: https://orgmode.org
 ;;
@@ -47,7 +47,7 @@
 (declare-function org-mode "org" ())
 (declare-function org-duration-p "org-duration" (duration &optional canonical))
 (declare-function org-duration-to-minutes "org-duration" (duration &optional canonical))
-(declare-function org-element-at-point "org-element" ())
+(declare-function org-element-at-point "org-element" (&optional pom cached-only))
 (declare-function org-element-contents "org-element" (element))
 (declare-function org-element-extract-element "org-element" (element))
 (declare-function org-element-interpret-data "org-element" (data))
@@ -56,6 +56,7 @@
 (declare-function org-element-parse-buffer "org-element" (&optional granularity visible-only))
 (declare-function org-element-property "org-element" (property element))
 (declare-function org-element-type "org-element" (element))
+(declare-function org-element-cache-reset "org-element" (&optional all))
 (declare-function org-entry-get "org" (pom property &optional inherit literal-nil))
 (declare-function org-export-create-backend "ox" (&rest rest) t)
 (declare-function org-export-data-with-backend "ox" (data backend info))
@@ -66,6 +67,7 @@
 (declare-function org-export-install-filters "ox" (info))
 (declare-function org-export-table-has-special-column-p "ox" (table))
 (declare-function org-export-table-row-is-special-p "ox" (table-row info))
+(declare-function org-forward-paragraph "org" (&optional arg))
 (declare-function org-id-find "org-id" (id &optional markerp))
 (declare-function org-indent-line "org" ())
 (declare-function org-load-modules-maybe "org" (&optional force))
@@ -331,7 +333,7 @@ relies on the variables to be present in the list."
 The default value is `hours', and will output the results as a
 number of hours.  Other allowed values are `seconds', `minutes' and
 `days', and the output will be a fraction of seconds, minutes or
-days. `hh:mm' selects to use hours and minutes, ignoring seconds.
+days.  `hh:mm' selects to use hours and minutes, ignoring seconds.
 The `U' flag in a table formula will select this specific format for
 a single formula."
   :group 'org-table-calculation
@@ -461,41 +463,46 @@ This may be useful when columns have been shrunk."
     (when pos (goto-char pos))
     (goto-char (line-beginning-position))
     (let ((end (line-end-position)) str)
+      (backward-char)
       (while (progn (forward-char 1) (< (point) end))
 	(let ((ov (car (overlays-at (point)))))
 	  (if (not ov)
 	      (push (char-to-string (char-after)) str)
 	    (push (overlay-get ov 'display) str)
 	    (goto-char (1- (overlay-end ov))))))
-      (format "|%s" (mapconcat #'identity (reverse str) "")))))
+      (format "%s" (mapconcat #'identity (reverse str) "")))))
 
 (defvar-local org-table-header-overlay nil)
 (defun org-table-header-set-header ()
   "Display the header of the table at point."
-  (when (overlayp org-table-header-overlay)
-    (delete-overlay org-table-header-overlay))
-  (let* ((ws (window-start))
-	 (beg (save-excursion
-		(goto-char (org-table-begin))
-		(while (or (org-at-table-hline-p)
-			   (looking-at-p ".*|\\s-+<[rcl]?\\([0-9]+\\)?>"))
-		  (move-beginning-of-line 2))
-		(point)))
-	 (end (save-excursion (goto-char beg) (point-at-eol))))
-    (if (pos-visible-in-window-p beg)
-	(when (overlayp org-table-header-overlay)
-	  (delete-overlay org-table-header-overlay))
-      (setq org-table-header-overlay
-	    (make-overlay ws (+ ws (- end beg))))
-      (org-overlay-display
-       org-table-header-overlay
-       (org-table-row-get-visible-string beg)
-       'org-table-header))))
+  (let ((gcol temporary-goal-column))
+    (unwind-protect
+        (progn
+          (when (overlayp org-table-header-overlay)
+            (delete-overlay org-table-header-overlay))
+          (let* ((ws (window-start))
+                 (beg (save-excursion
+                        (goto-char (org-table-begin))
+                        (while (or (org-at-table-hline-p)
+                                   (looking-at-p ".*|\\s-+<[rcl]?\\([0-9]+\\)?>"))
+                          (move-beginning-of-line 2))
+                        (line-beginning-position)))
+                 (end (save-excursion (goto-char beg) (point-at-eol))))
+            (if (pos-visible-in-window-p beg)
+                (when (overlayp org-table-header-overlay)
+                  (delete-overlay org-table-header-overlay))
+              (setq org-table-header-overlay
+                    (make-overlay ws (+ ws (- end beg))))
+              (org-overlay-display
+               org-table-header-overlay
+               (org-table-row-get-visible-string beg)
+               'org-table-header))))
+      (setq temporary-goal-column gcol))))
 
 ;;;###autoload
 (define-minor-mode org-table-header-line-mode
   "Display the first row of the table at point in the header line."
-  nil " TblHeader" nil
+  :lighter " TblHeader"
   (unless (eq major-mode 'org-mode)
     (user-error "Cannot turn org table header mode outside org-mode buffers"))
   (if org-table-header-line-mode
@@ -856,52 +863,52 @@ nil      When nil, the command tries to be smart and figure out the
   (let* ((beg (min beg0 end0))
 	 (end (max beg0 end0))
 	 re)
-    (if (> (count-lines beg end) org-table-convert-region-max-lines)
-	(user-error "Region is longer than `org-table-convert-region-max-lines' (%s) lines; not converting"
-		    org-table-convert-region-max-lines)
-      (when (equal separator '(64))
-	(setq separator (read-regexp "Regexp for field separator")))
+    (when (> (count-lines beg end) org-table-convert-region-max-lines)
+      (user-error "Region is longer than `org-table-convert-region-max-lines' (%s) lines; not converting"
+		  org-table-convert-region-max-lines))
+    (when (equal separator '(64))
+      (setq separator (read-regexp "Regexp for field separator")))
+    (goto-char beg)
+    (beginning-of-line 1)
+    (setq beg (point-marker))
+    (goto-char end)
+    (if (bolp) (backward-char 1) (end-of-line 1))
+    (setq end (point-marker))
+    ;; Get the right field separator
+    (unless separator
       (goto-char beg)
-      (beginning-of-line 1)
-      (setq beg (point-marker))
-      (goto-char end)
-      (if (bolp) (backward-char 1) (end-of-line 1))
-      (setq end (point-marker))
-      ;; Get the right field separator
-      (unless separator
-	(goto-char beg)
-	(setq separator
-	      (cond
-	       ((not (re-search-forward "^[^\n\t]+$" end t)) '(16))
-	       ((not (re-search-forward "^[^\n,]+$" end t)) '(4))
-	       (t 1))))
-      (goto-char beg)
-      (if (equal separator '(4))
-	  (while (< (point) end)
-	    ;; parse the csv stuff
+      (setq separator
 	    (cond
-	     ((looking-at "^") (insert "| "))
-	     ((looking-at "[ \t]*$") (replace-match " |") (beginning-of-line 2))
-	     ((looking-at "[ \t]*\"\\([^\"\n]*\\)\"")
-	      (replace-match "\\1")
-	      (if (looking-at "\"") (insert "\"")))
-	     ((looking-at "[^,\n]+") (goto-char (match-end 0)))
-	     ((looking-at "[ \t]*,") (replace-match " | "))
-	     (t (beginning-of-line 2))))
-	(setq re (cond
-		  ((equal separator '(4)) "^\\|\"?[ \t]*,[ \t]*\"?")
-		  ((equal separator '(16)) "^\\|\t")
-		  ((integerp separator)
-		   (if (< separator 1)
-		       (user-error "Number of spaces in separator must be >= 1")
-		     (format "^ *\\| *\t *\\| \\{%d,\\}" separator)))
-		  ((stringp separator)
-		   (format "^ *\\|%s" separator))
-		  (t (error "This should not happen"))))
-	(while (re-search-forward re end t)
-	  (replace-match "| " t t)))
-      (goto-char beg)
-      (org-table-align))))
+	     ((not (re-search-forward "^[^\n\t]+$" end t)) '(16))
+	     ((not (re-search-forward "^[^\n,]+$" end t)) '(4))
+	     (t 1))))
+    (goto-char beg)
+    (if (equal separator '(4))
+	(while (< (point) end)
+	  ;; parse the csv stuff
+	  (cond
+	   ((looking-at "^") (insert "| "))
+	   ((looking-at "[ \t]*$") (replace-match " |") (beginning-of-line 2))
+	   ((looking-at "[ \t]*\"\\([^\"\n]*\\)\"")
+	    (replace-match "\\1")
+	    (if (looking-at "\"") (insert "\"")))
+	   ((looking-at "[^,\n]+") (goto-char (match-end 0)))
+	   ((looking-at "[ \t]*,") (replace-match " | "))
+	   (t (beginning-of-line 2))))
+      (setq re (cond
+		((equal separator '(4)) "^\\|\"?[ \t]*,[ \t]*\"?")
+		((equal separator '(16)) "^\\|\t")
+		((integerp separator)
+		 (if (< separator 1)
+		     (user-error "Number of spaces in separator must be >= 1")
+		   (format "^ *\\| *\t *\\| \\{%d,\\}" separator)))
+		((stringp separator)
+		 (format "^ *\\|%s" separator))
+		(t (error "This should not happen"))))
+      (while (re-search-forward re end t)
+	(replace-match "| " t t)))
+    (goto-char beg)
+    (org-table-align)))
 
 ;;;###autoload
 (defun org-table-import (file separator)
@@ -924,7 +931,8 @@ lines.  It can have the following values:
 - regexp  When a regular expression, use it to match the separator."
   (interactive "f\nP")
   (when (and (called-interactively-p 'any)
-	     (not (string-match-p (rx "." (or "txt" "tsv" "csv") eos) file)))
+	     (not (string-match-p (rx "." (or "txt" "tsv" "csv") eos) file))
+             (not (yes-or-no-p "The file's extension is not .txt, .tsv or .csv.  Import? ")))
     (user-error "Cannot import such file"))
   (unless (bolp) (insert "\n"))
   (let ((beg (point))
@@ -1922,8 +1930,9 @@ of lists of fields."
 	(forward-line))
       (set-marker end nil))
     (when cut (org-table-align))
-    (message (substitute-command-keys "Cells in the region copied, use \
-\\[org-table-paste-rectangle] to paste them in a table."))
+    (when (called-interactively-p 'any)
+      (message (substitute-command-keys "Cells in the region copied, use \
+\\[org-table-paste-rectangle] to paste them in a table.")))
     (setq org-table-clip (nreverse region))))
 
 ;;;###autoload
@@ -1962,7 +1971,7 @@ lines."
 When this mode is active, the field editor window will always show the
 current field.  The mode exits automatically when the cursor leaves the
 table (but see `org-table-exit-follow-field-mode-when-leaving-table')."
-  nil " TblFollow" nil
+  :lighter " TblFollow"
   (if org-table-follow-field-mode
       (add-hook 'post-command-hook 'org-table-follow-fields-with-editor
 		'append 'local)
@@ -2154,7 +2163,7 @@ LOCATION instead."
 	    (goto-char (match-beginning 3))
 	    (delete-region (match-beginning 3) (match-end 0)))
 	(org-indent-line)
-	(insert (or (match-string 2) "#+TBLFM:")))
+	(insert "#+TBLFM:"))
       (insert " "
 	      (mapconcat (lambda (x) (concat (car x) "=" (cdr x)))
 			 (sort alist #'org-table-formula-less-p)
@@ -2449,7 +2458,7 @@ location of point."
 	      (let ((c (string-to-char (match-string 1 fmt))))
 		(cl-case c
 		  (?t (setq duration t numbers t
-		      	    duration-output-format org-table-duration-custom-format))
+                            duration-output-format org-table-duration-custom-format))
 		  (?T (setq duration t numbers t duration-output-format nil))
 		  (?U (setq duration t numbers t duration-output-format 'hh:mm))
 		  (?N (setq numbers t))
@@ -2860,7 +2869,7 @@ ARGS are passed as arguments to the `message' function.  Returns
 current time if a message is printed, otherwise returns T1.  If
 T1 is nil, always messages."
   (let ((curtime (current-time)))
-    (if (or (not t1) (org-time-less-p 1 (org-time-subtract curtime t1)))
+    (if (or (not t1) (time-less-p 1 (time-subtract curtime t1)))
 	(progn (apply 'message args)
 	       curtime)
       t1)))
@@ -3260,7 +3269,7 @@ Parameters get priority."
     (org-defkey map "\C-c}"    'org-table-fedit-toggle-coordinates)
     map))
 
-(easy-menu-define org-table-fedit-menu org-table-fedit-map "Org Edit Formulas Menu"
+(easy-menu-define org-table-fedit-menu org-table-fedit-map "Org Edit Formulas Menu."
   '("Edit-Formulas"
     ["Finish and Install" org-table-fedit-finish t]
     ["Finish, Install, and Apply" (org-table-fedit-finish t) :keys "C-u C-c C-c"]
@@ -4428,7 +4437,7 @@ Optional argument NEW may specify text to replace the current field content."
 	  (col (org-table-current-column)))
       (when (> col 0)
 	(skip-chars-backward "^|")
-	(if (not (looking-at " *\\([^|\n]*?\\) *\\(|\\|$\\)"))
+	(if (not (looking-at " *\\(?:\\([^|\n]*?\\) *\\(|\\)\\|\\([^|\n]+?\\) *\\($\\)\\)"))
 	    (setq org-table-may-need-update t)
 	  (let* ((align (nth (1- col) org-table-last-alignment))
 		 (width (nth (1- col) org-table-last-column-widths))
@@ -4554,8 +4563,8 @@ function is being called interactively."
 	     (predicate
 	      (cl-case sorting-type
 		((?n ?N ?t ?T) #'<)
-		((?a ?A) (if with-case #'org-string-collate-lessp
-			   (lambda (s1 s2) (org-string-collate-lessp s1 s2 nil t))))
+		((?a ?A) (if with-case #'string-collate-lessp
+			   (lambda (s1 s2) (string-collate-lessp s1 s2 nil t))))
 		((?f ?F)
 		 (or compare-func
 		     (and interactive?
@@ -4654,19 +4663,24 @@ blank, and the content is appended to the field above."
   (if (org-region-active-p)
       ;; There is a region: fill as a paragraph.
       (let ((start (region-beginning)))
-	(org-table-cut-region (region-beginning) (region-end))
-	(when (> (length (car org-table-clip)) 1)
-	  (user-error "Region must be limited to single column"))
-	(let ((nlines (cond ((not arg) (length org-table-clip))
-			    ((< arg 1) (+ (length org-table-clip) arg))
-			    (t arg))))
-	  (setq org-table-clip
-		(mapcar #'list
-			(org-wrap (mapconcat #'car org-table-clip " ")
-				  nil
-				  nlines))))
-	(goto-char start)
-	(org-table-paste-rectangle))
+        (save-restriction
+          (narrow-to-region
+           (save-excursion (goto-char start) (move-beginning-of-line 1))
+           (save-excursion (org-forward-paragraph) (point)))
+          (org-table-cut-region (region-beginning) (region-end))
+	  (when (> (length (car org-table-clip)) 1)
+	    (user-error "Region must be limited to single column"))
+	  (let ((nlines (cond ((not arg) (length org-table-clip))
+			      ((< arg 1) (+ (length org-table-clip) arg))
+			      (t arg))))
+	    (setq org-table-clip
+		  (mapcar #'list
+			  (org-wrap (mapconcat #'car org-table-clip " ")
+				    nil
+				    nlines))))
+	  (goto-char start)
+	  (org-table-paste-rectangle))
+        (org-table-align))
     ;; No region, split the current field at point.
     (unless (org-get-alist-option org-M-RET-may-split-line 'table)
       (skip-chars-forward "^\r\n|"))
@@ -5064,7 +5078,7 @@ When LOCAL is non-nil, show references for the table at point."
 (put 'orgtbl-mode :included t)
 (put 'orgtbl-mode :menu-tag "Org Table Mode")
 
-(easy-menu-define orgtbl-mode-menu orgtbl-mode-map "OrgTbl menu"
+(easy-menu-define orgtbl-mode-menu orgtbl-mode-map "OrgTbl menu."
   '("OrgTbl"
     ["Create or convert" org-table-create-or-convert-from-region
      :active (not (org-at-table-p)) :keys "C-c |" ]
@@ -5129,7 +5143,7 @@ When LOCAL is non-nil, show references for the table at point."
 ;;;###autoload
 (define-minor-mode orgtbl-mode
   "The Org mode table editor as a minor mode for use in other modes."
-  :lighter " OrgTbl" :keymap orgtbl-mode-map
+  :lighter " OrgTbl"
   (org-load-modules-maybe)
   (cond
    ((derived-mode-p 'org-mode)
@@ -5314,7 +5328,7 @@ With prefix arg, also recompute table."
 (defun orgtbl-create-or-convert-from-region (_arg)
   "Create table or convert region to table, if no conflicting binding.
 This installs the table binding `C-c |', but only if there is no
-conflicting binding to this key outside orgtbl-mode."
+conflicting binding to this key outside `orgtbl-mode'."
   (interactive "P")
   (let* (orgtbl-mode (cmd (key-binding "\C-c|")))
     (if cmd
@@ -5553,7 +5567,7 @@ First element has index 0, or I0 if given."
 
 ;;;###autoload
 (defun orgtbl-to-generic (table params)
-  "Convert the orgtbl-mode TABLE to some other format.
+  "Convert the `orgtbl-mode' TABLE to some other format.
 
 This generic routine can be used for many standard cases.
 
@@ -5636,6 +5650,9 @@ strings, or the current cell) returning a string:
 
     (:fmt (2 \"$%s$\" 4 (lambda (c) (format \"$%s$\" c))))
 
+  The format is ignored for empty fields.  Use :raw t with non-nil
+  :backend option to force formatting empty fields.
+
 :hlstart :hllstart :hlend :hllend :hsep :hlfmt :hllfmt :hfmt
 
  Same as above, specific for the header lines in the table.
@@ -5681,6 +5698,7 @@ This may be either a string or a function of two arguments:
 		((consp e)
 		 (princ "| ") (dolist (c e) (princ c) (princ " |"))
 		 (princ "\n")))))
+      (org-element-cache-reset)
       ;; Add back-end specific filters, but not user-defined ones.  In
       ;; particular, make sure to call parse-tree filters on the
       ;; table.
@@ -5940,12 +5958,12 @@ information."
 
 ;;;###autoload
 (defun orgtbl-to-tsv (table params)
-  "Convert the orgtbl-mode table to TAB separated material."
+  "Convert the `orgtbl-mode' TABLE to TAB separated material."
   (orgtbl-to-generic table (org-combine-plists '(:sep "\t") params)))
 
 ;;;###autoload
 (defun orgtbl-to-csv (table params)
-  "Convert the orgtbl-mode table to CSV material.
+  "Convert the `orgtbl-mode' TABLE to CSV material.
 This does take care of the proper quoting of fields with comma or quotes."
   (orgtbl-to-generic table
 		     (org-combine-plists '(:sep "," :fmt org-quote-csv-field)
@@ -5953,7 +5971,7 @@ This does take care of the proper quoting of fields with comma or quotes."
 
 ;;;###autoload
 (defun orgtbl-to-latex (table params)
-  "Convert the orgtbl-mode TABLE to LaTeX.
+  "Convert the `orgtbl-mode' TABLE to LaTeX.
 
 TABLE is a list, each entry either the symbol `hline' for
 a horizontal separator line, or a list of fields for that line.
@@ -5986,7 +6004,7 @@ supported.  It is also possible to use the following ones:
 
 ;;;###autoload
 (defun orgtbl-to-html (table params)
-  "Convert the orgtbl-mode TABLE to HTML.
+  "Convert the `orgtbl-mode' TABLE to HTML.
 
 TABLE is a list, each entry either the symbol `hline' for
 a horizontal separator line, or a list of fields for that line.
@@ -6017,7 +6035,7 @@ supported.  It is also possible to use the following one:
 
 ;;;###autoload
 (defun orgtbl-to-texinfo (table params)
-  "Convert the orgtbl-mode TABLE to Texinfo.
+  "Convert the `orgtbl-mode' TABLE to Texinfo.
 
 TABLE is a list, each entry either the symbol `hline' for
 a horizontal separator line, or a list of fields for that line.
@@ -6048,7 +6066,7 @@ supported.  It is also possible to use the following one:
 
 ;;;###autoload
 (defun orgtbl-to-orgtbl (table params)
-  "Convert the orgtbl-mode TABLE into another orgtbl-mode table.
+  "Convert the `orgtbl-mode' TABLE into another orgtbl-mode table.
 
 TABLE is a list, each entry either the symbol `hline' for
 a horizontal separator line, or a list of fields for that line.
@@ -6063,7 +6081,7 @@ be set to provide ORGTBL directives for the generated table."
   (orgtbl-to-generic table (org-combine-plists params (list :backend 'org))))
 
 (defun orgtbl-to-table.el (table params)
-  "Convert the orgtbl-mode TABLE into a table.el table.
+  "Convert the `orgtbl-mode' TABLE into a table.el table.
 TABLE is a list, each entry either the symbol `hline' for
 a horizontal separator line, or a list of fields for that line.
 PARAMS is a property list of parameters that can influence the
@@ -6077,7 +6095,7 @@ supported."
      (replace-regexp-in-string "|-" "+-" (buffer-substring 1 (buffer-size))))))
 
 (defun orgtbl-to-unicode (table params)
-  "Convert the orgtbl-mode TABLE into a table with unicode characters.
+  "Convert the `orgtbl-mode' TABLE into a table with unicode characters.
 
 TABLE is a list, each entry either the symbol `hline' for
 a horizontal separator line, or a list of fields for that line.
@@ -6194,7 +6212,7 @@ which will prompt for the width."
 
 (defun orgtbl-uc-draw-grid (value min max &optional width)
   "Draw a bar in a table using block unicode characters.
-It is a variant of orgtbl-ascii-draw with Unicode block
+It is a variant of `orgtbl-ascii-draw' with Unicode block
 characters, for a smooth display.  Bars appear as grids (to the
 extent the font allows)."
   ;; https://en.wikipedia.org/wiki/Block_Elements
@@ -6204,7 +6222,7 @@ extent the font allows)."
 
 (defun orgtbl-uc-draw-cont (value min max &optional width)
   "Draw a bar in a table using block unicode characters.
-It is a variant of orgtbl-ascii-draw with Unicode block
+It is a variant of `orgtbl-ascii-draw' with Unicode block
 characters, for a smooth display.  Bars are solid (to the extent
 the font allows)."
   (orgtbl-ascii-draw value min max width

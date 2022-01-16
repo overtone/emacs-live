@@ -58,5 +58,5 @@
 			 (buffer-string)))))))
 
 
-
+(provide 'test-ob-sed)
 ;;; test-ob-sed ends here

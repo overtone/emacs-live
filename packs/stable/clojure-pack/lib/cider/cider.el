@@ -1,7 +1,7 @@
 ;;; cider.el --- Clojure Interactive Development Environment that Rocks -*- lexical-binding: t -*-
 
 ;; Copyright © 2012-2013 Tim King, Phil Hagelberg, Bozhidar Batsov
-;; Copyright © 2013-2021 Bozhidar Batsov, Artur Malabarba and CIDER contributors
+;; Copyright © 2013-2022 Bozhidar Batsov, Artur Malabarba and CIDER contributors
 ;;
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Phil Hagelberg <technomancy@gmail.com>
@@ -11,8 +11,8 @@
 ;;         Steve Purcell <steve@sanityinc.com>
 ;; Maintainer: Bozhidar Batsov <bozhidar@batsov.dev>
 ;; URL: http://www.github.com/clojure-emacs/cider
-;; Version: 1.2.0
-;; Package-Requires: ((emacs "26") (clojure-mode "5.12") (parseedn "1.0.6") (pkg-info "0.4") (queue "0.2") (spinner "1.7") (seq "2.22") (sesman "0.3.2"))
+;; Version: 1.3.0-snapshot
+;; Package-Requires: ((emacs "26") (clojure-mode "5.12") (parseedn "1.0.6") (queue "0.2") (spinner "1.7") (seq "2.22") (sesman "0.3.2"))
 ;; Keywords: languages, clojure, cider
 
 ;; This program is free software: you can redistribute it and/or modify
@@ -83,7 +83,6 @@
 (require 'cider-connection)
 (require 'cider-mode)
 (require 'cider-common)
-(require 'cider-compat)
 (require 'cider-debug)
 (require 'cider-util)
 
@@ -91,11 +90,10 @@
 (require 'subr-x)
 (require 'seq)
 (require 'sesman)
+(require 'package)
 
-(defconst cider-version "1.2.0"
-  "Fallback version used when it cannot be extracted automatically.
-Normally it won't be used, unless `pkg-info' fails to extract the
-version from the CIDER package or library.")
+(defconst cider-version "1.3.0-snapshot"
+  "The current version of CIDER.")
 
 (defconst cider-codename "Nice"
   "Codename used to denote stable releases.")
@@ -103,35 +101,30 @@ version from the CIDER package or library.")
 (defcustom cider-lein-command
   "lein"
   "The command used to execute Leiningen."
-  :type 'string
-  :group 'cider)
+  :type 'string)
 
 (defcustom cider-lein-global-options
   nil
   "Command global options used to execute Leiningen (e.g.: -o for offline)."
   :type 'string
-  :group 'cider
   :safe #'stringp)
 
 (defcustom cider-lein-parameters
   "repl :headless :host localhost"
   "Params passed to Leiningen to start an nREPL server via `cider-jack-in'."
   :type 'string
-  :group 'cider
   :safe #'stringp)
 
 (defcustom cider-boot-command
   "boot"
   "The command used to execute Boot."
   :type 'string
-  :group 'cider
   :package-version '(cider . "0.9.0"))
 
 (defcustom cider-boot-global-options
   nil
   "Command global options used to execute Boot (e.g.: -c for checkouts)."
   :type 'string
-  :group 'cider
   :safe #'stringp
   :package-version '(cider . "0.14.0"))
 
@@ -139,7 +132,6 @@ version from the CIDER package or library.")
   "repl -s -b localhost wait"
   "Params passed to boot to start an nREPL server via `cider-jack-in'."
   :type 'string
-  :group 'cider
   :safe #'stringp
   :package-version '(cider . "0.9.0"))
 
@@ -153,7 +145,6 @@ Don't use clj here, as it doesn't work when spawned from Emacs due to it
 using rlwrap.  If on Windows and no \"clojure\" executable is found we
 default to \"powershell\"."
   :type 'string
-  :group 'cider
   :safe #'stringp
   :package-version '(cider . "0.17.0"))
 
@@ -161,18 +152,16 @@ default to \"powershell\"."
   nil
   "Command line options used to execute clojure with tools.deps."
   :type 'string
-  :group 'cider
   :safe #'stringp
   :package-version '(cider . "0.17.0"))
 
 (defcustom cider-clojure-cli-aliases
   nil
   "A list of aliases to include when using the clojure cli.
-Should be of the form `foo:bar`.  Any leading \"-A\" or \"-M\" will be
-stripped as these are concatenated into the \"-M[your-deps]:cider/nrepl\"
-form."
+Alias names should be of the form `:foo:bar`.
+Leading \"-A\" \"-M\" \"-T\" or \"-X\" are stripped from aliases
+then concatenated into the \"-M[your-aliases]:cider/nrepl\" form."
   :type 'string
-  :group 'cider
   :safe #'stringp
   :package-version '(cider . "1.1"))
 
@@ -182,7 +171,6 @@ form."
 
 By default we favor the project-specific shadow-cljs over the system-wide."
   :type 'string
-  :group 'cider
   :safe #'stringp
   :package-version '(cider . "0.17.0"))
 
@@ -190,7 +178,6 @@ By default we favor the project-specific shadow-cljs over the system-wide."
   ""
   "Command line options used to execute shadow-cljs (e.g.: -v for verbose mode)."
   :type 'string
-  :group 'cider
   :safe #'stringp
   :package-version '(cider . "0.17.0"))
 
@@ -198,7 +185,6 @@ By default we favor the project-specific shadow-cljs over the system-wide."
   "server"
   "Params passed to shadow-cljs to start an nREPL server via `cider-jack-in'."
   :type 'string
-  :group 'cider
   :safe #'stringp
   :package-version '(cider . "0.17.0"))
 
@@ -206,7 +192,6 @@ By default we favor the project-specific shadow-cljs over the system-wide."
   "gradle"
   "The command used to execute Gradle."
   :type 'string
-  :group 'cider
   :safe #'stringp
   :package-version '(cider . "0.10.0"))
 
@@ -214,7 +199,6 @@ By default we favor the project-specific shadow-cljs over the system-wide."
   "--no-daemon"
   "Command line options used to execute Gradle (e.g.: -m for dry run)."
   :type 'string
-  :group 'cider
   :safe #'stringp
   :package-version '(cider . "0.14.0"))
 
@@ -222,7 +206,6 @@ By default we favor the project-specific shadow-cljs over the system-wide."
   "clojureRepl"
   "Params passed to gradle to start an nREPL server via `cider-jack-in'."
   :type 'string
-  :group 'cider
   :safe #'stringp
   :package-version '(cider . "0.10.0"))
 
@@ -230,7 +213,6 @@ By default we favor the project-specific shadow-cljs over the system-wide."
   "bb"
   "The command used to execute Babashka."
   :type 'string
-  :group 'cider
   :safe #'stringp
   :package-version '(cider . "1.2.0"))
 
@@ -238,7 +220,6 @@ By default we favor the project-specific shadow-cljs over the system-wide."
   nil
   "Command line options used to execute Babashka."
   :type 'string
-  :group 'cider
   :safe #'stringp
   :package-version '(cider . "1.2.0"))
 
@@ -246,7 +227,6 @@ By default we favor the project-specific shadow-cljs over the system-wide."
   "nrepl-server"
   "Params passed to babashka to start an nREPL server via `cider-jack-in'."
   :type 'string
-  :group 'cider
   :safe #'stringp
   :package-version '(cider . "1.2.0"))
 
@@ -264,7 +244,6 @@ to Leiningen."
                  (const shadow-cljs)
                  (const gradle)
                  (const babashka))
-  :group 'cider
   :safe #'symbolp
   :package-version '(cider . "0.9.0"))
 
@@ -284,7 +263,6 @@ command when there is no ambiguity."
                  (const gradle)
                  (const babashka)
                  (const :tag "Always ask" nil))
-  :group 'cider
   :safe #'symbolp
   :package-version '(cider . "0.13.0"))
 
@@ -296,7 +274,6 @@ When set to nil `cider-jack-in' will fail."
   :type '(choice (const :tag "always" t)
                  (const warn)
                  (const :tag "never" nil))
-  :group 'cider
   :safe #'symbolp
   :package-version '(cider . "0.15.0"))
 
@@ -307,19 +284,16 @@ The label is optional so that \\='(\"host\" \"port\") will suffice.
 This variable is used by `cider-connect'."
   :type '(repeat (list (string :tag "label")
                        (string :tag "host")
-                       (string :tag "port")))
-  :group 'cider)
+                       (string :tag "port"))))
 
 (defcustom cider-connected-hook nil
   "List of functions to call when connected to Clojure nREPL server."
   :type 'hook
-  :group 'cider
   :package-version '(cider . "0.9.0"))
 
 (defcustom cider-disconnected-hook nil
   "List of functions to call when disconnected from the Clojure nREPL server."
   :type 'hook
-  :group 'cider
   :package-version '(cider . "0.9.0"))
 
 (defcustom cider-inject-dependencies-at-jack-in t
@@ -417,7 +391,6 @@ Throws an error if PROJECT-TYPE is unknown."
 We inject the newest known version of nREPL just in case
 your version of Boot or Leiningen is bundling an older one."
   :type 'string
-  :group 'cider
   :package-version '(cider . "1.2.0")
   :safe #'stringp)
 
@@ -432,7 +405,8 @@ Added to `cider-jack-in-dependencies' when doing `cider-jack-in-cljs'.")
 
 (defvar cider-jack-in-dependencies-exclusions nil
   "List of exclusions for jack in dependencies.
-Elements of the list are artifact name and list of exclusions to apply for the artifact.")
+Elements of the list are artifact name and list of exclusions to apply for
+the artifact.")
 (put 'cider-jack-in-dependencies-exclusions 'risky-local-variable t)
 
 (defconst cider-clojure-artifact-id "org.clojure/clojure"
@@ -444,25 +418,23 @@ Elements of the list are artifact name and list of exclusions to apply for the a
 (defconst cider-latest-clojure-version "1.10.1"
   "Latest supported version of Clojure.")
 
-(defconst cider-required-middleware-version "0.27.4"
+(defconst cider-required-middleware-version "0.28.0"
   "The CIDER nREPL version that's known to work properly with CIDER.")
 
 (defcustom cider-injected-middleware-version cider-required-middleware-version
   "The version of cider-nrepl injected on jack-in.
 Should be newer than the required version for optimal results."
   :type 'string
-  :group 'cider
   :package-version '(cider . "1.2.0")
   :safe #'stringp)
 
-(defcustom cider-enrich-classpath nil
+(defcustom cider-enrich-classpath t
   "Whether to use git.io/JiJVX for adding sources and javadocs to the classpath.
 
 This is done in a clean manner, without interfering with classloaders.
 
 Only available for Leiningen projects at the moment."
   :type 'boolean
-  :group 'cider
   :package-version '(cider . "1.2.0")
   :safe #'booleanp)
 
@@ -519,7 +491,7 @@ where it doesn't make sense."
   (let* ((corpus (if (and cider-enrich-classpath
                           (eq project-type 'lein))
                      (append cider-jack-in-lein-plugins
-                             '(("mx.cider/enrich-classpath" "1.5.1")))
+                             '(("mx.cider/enrich-classpath" "1.6.2")))
                    cider-jack-in-lein-plugins)))
     (thread-last corpus
       (seq-filter
@@ -659,9 +631,9 @@ one used."
             deps-string
             main-opts
             (if cider-clojure-cli-aliases
-                ;; replace -A or -M in the jack-in-aliases to be concatenated
-                ;; with cider/nrepl to ensure cider/nrepl comes last
-                (format ":%s" (replace-regexp-in-string "^-\\(A\\\|M\\):" "" cider-clojure-cli-aliases))
+                ;; remove exec-opts flags -A -M -T or -X from cider-clojure-cli-aliases
+                ;; concatenated with :cider/nrepl to ensure :cider/nrepl comes last
+                (format "%s" (replace-regexp-in-string "^-\\(A\\|M\\|T\\|X\\)" "" cider-clojure-cli-aliases))
               ""))))
 
 (defun cider-shadow-cljs-jack-in-dependencies (global-opts params dependencies)
@@ -887,11 +859,13 @@ Figwheel for details."
   :package-version '(cider . "0.18.0"))
 
 (defun cider--figwheel-main-get-builds ()
-  "Extract build names from the <build-id>.cljs.edn config files in the project root."
+  "Extract build names from the <build-id>.cljs.edn config files.
+Fetches them in the project root."
   (when-let ((project-dir (clojure-project-dir)))
     (let ((builds (directory-files project-dir nil ".*\\.cljs\\.edn")))
       (mapcar (lambda (f) (string-match "^\\(.*\\)\\.cljs\\.edn" f)
-                (match-string 1 f)) builds))))
+                (match-string 1 f))
+              builds))))
 
 (defun cider-figwheel-main-init-form ()
   "Produce the figwheel-main ClojureScript init form."
@@ -998,7 +972,6 @@ you're working on."
                  (const :tag "Shadow w/o Server" shadow-select)
                  (const :tag "Krell"    krell)
                  (const :tag "Custom"   custom))
-  :group 'cider
   :safe #'symbolp
   :package-version '(cider . "0.17.0"))
 
@@ -1593,7 +1566,8 @@ of list of the form (project-dir port)."
 
 (defun cider--running-nrepl-paths ()
   "Retrieve project paths of running nREPL servers.
-Use `cider-ps-running-nrepls-command' and `cider-ps-running-nrepl-path-regexp-list'."
+Use `cider-ps-running-nrepls-command' and
+`cider-ps-running-nrepl-path-regexp-list'."
   (let (paths)
     (with-temp-buffer
       (insert (shell-command-to-string cider-ps-running-nrepls-command))

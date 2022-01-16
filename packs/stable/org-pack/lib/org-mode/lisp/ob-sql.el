@@ -1,6 +1,6 @@
 ;;; ob-sql.el --- Babel Functions for SQL            -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2009-2021 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2022 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;; Keywords: literate programming, reproducible research
@@ -93,15 +93,24 @@
 
 (defun org-babel-expand-body:sql (body params)
   "Expand BODY according to the values of PARAMS."
-  (org-babel-sql-expand-vars
-   body (org-babel--get-vars params)))
+  (let ((prologue (cdr (assq :prologue params)))
+	(epilogue (cdr (assq :epilogue params))))
+    (mapconcat 'identity
+               (list
+                prologue
+                (org-babel-sql-expand-vars
+                 body (org-babel--get-vars params))
+                epilogue)
+               "\n")))
 
 (defun org-babel-edit-prep:sql (info)
   "Set `sql-product' in Org edit buffer.
 Set `sql-product' in Org edit buffer according to the
 corresponding :engine source block header argument."
   (let ((product (cdr (assq :engine (nth 2 info)))))
-    (sql-set-product product)))
+    (condition-case nil
+        (sql-set-product product)
+      (user-error "Cannot set `sql-product' in Org Src edit buffer"))))
 
 (defun org-babel-sql-dbstring-mysql (host port user password database)
   "Make MySQL cmd line args for database connection.  Pass nil to omit that arg."
@@ -170,13 +179,13 @@ SQL Server on Windows and Linux platform."
   "Make Vertica command line args for database connection.
 Pass nil to omit that arg."
   (mapconcat #'identity
-	      (delq nil
-		    (list (when host     (format "-h %s" host))
-			  (when port     (format "-p %d" port))
-			  (when user     (format "-U %s" user))
-			  (when password (format "-w %s" (shell-quote-argument password) ))
-			  (when database (format "-d %s" database))))
-	      " "))
+	     (delq nil
+		   (list (when host     (format "-h %s" host))
+			 (when port     (format "-p %d" port))
+			 (when user     (format "-U %s" user))
+			 (when password (format "-w %s" (shell-quote-argument password) ))
+			 (when database (format "-d %s" database))))
+	     " "))
 
 (defun org-babel-sql-dbstring-saphana (host port instance user password database)
   "Make SAP HANA command line args for database connection.
@@ -206,8 +215,8 @@ Otherwise, use Emacs' standard conversion function."
   "Return database connection parameter NAME.
 Given a parameter NAME, if :dbconnection is defined in PARAMS
 then look for the parameter into the corresponding connection
-defined in `sql-connection-alist`, otherwise look into PARAMS.
-Look `sql-connection-alist` (part of SQL mode) for how to define
+defined in `sql-connection-alist', otherwise look into PARAMS.
+See `sql-connection-alist' (part of SQL mode) for how to define
 database connections."
   (if (assq :dbconnection params)
       (let* ((dbconnection (cdr (assq :dbconnection params)))
@@ -395,8 +404,8 @@ argument mechanism."
                                val (if sqlite
                                        nil
                                      '(:fmt (lambda (el) (if (stringp el)
-                                                      el
-                                                    (format "%S" el))))))))
+                                                             el
+                                                           (format "%S" el))))))))
                     data-file)
                 (if (stringp val) val (format "%S" val))))
 	    body)))

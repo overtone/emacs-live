@@ -1,6 +1,6 @@
 ;;; cider-client.el --- A layer of abstraction above low-level nREPL client code. -*- lexical-binding: t -*-
 
-;; Copyright © 2013-2021 Bozhidar Batsov
+;; Copyright © 2013-2022 Bozhidar Batsov
 ;;
 ;; Author: Bozhidar Batsov <bozhidar@batsov.dev>
 
@@ -33,7 +33,6 @@
 (require 'clojure-mode)
 (require 'spinner)
 
-(require 'cider-compat)
 (require 'cider-connection)
 (require 'cider-common)
 (require 'cider-util)
@@ -817,7 +816,7 @@ FORMAT-OPTIONS is an optional configuration map for cljfmt."
   (with-current-buffer buffer
     (let ((map (make-sparse-keymap)))
       (set-keymap-parent map minibuffer-local-map)
-      (define-key map (kbd "C-c C-c") 'abort-recursive-edit)
+      (define-key map (kbd "C-c C-c") #'abort-recursive-edit)
       (let ((stdin (condition-case nil
                        (concat (read-from-minibuffer "Stdin: " nil map) "\n")
                      (quit nil))))

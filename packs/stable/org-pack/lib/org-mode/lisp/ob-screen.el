@@ -1,9 +1,9 @@
 ;;; ob-screen.el --- Babel Support for Interactive Terminal -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2009-2021 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2022 Free Software Foundation, Inc.
 
 ;; Author: Benjamin Andresen
-;; Maintainer: Ken Mankoff
+;; Maintainer: Ken Mankoff <mankoff@gmail.com>
 ;; Keywords: literate programming, interactive shell
 ;; Homepage: https://orgmode.org
 
@@ -30,7 +30,7 @@
 ;; Adding :cmd and :terminal as header arguments
 ;; :terminal must support the -T (title) and -e (command) parameter
 ;;
-;; You can test the default setup. (xterm + sh) with
+;; You can test the default setup (xterm + sh) with
 ;; M-x org-babel-screen-test RET
 
 ;;; Code:

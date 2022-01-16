@@ -2,6 +2,17 @@
 
 ## master (unreleased)
 
+### Changes
+
+* [#3127](https://github.com/clojure-emacs/cider/pull/3040): Strip all exec-opts flags (`-A` `-M` `-T` `-X`) if they exist in `cider-clojure-cli-aliases`. Also addresses a duplicate `:` in the generated `clj` command.
+* Enable `cider-enrich-classpath` by default again.
+  
+### Bugs fixed
+
+* Upgrade [enrich-classpath](https://github.com/clojure-emacs/enrich-classpath), which fixes various edge cases.
+  * Remember: at the moment the enrich-classpath is disabled by default. It will soon be enabled again. If you wish to try it out, you can customize `cider-enrich-classpath` to `t`.
+  * Also remember: for it to work, on Linux, you'll also have to do something like `sudo apt install openjdk-11-source` (depending on your package manager and JDK of choice).
+
 ## 1.2.0 (2021-12-22)
 
 ### New features
@@ -33,6 +44,10 @@
 * [#3069](https://github.com/clojure-emacs/cider/pull/3069): Fix cursor color changing when it shouldn't in `evil-mode`.
 * [#3071](https://github.com/clojure-emacs/cider/issues/3071): Use `xref` instead of `etags` to push point to marker stack.
 * [#3074](https://github.com/clojure-emacs/cider/issues/3074): Recognize `pwsh` as a `powershell` executable.
+
+### Changes
+
+* Drop support for Emacs 25 (this tracks upstream deps like `parseedn` that no longer support Emacs 25 and is line with our compatibility policy for RHEL and Debian).
 
 ## 1.1.1 (2021-05-24)
 

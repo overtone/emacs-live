@@ -1,6 +1,6 @@
 ;;; cider-apropos.el --- Apropos functionality for Clojure -*- lexical-binding: t -*-
 
-;; Copyright © 2014-2021 Jeff Valk, Bozhidar Batsov and CIDER contributors
+;; Copyright © 2014-2022 Jeff Valk, Bozhidar Batsov and CIDER contributors
 ;;
 ;; Author: Jeff Valk <jv@jeffvalk.com>
 
@@ -29,7 +29,6 @@
 (require 'cider-find) ; for cider--find-var
 (require 'cider-util)
 (require 'subr-x)
-(require 'cider-compat)
 (require 'cider-connection) ; for cider-ensure-connected
 
 (require 'cider-client)
@@ -100,7 +99,7 @@ and be case-sensitive (based on CASE-SENSITIVE-P)."
     (let* ((label (capitalize (if (string= type "variable") "var" type)))
            (help (concat "Display doc for this " (downcase label)))
            (props (list 'apropos-symbol name
-                        'action 'cider-apropos-doc))
+                        'action #'cider-apropos-doc))
            (props (if cider-use-tooltips
                       (append props (list 'help-echo help))
                     props)))

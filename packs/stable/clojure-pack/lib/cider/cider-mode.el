@@ -1,7 +1,7 @@
 ;;; cider-mode.el --- Minor mode for REPL interactions -*- lexical-binding: t -*-
 
 ;; Copyright © 2012-2013 Tim King, Phil Hagelberg, Bozhidar Batsov
-;; Copyright © 2013-2021 Bozhidar Batsov, Artur Malabarba and CIDER contributors
+;; Copyright © 2013-2022 Bozhidar Batsov, Artur Malabarba and CIDER contributors
 ;;
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Phil Hagelberg <technomancy@gmail.com>
@@ -42,7 +42,6 @@
 (require 'cider-inspector)
 (require 'cider-find)
 (require 'subr-x)
-(require 'cider-compat)
 
 (defcustom cider-mode-line-show-connection t
   "If the mode-line lighter should detail the connection."
@@ -250,7 +249,7 @@ If EVAL is non-nil the form will also be evaluated.  Use
         (let ((beg (point)))
           (insert form)
           (indent-region beg (point))
-          (cider--font-lock-ensure beg (point)))
+          (font-lock-ensure beg (point)))
         (when (if cider-invert-insert-eval-p
                   (not eval)
                 eval)
@@ -312,8 +311,8 @@ If invoked with a prefix ARG eval the expression after inserting it."
     ["Configure CIDER" (customize-group 'cider)]
     "--"
     ["A sip of CIDER" cider-drink-a-sip]
-    ["View manual online" cider-view-manual]
-    ["View refcard online" cider-view-refcard]
+    ["View user manual" cider-view-manual]
+    ["View quick reference card" cider-view-refcard]
     ["Report a bug" cider-report-bug]
     ["Version info" cider-version]
     "--"
@@ -569,7 +568,7 @@ higher precedence."
       ["Start a Clojure REPL, and a ClojureScript REPL" cider-jack-in-clj&cljs
        :help "Starts an nREPL server, connects a Clojure REPL to it, and then a ClojureScript REPL."]
       "--"
-      ["View manual online" cider-view-manual])))
+      ["View user manual" cider-view-manual])))
 
 ;;; Dynamic indentation
 (defcustom cider-dynamic-indentation t
@@ -766,7 +765,7 @@ with the given LIMIT."
     value))
 
 (defun cider--compile-font-lock-keywords (symbols-plist core-plist)
-  "Return a list of font-lock rules for the symbols in SYMBOLS-PLIST and CORE-PLIST."
+  "Return a list of font-lock rules for symbols."
   (let ((cider-font-lock-dynamically (if (eq cider-font-lock-dynamically t)
                                          '(function var macro core deprecated)
                                        cider-font-lock-dynamically))
@@ -854,7 +853,7 @@ namespace itself."
                   (cider--compile-font-lock-keywords
                    symbols (cider-resolve-ns-symbols (cider-resolve-core-ns))))
       (font-lock-add-keywords nil cider--dynamic-font-lock-keywords 'end))
-    (cider--font-lock-flush)))
+    (font-lock-flush)))
 
 
 ;;; Detecting local variables
@@ -1085,7 +1084,7 @@ property."
     (font-lock-add-keywords nil cider--reader-conditionals-font-lock-keywords)
     (font-lock-remove-keywords nil cider--dynamic-font-lock-keywords)
     (font-lock-remove-keywords nil cider--static-font-lock-keywords)
-    (cider--font-lock-flush)
+    (font-lock-flush)
     (remove-hook 'completion-at-point-functions #'cider-complete-at-point t)))
 
 (defun cider-set-buffer-ns (ns)

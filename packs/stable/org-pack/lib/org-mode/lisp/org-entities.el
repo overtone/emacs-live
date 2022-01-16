@@ -1,8 +1,8 @@
 ;;; org-entities.el --- Support for Special Entities -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2010-2021 Free Software Foundation, Inc.
+;; Copyright (C) 2010-2022 Free Software Foundation, Inc.
 
-;; Author: Carsten Dominik <carsten at orgmode dot org>,
+;; Author: Carsten Dominik <carsten.dominik@gmail.com>,
 ;;         Ulf Stegemann <ulf at zeitform dot de>
 ;; Keywords: outlines, calendar, wp
 ;; Homepage: https://orgmode.org
@@ -89,8 +89,8 @@ packages to be loaded, add these packages to `org-latex-packages-alist'."
      ("aacute" "\\'{a}" nil "&aacute;" "a" "á" "á")
      ("Acirc" "\\^{A}" nil "&Acirc;" "A" "Â" "Â")
      ("acirc" "\\^{a}" nil "&acirc;" "a" "â" "â")
-     ("Amacr" "\\bar{A}" nil "&Amacr;" "A" "Ã" "Ã")
-     ("amacr" "\\bar{a}" nil "&amacr;" "a" "ã" "ã")
+     ("Amacr" "\\={A}" nil "&Amacr;" "A" "Ã" "Ã")
+     ("amacr" "\\={a}" nil "&amacr;" "a" "ã" "ã")
      ("Atilde" "\\~{A}" nil "&Atilde;" "A" "Ã" "Ã")
      ("atilde" "\\~{a}" nil "&atilde;" "a" "ã" "ã")
      ("Auml" "\\\"{A}" nil "&Auml;" "Ae" "Ä" "Ä")
@@ -114,6 +114,8 @@ packages to be loaded, add these packages to `org-latex-packages-alist'."
      ("igrave" "\\`{i}" nil "&igrave;" "i" "ì" "ì")
      ("Iacute" "\\'{I}" nil "&Iacute;" "I" "Í" "Í")
      ("iacute" "\\'{i}" nil "&iacute;" "i" "í" "í")
+     ("Idot" "\\.{I}" nil "&idot;" "I" "İ" "İ")
+     ("inodot" "\\i" nil "&inodot;" "i" "ı" "ı")
      ("Icirc" "\\^{I}" nil "&Icirc;" "I" "Î" "Î")
      ("icirc" "\\^{i}" nil "&icirc;" "i" "î" "î")
      ("Iuml" "\\\"{I}" nil "&Iuml;" "I" "Ï" "Ï")

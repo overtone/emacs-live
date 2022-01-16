@@ -1,8 +1,8 @@
 ;;; org-list.el --- Plain lists for Org              -*- lexical-binding: t; -*-
 ;;
-;; Copyright (C) 2004-2021 Free Software Foundation, Inc.
+;; Copyright (C) 2004-2022 Free Software Foundation, Inc.
 ;;
-;; Author: Carsten Dominik <carsten at orgmode dot org>
+;; Author: Carsten Dominik <carsten.dominik@gmail.com>
 ;;	   Bastien Guerry <bzg@gnu.org>
 ;; Keywords: outlines, hypermedia, calendar, wp
 ;; Homepage: https://orgmode.org
@@ -103,7 +103,7 @@
 (declare-function org-back-to-heading "org" (&optional invisible-ok))
 (declare-function org-before-first-heading-p "org" ())
 (declare-function org-current-level "org" ())
-(declare-function org-element-at-point "org-element" ())
+(declare-function org-element-at-point "org-element" (&optional pom cached-only))
 (declare-function org-element-context "org-element" (&optional element))
 (declare-function org-element-interpret-data "org-element" (data))
 (declare-function org-element-lineage "org-element" (blob &optional types with-self))
@@ -133,7 +133,7 @@
 (declare-function org-inlinetask-outline-regexp "org-inlinetask" ())
 (declare-function org-level-increment "org" ())
 (declare-function org-mode "org" ())
-(declare-function org-narrow-to-subtree "org" ())
+(declare-function org-narrow-to-subtree "org" (&optional element))
 (declare-function org-outline-level "org" ())
 (declare-function org-previous-line-empty-p "org" ())
 (declare-function org-reduced-level "org" (L))
@@ -2296,7 +2296,7 @@ is an integer, 0 means `-', 1 means `+' etc.  If WHICH is
 ;;;###autoload
 (define-minor-mode org-list-checkbox-radio-mode
   "When turned on, use list checkboxes as radio buttons."
-  nil " CheckBoxRadio" nil
+  :lighter " CheckBoxRadio"
   (unless (eq major-mode 'org-mode)
     (user-error "Cannot turn this mode outside org-mode buffers")))
 
@@ -2476,10 +2476,10 @@ With optional prefix argument ALL, do this for the whole buffer."
    (let* ((cookie-re "\\(\\(\\[[0-9]*%\\]\\)\\|\\(\\[[0-9]*/[0-9]*\\]\\)\\)")
 	  (box-re "^[ \t]*\\([-+*]\\|\\([0-9]+\\|[A-Za-z]\\)[.)]\\)[ \t]+\
 \\(?:\\[@\\(?:start:\\)?\\([0-9]+\\|[A-Za-z]\\)\\][ \t]*\\)?\\(\\[[- X]\\]\\)")
+          (cookie-data (or (org-entry-get nil "COOKIE_DATA") ""))
 	  (recursivep
 	   (or (not org-checkbox-hierarchical-statistics)
-	       (string-match "\\<recursive\\>"
-			     (or (org-entry-get nil "COOKIE_DATA") ""))))
+	       (string-match-p "\\<recursive\\>" cookie-data)))
 	  (within-inlinetask (and (not all)
 				  (featurep 'org-inlinetask)
 				  (org-inlinetask-in-task-p)))
@@ -2525,7 +2525,8 @@ With optional prefix argument ALL, do this for the whole buffer."
      (while (re-search-forward cookie-re end t)
        (let ((context (save-excursion (backward-char)
 				      (save-match-data (org-element-context)))))
-	 (when (eq (org-element-type context) 'statistics-cookie)
+	 (when (and (eq (org-element-type context) 'statistics-cookie)
+                    (not (string-match-p "\\<todo\\>" cookie-data)))
 	   (push
 	    (append
 	     (list (match-beginning 1) (match-end 1) (match-end 2))
@@ -2909,7 +2910,7 @@ function is being called interactively."
 		   (error "Missing key extractor"))))
 	 (sort-func
 	  (cond
-	   ((= dcst ?a) #'org-string-collate-lessp)
+	   ((= dcst ?a) #'string-collate-lessp)
 	   ((= dcst ?f)
 	    (or compare-func
 		(and interactive?
@@ -3347,7 +3348,7 @@ Valid parameters are:
     (when (and backend (symbolp backend) (not (org-export-get-backend backend)))
       (user-error "Unknown :backend value"))
     (unless backend (require 'ox-org))
-    ;; When`:raw' property has a non-nil value, turn all objects back
+    ;; When ':raw' property has a non-nil value, turn all objects back
     ;; into Org syntax.
     (when (and backend (plist-get params :raw))
       (org-element-map data org-element-all-objects

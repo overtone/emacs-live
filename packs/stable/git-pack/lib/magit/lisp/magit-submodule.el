@@ -1,6 +1,6 @@
 ;;; magit-submodule.el --- submodule support for Magit  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2011-2021  The Magit Project Contributors
+;; Copyright (C) 2011-2022  The Magit Project Contributors
 ;;
 ;; You should have received a copy of the AUTHORS.md file which
 ;; lists all contributors.  If not, see http://magit.vc/authors.
@@ -225,7 +225,7 @@ it is nil, then PATH also becomes the name."
              (magit-process-sentinel process event)
            (process-put process 'inhibit-refresh t)
            (magit-process-sentinel process event)
-           (unless (version< (magit-git-version) "2.12.0")
+           (when (magit-git-version>= "2.12.0")
              (magit-call-git "submodule" "absorbgitdirs" path))
            (magit-refresh)))))))
 
@@ -360,7 +360,7 @@ to recover from making a mistake here, but don't count on it."
            (list (magit-read-module-path "Remove module")))
          (magit-submodule-arguments "--force")
          current-prefix-arg))
-  (when (version< (magit-git-version) "2.12.0")
+  (when (magit-git-version< "2.12.0")
     (error "This command requires Git v2.12.0"))
   (when magit-submodule-remove-trash-gitdirs
     (setq trash-gitdirs t))
@@ -383,14 +383,14 @@ to recover from making a mistake here, but don't count on it."
                                           (expand-file-name module))))
                   (magit-git "stash" "push"
                              "-m" "backup before removal of this module")))
-            (setq modules (cl-set-difference modules modified)))
+            (setq modules (cl-set-difference modules modified :test #'equal)))
         (if (cdr modified)
             (message "Omitting %s modules with uncommitted changes: %s"
                      (length modified)
                      (mapconcat #'identity modified ", "))
           (message "Omitting module %s, it has uncommitted changes"
                    (car modified)))
-        (setq modules (cl-set-difference modules modified))))
+        (setq modules (cl-set-difference modules modified :test #'equal))))
     (when modules
       (let ((alist
              (and trash-gitdirs

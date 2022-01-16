@@ -3,34 +3,36 @@
 The text below explains the rules for participating in Org mode
 development.
 
+* Org maintenance
+
+Org maintenance is detailed on Worg: see [[https://orgmode.org/worg/org-maintenance.html][org-maintenance]].
+
 * Main contribution rules
 
-1. The master git repository is hosted publicly at [[https://orgmode.org][orgmode.org]].
+1. The master git repository is hosted publicly on [[https://savannah.gnu.org][savannah.gnu.org]].
 
-   Anyone can get a clone of the current repository state using the
-   command
+   : git clone https://git.savannah.gnu.org/git/emacs/org-mode.git
 
-   : git clone https://code.orgmode.org/bzg/org-mode.git
+   This is sufficient to start hacking and to produce patches that can
+   easily and consistently be applied to the main repository.
 
-   Having a clone is sufficient to start hacking and to produce
-   patches that can easily and consistently be applied to the main
-   repository.
-
-2. People who are interested in participating to the Org mode
-   development can do so by sending patches to this address:
+2. People who want to participate to the Org mode development can send
+   patches to this address:
 
    : emacs-orgmode@gnu.org
 
-3. An interested developer can also request push access to the central
-   repository by creating an account on code.orgmode.org and by
-   sending her/his user info to the maintainer.
+3. If you are a regular contributor, you can request push access to
+   the repository by creating an account on [[https://savannah.gnu.org/account/register.php][savannah.gnu.org]] and by
+   [[https://savannah.gnu.org/git/?group=emacs][joining the Emacs group]].
+   
+   After you have been added as a user with push privileges, you can
+   clone the repository like this:
 
-   After you have been added as a user with push privileges, clone the
-   repository through ssh using
+   : git clone USERNAME@git.savannah.gnu.org:/srv/git/emacs/org-mode.git
 
-   : git clone git@code.orgmode.org:bzg/org-mode.git
+   Replace =USERNAME= with your Savannah username.
 
-   By requesting push access, you acknowledge that you have read and
+4. By requesting push access, you acknowledge that you have read and
    agreed with the following rules:
 
    - Org mode is part of GNU Emacs.  Therefore, we need to be very
@@ -40,14 +42,13 @@ development.
      applies are:
 
      - all *.el files in the lisp directory of the repository
-     - org.texi, orgcard.tex in the doc directory
-     - the corresponding ChangeLog files
+     - orgcard.tex and all *.org files in the doc/ directory
 
    - Before making any significant changes, please explain and discuss
-     them on the mailing list [[mailto:emacs-orgmode@gnu.org][emacs-orgmode@gnu.org]].  
+     them on the mailing list [[mailto:emacs-orgmode@gnu.org][emacs-orgmode@gnu.org]].
 
      This does obviously not apply to people who are maintaining their
-     own contributions to Org mode. Please, just use the new mechanism
+     own contributions to Org mode.  Please just use the new mechanism
      to make sure all changes end up in the right place.
 
      We value a nice tone in our discussions: please check and respect
@@ -58,29 +59,13 @@ development.
      `CONTRIBUTE' file in the main Emacs repository.
 
    - Among other things, Org mode is widely appreciated because of its
-     simplicity, cleanness and consistency.  We should try hard to
-     preserve this and ask everyone to keep this in mind when
-     proposing changes.
+     simplicity, cleanness and consistency.  We should try to preserve
+     them and ask everyone to keep this in mind when posting changes.
 
-* The contrib/ directory
+See [[https://orgmode.org/worg/org-contribute.html][worg/org-contribute]] for guidance on how to contribute effectively.
 
-The git repository contains a =contrib/= directory.  This directory is
-the playing field for any developer, also people who have not (yet)
-signed the papers with the FSF.  You are free to add files to this
-directory, implementing extensions, new link types etc.
+* The =contrib/= directory
 
-Also non-Lisp extensions like scripts to process Org files in different
-ways are welcome in this directory.  You should provide documentation
-with your extensions, at least in the form of commentary in the file,
-better on worg.  Please discuss your extensions on
-[[mailto:emacs-orgmode@gnu.org][emacs-orgmode@gnu.org]].
-
-After files have been tested in =contrib/= and found to be generally
-useful, we may decide to clarify copyright questions and then move the
-file into the Org mode core.  This means they will be moved up to the
-root directory and will also eventually be added to GNU Emacs git
-repository.  The final decision about this rests with the maintainer.
-
-* Org maintenance
-
-Org maintenance is explained on Worg: see [[https://orgmode.org/worg/org-maintenance.html][org-maintenance]].
+The git repository used to contain a =contrib/= directory.  Files in
+this directory were moved to a new [[https://git.sr.ht/~bzg/org-contrib][org-contrib]] repository before Org
+9.5.  You can install the new =org-contrib= from [[https://elpa.nongnu.org/nongnu/][NonGNU ELPA]].

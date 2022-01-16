@@ -92,6 +92,20 @@
 	    (looking-at " *agenda-file:Scheduled: *test agenda"))))
   (org-test-agenda--kill-all-agendas))
 
+(ert-deftest test-org-agenda/non-scheduled-re-matces ()
+  "Make sure that scheduled-looking elements do not appear in agenda.
+See https://list.orgmode.org/20220101200103.GB29829@itccanarias.org/T/#t."
+  (cl-assert (not org-agenda-sticky) nil "precondition violation")
+  (cl-assert (not (org-test-agenda--agenda-buffers))
+	     nil "precondition violation")
+  (let ((org-agenda-span 'day)
+	(org-agenda-files `(,(expand-file-name "examples/agenda-file.org"
+					       org-test-dir))))
+    (org-agenda-list nil "<2022-01-03 Mon>")
+    (set-buffer org-agenda-buffer-name)
+    (should (= 2 (count-lines (point-min) (point-max)))))
+  (org-test-agenda--kill-all-agendas))
+
 (ert-deftest test-org-agenda/set-priority ()
   "One informative line in the agenda. Check that org-agenda-priority updates the agenda."
   (cl-assert (not org-agenda-sticky) nil "precondition violation")

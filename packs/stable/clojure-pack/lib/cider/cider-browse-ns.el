@@ -1,6 +1,6 @@
-;;; cider-browse-ns.el --- CIDER namespace browser
+;;; cider-browse-ns.el --- CIDER namespace browser  -*- lexical-binding: t; -*-
 
-;; Copyright © 2014-2021 John Andrews, Bozhidar Batsov and CIDER contributors
+;; Copyright © 2014-2022 John Andrews, Bozhidar Batsov and CIDER contributors
 
 ;; Author: John Andrews <john.m.andrews@gmail.com>
 
@@ -37,7 +37,6 @@
 
 (require 'cider-client)
 (require 'cider-popup)
-(require 'cider-compat)
 (require 'cider-util)
 (require 'nrepl-dict)
 
@@ -224,7 +223,7 @@ be displayed."
         (cider-find-ns nil value)
       (cider-find-var current-prefix-arg value))))
 
-(defun cider-browse-ns-handle-mouse (event)
+(defun cider-browse-ns-handle-mouse (event) ;FIXME: Unused arg!
   "Handle mouse click EVENT."
   (interactive "e")
   (cider-browse-ns-operate-at-point))

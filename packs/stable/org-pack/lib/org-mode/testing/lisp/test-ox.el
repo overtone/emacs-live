@@ -163,7 +163,12 @@ num:2 <:active")))
 	  (org-export--parse-option-keyword
 	   "opt:t"
 	   (org-export-create-backend
-	    :options '((:opt1 nil "opt") (:opt2 nil "opt")))))))
+	    :options '((:opt1 nil "opt") (:opt2 nil "opt"))))))
+  ;; Ignore options with a missing value.
+  (should
+   (let ((options (org-export--parse-option-keyword "H: num:t")))
+     (and (not (plist-get options :headline-levels))
+          (plist-get options :section-numbers)))))
 
 (ert-deftest test-org-export/get-inbuffer-options ()
   "Test reading all standard export keywords."
@@ -531,24 +536,21 @@ Paragraph"
    (equal ""
 	  (let (org-export-filter-body-functions
 		org-export-filter-final-output-functions)
-	    (org-test-with-temp-text "* Head1 :archive:"
-	      (let ((org-archive-tag "archive"))
-		(org-export-as (org-test-default-backend)
-			       nil nil nil '(:with-archived-trees nil)))))))
+	    (org-test-with-temp-text "* Head1 :ARCHIVE:"
+	      (org-export-as (org-test-default-backend)
+			     nil nil nil '(:with-archived-trees nil))))))
   (should
    (string-match
-    "\\* Head1[ \t]+:archive:"
+    "\\* Head1[ \t]+:ARCHIVE:"
     (org-test-with-temp-text "* Head1 :archive:\nbody\n** Sub-head 2"
-      (let ((org-archive-tag "archive"))
-	(org-export-as (org-test-default-backend) nil nil nil
-		       '(:with-archived-trees headline))))))
+      (org-export-as (org-test-default-backend) nil nil nil
+		     '(:with-archived-trees headline)))))
   (should
    (string-match
-    "\\`\\* Head1[ \t]+:archive:\n\\'"
-    (org-test-with-temp-text "* Head1 :archive:"
-      (let ((org-archive-tag "archive"))
-	(org-export-as (org-test-default-backend)
-		       nil nil nil '(:with-archived-trees t))))))
+    "\\`\\* Head1[ \t]+:ARCHIVE:\n\\'"
+    (org-test-with-temp-text "* Head1 :ARCHIVE:"
+      (org-export-as (org-test-default-backend)
+		     nil nil nil '(:with-archived-trees t)))))
   ;; Broken links.  Depending on `org-export-with-broken-links', raise
   ;; an error, ignore link or mark is as broken in output.
   (should-error
@@ -3807,6 +3809,17 @@ Another text. (ref:text)
 	    (org-export-data-with-backend paragraph backend nil)))))
 
 
+;;; Raw objects
+
+(ert-deftest test-org-export/raw-strings ()
+  "Test exporting raw objects."
+  (should
+   (equal "foo"
+          (let ((backend (org-export-create-backend))
+                (object (org-export-raw-string "foo")))
+            (org-export-data-with-backend object backend nil)))))
+
+
 ;;; Src-block and example-block
 
 (ert-deftest test-org-export/unravel-code ()
@@ -3890,6 +3903,103 @@ Another text. (ref:text)
 		"#+BEGIN_SRC emacs-lisp\n123 (ref:a)\n1 (ref:b)\n#+END_SRC"
 	      (org-export-format-code-default
 	       (org-element-map tree 'src-block #'identity info t) info))))))
+
+(ert-deftest test-org-export/latex-src-block-verbatim-caption ()
+  "Test `org-latex-src-block' caption for verbatim environment.
+Check that percent sign does not become a part of format.
+This test does not cover listings and custom environments."
+  (let ((export
+	 (lambda (buffer-text)
+	   (org-test-with-parsed-data
+	       buffer-text
+	     (let* ((backend (org-export-get-backend 'latex))
+		    (info (org-combine-plists
+			   (org-export--get-export-attributes backend)
+			   (org-export-get-environment backend)))
+		    (result (org-latex-src-block
+			     (org-element-map tree 'src-block #'identity info t)
+			     t info)))
+	       ;; Remove properties to make failure reports more clear.
+	       (set-text-properties 0 (length result) nil result)
+	       result)))))
+
+    (should (equal
+	     "\
+\\begin{verbatim}
+\"No float, no listings, 20%S\"
+\\end{verbatim}
+\\captionof{figure}{Caption of verbatim is below, 20\\%s}
+"
+	     (funcall export
+		      "\
+#+CAPTION: Caption of verbatim is below, 20%s
+#+BEGIN_SRC emacs-lisp
+  \"No float, no listings, 20%S\"
+#+END_SRC")))
+
+    ;; `org-latex-caption-above' has no associated property or keyword.
+    (should (equal
+	     "\
+\\captionof{figure}{Caption of verbatim is above, 40\\%s}
+\\begin{verbatim}
+\"No float, no listings, 40%S\"
+\\end{verbatim}"
+	     (let ((org-latex-caption-above t))
+	       (funcall export
+			"\
+#+CAPTION: Caption of verbatim is above, 40%s
+#+BEGIN_SRC emacs-lisp
+  \"No float, no listings, 40%S\"
+#+END_SRC"))))
+
+    (should (equal
+	     "\
+\\begin{figure*}[tp]
+\\caption{Caption is above, 60\\%s}
+\\begin{verbatim}
+\"Float, no listings, 60%S\"
+\\end{verbatim}
+\\end{figure*}"
+	     (let ((org-latex-caption-above t)
+		   (org-latex-default-figure-position "tp"))
+	       (funcall export
+			"\
+#+CAPTION: Caption is above, 60%s
+#+ATTR_LATEX: :float multicolumn
+#+BEGIN_SRC emacs-lisp
+  \"Float, no listings, 60%S\"
+#+END_SRC"))))
+
+    (should (equal
+	     "\
+\\begin{figure*}[tp]
+\\begin{verbatim}
+\"Float, no lang, listings, 80%S\"
+\\end{verbatim}
+\\caption{Caption is below, 60\\%s}
+\\end{figure*}"
+	     (let ((org-latex-listings 'minted) ; inactive due to missing lang
+		   (org-latex-default-figure-position "tp"))
+	       ;; Namely "multicolumn" value to get just figure environment
+	       ;; looks like a bug.
+	       (funcall export
+			"\
+#+CAPTION: Caption is below, 60%s
+#+ATTR_LATEX: :float multicolumn
+#+BEGIN_SRC
+  \"Float, no lang, listings, 80%S\"
+#+END_SRC"))))
+
+    (should (equal
+	     "\
+\\begin{verbatim}
+\"No caption, no float, no listings, 100%S\"
+\\end{verbatim}"
+	     (funcall export
+		      "\
+#+BEGIN_SRC emacs-lisp
+  \"No caption, no float, no listings, 100%S\"
+#+END_SRC")))))
 
 
 

@@ -373,7 +373,11 @@ setting `pp-escape-newlines' to nil manually."
 		   (condition-case err
 		       (when (string-match "^[A-Za-z].*\\.el$"
 					   (file-name-nondirectory path))
-			 (load-file path))
+                         (let ((feature-name
+                                (intern
+                                 (file-name-base
+                                  (file-name-nondirectory path)))))
+			   (require feature-name path)))
 		     (missing-test-dependency
 		      (let ((name (intern
 				   (concat "org-missing-dependency/"
@@ -466,8 +470,13 @@ TIME can be a non-nil Lisp time value, or a string specifying a date and time."
 	       (apply ,(symbol-function 'current-time-zone)
 		      (or time ,at) args)))
 	    ((symbol-function 'decode-time)
-	     (lambda (&optional time) (funcall ,(symbol-function 'decode-time)
-					       (or time ,at))))
+	     (lambda (&optional time zone form)
+               (condition-case err
+                   (funcall ,(symbol-function 'decode-time)
+			    (or time ,at) zone form)
+                 ;; Fallback for Emacs <27.1.
+                 (error (funcall ,(symbol-function 'decode-time)
+			         (or time ,at) zone)))))
 	    ((symbol-function 'encode-time)
 	     (lambda (time &rest args)
 	       (apply ,(symbol-function 'encode-time) (or time ,at) args)))

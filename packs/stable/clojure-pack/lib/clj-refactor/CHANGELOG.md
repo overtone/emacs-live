@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Use refactor-nrepl [3.2.0](https://github.com/clojure-emacs/refactor-nrepl/blob/v3.2.0/CHANGELOG.md#320-2022-01-09).
+
 ## 3.2.0, 3.2.1, 3.2.2 (2021-11-16)
 
 - [#504](https://github.com/clojure-emacs/clj-refactor.el/issues/504): Introduce `cljr-print-right-margin`, `cljr-print-miser-width` customization options which control the line wrapping of ns forms after formatting them (as performed after `clean-ns`, `rename-file-or-dir`, etc).

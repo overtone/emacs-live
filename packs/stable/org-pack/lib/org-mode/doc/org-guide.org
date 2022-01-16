@@ -10,7 +10,7 @@
 :copying:  t
 :END:
 
-Copyright \copy 2004--2021  Free Software Foundation, Inc.
+Copyright \copy 2004--2022  Free Software Foundation, Inc.
 
 #+begin_quote
 Permission is granted to copy, distribute and/or modify this document
@@ -59,7 +59,6 @@ subdirectories to the Emacs load path.  To do this, add the following
 line to your Emacs init file:
 
 : (add-to-list 'load-path "~/path/to/orgdir/lisp")
-: (add-to-list 'load-path "~/path/to/orgdir/contrib/lisp" t)
 
 #+texinfo: @noindent
 If you have been using git or a tar ball to get Org, you need to run
@@ -77,9 +76,9 @@ keys for three commands that are useful in any Emacs buffer, not just
 Org buffers.  Please choose suitable keys yourself.
 
 #+begin_src emacs-lisp
-(global-set-key (kbd "C-c l") 'org-store-link)
-(global-set-key (kbd "C-c a") 'org-agenda)
-(global-set-key (kbd "C-c c") 'org-capture)
+(global-set-key (kbd "C-c l") #'org-store-link)
+(global-set-key (kbd "C-c a") #'org-agenda)
+(global-set-key (kbd "C-c c") #'org-capture)
 #+end_src
 
 Files with extension =.org= will be put into Org mode automatically.
@@ -2221,7 +2220,7 @@ compatible with XHTML 1.0 strict standard.
 - {{{kbd(C-c C-e h h)}}} ::
 
   Export as HTML file with a =.html= extension.  For =myfile.org=, Org
-  exports to =myfile.html=, overwriting without warning.  {{{kbd{C-c
+  exports to =myfile.html=, overwriting without warning.  {{{kbd(C-c
   C-e h o)}}} exports to HTML and opens it in a web browser.
 
 The HTML export back-end transforms =<= and =>= to =&lt;= and =&gt;=.
@@ -2334,12 +2333,13 @@ example:
 (setq org-publish-project-alist
       '(("org"
          :base-directory "~/org/"
+         :publishing-function org-html-publish-to-html
          :publishing-directory "~/public_html"
          :section-numbers nil
-         :table-of-contents nil
-         :style "<link rel=\"stylesheet\"
-                href=\"../other/mystyle.css\"
-                type=\"text/css\"/>")))
+         :with-toc nil
+         :html-head "<link rel=\"stylesheet\"
+                    href=\"../other/mystyle.css\"
+                    type=\"text/css\"/>")))
 #+end_src
 
 - {{{kbd(C-c C-e P x)}}} ::

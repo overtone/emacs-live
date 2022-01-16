@@ -1,8 +1,8 @@
 ;;; org-id.el --- Global identifiers for Org entries -*- lexical-binding: t; -*-
 ;;
-;; Copyright (C) 2008-2021 Free Software Foundation, Inc.
+;; Copyright (C) 2008-2022 Free Software Foundation, Inc.
 ;;
-;; Author: Carsten Dominik <carsten at orgmode dot org>
+;; Author: Carsten Dominik <carsten.dominik@gmail.com>
 ;; Keywords: outlines, hypermedia, calendar, wp
 ;; Homepage: https://orgmode.org
 ;;
@@ -129,8 +129,11 @@ nil   Never use an ID to make a link, instead link using a text search for
   :type 'string)
 
 (defcustom org-id-ts-format "%Y%m%dT%H%M%S.%6N"
-  "Default format for IDs generated using `ts' `org-id-method'.
-The format should be suitable to pass as an argument to `format-time-string'."
+  "Timestamp format for IDs generated using `ts' `org-id-method'.
+The format should be suitable to pass as an argument to `format-time-string'.
+
+Defaults to ISO8601 timestamps without separators and without
+timezone, local time and precision down to 1e-6 seconds."
   :type 'string
   :package-version '(Org . "9.5"))
 
@@ -150,13 +153,12 @@ uuid       Create random (version 4) UUIDs.  If the program defined in
            `org-id-uuid-program' is available it is used to create the ID.
            Otherwise an internal functions is used.
 
-ts         Create ID's based on ISO8601 timestamps (without separators
-           and without timezone, local time).  Precision down to seconds."
+ts         Create ID's based on timestamps as specified in `org-id-ts-format'."
   :group 'org-id
   :type '(choice
 	  (const :tag "Org's internal method" org)
 	  (const :tag "external: uuidgen" uuid)
-	  (const :tag "ISO8601 timestamp" ts)))
+	  (const :tag "Timestamp with format `org-id-ts-format'" ts)))
 
 (defcustom org-id-prefix nil
   "The prefix for IDs.
@@ -202,7 +204,7 @@ This variable is only relevant when `org-id-track-globally' is set."
   :type 'file)
 
 (defcustom org-id-locations-file-relative nil
-  "Determines if org-id-locations should be stored as relative links.
+  "Determine if `org-id-locations' should be stored as relative links.
 Non-nil means that links to locations are stored as links
 relative to the location of where `org-id-locations-file' is
 stored.
@@ -380,17 +382,15 @@ So a typical ID could look like \"Org:4nd91V40HI\"."
 	(setq unique (org-id-uuid))))
      ((eq org-id-method 'org)
       (let* ((etime (org-reverse-string (org-id-time-to-b36)))
-	     (postfix (if org-id-include-domain
-			  (progn
-			    (require 'message)
-			    (concat "@" (message-make-fqdn))))))
+	     (postfix (when org-id-include-domain
+			(require 'message)
+			(concat "@" (message-make-fqdn)))))
 	(setq unique (concat etime postfix))))
      ((eq org-id-method 'ts)
       (let ((ts (format-time-string org-id-ts-format))
-	    (postfix (if org-id-include-domain
-			 (progn
-			   (require 'message)
-			   (concat "@" (message-make-fqdn))))))
+	    (postfix (when org-id-include-domain
+		       (require 'message)
+		       (concat "@" (message-make-fqdn)))))
 	(setq unique (concat ts postfix))))
      (t (error "Invalid `org-id-method'")))
     (concat prefix unique)))
@@ -419,15 +419,15 @@ So a typical ID could look like \"Org:4nd91V40HI\"."
 	    (substring rnd 18 20)
 	    (substring rnd 20 32))))
 
-(defun org-id-int-to-b36-one-digit (i)
-  "Turn an integer between 0 and 61 into a single character 0..9, A..Z, a..z."
+(defun org-id-int-to-b36-one-digit (integer)
+  "Convert INTEGER between 0 and 61 into a single character 0..9, A..Z, a..z."
   (cond
-   ((< i 10) (+ ?0 i))
-   ((< i 36) (+ ?a i -10))
+   ((< integer 10) (+ ?0 integer))
+   ((< integer 36) (+ ?a integer -10))
    (t (error "Larger that 35"))))
 
 (defun org-id-b36-to-int-one-digit (i)
-  "Turn a character 0..9, A..Z, a..z into a number 0..61.
+  "Convert character 0..9, A..Z, a..z into a number 0..61.
 The input I may be a character, or a single-letter string."
   (and (stringp i) (setq i (string-to-char i)))
   (cond
@@ -435,9 +435,11 @@ The input I may be a character, or a single-letter string."
    ((and (>= i ?a) (<= i ?z)) (+ (- i ?a) 10))
    (t (error "Invalid b36 letter"))))
 
-(defun org-id-int-to-b36 (i &optional length)
-  "Convert an integer to a base-36 number represented as a string."
-  (let ((s ""))
+(defun org-id-int-to-b36 (integer &optional length)
+  "Convert an INTEGER to a base-36 number represented as a string.
+The returned string is padded with leading zeros to LENGTH if necessary."
+  (let ((s "")
+        (i integer))
     (while (> i 0)
       (setq s (concat (char-to-string
 		       (org-id-int-to-b36-one-digit (mod i 36))) s)
@@ -447,11 +449,11 @@ The input I may be a character, or a single-letter string."
 	(setq s (concat (make-string (- length (length s)) ?0) s)))
     s))
 
-(defun org-id-b36-to-int (s)
-  "Convert a base-36 string into the corresponding integer."
+(defun org-id-b36-to-int (string)
+  "Convert a base-36 STRING into the corresponding integer."
   (let ((r 0))
     (mapc (lambda (i) (setq r (+ (* r 36) (org-id-b36-to-int-one-digit i))))
-	  s)
+	  string)
     r))
 
 (defun org-id-time-to-b36 (&optional time)
@@ -489,7 +491,8 @@ and TIME is a Lisp time value (HI LO USEC)."
 Store the relation between files and corresponding IDs.
 This will scan all agenda files, all associated archives, and all
 files currently mentioned in `org-id-locations'.
-When FILES is given, scan also these files."
+When FILES is given, scan also these files.
+If SILENT is non-nil, messages are suppressed."
   (interactive)
   (unless org-id-track-globally
     (error "Please turn on `org-id-track-globally' if you want to track IDs"))
@@ -589,7 +592,7 @@ When FILES is given, scan also these files."
 			(setf (car item) (expand-file-name (car item) loc))))
 		    org-id-locations)))
 	(error
-	 (message "Could not read org-id-values from %s.  Setting it to nil."
+	 (message "Could not read `org-id-values' from %s, setting it to nil"
 		  org-id-locations-file))))
     (setq org-id-files (mapcar 'car org-id-locations))
     (setq org-id-locations (org-id-alist-to-hash org-id-locations))))
@@ -598,7 +601,7 @@ When FILES is given, scan also these files."
   "Add the ID with location FILE to the database of ID locations."
   ;; Only if global tracking is on, and when the buffer has a file
   (unless file
-    (error "bug: org-id-get expects a file-visiting buffer"))
+    (error "`org-id-get' expects a file-visiting buffer"))
   (let ((afile (abbreviate-file-name file)))
     (when (and org-id-track-globally id)
       (unless org-id-locations (org-id-locations-load))
@@ -610,7 +613,8 @@ When FILES is given, scan also these files."
   (add-hook 'kill-emacs-hook 'org-id-locations-save))
 
 (defun org-id-hash-to-alist (hash)
-  "Turn an org-id hash into an alist, so that it can be written to a file."
+  "Turn an org-id HASH into an alist.
+This is to be able to write it to a file."
   (let (res x)
     (maphash
      (lambda (k v)
@@ -621,7 +625,7 @@ When FILES is given, scan also these files."
     res))
 
 (defun org-id-alist-to-hash (list)
-  "Turn an org-id location list into a hash table."
+  "Turn an org-id location LIST into a hash table."
   (let ((res (make-hash-table
 	      :test 'equal
 	      :size (apply '+ (mapcar 'length list))))
@@ -634,7 +638,7 @@ When FILES is given, scan also these files."
     res))
 
 (defun org-id-paste-tracker (txt &optional buffer-or-file)
-  "Update any IDs in TXT and assign BUFFER-OR-FILE to them."
+  "Update any ids in TXT and assign BUFFER-OR-FILE to them."
   (when org-id-track-globally
     (save-match-data
       (setq buffer-or-file (or buffer-or-file (current-buffer)))
@@ -653,7 +657,7 @@ When FILES is given, scan also these files."
 
 ;;;###autoload
 (defun org-id-find-id-file (id)
-  "Query the id database for the file in which this ID is located."
+  "Query the id database for the file in which ID is located."
   (unless org-id-locations (org-id-locations-load))
   (or (and org-id-locations
 	   (hash-table-p org-id-locations)

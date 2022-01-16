@@ -213,6 +213,14 @@ Here is one at the end of a line. {{{results(=2=)}}}
 		  (org-export-use-babel t))
 	      (org-babel-exp-process-buffer))
 	    (buffer-string))))
+  ;; Do not escape characters in inline source blocks.
+  (should
+   (equal "src_c[]{*a}"
+	  (org-test-with-temp-text "src_c[ :exports code ]{*a}"
+	    (let ((org-babel-inline-result-wrap "=%s=")
+		  (org-export-use-babel t))
+	      (org-babel-exp-process-buffer))
+	    (buffer-string))))
   (should
    (equal "src_emacs-lisp[]{(+ 1 1)} {{{results(=2=)}}}"
 	  (org-test-with-temp-text "src_emacs-lisp[:exports both]{(+ 1 1)}"

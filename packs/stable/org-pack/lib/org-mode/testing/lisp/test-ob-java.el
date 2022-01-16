@@ -1,6 +1,6 @@
 ;;; test-ob-java.el --- tests for ob-java.el
 
-;; Copyright (c) 2020-2021 Free Software Foundation, Inc.
+;; Copyright (c) 2020-2022 Free Software Foundation, Inc.
 ;; Authors: Eric Schulte
 ;;          Dan Davison
 ;; Maintainer: Ian Martins <ianxm@jhu.edu>

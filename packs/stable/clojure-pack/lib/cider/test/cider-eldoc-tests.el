@@ -1,6 +1,6 @@
-;;; cider-eldoc-tests.el
+;;; cider-eldoc-tests.el  -*- lexical-binding: t; -*-
 
-;; Copyright © 2012-2021 Tim King, Bozhidar Batsov
+;; Copyright © 2012-2022 Tim King, Bozhidar Batsov
 
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Bozhidar Batsov <bozhidar@batsov.dev>
@@ -81,7 +81,7 @@
 
     (describe "when the given ns doesn't exist"
       (it "returns eldoc formatted symbol"
-        (let ((cider-eldoc-ns-function (lambda (ns) nil)))
+        (let ((cider-eldoc-ns-function (lambda (_ns) nil)))
           (expect (cider-eldoc-format-thing "non-existent-ns" "" "my-map" 'function)
                   :to-equal "my-map")
           (expect (cider-eldoc-format-thing "" "" "my-map" 'function)

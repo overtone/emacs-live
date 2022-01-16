@@ -7,3 +7,5 @@
 *.elc
 .cask
 elpa*
+/clojure-mode-autoloads.el
+/clojure-mode-pkg.el

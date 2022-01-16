@@ -1,6 +1,6 @@
 ;;; magit-git.el --- Git functionality  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2010-2021  The Magit Project Contributors
+;; Copyright (C) 2010-2022  The Magit Project Contributors
 ;;
 ;; You should have received a copy of the AUTHORS.md file which
 ;; lists all contributors.  If not, see http://magit.vc/authors.
@@ -575,10 +575,19 @@ call function WASHER with ARGS as its sole argument."
       (magit-maybe-make-margin-overlay))))
 
 (defun magit-git-version (&optional raw)
+  "Return the installed Git version."
   (--when-let (let (magit-git-global-arguments)
                 (ignore-errors (substring (magit-git-string "version") 12)))
     (if raw it (and (string-match "\\`\\([0-9]+\\(\\.[0-9]+\\)\\{1,2\\}\\)" it)
                     (match-string 1 it)))))
+
+(defun magit-git-version>= (n)
+  "Return t if `magit-git-version's value is greater than or equal to N."
+  (magit--version>= (magit-git-version) n))
+
+(defun magit-git-version< (n)
+  "Return t if `magit-git-version's value is smaller than N."
+  (version< (magit-git-version) n))
 
 ;;; Variables
 
@@ -1199,7 +1208,7 @@ ref that should have been excluded, then that is discarded and
 this function returns nil instead.  This is unfortunate because
 there might be other refs that do match.  To fix that, update
 Git."
-  (if (version< (magit-git-version) "2.13")
+  (if (magit-git-version< "2.13")
       (when-let
           ((ref (magit-git-string "name-rev" "--name-only" "--no-undefined"
                                   (and pattern (concat "--refs=" pattern))
@@ -1691,7 +1700,9 @@ SORTBY is a key or list of keys to pass to the `--sort' flag of
                                         ((and val (pred listp)) val)))
                                (or namespaces magit-list-refs-namespaces))))
     (if (member format '("%(refname)" "%(refname:short)"))
-        (--remove (string-match-p "\\(\\`\\|/\\)HEAD\\'" it) refs)
+        (let ((case-fold-search nil))
+          (--remove (string-match-p "\\(\\`\\|/\\)HEAD\\'" it)
+                    refs))
       refs)))
 
 (defun magit-list-branches ()
@@ -1959,12 +1970,13 @@ Return a list of two integers: (A>B B>A)."
     (cdr (split-string it))))
 
 (defun magit-patch-id (rev)
-  (magit--with-temp-process-buffer
-    (magit-process-file
-     shell-file-name nil '(t nil) nil shell-command-switch
-     (let ((exec (shell-quote-argument (magit-git-executable))))
-       (format "%s diff-tree -u %s | %s patch-id" exec rev exec)))
-    (car (split-string (buffer-string)))))
+  (magit--with-connection-local-variables
+   (magit--with-temp-process-buffer
+     (magit-process-file
+      shell-file-name nil '(t nil) nil shell-command-switch
+      (let ((exec (shell-quote-argument (magit-git-executable))))
+        (format "%s diff-tree -u %s | %s patch-id" exec rev exec)))
+     (car (split-string (buffer-string))))))
 
 (defun magit-rev-format (format &optional rev args)
   (let ((str (magit-git-string "show" "--no-patch"
@@ -2160,7 +2172,7 @@ and this option only controls what face is used.")
 
 (defun magit-update-ref (ref message rev &optional stashish)
   (let ((magit--refresh-cache nil))
-    (or (if (not (version< (magit-git-version) "2.6.0"))
+    (or (if (magit-git-version>= "2.6.0")
             (zerop (magit-call-git "update-ref" "--create-reflog"
                                    "-m" message ref rev
                                    (or (magit-rev-verify ref) "")))

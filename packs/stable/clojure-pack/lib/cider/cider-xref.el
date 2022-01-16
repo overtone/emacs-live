@@ -1,6 +1,6 @@
 ;;; cider-xref.el --- Xref functionality for Clojure -*- lexical-binding: t -*-
 
-;; Copyright © 2019-2021 Bozhidar Batsov and CIDER contributors
+;; Copyright © 2019-2022 Bozhidar Batsov and CIDER contributors
 ;;
 ;; Author: Bozhidar Batsov <bozhidar@batsov.dev>
 
@@ -32,7 +32,6 @@
 (require 'cider-find)
 (require 'cider-util)
 (require 'subr-x)
-(require 'cider-compat)
 
 (require 'cider-client)
 (require 'cider-popup)
@@ -64,7 +63,7 @@ the symbol found by the xref search as argument."
   "Emit a RESULT into current buffer."
   (let ((var-name (nrepl-dict-get result "name")))
     (cider-propertize-region (list 'apropos-symbol var-name
-                                   'action 'cider-xref-doc
+                                   'action #'cider-xref-doc
                                    'help-echo "Display doc")
       (insert-text-button var-name 'type 'apropos-symbol))
     (insert "\n  ")

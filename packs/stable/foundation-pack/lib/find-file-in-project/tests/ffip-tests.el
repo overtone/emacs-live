@@ -140,9 +140,9 @@
       (goto-char 5)
       (should (file-exists-p (buffer-string)))
       ;; absolute path
-      (should (not (string= "tests/git-diff.diff" (buffer-string))))
+      (should (not (string= "tests/git-diff.diff" (replace-regexp-in-string "/<<PKGBUILDDIR>>/" "" (buffer-string)))))
       (ffip-fix-file-path-at-point)
       ;; relative path
-      (should (string= "tests/git-diff.diff" (buffer-string))))))
+      (should (string= "tests/git-diff.diff" (replace-regexp-in-string "/<<PKGBUILDDIR>>/" "" (buffer-string)))))))
 
 (ert-run-tests-batch-and-exit)

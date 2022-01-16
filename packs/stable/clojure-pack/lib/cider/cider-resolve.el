@@ -1,6 +1,6 @@
-;;; cider-resolve.el --- Resolve clojure symbols according to current nREPL connection
+;;; cider-resolve.el --- Resolve clojure symbols according to current nREPL connection  -*- lexical-binding: t; -*-
 
-;; Copyright © 2015-2021 Bozhidar Batsov, Artur Malabarba and CIDER contributors
+;; Copyright © 2015-2022 Bozhidar Batsov, Artur Malabarba and CIDER contributors
 
 ;; Author: Artur Malabarba <bruce.connor.am@gmail.com>
 
@@ -118,7 +118,7 @@ NS can be the namespace name, or a dict of the namespace itself."
   (when-let* ((dict (if (stringp ns)
                         (cider-resolve--get-in ns)
                       ns)))
-    (nrepl-dbind-response dict (interns refers aliases)
+    (nrepl-dbind-response dict (interns _refers aliases)
       (append (cdr interns)
               (nrepl-dict-flat-map (lambda (alias namespace)
                                      (nrepl-dict-flat-map (lambda (sym meta)

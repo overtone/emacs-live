@@ -42,11 +42,9 @@
 
 (defun fuzzy-current-time-float ()
   (let ((time (current-time)))
-    (+ (* (float (first time))
-          (lsh 2 16))
-       (float (second time))
-       (/ (float (third time))
-          1000000))))
+    (+ (* (float (cl-first time)) (lsh 2 16))
+       (float (cl-second time))
+       (/ (float (cl-third time)) 1000000))))
 
 (cl-defmacro fuzzy-with-stopwatch
     ((&optional (elapsed-name 'elapsed))
@@ -80,11 +78,11 @@
   (let ((elapsed (gensym "ELAPSED")))
     `(catch 'timeout
        (fuzzy-with-stopwatch (,elapsed)
-         (cl-flet ((,tick-name
-                    ()
-                    (when (and ,timeout (< ,timeout (,elapsed)))
-                      (throw 'timeout ,timeout-result))))
-           ,@body)))))
+                             (cl-flet ((,tick-name
+                                        ()
+                                        (when (and ,timeout (< ,timeout (,elapsed)))
+                                          (throw 'timeout ,timeout-result))))
+                               ,@body)))))
 
 (defun fuzzy-count-matches-in-string (regexp string &optional start end)
   (setq start (or start 0)
@@ -192,7 +190,7 @@ The score must be between 0.0 and 1.0."
   "Like `all-completions' but with fuzzy matching."
   (cl-loop with length = (length string)
            for str in collection
-       for len = (min (length str)
+           for len = (min (length str)
                           (+ length fuzzy-match-accept-length-difference))
            if (fuzzy-match string (substring str 0 len))
            collect str))
@@ -374,23 +372,23 @@ The score must be between 0.0 and 1.0."
 
 (cl-defun fuzzy-quicksilver-realtime-abbrev-score
     ( list abbrev
-      &key limit timeout (quality 0.7)
-      &aux new-list)
+           &key limit timeout (quality 0.7)
+           &aux new-list)
   (fuzzy-with-timeout (timeout (nreverse new-list))
-    (cl-loop with length = 0
-             for string in list
-             for score = (fuzzy-quicksilver-abbrev-score string abbrev)
-             if (>= score quality) do
-             (fuzzy-add-to-list-as-sorted
-              'new-list (cons string score)
-              :test '<
-              :key 'cdr)
-             (cl-incf length)
-             if (and limit (> length limit)) do
-             (pop new-list)
-             (setq length limit)
-             do (tick)
-             finally return (nreverse new-list))))
+                      (cl-loop with length = 0
+                               for string in list
+                               for score = (fuzzy-quicksilver-abbrev-score string abbrev)
+                               if (>= score quality) do
+                               (fuzzy-add-to-list-as-sorted
+                                'new-list (cons string score)
+                                :test '<
+                                :key 'cdr)
+                               (cl-incf length)
+                               if (and limit (> length limit)) do
+                               (pop new-list)
+                               (setq length limit)
+                               do (tick)
+                               finally return (nreverse new-list))))
 
 ;;; _
 (provide 'fuzzy)

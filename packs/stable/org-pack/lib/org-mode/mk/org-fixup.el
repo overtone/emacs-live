@@ -27,6 +27,21 @@
 (require 'autoload)
 (require 'org-compat "org-compat.el")
 
+(defun org-make-manual ()
+  "Generate the Texinfo file out of the Org manual."
+  (require 'ox-texinfo)
+  (find-file "../doc/org-manual.org")
+  (org-texinfo-export-to-texinfo))
+
+(defun org-make-guide ()
+  "Generate the Texinfo file out of the Org guide."
+  (require 'ox-texinfo)
+  (find-file "../doc/org-guide.org")
+  (org-texinfo-export-to-texinfo))
+
+(make-obsolete 'org-make-manuals
+               "use org-make-manual and org-make-guide."
+               "9.6")
 (defun org-make-manuals ()
   "Generate the Texinfo files out of Org manuals."
   (require 'ox-texinfo)

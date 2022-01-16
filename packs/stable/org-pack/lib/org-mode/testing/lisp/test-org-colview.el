@@ -991,6 +991,7 @@
 	(let ((org-columns-default-format "%A{min}")
 	      (org-columns-ellipses "..")
 	      (org-inlinetask-min-level 15))
+          (org-element-update-syntax)
 	  (org-columns))
 	(get-char-property (point-min) 'org-columns-value)))))
   ;; Handle `org-columns-modify-value-for-display-function', even with

@@ -1,11 +1,11 @@
 .EXPORT_ALL_VARIABLES:
 .NOTPARALLEL: .PHONY
 # Additional distribution files
-DISTFILES_extra=  Makefile request-assign-future.txt contrib etc
+DISTFILES_extra=  Makefile request-assign-future.txt etc
 
 LISPDIRS      = lisp
 OTHERDIRS     = doc etc
-CLEANDIRS     = contrib testing mk
+CLEANDIRS     = testing mk
 SUBDIRS       = $(OTHERDIRS) $(LISPDIRS)
 INSTSUB       = $(SUBDIRS:%=install-%)
 ORG_MAKE_DOC ?= info html pdf
@@ -15,8 +15,8 @@ ifneq ($(wildcard .git),)
   ifeq ($(ORGVERSION),)
     # In elpa.git, there are no tags available.  Fall back to using
     # the org.el header.
-    ORGVERSION := $(shell $(BATCH) --eval "(require 'lisp-mnt)" \
-      --visit lisp/org.el --eval '(princ (lm-header "version"))')
+    ORGVERSION := $(patsubst %-dev,%,$(shell $(BATCH) --eval "(require 'lisp-mnt)" \
+      --visit lisp/org.el --eval '(princ (lm-header "version"))'))
     GITVERSION ?= $(ORGVERSION)-g$(shell git rev-parse --short=6 HEAD)
   else
     GITVERSION ?= $(shell git describe --match release\* --abbrev=6 HEAD)
@@ -37,7 +37,7 @@ endif
 	check test install $(INSTSUB) \
 	info html pdf card refcard doc docs \
 	autoloads cleanall clean $(CLEANDIRS:%=clean%) \
-	clean-install cleanelc cleandirs cleanaddcontrib \
+	clean-install cleanelc cleandirs \
 	cleanlisp cleandoc cleandocs cleantest \
 	compile compile-dirty uncompiled \
 	config config-test config-exe config-all config-eol config-version \
@@ -55,13 +55,6 @@ config config-all::
 	$(info ========= Emacs executable and Installation paths)
 	$(foreach var,$(CONF_BASE),$(info $(var)	= $($(var))$(EOL)))
 	$(foreach var,$(CONF_DEST),$(info $(var)	= $(DESTDIR)$($(var))$(EOL)))
-	$(info ========= Additional files from contrib/lisp)
-	$(info $(notdir \
-		$(wildcard \
-		$(addsuffix .el, \
-		$(addprefix contrib/lisp/, \
-		$(basename \
-		$(notdir $(ORG_ADD_CONTRIB))))))))
 config-test config-all::
 	$(info )
 	$(info ========= Test configuration)
@@ -115,7 +108,6 @@ ifeq ($(TEST_NO_AUTOCLEAN),) # define this variable to leave $(testdir) around f
 	$(MAKE) cleantest
 endif
 
-up0::	cleanaddcontrib
 up0 up1 up2::
 	git checkout $(GIT_BRANCH)
 	git remote update
@@ -145,7 +137,7 @@ cleandirs:
 
 clean:	cleanlisp cleandoc
 
-cleanall: cleandirs cleantest cleanaddcontrib
+cleanall: cleandirs cleantest
 	-$(FIND) . \( -name \*~ -o -name \*# -o -name .#\* \) -exec $(RM) {} +
 	-$(FIND) $(CLEANDIRS) \( -name \*~ -o -name \*.elc \) -exec $(RM) {} +
 
@@ -155,10 +147,6 @@ $(CLEANDIRS:%=clean%):
 cleanelc:
 	$(MAKE) -C lisp $@
 
-cleanaddcontrib:
-	-$(RM) $(wildcard $(addprefix lisp/,$(notdir $(wildcard contrib/lisp/*.el))))
-
-cleanlisp:	cleanaddcontrib
 cleanlisp cleandoc:
 	$(MAKE) -C $(@:clean%=%) clean
 

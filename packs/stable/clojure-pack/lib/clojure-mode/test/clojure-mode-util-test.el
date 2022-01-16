@@ -25,11 +25,13 @@
 (require 'clojure-mode)
 (require 'cl-lib)
 (require 'buttercup)
-
+(require 'test-helper "test/utils/test-helper")
 
 (describe "clojure-mode-version"
   (it "should not be nil"
     (expect clojure-mode-version)))
+
+(defvar clojure-cache-project)
 
 (let ((project-dir "/home/user/projects/my-project/")
       (clj-file-path "/home/user/projects/my-project/src/clj/my_project/my_ns/my_file.clj")
@@ -45,13 +47,13 @@
   (describe "clojure-expected-ns"
     (it "should return the namespace matching a path"
       (cl-letf (((symbol-function 'clojure-project-relative-path)
-                 (lambda (&optional current-buffer-file-name)
+                 (lambda (&optional _current-buffer-file-name)
                    project-relative-clj-file-path)))
         (expect (string= (clojure-expected-ns clj-file-path) clj-file-ns))))
 
     (it "should return the namespace even without a path"
       (cl-letf (((symbol-function 'clojure-project-relative-path)
-                 (lambda (&optional current-buffer-file-name)
+                 (lambda (&optional _current-buffer-file-name)
                    project-relative-clj-file-path)))
         (expect (string= (let ((buffer-file-name clj-file-path))
                            (clojure-expected-ns))

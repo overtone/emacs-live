@@ -1,4 +1,4 @@
-About [![Build Status](https://github.com/mooz/js2-mode/actions/workflows/test.yml/badge.svg)](https://github.com/mooz/js2-mode/actions/workflows/test.yml) [![MELPA](https://melpa.org/packages/js2-mode-badge.svg)](https://melpa.org/#/js2-mode)
+About [![Build Status](https://github.com/mooz/js2-mode/actions/workflows/test.yml/badge.svg)](https://github.com/mooz/js2-mode/actions/workflows/test.yml) [![GNU ELPA](https://elpa.gnu.org/packages/js2-mode.svg)](https://elpa.gnu.org/packages/js2-mode.html) [![MELPA](https://melpa.org/packages/js2-mode-badge.svg)](https://melpa.org/#/js2-mode)
 ======
 
 Improved JavaScript editing mode for GNU Emacs ([description here](http://elpa.gnu.org/packages/js2-mode.html)).

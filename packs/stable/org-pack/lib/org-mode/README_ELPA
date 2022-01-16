@@ -17,9 +17,6 @@ that are also part of GNU Emacs.
 
 There are other ELPA online, offering more packages.
 
-Some contain the org-plus-contrib-*.tar ELPA package, which bundles
-the core Org files plus many additional contributed libraries.
-
 All ELPA packages of Org contain:
 
 README_ELPA

@@ -22,12 +22,16 @@
 
 ;;; Helper functions
 
-(defun org-test-publish (properties handler)
+(defun org-test-publish (properties handler &optional remove-prop)
   "Publish a project defined by PROPERTIES.
 Call HANDLER with the publishing directory as its sole argument.
 Unless set otherwise in PROPERTIES, `:base-directory' is set to
 \"examples/pub/\" sub-directory from test directory and
-`:publishing-function' is set to `org-publish-attachment'."
+`:publishing-function' is set to `org-publish-attachment'.
+Because `org-publish-property' uses `plist-member' to check the
+existence of a property, a property with a value nil is different
+from a non-existing property.  Properties in REMOVE-PROP will be
+removed from the final plist."
   (declare (indent 1))
   (let* ((org-publish-use-timestamps-flag nil)
 	 (org-publish-cache nil)
@@ -35,13 +39,15 @@ Unless set otherwise in PROPERTIES, `:base-directory' is set to
 	 (pub-dir (make-temp-file "org-test" t))
 	 (org-publish-timestamp-directory
 	  (expand-file-name ".org-timestamps/" pub-dir))
+         (props (org-plist-delete-all
+                 (org-combine-plists
+                  `(:base-directory ,base-dir
+                    :publishing-function org-publish-attachment)
+                  properties
+                  `(:publishing-directory ,pub-dir))
+                 remove-prop))
 	 (project
-	  `("test" ,@(org-combine-plists
-		      `(:base-directory
-			,base-dir
-			:publishing-function org-publish-attachment)
-		      properties
-		      `(:publishing-directory ,pub-dir)))))
+	  `("test" ,@props)))
     (unwind-protect
 	(progn
 	  (org-publish-projects (list project))
@@ -92,7 +98,19 @@ Unless set otherwise in PROPERTIES, `:base-directory' is set to
 	    (lambda (dir)
 	      (remove ".org-timestamps"
 		      (cl-remove-if #'file-directory-p
-				    (directory-files dir))))))))
+				    (directory-files dir)))))))
+
+  ;; Check the default trasformation function,
+  ;; org-html-publish-to-html. Because org-test-publish uses
+  ;; org-publish-attachment by default, we must not just override with
+  ;; nil but tell it to remove the :publishing-function from the list.
+  (should
+   (let ((func (lambda (dir)
+                 (with-temp-buffer
+                   (insert-file-contents (expand-file-name "a.html" dir))
+                   (buffer-string)))))
+    (equal (org-test-publish nil func '(:publishing-function))
+           (org-test-publish '(:publishing-function org-html-publish-to-html) func)))))
 
 
 ;;; Site-map

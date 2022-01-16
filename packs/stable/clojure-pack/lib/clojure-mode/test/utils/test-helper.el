@@ -95,4 +95,6 @@ DESCRIPTION is a string with the description of the spec."
          (expect (buffer-string) :to-equal expected-state)
          (expect (point) :to-equal expected-cursor-pos)))))
 
+
+(provide 'test-helper)
 ;;; test-helper.el ends here

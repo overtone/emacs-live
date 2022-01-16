@@ -15,8 +15,8 @@ jobs:
     strategy:
       matrix:
         emacs_version: ['27.1', '26.3', '25.2']
-        otp: ['21.3', '23.2']
-        elixir: ['1.8.2', '1.11.4']
+        otp: ['22.3', '23.2', '24.2']
+        elixir: ['1.9.4', '1.11.4', '1.13.1']
 
     steps:
       - name: Setup Emacs

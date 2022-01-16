@@ -1,6 +1,6 @@
-;;; cider-tests.el
+;;; cider-tests.el  -*- lexical-binding: t; -*-
 
-;; Copyright © 2012-2021 Tim King, Bozhidar Batsov
+;; Copyright © 2012-2022 Tim King, Bozhidar Batsov
 
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Bozhidar Batsov <bozhidar@batsov.dev>
@@ -124,7 +124,7 @@
                                 " -- update-in :plugins conj "
                                 (shell-quote-argument "[cider/cider-nrepl \"0.10.0-SNAPSHOT\"]")
                                 " -- update-in :plugins conj "
-                                (shell-quote-argument "[mx.cider/enrich-classpath \"1.5.1\"]")
+                                (shell-quote-argument "[mx.cider/enrich-classpath \"1.6.2\"]")
                                 " -- update-in :middleware conj cider.enrich-classpath/middleware"
                                 " -- repl :headless")))
 
@@ -137,7 +137,7 @@
                          " -- update-in :plugins conj "
                          (shell-quote-argument "[cider/cider-nrepl \"0.10.0-SNAPSHOT\"]")
                          " -- update-in :plugins conj "
-                         (shell-quote-argument "[mx.cider/enrich-classpath \"1.5.1\"]")
+                         (shell-quote-argument "[mx.cider/enrich-classpath \"1.6.2\"]")
                          " -- update-in :middleware conj cider.enrich-classpath/middleware"
                          " -- repl :headless")))
 
@@ -149,7 +149,7 @@
                                 " -- update-in :plugins conj "
                                 (shell-quote-argument "[cider/cider-nrepl \"0.10.0-SNAPSHOT\"]")
                                 " -- update-in :plugins conj "
-                                (shell-quote-argument "[mx.cider/enrich-classpath \"1.5.1\"]")
+                                (shell-quote-argument "[mx.cider/enrich-classpath \"1.6.2\"]")
                                 " -- update-in :middleware conj cider.enrich-classpath/middleware"
                                 " -- repl :headless")))
 
@@ -184,7 +184,7 @@
                                 " -- update-in :plugins conj "
                                 (shell-quote-argument "[cider/cider-nrepl \"0.11.0\"]")
                                 " -- update-in :plugins conj "
-                                (shell-quote-argument "[mx.cider/enrich-classpath \"1.5.1\"]")
+                                (shell-quote-argument "[mx.cider/enrich-classpath \"1.6.2\"]")
                                 " -- update-in :middleware conj cider.enrich-classpath/middleware"
                                 " -- repl :headless")))
 
@@ -217,7 +217,7 @@
                                 " -- update-in :plugins conj "
                                 (shell-quote-argument "[cider/cider-nrepl \"0.11.0\"]")
                                 " -- update-in :plugins conj "
-                                (shell-quote-argument "[mx.cider/enrich-classpath \"1.5.1\"]")
+                                (shell-quote-argument "[mx.cider/enrich-classpath \"1.6.2\"]")
                                 " -- update-in :middleware conj cider.enrich-classpath/middleware"
                                 " -- repl :headless")))
     (it "can concat in a boot project"
@@ -282,7 +282,7 @@
       (spy-on 'cider-jack-in-normalized-lein-plugins
               :and-return-value '(("refactor-nrepl" "2.0.0")
                                   ("cider/cider-nrepl" "0.11.0")
-                                  ("mx.cider/enrich-classpath" "1.5.1")))
+                                  ("mx.cider/enrich-classpath" "1.6.2")))
       (setq-local cider-jack-in-dependencies-exclusions '()))
     (it "uses them in a lein project"
       (expect (cider-inject-jack-in-dependencies "" "repl :headless" 'lein)
@@ -293,7 +293,7 @@
                                 " -- update-in :plugins conj "
                                 (shell-quote-argument "[cider/cider-nrepl \"0.11.0\"]")
                                 " -- update-in :plugins conj "
-                                (shell-quote-argument "[mx.cider/enrich-classpath \"1.5.1\"]")
+                                (shell-quote-argument "[mx.cider/enrich-classpath \"1.6.2\"]")
                                 " -- update-in :middleware conj cider.enrich-classpath/middleware"
                                 " -- repl :headless"))))
 
@@ -432,14 +432,20 @@
                                      " \"[cider.nrepl/cider-middleware]\"]}}}' -M:test:cider/nrepl")
                                    ""))
             (deps '(("nrepl/nrepl" "0.8.3"))))
-        (let ((cider-clojure-cli-aliases "test"))
+        (let ((cider-clojure-cli-aliases ":test"))
           (expect (cider-clojure-cli-jack-in-dependencies nil nil deps)
                   :to-equal expected))
-        (describe "should strip out leading -A and -M's"
+        (describe "should strip out leading exec opts -A -M -T -X"
           (let ((cider-clojure-cli-aliases "-A:test"))
            (expect (cider-clojure-cli-jack-in-dependencies nil nil deps)
                    :to-equal expected))
           (let ((cider-clojure-cli-aliases "-M:test"))
+            (expect (cider-clojure-cli-jack-in-dependencies nil nil deps)
+                    :to-equal expected))
+          (let ((cider-clojure-cli-aliases "-T:test"))
+            (expect (cider-clojure-cli-jack-in-dependencies nil nil deps)
+                    :to-equal expected))
+          (let ((cider-clojure-cli-aliases "-T:test"))
             (expect (cider-clojure-cli-jack-in-dependencies nil nil deps)
                     :to-equal expected)))))
     (it "allows for global options"
@@ -449,7 +455,7 @@
                                      " \"[cider.nrepl/cider-middleware]\"]}}}' -M:test:cider/nrepl")
                                    ""))
             (deps '(("nrepl/nrepl" "0.8.3"))))
-        (let ((cider-clojure-cli-aliases "test"))
+        (let ((cider-clojure-cli-aliases ":test"))
           (expect (cider-clojure-cli-jack-in-dependencies "-J-Djdk.attach.allowAttachSelf" nil deps)
                   :to-equal expected))))))
 

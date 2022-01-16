@@ -45,6 +45,5 @@
    (org-babel-next-src-block 3)
    (should (= 6 (org-babel-execute-src-block)))))
 
-(provide 'test-ob-R)
-
+(provide 'test-property-inheritance)
 ;;; test-property-inheritance.el ends here

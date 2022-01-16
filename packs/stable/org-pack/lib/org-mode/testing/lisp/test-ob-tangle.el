@@ -308,7 +308,7 @@ another block
 	      (delete-file file)))))
   ;; Preserve order with mixed languages.
   (should
-   (equal '("1" "3" "2" "4")
+   (equal '("1" "2" "3" "4")
 	  (let ((file (make-temp-file "org-tangle-")))
 	    (unwind-protect
 		(progn

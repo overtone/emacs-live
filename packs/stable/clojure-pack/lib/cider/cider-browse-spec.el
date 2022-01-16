@@ -1,6 +1,6 @@
-;;; cider-browse-spec.el --- CIDER spec browser
+;;; cider-browse-spec.el --- CIDER spec browser  -*- lexical-binding: t; -*-
 
-;; Copyright © 2017-2021 Juan Monetta, Bozhidar Batsov and CIDER contributors
+;; Copyright © 2017-2022 Juan Monetta, Bozhidar Batsov and CIDER contributors
 
 ;; Author: Juan Monetta <jpmonettas@gmail.com>
 
@@ -35,7 +35,6 @@
 ;;; Code:
 
 (require 'cider-client)
-(require 'cider-compat)
 (require 'cider-popup)
 (require 'cider-util)
 (require 'cl-lib)
@@ -257,7 +256,7 @@ Return the result as a string."
     (clojure-mode)
     (insert (cider-browse-spec--pprint spec-form))
     (indent-region (point-min) (point-max))
-    (cider--font-lock-ensure)
+    (font-lock-ensure)
     (buffer-string)))
 
 (defun cider-browse-spec--draw-spec-buffer (buffer spec spec-form)

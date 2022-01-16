@@ -1,27 +1,29 @@
+SHELL := /usr/bin/env bash
+
 EMACS ?= emacs
 CASK ?= cask
-EMACS23=emacs23
 
-ELPA_DIR = $(shell EMACS=$(EMACS) $(CASK) package-directory)
+PKG-FILES := popup.el
 
-.PHONY: test test-nw test-emacs23 test-emacs23-nw travis-ci
+TEST-FILES := $(shell ls test/popup-*.el)
 
-test:
-	$(CASK) exec $(EMACS) -Q -L . -l tests/run-test.el
+.PHONY: clean checkdoc lint unix-build unix-compile	unix-test
 
-test-nw:
-	$(CASK) exec $(EMACS) -Q -nw -L . -l tests/run-test.el
+unix-ci: clean unix-build unix-compile
 
-test-emacs23: tests/ert.el
-	${EMACS23} -Q -L . -l test/ert.el -l tests/run-test.el
-
-test-emacs23-nw: tests/ert.el
-	$(EMACS23) -Q -nw -L . -l test/ert.el -l tests/run-test.el
-
-travis-ci: elpa
-	$(CASK) exec $(EMACS) -batch -Q -l tests/run-test.el
-
-elpa: $(ELPA_DIR)
-$(ELPA_DIR): Cask
+unix-build:
 	$(CASK) install
-	touch $@
+
+unix-compile:
+	@echo "Compiling..."
+	@$(CASK) $(EMACS) -Q --batch \
+		-L . \
+		--eval '(setq byte-compile-error-on-warn t)' \
+		-f batch-byte-compile $(PKG-FILES)
+
+unix-test:
+	@echo "Testing..."
+	$(CASK) exec ert-runner -L . $(LOAD-TEST-FILES) -t '!no-win' -t '!org'
+
+clean:
+	rm -rf .cask *.elc

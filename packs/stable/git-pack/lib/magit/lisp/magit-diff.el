@@ -1,6 +1,6 @@
 ;;; magit-diff.el --- inspect Git diffs  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2010-2021  The Magit Project Contributors
+;; Copyright (C) 2010-2022  The Magit Project Contributors
 ;;
 ;; You should have received a copy of the AUTHORS.md file which
 ;; lists all contributors.  If not, see http://magit.vc/authors.
@@ -2058,7 +2058,7 @@ Staging and applying changes is documented in info node
     (when (and (not (equal cmd "merge-tree"))
                (pcase (magit-repository-local-get 'diff-ita-kludge-p 'unset)
                  (`unset
-                  (let ((val (version<= "2.19.0" (magit-git-version))))
+                  (let ((val (magit-git-version>= "2.19.0")))
                     (magit-repository-local-set 'diff-ita-kludge-p val)
                     val))
                  (val val)))

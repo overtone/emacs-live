@@ -19,6 +19,26 @@
 
 ;;; Code:
 
+(ert-deftest test-org-lint/add-checker ()
+  "Test `org-lint-add-checker'."
+  ;; Name should be a non-nil symbol.
+  (should-error (org-lint-add-checker nil "Nil check" #'ignore))
+  (should-error (org-lint-add-checker 2 "Odd check" #'ignore))
+  ;; Check function should be valid.
+  (should-error (org-lint-add-checker 'check "check" (gensym)))
+  ;; Checkers must be named uniquely.
+  (should
+   (= 1
+      (let ((org-lint--checkers nil))
+        (org-lint-add-checker 'check "check" #'ignore)
+        (length org-lint--checkers))))
+  (should-not
+   (= 2
+      (let ((org-lint--checkers nil))
+        (org-lint-add-checker 'check "check" #'ignore)
+        (org-lint-add-checker 'check "other check" #'ignore)
+        (length org-lint--checkers)))))
+
 (ert-deftest test-org-lint/duplicate-custom-id ()
   "Test `org-lint-duplicate-custom-id' checker."
   (should
@@ -313,6 +333,9 @@ This is not a node property
   "Test `org-lint-unknown-options-item' checker."
   (should
    (org-test-with-temp-text "#+options: foobarbaz:t"
+     (org-lint '(unknown-options-item))))
+  (should
+   (org-test-with-temp-text "#+options: H:"
      (org-lint '(unknown-options-item)))))
 
 (ert-deftest test-org-lint/invalid-macro-argument-and-template ()
@@ -336,6 +359,12 @@ This is not a node property
   (should-not
    (org-test-with-temp-text
        "#+macro: valid $1 $2\n{{{valid(1, 2)}}}"
+     (org-lint '(invalid-macro-argument-and-template))))
+  (should
+   (org-test-with-temp-text "{{{keyword}}}"
+     (org-lint '(invalid-macro-argument-and-template))))
+  (should
+   (org-test-with-temp-text "{{{keyword(one, too many)}}}"
      (org-lint '(invalid-macro-argument-and-template)))))
 
 (ert-deftest test-org-lint/undefined-footnote-reference ()
@@ -564,6 +593,56 @@ SCHEDULED: <2012-03-29 thu.>"
    (org-test-with-temp-text "* H :tag::"
      (org-lint '(spurious-colons)))))
 
+(ert-deftest test-org-lint/non-existent-bibliography ()
+  "Test `org-lint-non-existent-bibliography' checker."
+  (should
+   (org-test-with-temp-text "#+bibliography: Idonotexist.bib"
+     (org-lint '(non-existent-bibliography)))))
+
+(ert-deftest test-org-lint/missing-print-bibliography ()
+  "Test `org-lint-missing-print-bibliography' checker."
+  (should
+   (org-test-with-temp-text "[cite:@foo]"
+     (org-lint '(missing-print-bibliography))))
+  (should-not
+   (org-test-with-temp-text "[cite:@foo]\n#+print_bibliography:"
+     (org-lint '(missing-print-bibliography))))
+  (should-not
+   (org-test-with-temp-text ""
+     (org-lint '(missing-print-bibliography)))))
+
+(ert-deftest test-org-lint/invalid-cite-export-declaration ()
+  "Test `org-lint-invalid-cite-export-declaration' checker."
+  (should
+   (org-test-with-temp-text "#+cite_export: "
+     (org-lint '(invalid-cite-export-declaration))))
+  (should
+   (org-test-with-temp-text "#+cite_export: 2"
+     (org-lint '(invalid-cite-export-declaration))))
+  (should
+   (org-test-with-temp-text "#+cite_export: basic bar baz qux"
+     (org-lint '(invalid-cite-export-declaration))))
+  (should
+   (org-test-with-temp-text "#+cite_export: basic \"bar"
+     (org-lint '(invalid-cite-export-declaration))))
+  (should
+   (org-test-with-temp-text "#+cite_export: unknown"
+     (org-lint '(invalid-cite-export-declaration))))
+  (should-not
+   (org-test-with-temp-text "#+cite_export: basic"
+     (org-lint '(invalid-cite-export-declaration)))))
+
+(ert-deftest test-org-lint/incomplete-citation ()
+  "Test `org-lint-incomplete-citation' checker."
+  (should
+   (org-test-with-temp-text "[cite:foo]"
+     (org-lint '(incomplete-citation))))
+  (should
+   (org-test-with-temp-text "[cite:@foo"
+     (org-lint '(incomplete-citation))))
+  (should-not
+   (org-test-with-temp-text "[cite:@foo]"
+     (org-lint '(incomplete-citation)))))
 
 (provide 'test-org-lint)
 ;;; test-org-lint.el ends here

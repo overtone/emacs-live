@@ -1,6 +1,6 @@
 ;;; cider-common-tests.el ---                        -*- lexical-binding: t; -*-
 
-;; Copyright © 2012-2021 Tim King, Bozhidar Batsov
+;; Copyright © 2012-2022 Tim King, Bozhidar Batsov
 
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Bozhidar Batsov <bozhidar@batsov.dev>
@@ -93,8 +93,6 @@
   ;; drive letter on windows.
   :var ((/docker/src (expand-file-name "/docker/src"))
         (/home/host/project/src (expand-file-name "/home/host/project/src"))
-        (/docker/src/namespace.clj (expand-file-name "/docker/src/namespace.clj"))
-        (/home/host/project/src/namespace.clj (expand-file-name "/home/host/project/src/namespace.clj"))
         (/home/host/random/file.clj (expand-file-name "/home/host/random/file.clj"))
         (/src (expand-file-name "/src"))
         (/host (expand-file-name "/host"))

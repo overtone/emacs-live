@@ -6,3 +6,13 @@ SCHEDULED: <2017-07-19 Wed>
 ** subnote
 * test code 216bc1ff1d862e78183e38ee9a4da504919b9878
 <2019-01-08 Tue>
+* test agenda non-scheduled
+#+begin_src org
+SCHEDULED: <2022-01-03 Mon>
+#+end_src
+* colon scheduled entry
+: SCHEDULED: <2022-01-03 Mon>
+* begin_example scheduled entry
+#+begin_example
+SCHEDULED: <2022-01-03 Mon>
+#+end_example

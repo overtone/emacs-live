@@ -1,4 +1,4 @@
-;;; clojure-mode-extra-font-locking.el --- Extra font-locking for Clojure mode
+;;; clojure-mode-extra-font-locking.el --- Extra font-locking for Clojure mode  -*- lexical-binding: t; -*-
 
 ;; Copyright © 2014-2021 Bozhidar Batsov
 ;;

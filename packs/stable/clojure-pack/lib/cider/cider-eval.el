@@ -1,7 +1,7 @@
 ;;; cider-eval.el --- Interactive evaluation (compilation) functionality -*- lexical-binding: t -*-
 
 ;; Copyright © 2012-2013 Tim King, Phil Hagelberg, Bozhidar Batsov
-;; Copyright © 2013-2021 Bozhidar Batsov, Artur Malabarba and CIDER contributors
+;; Copyright © 2013-2022 Bozhidar Batsov, Artur Malabarba and CIDER contributors
 ;;
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Phil Hagelberg <technomancy@gmail.com>
@@ -52,7 +52,6 @@
 
 (require 'cider-client)
 (require 'cider-common)
-(require 'cider-compat)
 (require 'cider-jar)
 (require 'cider-overlays)
 (require 'cider-popup)
@@ -531,10 +530,12 @@ It delegates the actual error content to the eval or op handler."
                                   " - "))
 
 
-(defconst cider-clojure-compilation-regexp (eval
-                                            `(rx bol (or ,cider-clojure-1.9-error
-                                                         ,cider-clojure-warning
-                                                         ,cider-clojure-1.10-error))))
+(defconst cider-clojure-compilation-regexp
+  (eval
+   `(rx bol (or ,cider-clojure-1.9-error
+                ,cider-clojure-warning
+                ,cider-clojure-1.10-error))
+   t))
 
 
 (defvar cider-compilation-regexp
@@ -1402,13 +1403,13 @@ Useful when the running nREPL on remote host."
   (mapcar #'cider-load-file
           (directory-files-recursively directory "\\.clj[cs]?$")))
 
-(defalias 'cider-eval-file 'cider-load-file
+(defalias 'cider-eval-file #'cider-load-file
   "A convenience alias as some people are confused by the load-* names.")
 
-(defalias 'cider-eval-all-files 'cider-load-all-files
+(defalias 'cider-eval-all-files #'cider-load-all-files
   "A convenience alias as some people are confused by the load-* names.")
 
-(defalias 'cider-eval-buffer 'cider-load-buffer
+(defalias 'cider-eval-buffer #'cider-load-buffer
   "A convenience alias as some people are confused by the load-* names.")
 
 (defun cider-load-all-project-ns ()

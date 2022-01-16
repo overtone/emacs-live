@@ -1,9 +1,9 @@
 ;;; ob-dot.el --- Babel Functions for dot            -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2009-2021 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2022 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
-;; Maintainer: Justin Abrahms
+;; Maintainer: Justin Abrahms <justin@abrah.ms>
 ;; Keywords: literate programming, reproducible research
 ;; Homepage: https://orgmode.org
 

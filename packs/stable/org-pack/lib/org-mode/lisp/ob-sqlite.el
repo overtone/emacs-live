@@ -1,8 +1,9 @@
 ;;; ob-sqlite.el --- Babel Functions for SQLite Databases -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2010-2021 Free Software Foundation, Inc.
+;; Copyright (C) 2010-2022 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
+;; Maintainer: Nick Savage <nick@nicksavage.ca>
 ;; Keywords: literate programming, reproducible research
 ;; Homepage: https://orgmode.org
 
@@ -113,7 +114,7 @@ This function is called by `org-babel-execute-src-block'."
 
 (defun org-babel-sqlite-expand-vars (body vars)
   "Expand the variables held in VARS in BODY."
-  (declare (obsolete "use `org-babel-sql-expand-vars' instead." "Org 9.5"))
+  (declare (obsolete "use `org-babel-sql-expand-vars' instead." "9.5"))
   (org-babel-sql-expand-vars body vars t))
 
 (defun org-babel-sqlite-table-or-scalar (result)
@@ -124,7 +125,7 @@ This function is called by `org-babel-execute-src-block'."
     (mapcar (lambda (row)
 	      (if (eq 'hline row)
 		  'hline
-		(mapcar #'org-babel-string-read row)))
+		(mapcar #'org-babel-sqlite--read-cell row)))
 	    result)))
 
 (defun org-babel-sqlite-offset-colnames (table headers-p)
@@ -137,6 +138,10 @@ This function is called by `org-babel-execute-src-block'."
   "Raise an error because support for SQLite sessions isn't implemented.
 Prepare SESSION according to the header arguments specified in PARAMS."
   (error "SQLite sessions not yet implemented"))
+
+(defun org-babel-sqlite--read-cell (cell)
+  "Process CELL to remove unnecessary characters."
+  (org-babel-read cell t))
 
 (provide 'ob-sqlite)
 

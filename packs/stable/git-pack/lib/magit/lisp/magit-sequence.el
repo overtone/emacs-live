@@ -1,6 +1,6 @@
 ;;; magit-sequence.el --- history manipulation in Magit  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2011-2021  The Magit Project Contributors
+;; Copyright (C) 2011-2022  The Magit Project Contributors
 ;;
 ;; You should have received a copy of the AUTHORS.md file which
 ;; lists all contributors.  If not, see http://magit.vc/authors.
@@ -426,7 +426,7 @@ without prompting."
    ("-k" "Inhibit removal of email cruft"    ("-k" "--keep"))
    ("-b" "Limit removal of email cruft"      "--keep-non-patch")
    ("-d" "Use author date as committer date" "--committer-date-is-author-date")
-   ("-D" "Use committer date as author date" "--ignore-date")
+   ("-t" "Use current time as author date"   "--ignore-date")
    ("-s" "Add Signed-off-by lines"           ("-s" "--signoff"))
    (5 magit:--gpg-sign)]
   ["Apply"
@@ -514,18 +514,22 @@ This discards all changes made since the sequence started."
   ["Arguments"
    :if-not magit-rebase-in-progress-p
    ("-k" "Keep empty commits"       "--keep-empty")
-   ("-p" "Preserve merges"          ("-p" "--preserve-merges"))
+   ("-p" "Preserve merges"          ("-p" "--preserve-merges")
+    :if (lambda () (magit-git-version< "2.33.0")))
+   ("-r" "Rebase merges"            ("-r" "--rebase-merges=")
+    magit-rebase-merges-select-mode
+    :if (lambda () (magit-git-version>= "2.18.0")))
    (7 magit-merge:--strategy)
    (7 magit-merge:--strategy-option)
    (7 "=X" magit-diff:--diff-algorithm :argument "-Xdiff-algorithm=")
-   ("-d" "Lie about committer date" "--committer-date-is-author-date")
+   ("-d" "Use author date as committer date" "--committer-date-is-author-date")
+   ("-t" "Use current time as author date"   "--ignore-date")
    ("-a" "Autosquash"               "--autosquash")
    ("-A" "Autostash"                "--autostash")
    ("-i" "Interactive"              ("-i" "--interactive"))
    ("-h" "Disable hooks"            "--no-verify")
    (7 magit-rebase:--exec)
-   (5 magit:--gpg-sign)
-   (5 "-r" "Rebase merges" "--rebase-merges=" magit-rebase-merges-select-mode)]
+   (5 magit:--gpg-sign)]
   [:if-not magit-rebase-in-progress-p
    :description (lambda ()
                   (format (propertize "Rebase %s onto" 'face 'transient-heading)

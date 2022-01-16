@@ -1,6 +1,6 @@
 ;;; cider-format.el --- Code and EDN formatting functionality -*- lexical-binding: t -*-
 
-;; Copyright © 2013-2021 Bozhidar Batsov, Artur Malabarba and CIDER contributors
+;; Copyright © 2013-2022 Bozhidar Batsov, Artur Malabarba and CIDER contributors
 ;;
 ;; Author: Bozhidar Batsov <bozhidar@batsov.dev>
 ;;         Artur Malabarba <bruce.connor.am@gmail.com>
@@ -147,7 +147,7 @@ START and END represent the region's boundaries."
 (defun cider-format-edn-last-sexp ()
   "Format the EDN data of the last sexp."
   (interactive)
-  (apply 'cider-format-edn-region (cider-sexp-at-point 'bounds)))
+  (apply #'cider-format-edn-region (cider-sexp-at-point 'bounds)))
 
 (provide 'cider-format)
 ;;; cider-format.el ends here

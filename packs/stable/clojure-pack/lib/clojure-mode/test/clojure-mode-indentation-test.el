@@ -26,7 +26,8 @@
 (require 'clojure-mode)
 (require 'cl-lib)
 (require 'buttercup)
-(require 's)
+(require 's nil t)               ;Don't burp if it's missing during compilation.
+(require 'test-helper "test/utils/test-helper")
 
 (defmacro when-indenting-with-point-it (description before after)
   "Return a buttercup spec.
@@ -279,7 +280,7 @@ DESCRIPTION is a string with the description of the spec."
         one)"))
 
   (describe "we can pass a lambda to explicitly set the column"
-    (put-clojure-indent 'arsymbol (lambda (indent-point state) 0))
+    (put-clojure-indent 'arsymbol (lambda (_indent-point _state) 0))
 
     (when-indenting-with-point-it "should handle a symbol with lambda"
       "

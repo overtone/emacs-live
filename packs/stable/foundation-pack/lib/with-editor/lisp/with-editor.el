@@ -1,6 +1,6 @@
 ;;; with-editor.el --- Use the Emacsclient as $EDITOR -*- lexical-binding: t -*-
 
-;; Copyright (C) 2014-2021  The Magit Project Contributors
+;; Copyright (C) 2014-2022  The Magit Project Contributors
 ;;
 ;; You should have received a copy of the AUTHORS.md file.  If not,
 ;; see https://github.com/magit/with-editor/blob/master/AUTHORS.md.
@@ -11,7 +11,7 @@
 ;; Homepage: https://github.com/magit/with-editor
 
 ;; Package-Requires: ((emacs "24.4"))
-;; Package-Version: 3.0.5
+;; Package-Version: 3.1.1
 
 ;; SPDX-License-Identifier: GPL-3.0-or-later
 

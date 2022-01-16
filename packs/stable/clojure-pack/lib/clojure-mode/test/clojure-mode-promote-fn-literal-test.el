@@ -23,6 +23,7 @@
 
 (require 'clojure-mode)
 (require 'buttercup)
+(require 'test-helper "test/utils/test-helper")
 
 (describe "clojure-promote-fn-literal"
   :var (names)

@@ -1,6 +1,6 @@
 ;;; ob-haskell.el --- Babel Functions for Haskell    -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2009-2021 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2022 Free Software Foundation, Inc.
 
 ;; Author: Eric Schulte
 ;; Maintainer: Lawrence Bottorff <borgauf@gmail.com>
@@ -70,11 +70,11 @@ a parameter, such as \"ghc -v\"."
   :package-version '(Org "9.4")
   :type 'string)
 
-(defconst org-babel-header-args:haskell '(compile . :any)
+(defconst org-babel-header-args:haskell '((compile . :any))
   "Haskell-specific header arguments.")
 
 (defun org-babel-haskell-execute (body params)
-  "This function should only be called by `org-babel-execute:haskell'"
+  "This function should only be called by `org-babel-execute:haskell'."
   (let* ((tmp-src-file (org-babel-temp-file "Haskell-src-" ".hs"))
          (tmp-bin-file
           (org-babel-process-file-name

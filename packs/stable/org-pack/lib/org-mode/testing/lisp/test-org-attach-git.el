@@ -1,4 +1,4 @@
-;;; test-org-annex-attach.el --- Tests for Org Attach with git-annex
+;;; test-org-attach-git.el --- Tests for Org Attach with git-annex
 ;;
 ;; Copyright (c) 2016, 2019 Erik Hetzner
 ;; Authors: Erik Hetzner
@@ -92,4 +92,5 @@
 	   (should (string-equal "hello world\n" (buffer-string))))
 	 (should (eq called 'was-called)))))))
 
-;;; test-org-attach-annex.el ends here
+(provide 'test-org-attach-git)
+;;; test-org-attach-git.el ends here

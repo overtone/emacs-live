@@ -21,7 +21,6 @@ LOAD_PATH  += -L .
 
 ifndef ORG_LOAD_PATH
 ORG_LOAD_PATH  = -L ../../org/lisp
-ORG_LOAD_PATH += -L ../../ox-texinfo+
 endif
 
 INSTALL_INFO     ?= $(shell command -v ginstall-info || printf install-info)

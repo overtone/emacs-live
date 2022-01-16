@@ -1,7 +1,7 @@
 ;;; cider-macroexpansion.el --- Macro expansion support -*- lexical-binding: t -*-
 
 ;; Copyright © 2012-2013 Tim King, Phil Hagelberg, Bozhidar Batsov
-;; Copyright © 2013-2021 Bozhidar Batsov, Artur Malabarba and CIDER contributors
+;; Copyright © 2013-2022 Bozhidar Batsov, Artur Malabarba and CIDER contributors
 ;;
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Phil Hagelberg <technomancy@gmail.com>
@@ -33,7 +33,6 @@
 
 (require 'cider-mode)
 (require 'subr-x)
-(require 'cider-compat)
 
 (defconst cider-macroexpansion-buffer "*cider-macroexpansion*")
 
@@ -143,7 +142,7 @@ If invoked with a PREFIX argument, use \\=`macroexpand\\=` instead of
     (erase-buffer)
     (insert (format "%s" expansion))
     (goto-char (point-max))
-    (cider--font-lock-ensure)))
+    (font-lock-ensure)))
 
 (defun cider-redraw-macroexpansion-buffer (expansion buffer start end)
   "Redraw the macroexpansion with new EXPANSION.
@@ -194,12 +193,8 @@ and point is placed after the expanded form."
     map))
 
 (define-minor-mode cider-macroexpansion-mode
-  "Minor mode for CIDER macroexpansion.
-
-\\{cider-macroexpansion-mode-map}"
-  nil
-  " Macroexpand"
-  cider-macroexpansion-mode-map)
+  "Minor mode for CIDER macroexpansion."
+  :lighter " Macroexpand")
 
 (provide 'cider-macroexpansion)
 

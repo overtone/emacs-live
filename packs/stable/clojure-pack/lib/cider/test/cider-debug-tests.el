@@ -1,6 +1,6 @@
-;;; cider-debug-tests.el
+;;; cider-debug-tests.el  -*- lexical-binding: t; -*-
 
-;; Copyright © 2012-2021 Tim King, Bozhidar Batsov
+;; Copyright © 2012-2022 Tim King, Bozhidar Batsov
 
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Bozhidar Batsov <bozhidar@batsov.dev>
@@ -91,7 +91,7 @@
       (expect (thing-at-point 'symbol) :to-equal "1")
       (goto-char (point-min))
       (cider--debug-move-point '(2))
-      (expect (looking-back (rx "[]")) :to-be-truthy)
+      (expect (looking-back (rx "[]") (line-beginning-position)) :to-be-truthy)
       (goto-char (point-min))
       (cider--debug-move-point '(4 ":b"))
       ;(message "%S" (point))
@@ -141,17 +141,20 @@
       (clojure-mode)
       (save-excursion (insert "(let [x (atom 1)] @x)"))
       (cider--debug-move-point '(2 1))
-      (expect (looking-back "@x") :to-be-truthy))
+      (expect (looking-back "@x" (line-beginning-position))
+              :to-be-truthy))
     (with-temp-buffer
       (clojure-mode)
       (save-excursion (insert "(do @(do (atom {})))"))
       (cider--debug-move-point '(1 1 1))
-      (expect (looking-back "(atom {})") :to-be-truthy))
+      (expect (looking-back "(atom {})" (line-beginning-position))
+              :to-be-truthy))
     (with-temp-buffer
       (clojure-mode)
       (save-excursion (insert "(do @@(do (atom {})))"))
       (cider--debug-move-point '(1 1 1 1))
-      (expect (looking-back "(atom {})") :to-be-truthy)))
+      (expect (looking-back "(atom {})" (line-beginning-position))
+              :to-be-truthy)))
 
   (it "handles metadata maps"
     (with-temp-buffer

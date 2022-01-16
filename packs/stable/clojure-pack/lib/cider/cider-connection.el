@@ -1,6 +1,6 @@
 ;;; cider-connection.el --- Connection and session life-cycle management for CIDER -*- lexical-binding: t -*-
 ;;
-;; Copyright © 2019-2021 Artur Malabarba, Bozhidar Batsov, Vitalie Spinu and CIDER contributors
+;; Copyright © 2019-2022 Artur Malabarba, Bozhidar Batsov, Vitalie Spinu and CIDER contributors
 ;;
 ;; Author: Artur Malabarba <bruce.connor.am@gmail.com>
 ;;         Bozhidar Batsov <bozhidar@batsov.dev>
@@ -280,7 +280,7 @@ See command `cider-mode'."
 
 (declare-function cider--debug-mode "cider-debug")
 (defun cider-disable-on-existing-clojure-buffers ()
-  "Disable command `cider-mode' and related commands on existing Clojure buffers."
+  "Disable `cider-mode' and related commands on existing Clojure buffers."
   (interactive)
   (dolist (buffer (cider-util--clojure-buffers))
     (with-current-buffer buffer
@@ -288,7 +288,7 @@ See command `cider-mode'."
       (cider-mode -1))))
 
 (defun cider-possibly-disable-on-existing-clojure-buffers ()
-  "Disable command `cider-mode' on existing Clojure buffers when all CIDER sessions are closed."
+  "Disable `cider-mode' in all Clojure buffers if all CIDER sessions are closed."
   (unless (cider-sessions)
     (cider-disable-on-existing-clojure-buffers)))
 
@@ -929,11 +929,11 @@ session."
 
 ;; Deprecated after #2324 (introduction of sesman)
 
-(define-obsolete-function-alias 'cider-current-repl-buffer 'cider-current-repl "0.18")
-(define-obsolete-function-alias 'cider-repl-buffers 'cider-repls "0.18")
-(define-obsolete-function-alias 'cider-current-session 'cider-nrepl-eval-session "0.18")
-(define-obsolete-function-alias 'cider-current-tooling-session 'cider-nrepl-tooling-session "0.18")
-(define-obsolete-function-alias 'nrepl-connection-buffer-name 'nrepl-repl-buffer-name "0.18")
+(define-obsolete-function-alias 'cider-current-repl-buffer #'cider-current-repl "0.18")
+(define-obsolete-function-alias 'cider-repl-buffers #'cider-repls "0.18")
+(define-obsolete-function-alias 'cider-current-session #'cider-nrepl-eval-session "0.18")
+(define-obsolete-function-alias 'cider-current-tooling-session #'cider-nrepl-tooling-session "0.18")
+(define-obsolete-function-alias 'nrepl-connection-buffer-name #'nrepl-repl-buffer-name "0.18")
 
 (provide 'cider-connection)
 

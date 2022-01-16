@@ -1,6 +1,6 @@
 ;;; magit.el --- A Git porcelain inside Emacs  -*- lexical-binding: t; coding: utf-8 -*-
 
-;; Copyright (C) 2008-2021  The Magit Project Contributors
+;; Copyright (C) 2008-2022  The Magit Project Contributors
 ;;
 ;; You should have received a copy of the AUTHORS.md file which
 ;; lists all contributors.  If not, see http://magit.vc/authors.
@@ -447,8 +447,9 @@ is run in the top-level directory of the current working tree."
   (let ((default-directory (or directory default-directory))
         (process-environment process-environment))
     (push "GIT_PAGER=cat" process-environment)
-    (magit-start-process shell-file-name nil
-                         shell-command-switch command))
+    (magit--with-connection-local-variables
+     (magit-start-process shell-file-name nil
+                          shell-command-switch command)))
   (magit-process-buffer))
 
 (defun magit-read-shell-command (&optional toplevel initial-input)
@@ -566,7 +567,8 @@ and Emacs to it."
         (when print-dest
           (princ (format "Magit %s%s, Git %s, Emacs %s, %s"
                          (or magit-version "(unknown)")
-                         (or (and (ignore-errors (version< "2008" magit-version))
+                         (or (and (ignore-errors
+                                    (magit--version>= magit-version "2008"))
                                   (ignore-errors
                                     (require 'lisp-mnt)
                                     (and (fboundp 'lm-header)

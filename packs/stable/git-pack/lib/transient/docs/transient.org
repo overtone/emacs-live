@@ -1,20 +1,15 @@
-#+TITLE: Transient User and Developer Manual
+#+title: Transient User and Developer Manual
 :PREAMBLE:
-#+AUTHOR: Jonas Bernoulli
-#+EMAIL: jonas@bernoul.li
-#+DATE: 2018-{{{year}}}
-#+LANGUAGE: en
+#+author: Jonas Bernoulli
+#+email: jonas@bernoul.li
+#+date: 2018-{{{year}}}
 
-#+TEXINFO_DIR_CATEGORY: Emacs
-#+TEXINFO_DIR_TITLE: Transient: (transient).
-#+TEXINFO_DIR_DESC: Transient Commands
-#+SUBTITLE: for version {{{version}}}
+#+texinfo_dir_category: Emacs
+#+texinfo_dir_title: Transient: (transient).
+#+texinfo_dir_desc: Transient Commands
+#+subtitle: for version {{{version}}}
 
-#+TEXINFO_DEFFN: t
-#+OPTIONS: H:4 num:4 toc:2
-#+PROPERTY: header-args :eval never
-#+MACRO: version (eval (ox-texinfo+-get-version 'mixed))
-#+MACRO: year (eval (format-time-string "%Y"))
+#+setupfile: .orgconfig
 
 Taking inspiration from prefix keys and prefix arguments, Transient
 implements a similar abstraction involving a prefix command, infix
@@ -36,10 +31,10 @@ reading a new value in the minibuffer.
 Calling a suffix command usually causes the transient to be exited
 but suffix commands can also be configured to not exit the transient.
 
-#+TEXINFO: @noindent
+#+texinfo: @noindent
 This manual is for Transient version {{{version}}}.
 
-#+BEGIN_QUOTE
+#+begin_quote
 Copyright (C) 2018-{{{year}}} Jonas Bernoulli <jonas@bernoul.li>
 
 You can redistribute this document and/or modify it under the terms
@@ -51,7 +46,7 @@ This document is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 General Public License for more details.
-#+END_QUOTE
+#+end_quote
 :END:
 * Introduction
 
@@ -62,7 +57,7 @@ arguments and suffix commands.  We could call this abstraction a
 commands (a prefix and a suffix) we prefer to call it just a
 "transient".
 
-#+BEGIN_QUOTE
+#+begin_quote
 Transient keymaps are a feature provided by Emacs.  Transients as
 implemented by this package involve the use of transient keymaps.
 
@@ -71,7 +66,7 @@ talk about "prefix commands" in this manual, then we mean our own kind
 of "prefix commands", unless specified otherwise.  To avoid ambiguity
 we sometimes use the terms "transient prefix command" for our kind and
 "regular prefix command" for Emacs' kind.
-#+END_QUOTE
+#+end_quote
 
 When the user calls a transient prefix command, then a transient
 (temporary) keymap is activated, which binds the transient's infix and
@@ -106,7 +101,7 @@ arguments have been set using a command such as ~universal-argument~.
 The information shown in the popup buffer while a transient is active
 looks a bit like this:
 
-#+BEGIN_EXAMPLE
+#+begin_example
 ,-----------------------------------------
 |Arguments
 | -f Force (--force)
@@ -116,15 +111,15 @@ looks a bit like this:
 | t tag
 | r release
 `-----------------------------------------
-#+END_EXAMPLE
+#+end_example
 
-#+BEGIN_QUOTE
+#+begin_quote
 This is a simplified version of ~magit-tag~.  Info manuals do not
 support images or colored text, so the above "screenshot" lacks some
 information; in practice you would be able to tell whether the
 arguments ~--force~ and ~--annotate~ are enabled or not based on their
 color.
-#+END_QUOTE
+#+end_quote
 
 Transient can be used to implement simple "command dispatchers".  The
 main benefit then is that the user can see all the available commands
@@ -214,8 +209,9 @@ transient.
 the latter, then you can later resume the stack of transients using
 ~M-x transient-resume~.
 
-- Key: C-g, transient-quit-seq
-- Key: C-g, transient-quit-one
+#+attr_texinfo: :compact t
+- Key: C-g (transient-quit-seq) ::
+- Key: C-g (transient-quit-one) ::
 
   This key quits the currently active incomplete key sequence, if any,
   or else the current transient.  When quitting the current transient,
@@ -225,13 +221,13 @@ Transient's predecessor bound ~q~ instead of ~C-g~ to the quit command.
 To learn how to get that binding back see ~transient-bind-q-to-quit~'s
 doc string.
 
-- Key: C-q, transient-quit-all
+- Key: C-q (transient-quit-all) ::
 
   This command quits the currently active incomplete key sequence, if
   any, and all transients, including the active transient and all
   suspended transients, if any.
 
-- Key: C-z, transient-suspend
+- Key: C-z (transient-suspend) ::
 
   Like ~transient-quit-all~, this command quits an incomplete key
   sequence, if any, and all transients.  Additionally it saves the
@@ -244,7 +240,7 @@ doc string.
   If another stack is already saved, then saving a new stack discards
   the previous stack.
 
-- Key: M-x transient-resume, transient-resume
+- Key: M-x transient-resume ::
 
   This command resumes the previously suspended stack of transients,
   if any.
@@ -262,14 +258,14 @@ the section disappears again.  Note however that one of these commands
 is described as "Show common permanently"; invoke that if you want the
 common commands to always be shown for all transients.
 
-- Key: C-x t, transient-toggle-common
+- Key: C-x t (transient-toggle-common) ::
 
   This command toggles whether the generic commands that are common to
   all transients are always displayed or only after typing the
   incomplete prefix key sequence ~C-x~.  This only affects the current
   Emacs session.
 
-- User Option: transient-show-common-commands
+- User Option: transient-show-common-commands ::
 
   This option controls whether shared suffix commands are shown
   alongside the transient-specific infix and suffix commands.  By
@@ -302,17 +298,17 @@ suffix command, then the value is merely saved to the transient's
 history.  That value won't be used when the transient is next invoked
 but it is easily accessible (see [[*Using History]]).
 
-- Key: C-x s, transient-set
+- Key: C-x s (transient-set) ::
 
   This command saves the value of the active transient for this Emacs
   session.
 
-- Key: C-x C-s, transient-save
+- Key: C-x C-s (transient-save) ::
 
   Save the value of the active transient persistently across Emacs
   sessions.
 
-- User Option: transient-values-file
+- User Option: transient-values-file ::
 
   This file is used to persist the values of transients between Emacs
   sessions.
@@ -328,14 +324,15 @@ value is saved to its history.  These values can be cycled through the
 same way one can cycle through the history of commands that read
 user-input in the minibuffer.
 
-- Key: C-M-p, transient-history-prev
-- Key: C-x p, transient-history-prev
+#+attr_texinfo: :compact t
+- Key: C-M-p (transient-history-prev) ::
+- Key: C-x p ::
 
   This command switches to the previous value used for the active
   transient.
 
-- Key: C-M-n, transient-history-next
-- Key: C-x n, transient-history-next
+- Key: C-M-n (transient-history-next) ::
+- Key: C-x n ::
 
   This command switches to the next value used for the active
   transient.
@@ -352,12 +349,12 @@ read the same kind of value to also use the same history key (see
 
 Both kinds of history are saved to a file when Emacs is exited.
 
-- User Option: transient-history-file
+- User Option: transient-history-file ::
 
   This file is used to persist the history of transients and their
   infixes between Emacs sessions.
 
-- User Option: transient-history-limit
+- User Option: transient-history-limit ::
 
   This option controls how many history elements are kept at the time
   the history is saved in ~transient-history-file~.
@@ -369,7 +366,7 @@ be familiar with.  To make it trivial to get help for these, Transient
 provides access to the documentation directly from the active
 transient.
 
-- Key: C-h, transient-help
+- Key: C-h (transient-help) ::
 
   This command enters help mode.  When help mode is active, then
   typing ~<key>~ shows information about the suffix command that ~<key>~
@@ -415,18 +412,18 @@ expect that it won't be of use to most users, and they should place
 very important suffixes on a lower level, so that they remain
 available even if the user lowers the transient level.
 
-- User Option: transient-default-level
+- User Option: transient-default-level ::
 
   This option controls which suffix levels are made available by
   default.  It sets the transient-level for transients for which the
   user has not set that individually.
 
-- User Option: transient-levels-file
+- User Option: transient-levels-file ::
 
   This file is used to persist the levels of transients and their
   suffixes between Emacs sessions.
 
-- Key: C-x l, transient-set-level
+- Key: C-x l (transient-set-level) ::
 
   This command enters edit mode.  When edit mode is active, then all
   infixes and suffixes that are currently usable are displayed along
@@ -460,21 +457,31 @@ following commands.  These commands are never shown in the transient
 window, and the key bindings are the same as for ~scroll-up-command~ and
 ~scroll-down-command~ in other buffers.
 
-- Command: transient-scroll-up arg
+- Command: transient-scroll-up arg ::
 
   This command scrolls text of transient popup window upward ARG
   lines.  If ARG is ~nil~, then it scrolls near full screen.  This
   is a wrapper around ~scroll-up-command~ (which see).
 
-- Command: transient-scroll-down arg
+- Command: transient-scroll-down arg ::
 
   This command scrolls text of transient popup window down ARG
   lines.  If ARG is ~nil~, then it scrolls near full screen.  This
   is a wrapper around ~scroll-down-command~ (which see).
 
-** Other Options
+** Configuration
 
-- User Option: transient-show-popup
+More options are described in [[* Common Suffix Commands]], in [[* Saving
+Values]], in [[* Using History]] and in [[* Enabling and Disabling Suffixes]].
+
+*** Essential Options
+:PROPERTIES:
+:UNNUMBERED: notoc
+:END:
+
+Also see [[* Common Suffix Commands]].
+
+- User Option: transient-show-popup ::
 
   This option controls whether the current transient's infix and
   suffix commands are shown in the popup buffer.
@@ -495,7 +502,7 @@ window, and the key bindings are the same as for ~scroll-up-command~ and
     then the popup is shown after that many seconds of inactivity
     (using the absolute value).
 
-- User Option: transient-enable-popup-navigation
+- User Option: transient-enable-popup-navigation ::
 
   This option controls whether navigation commands are enabled in the
   transient popup buffer.
@@ -511,7 +518,7 @@ window, and the key bindings are the same as for ~scroll-up-command~ and
   - ~<mouse-1>~ invokes the clicked on suffix.
   - ~C-s~ and ~C-r~ start isearch in the popup buffer.
 
-- User Option: transient-display-buffer-action
+- User Option: transient-display-buffer-action ::
 
   This option specifies the action used to display the transient popup
   buffer.  The transient popup buffer is displayed in a window using
@@ -525,10 +532,12 @@ window, and the key bindings are the same as for ~scroll-up-command~ and
 
   The default is:
 
-  (display-buffer-in-side-window
-    (side . bottom)
-    (inhibit-same-window . t)
-    (window-parameters (no-other-window . t)))
+  #+BEGIN_SRC emacs-lisp
+    (display-buffer-in-side-window
+      (side . bottom)
+      (inhibit-same-window . t)
+      (window-parameters (no-other-window . t)))
+  #+END_SRC
 
   This displays the window at the bottom of the selected frame.
   Another useful FUNCTION is ~display-buffer-below-selected~, which
@@ -551,7 +560,24 @@ window, and the key bindings are the same as for ~scroll-up-command~ and
   If you change the value of this option, then you might also
   want to change the value of ~transient-mode-line-format~.
 
-- User Option: transient-mode-line-format
+*** Accessibility Options
+:PROPERTIES:
+:UNNUMBERED: notoc
+:END:
+
+- User Option: transient-force-single-column
+
+  This option controls whether the use of a single column to display
+  suffixes is enforced.  This might be useful for users with low
+  vision who use large text and might otherwise have to scroll in two
+  dimensions.
+
+*** Auxiliary Options
+:PROPERTIES:
+:UNNUMBERED: notoc
+:END:
+
+- User Option: transient-mode-line-format ::
 
   This option controls whether the transient popup buffer has a
   mode-line, separator line, or neither.
@@ -568,14 +594,21 @@ window, and the key bindings are the same as for ~scroll-up-command~ and
   Otherwise this can be any mode-line format.  See [[info:elisp#Mode
   Line Format]] for details.
 
-- User Option: transient-read-with-initial-input
+- User Option: transient-semantic-coloring ::
 
-  This option controls whether the last history element is used as the
-  initial minibuffer input when reading the value of an infix argument
-  from the user.  If ~nil~, then there is no initial input and the first
-  element has to be accessed the same way as the older elements.
+  This option controls whether prefixes and suffixes are colored in
+  a Hydra-like fashion.
 
-- User Option: transient-highlight-mismatched-keys
+  If non-nil, then the key binding of each suffix is colorized to
+  indicate whether it exits the transient state or not.  The color of
+  the prefix is indicated using the line that is drawn when the value
+  of ~transient-mode-line-format~ is ~line~.
+
+  For more information about how Hydra uses colors see
+  https://github.com/abo-abo/hydra#color and
+  https://oremacs.com/2015/02/19/hydra-colors-reloaded.
+
+- User Option: transient-highlight-mismatched-keys ::
 
   This option controls whether key bindings of infix commands that do
   not match the respective command-line argument should be highlighted.
@@ -594,7 +627,7 @@ window, and the key bindings are the same as for ~scroll-up-command~ and
   The highlighting is done using one of the faces
   ~transient-mismatched-key~ and ~transient-nonstandard-key~.
 
-- User Option: transient-substitute-key-function
+- User Option: transient-substitute-key-function ::
 
   This function is used to modify key bindings.  If the value of this
   option is nil (the default), then no substitution is performed.
@@ -618,7 +651,48 @@ window, and the key bindings are the same as for ~scroll-up-command~ and
                 key))))
   #+END_SRC
 
-- User Option: transient-detect-key-conflicts
+- User Option: transient-read-with-initial-input ::
+
+  This option controls whether the last history element is used as the
+  initial minibuffer input when reading the value of an infix argument
+  from the user.  If ~nil~, then there is no initial input and the first
+  element has to be accessed the same way as the older elements.
+
+- User Option: transient-hide-during-minibuffer-read ::
+
+  This option controls whether the transient buffer is hidden while
+  user input is being read in the minibuffer.
+
+- User Option: transient-align-variable-pitch ::
+
+  This option controls whether columns are align pixel-wise in the
+  popup buffer.
+
+  If this is non-nil, then columns are aligned pixel-wise to support
+  variable-pitch fonts.  Keys are not aligned, so you should use a
+  fixed-pitch font for the ~transient-key~ face.  Other key faces
+  inherit from that face unless a theme is used that breaks that
+  relationship.
+
+  This option is intended for users who use a variable-pitch font for
+  the ~default~ face.
+
+- User Option: transient-force-fixed-pitch ::
+
+  This option controls whether to force the use of a monospaced font
+  in popup buffer.  Even if you use a proportional font for the
+  ~default~ face, you might still want to use a monospaced font in
+  transient's popup buffer.  Setting this option to t causes ~default~
+  to be remapped to ~fixed-pitch~ in that buffer.
+
+*** Developer Options
+:PROPERTIES:
+:UNNUMBERED: notoc
+:END:
+
+These options are mainly intended for developers.
+
+- User Option: transient-detect-key-conflicts ::
 
   This option controls whether key binding conflicts should be
   detected at the time the transient is invoked.  If so, then this
@@ -632,13 +706,16 @@ window, and the key bindings are the same as for ~scroll-up-command~ and
   predicates of those suffixes prevent that more than one of them is
   enabled at a time.
 
-- User Option: transient-force-fixed-pitch
+- User Option: transient-highlight-higher-levels ::
 
-  This option controls whether to force the use of a monospaced font
-  in popup buffer.  Even if you use a proportional font for the
-  ~default~ face, you might still want to use a monospaced font in
-  transient's popup buffer.  Setting this option to t causes ~default~
-  to be remapped to ~fixed-pitch~ in that buffer.
+  This option controls whether to suffixes suffixes that would not
+  be available by default are highlighted.
+
+  When non-nil then the descriptions of suffixes are highlighted if
+  their level is above 4, the default of ~transient-default-level~.
+  Assuming you have set that variable to 7, this highlights all
+  suffixes that won't be available to users without them making the
+  same customization.
 
 * Modifying Existing Transients
 
@@ -678,29 +755,29 @@ These functions operate on the information stored in the
 that tree are not objects but have the form ~(LEVEL CLASS PLIST)~, where
 plist should set at least ~:key~, ~:description~ and ~:command~.
 
-- Function: transient-insert-suffix prefix loc suffix
+- Function: transient-insert-suffix prefix loc suffix ::
 
   This function inserts suffix or group SUFFIX into PREFIX before LOC.
 
-- Function: transient-append-suffix prefix loc suffix
+- Function: transient-append-suffix prefix loc suffix ::
 
   This function inserts suffix or group SUFFIX into PREFIX after LOC.
 
-- Function: transient-replace-suffix prefix loc suffix
+- Function: transient-replace-suffix prefix loc suffix ::
 
   This function replaces the suffix or group at LOC in PREFIX with
   suffix or group SUFFIX.
 
-- Function: transient-remove-suffix prefix loc
+- Function: transient-remove-suffix prefix loc ::
 
   This function removes the suffix or group at LOC in PREFIX.
 
-- Function: transient-get-suffix prefix loc
+- Function: transient-get-suffix prefix loc ::
 
   This function returns the suffix or group at LOC in PREFIX.  The
   returned value has the form mentioned above.
 
-- Function: transient-suffix-put prefix loc prop value
+- Function: transient-suffix-put prefix loc prop value ::
 
   This function edits the suffix or group at LOC in PREFIX, by setting
   the PROP of its plist to VALUE.
@@ -724,7 +801,7 @@ binds the transient's infix and suffix commands.  In other words, it
 defines the complete transient, not just the transient prefix command
 that is used to invoke that transient.
 
-- Macro: transient-define-prefix name arglist [docstring] [keyword value]... group... [body...]
+- Macro: transient-define-prefix name arglist [docstring] [keyword value]... group... [body...] ::
 
   This macro defines NAME as a transient prefix command and binds the
   transient's infix and suffix commands.
@@ -800,9 +877,9 @@ brackets to do the latter.
 
 Group specifications then have this form:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_src emacs-lisp
   [{LEVEL} {DESCRIPTION} {KEYWORD VALUE}... ELEMENT...]
-#+END_SRC
+#+end_src
 
 The LEVEL is optional and defaults to 4.  See [[*Enabling and Disabling
 Suffixes]].
@@ -895,9 +972,9 @@ suffixes".  Here it means the former.
 
 Suffix specifications have this form:
 
-#+BEGIN_SRC emacs-lisp
+#+begin_src emacs-lisp
   ([LEVEL] [KEY] [DESCRIPTION] COMMAND|ARGUMENT [KEYWORD VALUE]...)
-#+END_SRC
+#+end_src
 
 LEVEL, KEY and DESCRIPTION can also be specified using the KEYWORDs
 ~:level~, ~:key~ and ~:description~.  If the object that is associated with
@@ -919,7 +996,7 @@ the object's values just for the binding inside this transient.
 The next element is either a command or an argument.  This is the only
 argument that is mandatory in all cases.
 
-- Usually COMMAND is a symbol that is bound as a function, which has
+- COMMAND should be a symbol that is bound as a function, which has
   to be defined or at least autoloaded as a command by the time the
   containing prefix command is invoked.
 
@@ -927,10 +1004,9 @@ argument that is mandatory in all cases.
   with it (as would be the case if ~transient-define-suffix~ or
   ~transient-define-infix~ were used to define it).
 
-  The command can also be a closure or lambda expression, but that
-  should only be used for dynamic transients whose suffixes are
-  defined when the prefix command is invoked.  See information about
-  the ~:setup-children~ function in [[*Group Specifications]].
+  Anonymous, dynamically defined suffix commands are also support.
+  See information about the ~:setup-children~ function in [[*Group
+  Specifications]].
 
   As mentioned above, the object that is associated with a command can
   be used to set the default for certain values that otherwise have to
@@ -977,7 +1053,7 @@ Note that an infix is a special kind of suffix. Depending on context
 "suffixes" means "suffixes (including infixes)" or "non-infix
 suffixes".
 
-- Macro: transient-define-suffix name arglist [docstring] [keyword value]... body...
+- Macro: transient-define-suffix name arglist [docstring] [keyword value]... body... ::
 
   This macro defines NAME as a transient suffix command.
 
@@ -994,7 +1070,7 @@ suffixes".
   The infix arguments are usually accessed by using ~transient-args~
   inside ~interactive~.
 
-- Macro: transient-define-infix name arglist [docstring] [keyword value]...
+- Macro: transient-define-infix name arglist [docstring] [keyword value]... ::
 
   This macro defines NAME as a transient infix command.
 
@@ -1031,7 +1107,7 @@ suffixes".
   ~transient-define-suffix~ to define the infix command and use ~t~ as the
   value of the ~:transient~ keyword.
 
-- Macro: transient-define-argument name arglist [docstring] [keyword value]...
+- Macro: transient-define-argument name arglist [docstring] [keyword value]... ::
 
   This macro defines NAME as a transient infix command.
 
@@ -1058,7 +1134,7 @@ The preferred way of doing that is to call the ~transient-args~
 function, which for infix arguments serves about the same purpose as
 ~prefix-arg~ serves for prefix arguments.
 
-- Function: transient-args prefix
+- Function: transient-args prefix ::
 
   This function returns the value of the transient prefix command
   PREFIX.
@@ -1068,7 +1144,7 @@ function, which for infix arguments serves about the same purpose as
   command was not invoked from PREFIX, then it returns the set, saved
   or default value for PREFIX.
 
-- Function: transient-arg-value arg args
+- Function: transient-arg-value arg args ::
 
   This function return the value of ARG as it appears in ARGS.
 
@@ -1076,14 +1152,14 @@ function, which for infix arguments serves about the same purpose as
   returned as a string, using the empty string for the empty value,
   or nil if the option does not appear in ARGS.
 
-- Function: transient-suffixes prefix
+- Function: transient-suffixes prefix ::
 
   This function returns the suffixes of the transient prefix command
   PREFIX.  This is a list of objects.  This function should only be
   used if you need the objects (as opposed to just their values) and
   if the current command is not being invoked from PREFIX.
 
-- Variable: transient-current-suffixes
+- Variable: transient-current-suffixes ::
 
   The suffixes of the transient from which this suffix command was
   invoked.  This is a list of objects.  Usually it is sufficient to
@@ -1091,13 +1167,13 @@ function, which for infix arguments serves about the same purpose as
   values.  In complex cases it might be necessary to use this variable
   instead, i.e. if you need access to information beside the value.
 
-- Variable: transient-current-prefix
+- Variable: transient-current-prefix ::
 
   The transient from which this suffix command was invoked.  The
   returned value is a ~transient-prefix~ object, which holds information
   associated with the transient prefix command.
 
-- Variable: transient-current-command
+- Variable: transient-current-command ::
 
   The transient from which this suffix command was invoked.  The
   returned value is a symbol, the transient prefix command.
@@ -1183,7 +1259,7 @@ and set the values of ~transient--exitp~, ~transient--helpp~ or
 The default for infixes is ~transient--do-stay~.  This is also the only
 function that makes sense for infixes.
 
-- Function: transient--do-stay
+- Function: transient--do-stay ::
 
   Call the command without exporting variables and stay transient.
 
@@ -1194,20 +1270,51 @@ function that makes sense for infixes.
 
 The default for suffixes is ~transient--do-exit~.
 
-- Function: transient--do-exit
+- Function: transient--do-exit ::
 
   Call the command after exporting variables and exit the transient.
 
-- Function: transient--do-call
+- Function: transient--do-return ::
+
+  Call the command after exporting variables and return to parent
+  prefix.  If there is no parent prefix, then call ~transient--do-exit~.
+
+- Function: transient--do-call ::
 
   Call the command after exporting variables and stay transient.
 
-- Function: transient--do-replace
+The following pre-commands are suitable for sub-prefixes.  Only the
+first should ever explicitly be set as the value of the ~transient~
+slot.
+
+- Function: transient--do-recurse ::
+
+  Call the transient prefix command, preparing for return to active
+  transient.
+
+  Whether we actually return to the parent transient is ultimately
+  under the control of each invoked suffix.  The difference between
+  this pre-command and ~transient--do-replace~ is that it changes the
+  value of the ~transient-suffix~ slot to ~transient--do-return~.
+
+  If there is no parent transient, then only call this command and
+  skip the second step.
+
+- Function: transient--do-replace ::
 
   Call the transient prefix command, replacing the active transient.
 
-  This is used for suffixes that are prefixes themselves, i.e. for
-  sub-prefixes.
+  Unless ~transient--do-recurse~ is explicitly used, this pre-command
+  is automatically used for suffixes that are prefixes themselves,
+  i.e. for sub-prefixes.
+
+- Function: transient--do-suspend ::
+
+  Suspend the active transient, saving the transient stack.
+
+  This is used by the command ~transient-suspend~ and optionally also by
+  "external events" such as ~handle-switch-frame~.  Such bindings should
+  be added to ~transient-predicate-map~.
 
 *** Pre-commands for Non-Suffixes
 :PROPERTIES:
@@ -1223,11 +1330,11 @@ If you want to let the user invoke non-suffix commands, then use
 ~transient--do-stay~ as the value of the prefix's ~transient-non-suffix~
 slot.
 
-- Function: transient--do-warn
+- Function: transient--do-warn ::
 
   Call ~transient-undefined~ and stay transient.
 
-- Function: transient--do-noop
+- Function: transient--do-noop ::
 
   Call ~transient-noop~ and stay transient.
 
@@ -1236,19 +1343,19 @@ slot.
 :UNNUMBERED: notoc
 :END:
 
-- Function: transient--do-quit-one
+- Function: transient--do-quit-one ::
 
   If active, quit help or edit mode, else exit the active transient.
 
   This is used when the user pressed ~C-g~.
 
-- Function: transient--do-quit-all
+- Function: transient--do-quit-all ::
 
   Exit all transients without saving the transient stack.
 
   This is used when the user pressed ~C-q~.
 
-- Function: transient--do-suspend
+- Function: transient--do-suspend ::
 
   Suspend the active transient, saving the transient stack.
 
@@ -1338,7 +1445,7 @@ beginning of the class specification, e.g. ~[:class transient-columns
 
 ** Group Methods
 
-- Function: transient-setup-children group children
+- Function: transient-setup-children group children ::
 
   This generic function can be used to setup the children or a group.
 
@@ -1352,7 +1459,7 @@ beginning of the class specification, e.g. ~[:class transient-columns
   arbitrary changes to the children including constructing new
   children from scratch.
 
-- Function: transient--insert-group group
+- Function: transient--insert-group group ::
 
   This generic function formats the group and its elements and inserts
   the result into the current buffer, which is a temporary buffer.
@@ -1368,7 +1475,7 @@ Currently the ~transient-prefix~ class is being used for all prefix
 commands and there is only a single generic function that can be
 specialized based on the class of a prefix command.
 
-- Function: transient--history-init obj
+- Function: transient--history-init obj ::
 
   This generic function is called while setting up the transient and
   is responsible for initializing the ~history~ slot.  This is the
@@ -1436,7 +1543,7 @@ functions use ~describe-function~.
 
 *** Suffix Value Methods
 
-- Function: transient-init-value obj
+- Function: transient-init-value obj ::
 
   This generic function sets the initial value of the object OBJ.
 
@@ -1448,7 +1555,7 @@ functions use ~describe-function~.
   your class derives from that directly, then you must implement
   a method.
 
-- Function: transient-infix-read obj
+- Function: transient-infix-read obj ::
 
   This generic function determines the new value of the infix object
   OBJ.
@@ -1465,16 +1572,16 @@ functions use ~describe-function~.
   infix command determines what the new value should be, based
   on the previous value.
 
-- Function: transient-prompt obj
+- Function: transient-prompt obj ::
 
   This generic function returns the prompt to be used to read infix
   object OBJ's value.
 
-- Function: transient-infix-set obj value
+- Function: transient-infix-set obj value ::
 
   This generic function sets the value of infix object OBJ to VALUE.
 
-- Function: transient-infix-value obj
+- Function: transient-infix-value obj ::
 
   This generic function returns the value of the suffix object OBJ.
 
@@ -1488,7 +1595,7 @@ functions use ~describe-function~.
   Usually only infixes have a value, but see the method for
   ~transient-suffix~.
 
-- Function: transient-init-scope obj
+- Function: transient-init-scope obj ::
 
   This generic function sets the scope of the suffix object OBJ.
 
@@ -1504,7 +1611,7 @@ functions use ~describe-function~.
 
 *** Suffix Format Methods
 
-- Function: transient-format obj
+- Function: transient-format obj ::
 
   This generic function formats and returns OBJ for display.
 
@@ -1513,22 +1620,22 @@ functions use ~describe-function~.
   command was invoked to be current, then do so by temporarily
   making ~transient--source-buffer~ current.
 
-- Function: transient-format-key obj
+- Function: transient-format-key obj ::
 
   This generic function formats OBJ's ~key~ for display and returns the
   result.
 
-- Function: transient-format-description obj
+- Function: transient-format-description obj ::
 
   This generic function formats OBJ's ~description~ for display and
   returns the result.
 
-- Function: transient-format-value obj
+- Function: transient-format-value obj ::
 
   This generic function formats OBJ's value for display and returns
   the result.
 
-- Function: transient-show-help obj
+- Function: transient-show-help obj ::
 
   Show help for the prefix, infix or suffix command represented by
   OBJ.
@@ -1754,13 +1861,13 @@ The following diagrams illustrate some of the differences.
 
 See [[info:elisp#Prefix Keys]].
 
-#+BEGIN_EXAMPLE
+#+begin_example
                                     ,--> command1 --> (c)
                                     |
   (c)-(+)-> prefix command or key --+--> command2 --> (c)
                                     |
                                     `--> command3 --> (c)
-#+END_EXAMPLE
+#+end_example
 
 *** Regular Prefix Arguments
 :PROPERTIES:
@@ -1769,7 +1876,7 @@ See [[info:elisp#Prefix Keys]].
 
 See [[info:elisp#Prefix Command Arguments]].
 
-#+BEGIN_EXAMPLE
+#+begin_example
           ,----------------------------------,
           |                                  |
           v                                  |
@@ -1783,7 +1890,7 @@ See [[info:elisp#Prefix Command Arguments]].
                                         ^                          |
                                         |                          |
                                         `-------- discards --------'
-#+END_EXAMPLE
+#+end_example
 
 *** Transients
 :PROPERTIES:
@@ -1794,7 +1901,7 @@ See [[info:elisp#Prefix Command Arguments]].
 
 This diagram ignores the infix value and external state:
 
-#+BEGIN_EXAMPLE
+#+begin_example
   (c)
    |        ,- {stay} ------<-,-<------------<-,-<---,
   (+)       |                 |                |     |
@@ -1818,12 +1925,12 @@ This diagram ignores the infix value and external state:
                                     |--> {call} -->--'
                                     |
                                     `------------------> {exit} --> (c)
-#+END_EXAMPLE
+#+end_example
 
 This diagram takes the infix value into account to an extend, while
 still ignoring external state:
 
-#+BEGIN_EXAMPLE
+#+begin_example
   (c)
    |        ,- {stay} ------<-,-<------------<-,-<---,
   (+)       |                 |                |     |
@@ -1863,12 +1970,12 @@ still ignoring external state:
                                     |--> {call} -->--'     ^
                                     |                      |
                                     `------------------> {exit} --> (c)
-#+END_EXAMPLE
+#+end_example
 
 This diagram provides more information about the infix value
 and also takes external state into account.
 
-#+BEGIN_EXAMPLE
+#+begin_example
                                          ,----sets--- "anything"
                                          |
                                          v
@@ -1922,7 +2029,7 @@ and also takes external state into account.
                                     |--> {call} -->--'     ^
                                     |                      |
                                     `------------------> {exit} --> (c)
-#+END_EXAMPLE
+#+end_example
 
 - ~{1}~ Transients can be configured to be exited when a suffix command
   is invoked.  The default is to do so for all suffixes except for
@@ -2051,7 +2158,7 @@ commands are outlined:
 :UNNUMBERED: notoc
 :END:
 
-Yes, see ~transient-display-buffer-action~ in [[*Other Options]].
+Yes, see ~transient-display-buffer-action~ in [[*Configuration]].
 
 ** Why did some of the key bindings change?
 :PROPERTIES:
@@ -2126,12 +2233,7 @@ necessary changes.  See its doc string for more information.
 :INDEX:      ky
 :COOKIE_DATA: recursive
 :END:
-* Command Index
-:PROPERTIES:
-:APPENDIX:   t
-:INDEX:      cp
-:END:
-* Function Index
+* Function and Command Index
 :PROPERTIES:
 :APPENDIX:   t
 :INDEX:      fn
@@ -2147,7 +2249,7 @@ necessary changes.  See its doc string for more information.
 :COPYING:    t
 :END:
 
-#+BEGIN_QUOTE
+#+begin_quote
 Copyright (C) 2018-{{{year}}} Jonas Bernoulli <jonas@bernoul.li>
 
 You can redistribute this document and/or modify it under the terms
@@ -2159,7 +2261,7 @@ This document is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 General Public License for more details.
-#+END_QUOTE
+#+end_quote
 
 #  LocalWords:  ARGLIST ARGS DOCSTRING ELEMENTs EVAL GROUPs Infixes
 #  LocalWords:  Infixes KEYWORDs LOC LocalWords MERCHANTABILITY Magit
@@ -2172,7 +2274,6 @@ General Public License for more details.
 
 # IMPORTANT: Also update ORG_ARGS and ORG_EVAL in the Makefile.
 # Local Variables:
-# eval: (require 'ox-texinfo+ nil t)
 # indent-tabs-mode: nil
 # org-src-preserve-indentation: nil
 # End:

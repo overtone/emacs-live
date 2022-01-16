@@ -1,7 +1,7 @@
 ;; cider-util.el --- Common utility functions that don't belong anywhere else -*- lexical-binding: t -*-
 
 ;; Copyright © 2012-2013 Tim King, Phil Hagelberg, Bozhidar Batsov
-;; Copyright © 2013-2021 Bozhidar Batsov, Artur Malabarba and CIDER contributors
+;; Copyright © 2013-2022 Bozhidar Batsov, Artur Malabarba and CIDER contributors
 ;;
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Phil Hagelberg <technomancy@gmail.com>
@@ -39,10 +39,9 @@
 (require 'thingatpt)
 
 ;; clojure-mode and CIDER
-(require 'cider-compat)
 (require 'clojure-mode)
 
-(defalias 'cider-pop-back 'pop-tag-mark)
+(defalias 'cider-pop-back #'pop-tag-mark)
 
 (defcustom cider-font-lock-max-length 10000
   "The max length of strings to fontify in `cider-font-lock-as'.
@@ -276,22 +275,6 @@ return by the last called function."
 
 ;;; Font lock
 
-(defalias 'cider--font-lock-ensure
-  (if (fboundp 'font-lock-ensure)
-      #'font-lock-ensure
-    (with-no-warnings
-      (lambda (&optional _beg _end)
-        (when font-lock-mode
-          (font-lock-fontify-buffer))))))
-
-(defalias 'cider--font-lock-flush
-  (if (fboundp 'font-lock-flush)
-      #'font-lock-flush
-    (with-no-warnings
-      (lambda (&optional _beg _end)
-        (when font-lock-mode
-          (font-lock-fontify-buffer))))))
-
 (defvar cider--mode-buffers nil
   "A list of buffers for different major modes.")
 
@@ -388,20 +371,27 @@ propertized (defaults to current buffer)."
     (unless (equal "unspecified-bg" color)
       (color-lighten-name color (if darkp 5 -5)))))
 
-(autoload 'pkg-info-version-info "pkg-info.el")
-
 (defvar cider-version)
 (defvar cider-codename)
+
+(defun cider--pkg-version ()
+  "Extract CIDER's package version from its package metadata."
+  ;; FIXME: Inline the logic from package-get-version and adapt it
+  (if (fboundp 'package-get-version)
+      (package-get-version)
+    nil))
 
 (defun cider--version ()
   "Retrieve CIDER's version.
 A codename is added to stable versions."
-  (let ((version (condition-case nil
-                     (pkg-info-version-info 'cider)
-                   (error cider-version))))
-    (if (string-match-p "-snapshot" cider-version)
-        version
-      (format "%s (%s)" version cider-codename))))
+  (if (string-match-p "-snapshot" cider-version)
+      (let ((pkg-version (cider--pkg-version)))
+        (if pkg-version
+            ;; snapshot versions include the MELPA package version
+            (format "%s (package: %s)" cider-version pkg-version)
+          cider-version))
+    ;; stable versions include the codename of the release
+    (format "%s (%s)" cider-version cider-codename)))
 
 
 ;;; Strings
@@ -707,8 +697,10 @@ through a stack of help buffers.  Variables `help-back-label' and
 
 (defun cider-random-words-of-inspiration ()
   "Select a random entry from `cider-words-of-inspiration'."
+  ;; FIXME: Consider removing this eval.
   (eval (nth (random (length cider-words-of-inspiration))
-             cider-words-of-inspiration)))
+             cider-words-of-inspiration)
+        t))
 
 (defvar cider-tips
   '("Press <\\[cider-connect]> to connect to a running nREPL server."

@@ -1,6 +1,6 @@
 ;;; cider-popup.el --- Creating and quitting popup buffers  -*- lexical-binding: t; -*-
 
-;; Copyright © 2015-2021  Bozhidar Batsov, Artur Malabarba and CIDER contributors
+;; Copyright © 2015-2022  Bozhidar Batsov, Artur Malabarba and CIDER contributors
 
 ;; Author: Artur Malabarba <bruce.connor.am@gmail.com>
 
@@ -24,13 +24,11 @@
 ;;; Code:
 
 (require 'subr-x)
-(require 'cider-compat)
 
 (define-minor-mode cider-popup-buffer-mode
   "Mode for CIDER popup buffers."
-  nil
-  (" cider-tmp")
-  '(("q" .  cider-popup-buffer-quit-function)))
+  :lighter (" cider-tmp")
+  :keymap '(("q" .  cider-popup-buffer-quit-function)))
 
 (defvar-local cider-popup-buffer-quit-function #'cider-popup-buffer-quit
   "The function that is used to quit a temporary popup buffer.")
@@ -123,9 +121,7 @@ and non-nil."
           (goto-char cider-popup-output-marker)
           (let ((value-str (format "%s" value)))
             (when face
-              (if (fboundp 'add-face-text-property)
-                  (add-face-text-property 0 (length value-str) face nil value-str)
-                (add-text-properties 0 (length value-str) (list 'face face) value-str)))
+              (add-face-text-property 0 (length value-str) face nil value-str))
             (insert value-str))
           (unless inhibit-indent
             (indent-sexp))

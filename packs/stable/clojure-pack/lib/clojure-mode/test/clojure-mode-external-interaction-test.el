@@ -22,6 +22,7 @@
 (require 'clojure-mode)
 (require 'buttercup)
 (require 'paredit)
+(require 'test-helper "test/utils/test-helper")
 
 (describe "Interactions with Paredit:"
   ;; reuse existing when-refactoring-it macro

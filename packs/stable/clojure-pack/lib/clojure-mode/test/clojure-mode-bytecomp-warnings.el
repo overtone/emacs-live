@@ -1,4 +1,4 @@
-;;; clojure-mode-bytecomp-warnings.el --- Check for byte-compilation problems
+;;; clojure-mode-bytecomp-warnings.el --- Check for byte-compilation problems  -*- lexical-binding: t; -*-
 
 ;; Copyright © 2012-2021 Bozhidar Batsov and contributors
 ;;

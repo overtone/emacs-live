@@ -314,6 +314,15 @@
 	    (org-macro-replace-all org-macro-templates)
 	    (buffer-substring-no-properties
 	     (line-beginning-position) (point-max)))))
+  ;; Return AUTHOR keyword value.
+  (should
+   (equal "author 1 author 2"
+	  (org-test-with-temp-text
+              "#+author: author 1\n#+author: author 2\n<point>{{{author}}}"
+	    (org-macro-initialize-templates)
+	    (org-macro-replace-all org-macro-templates)
+	    (buffer-substring-no-properties
+	     (line-beginning-position) (point-max)))))
   ;; When AUTHOR keyword is missing, return the empty string.
   (should
    (equal ""

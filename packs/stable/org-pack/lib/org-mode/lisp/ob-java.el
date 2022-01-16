@@ -1,6 +1,6 @@
 ;;; ob-java.el --- org-babel functions for java evaluation -*- lexical-binding: t -*-
 
-;; Copyright (C) 2011-2021 Free Software Foundation, Inc.
+;; Copyright (C) 2011-2022 Free Software Foundation, Inc.
 
 ;; Authors: Eric Schulte
 ;;          Dan Davison
@@ -96,27 +96,29 @@ like javac -verbose."
 				       (group (1+ (in alnum ?_))) ; capture the class name
 				       (0+ space) ?{)
   "Regexp for the class declaration.")
-(defconst org-babel-java--main-re (rx line-start (0+ space) "public"
-				      (1+ space) "static"
-				      (1+ space) "void"
-				      (1+ space) "main"
-				      (0+ space) ?\(
-				      (0+ space) "String"
-				      (0+ space) (1+ (in alnum ?_ ?\[ ?\] space)) ; "[] args" or "args[]"
-				      (0+ space) ?\)
-				      (0+ space) (opt "throws" (1+ (in alnum ?_ ?, ?. space)))
-				      ?{)
+(defconst org-babel-java--main-re
+  (rx line-start (0+ space) "public"
+      (1+ space) "static"
+      (1+ space) "void"
+      (1+ space) "main"
+      (0+ space) ?\(
+      (0+ space) "String"
+      (1+ (in alnum ?_ ?\[ ?\] space)) ; "[] args" or "args[]"
+      ?\)
+      (0+ space) (opt "throws" (1+ (in alnum ?_ ?, ?. space)))
+      ?{)
   "Regexp for the main method declaration.")
-(defconst org-babel-java--any-method-re (rx line-start
-					    (0+ space) (opt (seq (1+ alnum) (1+ space)))   ; visibility
-					    (opt (seq "static" (1+ space)))                ; binding
-					    (1+ (in alnum ?_ ?\[ ?\]))                     ; return type
-                                            (1+ space) (1+ (in alnum ?_))                  ; method name
-					    (0+ space) ?\(
-					    (0+ space) (0+ (in alnum ?_ ?\[ ?\] ?, space)) ; params
-					    (0+ space) ?\)
-					    (0+ space) (opt "throws" (1+ (in alnum ?_ ?, ?. space)))
-					    ?{)
+(defconst org-babel-java--any-method-re
+  (rx line-start
+      (0+ space) (opt (seq (1+ alnum) (1+ space)))   ; visibility
+      (opt (seq "static" (1+ space)))                ; binding
+      (1+ (in alnum ?_ ?\[ ?\]))                     ; return type
+      (1+ space) (1+ (in alnum ?_))                  ; method name
+      (0+ space) ?\(
+      (0+ (in alnum ?_ ?\[ ?\] ?, space)) ; params
+      ?\)
+      (0+ space) (opt "throws" (1+ (in alnum ?_ ?, ?. space)))
+      ?{)
   "Regexp for any method.")
 (defconst org-babel-java--result-wrapper "\n    public static String __toString(Object val) {
         if (val instanceof String) {
@@ -192,7 +194,7 @@ replaced in this string.")
          ;; the dir to write the source file
          (packagedir (if (and (not run-from-temp) packagename)
                          (file-name-as-directory
-                          (concat basedir (replace-regexp-in-string "\\\." "/" packagename)))
+                          (concat basedir (replace-regexp-in-string "\\." "/" packagename)))
                        basedir))
          ;; the filename of the source file
          (src-file (concat packagedir classname ".java"))
@@ -472,7 +474,7 @@ If RESULT-TYPE equals `output' then return standard output as a
 string.  If RESULT-TYPE equals `value' then return the value
 returned by the source block, as elisp.
 
-RESULT-PARAMS input params used to format the reponse.
+RESULT-PARAMS input params used to format the response.
 
 RESULT-FILE filename of the tempfile to store the returned value in
 for `value' RESULT-TYPE.  Not used for `output' RESULT-TYPE."
@@ -481,7 +483,7 @@ for `value' RESULT-TYPE.  Not used for `output' RESULT-TYPE."
                (`value (org-babel-eval cmd "")
                        (org-babel-eval-read-file result-file)))))
     (org-babel-result-cond result-params raw
-      (org-babel-java-table-or-string raw))))
+                           (org-babel-java-table-or-string raw))))
 
 (provide 'ob-java)
 

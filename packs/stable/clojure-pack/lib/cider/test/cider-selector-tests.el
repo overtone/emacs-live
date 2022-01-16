@@ -1,6 +1,6 @@
-;;; cider-selector-tests.el
+;;; cider-selector-tests.el  -*- lexical-binding: t; -*-
 
-;; Copyright © 2012-2021 Tim King, Bozhidar Batsov
+;; Copyright © 2012-2022 Tim King, Bozhidar Batsov
 
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Bozhidar Batsov <bozhidar@batsov.dev>
@@ -29,7 +29,7 @@
 
 (require 'buttercup)
 (require 'cider-selector)
-(require 'cider-connection-test-utils)
+(require 'cider-connection-test-utils "test/utils/cider-connection-test-utils")
 
 ;; selector
 (defun cider-invoke-selector-method-by-key (ch)

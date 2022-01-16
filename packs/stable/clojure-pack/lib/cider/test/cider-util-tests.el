@@ -1,6 +1,6 @@
-;;; cider-util-tests.el
+;;; cider-util-tests.el  -*- lexical-binding: t; -*-
 
-;; Copyright © 2012-2021 Tim King, Bozhidar Batsov
+;; Copyright © 2012-2022 Tim King, Bozhidar Batsov
 
 ;; Author: Tim King <kingtim@gmail.com>
 ;;         Bozhidar Batsov <bozhidar@batsov.dev>
@@ -29,6 +29,7 @@
 
 (require 'buttercup)
 (require 'cider-util)
+(require 'package)
 
 (defmacro with-clojure-buffer (contents &rest body)
   "Execute BODY in a clojure-mode buffer with CONTENTS
@@ -42,7 +43,7 @@ buffer."
      (insert ,contents)
      (goto-char (point-min))
      (when (search-forward "|" nil 'noerror)
-       (delete-backward-char 1))
+       (delete-char -1))
      ,@body))
 
 ;;; cider-util tests
@@ -50,23 +51,16 @@ buffer."
 (describe "cider--version"
   :var (cider-version cider-codename)
 
-  (it "handles version unavailable error"
-    (spy-on 'pkg-info-version-info :and-throw-error '(error "No version"))
-    (setq cider-version "0.11.0"
-          cider-codename "Victory")
-    (expect (cider--version) :to-equal "0.11.0 (Victory)"))
-
   (it "returns correct version number when available"
-    (spy-on 'pkg-info-version-info :and-return-value "0.11.0")
     (setq cider-version "0.11.0"
           cider-codename "Victory")
     (expect (cider--version) :to-equal "0.11.0 (Victory)"))
 
   (it "handles snapshot versions"
-    (spy-on 'pkg-info-version-info :and-return-value "0.11.0snapshot (package: 20160301.2217)")
     (setq cider-version "0.11.0-snapshot"
           cider-codename "Victory")
-    (expect (cider--version) :to-equal "0.11.0snapshot (package: 20160301.2217)")))
+    (spy-on 'cider--pkg-version :and-return-value "20160301.2217")
+    (expect (cider--version) :to-equal "0.11.0-snapshot (package: 20160301.2217)")))
 
 (defvar some-cider-hook)
 
@@ -80,7 +74,7 @@ buffer."
 
   (it "exits on first nil"
     (let (here)
-      (setq some-cider-hook (list #'upcase (lambda (x) nil) (lambda (x) (setq here t))))
+      (setq some-cider-hook (list #'upcase (lambda (_x) nil) (lambda (_x) (setq here t))))
       (cider-run-chained-hook 'some-cider-hook "A")
       (expect here :to-be nil))))
 

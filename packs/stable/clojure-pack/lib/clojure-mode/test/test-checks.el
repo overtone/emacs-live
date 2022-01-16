@@ -1,4 +1,4 @@
-;; This is a script to be loaded from the root `clojure-mode' directory. It will
+;; This is a script to be loaded from the root `clojure-mode' directory. It will  -*- lexical-binding: t; -*-
 ;; prepare all requirements and then run `check-declare-directory' on
 ;; `default-directory'. For example: emacs -Q --batch -l test/test-checkdoc.el
 

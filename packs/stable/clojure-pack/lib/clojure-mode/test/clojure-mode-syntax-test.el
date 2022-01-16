@@ -25,6 +25,7 @@
 
 (require 'clojure-mode)
 (require 'buttercup)
+(require 'test-helper "test/utils/test-helper")
 
 (defun non-func (form-a form-b)
   (with-clojure-buffer form-a
@@ -66,6 +67,7 @@
                     ("#aaa"   . "aaa")
                     ("'aaa"   . "aaa")))
       (with-clojure-buffer (car form)
+        ;; FIXME: Shouldn't there be an `expect' here?
         (equal (symbol-name (symbol-at-point)) (cdr form)))))
 
   (it "skips prefixes"

@@ -1,13 +1,13 @@
 ;;; auto-compile.el --- automatically compile Emacs Lisp libraries  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2008-2021  Jonas Bernoulli
+;; Copyright (C) 2008-2022  Jonas Bernoulli
 
 ;; Author: Jonas Bernoulli <jonas@bernoul.li>
 ;; Homepage: https://github.com/emacscollective/auto-compile
 ;; Keywords: compile, convenience, lisp
 
 ;; Package-Requires: ((emacs "25.1") (packed "3.0.3"))
-
+;; Package-Version: 1.7.1
 ;; SPDX-License-Identifier: GPL-3.0-or-later
 
 ;; This file is free software; you can redistribute it and/or modify
@@ -171,8 +171,7 @@ variant `auto-compile-on-save-mode'.  Also see the related
     (user-error "This mode only makes sense with emacs-lisp-mode"))
   (if auto-compile-mode
       (add-hook  'after-save-hook 'auto-compile-byte-compile nil t)
-    (remove-hook 'after-save-hook 'auto-compile-byte-compile t))
-  (auto-compile-modify-mode-line auto-compile-use-mode-line))
+    (remove-hook 'after-save-hook 'auto-compile-byte-compile t)))
 
 ;;;###autoload
 (define-globalized-minor-mode auto-compile-on-save-mode
@@ -285,18 +284,42 @@ non-nil."
   :group 'auto-compile
   :type 'boolean)
 
+(defun auto-compile--tree-member (elt tree)
+  ;; Also known as keycast--tree-member.
+  (or (member elt tree)
+      (catch 'found
+        (dolist (sub tree)
+          (when-let ((found (and (listp sub)
+                                 (auto-compile--tree-member elt sub))))
+            (throw 'found found))))))
+
 (defun auto-compile-modify-mode-line (after)
-  (let ((format (delete 'mode-line-auto-compile
-                        (default-value 'mode-line-format)))
-        cell)
-    (when (and after auto-compile-mode
-               (setq cell (member after format)))
-      (push 'mode-line-auto-compile (cdr cell)))
+  (let ((format (default-value 'mode-line-format)))
+    (when-let ((mem (auto-compile--tree-member 'mode-line-auto-compile format)))
+      (setcar mem (cadr mem))
+      (setcdr mem (cddr mem)))
+    (when after
+      (if-let ((mem (auto-compile--tree-member after format)))
+          (push 'mode-line-auto-compile (cdr mem))
+        (message "Could not insert `%s' into `%s'"
+                 'mode-line-auto-compile
+                 'mode-line-format)))
     (set-default 'mode-line-format format)))
 
+(defun auto-compile-use-mode-line-set (_ignored value)
+  "Set `auto-compile-use-mode-line' and modify `mode-line-format'.
+VALUE is the element in `mode-line-format' after which our
+element is inserted. _IGNORED is of no relevance."
+  (setq-default auto-compile-use-mode-line value)
+  (auto-compile-modify-mode-line value))
+
 (defcustom auto-compile-use-mode-line
-  (car (memq 'mode-line-modified (default-value 'mode-line-format)))
-  "Whether to show information about the byte code file in the mode line.
+  (car (auto-compile--tree-member 'mode-line-remote
+                                  (default-value 'mode-line-format)))
+  "Whether and where to show byte-code information in the mode line.
+
+Set this variable using the Custom interface or using the function
+`auto-compile-use-mode-line-set'.
 
 This works by inserting `mode-line-auto-compile' into the default
 value of `mode-line-format' after the construct (usually a symbol)
@@ -311,9 +334,7 @@ variable that is itself a member of `mode-line-format' then you
 have to set this option to nil and manually modify that variable
 to include `mode-line-auto-compile'."
   :group 'auto-compile
-  :set (lambda (symbol value)
-         (set-default symbol value)
-         (auto-compile-modify-mode-line value))
+  :set #'auto-compile-use-mode-line-set
   :type '(choice (const :tag "don't insert" nil)
                  (const :tag "after mode-line-modified" mode-line-modified)
                  (const :tag "after mode-line-remote" mode-line-remote)
@@ -654,17 +675,24 @@ This is especially useful during rebase sessions."
         dst)
     (when (and src (setq dst (byte-compile-dest-file src)))
       (list
-       (when (and auto-compile-mode-line-counter
-                  (> auto-compile-warnings 0))
+       (cond
+        ((not auto-compile-mode-line-counter) "")
+        ((> auto-compile-warnings 0)
          (propertize
           (format "%s" auto-compile-warnings)
           'help-echo (format "%s compile warnings\nmouse-1 display compile log"
                              auto-compile-warnings)
           'face 'error
           'mouse-face 'mode-line-highlight
-          'local-map (purecopy (make-mode-line-mouse-map
-                                'mouse-1
-                                #'auto-compile-display-log))))
+          'local-map (make-mode-line-mouse-map
+                      'mouse-1 #'auto-compile-display-log)))
+        (t
+         (propertize
+          ":"
+          'help-echo "No compile warnings\nmouse-1 display compile log"
+          'mouse-face 'mode-line-highlight
+          'local-map (make-mode-line-mouse-map
+                      'mouse-1 #'auto-compile-display-log))))
        (cond
         ((file-writable-p dst)
          (propertize
@@ -681,35 +709,31 @@ This is especially useful during rebase sessions."
               (not (file-exists-p dst)))
          (propertize
           "!"
-          'help-echo "Failed to byte-compile updating\nmouse-1 retry"
+          'help-echo "Failed to byte-compile\nmouse-1 retry"
           'mouse-face 'mode-line-highlight
-          'local-map (purecopy (make-mode-line-mouse-map
-                                'mouse-1
-                                #'auto-compile-mode-line-byte-compile))))
+          'local-map (make-mode-line-mouse-map
+                      'mouse-1 #'auto-compile-mode-line-byte-compile)))
         ((not (file-exists-p dst))
          (propertize
           "%%"
           'help-echo "Byte-compiled file doesn't exist\nmouse-1 create"
           'mouse-face 'mode-line-highlight
-          'local-map (purecopy (make-mode-line-mouse-map
-                                'mouse-1
-                                #'mode-line-toggle-auto-compile))))
+          'local-map (make-mode-line-mouse-map
+                      'mouse-1 #'mode-line-toggle-auto-compile)))
         ((file-newer-than-file-p src dst)
          (propertize
           "*"
           'help-echo "Byte-compiled file needs updating\nmouse-1 update"
           'mouse-face 'mode-line-highlight
-          'local-map (purecopy (make-mode-line-mouse-map
-                                'mouse-1
-                                #'auto-compile-mode-line-byte-compile))))
+          'local-map (make-mode-line-mouse-map
+                      'mouse-1 #'auto-compile-mode-line-byte-compile)))
         (t
          (propertize
           "-"
           'help-echo "Byte-compiled file is up-to-date\nmouse-1 remove"
           'mouse-face 'mode-line-highlight
-          'local-map (purecopy (make-mode-line-mouse-map
-                                'mouse-1
-                                #'mode-line-toggle-auto-compile)))))))))
+          'local-map (make-mode-line-mouse-map
+                      'mouse-1 #'mode-line-toggle-auto-compile))))))))
 
 (defun auto-compile-display-log ()
   "Display the *Compile-Log* buffer."

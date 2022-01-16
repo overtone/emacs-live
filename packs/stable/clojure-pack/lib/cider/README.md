@@ -104,6 +104,13 @@ available features is to go over the entire
 If you're into video lessons, you might also check out
 this [intro to CIDER demo](https://www.youtube.com/watch?v=aYA4AAjLfT0) as well.
 
+## Quick Reference Card
+
+You'll find all of CIDER's essential commands and their keybindings in its
+one-page printable [quick reference card](https://github.com/clojure-emacs/cider/blob/master/refcard/cider-refcard.pdf).
+
+New CIDER users might benefit from keeping a copy close to their keyboard.
+
 ## Get Help
 
 Start with CIDER's [discussions board](https://github.com/clojure-emacs/cider/discussions). If it doesn't get the job done consider some of the other available
@@ -253,7 +260,7 @@ site. [[Become a sponsor](https://opencollective.com/cider#sponsor)]
 
 CIDER is distributed under the GNU General Public License, version 3.
 
-Copyright © 2012-2021 Bozhidar Batsov, Artur Malabarba, Tim King, Phil Hagelberg and
+Copyright © 2012-2022 Bozhidar Batsov, Artur Malabarba, Tim King, Phil Hagelberg and
 [contributors](https://github.com/clojure-emacs/cider/contributors).
 
 [badge-license]: https://img.shields.io/badge/license-GPL_3-green.svg

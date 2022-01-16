@@ -1,6 +1,6 @@
 ;;; test-ob-emacs-lisp.el
 
-;; Copyright (c) 2012-2021 Free Software Foundation, Inc.
+;; Copyright (c) 2012-2022 Free Software Foundation, Inc.
 ;; Authors: Eric Schulte, Martyn Jago
 
 ;; This file is not part of GNU Emacs.
