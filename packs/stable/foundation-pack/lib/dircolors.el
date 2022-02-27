@@ -1,4 +1,3 @@
-
 ;;; dircolors.el -- provide the same facility of ls --color inside emacs
 
 ;; Copyright (C) 2000  Padioleau yoann <padiolea@irisa.fr>
@@ -55,7 +54,7 @@
         ((null (cdr xs)) (car xs))
         (t (concat (car xs) (or sep " ") (join-string (cdr xs) sep)))))
 
-(defun map-apply(func xs)
+(defun dircolors-map-apply(func xs)
   (mapcar #'(lambda (l)(apply func l)) xs))
 
 ;; here start the real code
@@ -163,7 +162,7 @@
 (defun dircolors-boot ()
   "Initialisation..."
   ;; create faces
-  (map-apply (lambda (symb face)
+  (dircolors-map-apply (lambda (symb face)
                (set-face-foreground (make-face symb) face)
                )
              dircolors-face-color)
@@ -171,7 +170,7 @@
   (setq dircolors-font-lock-keywords
         (cons
          '("\\w*/"  dircolors-face-dir)
-         (map-apply (lambda (l face) (dircolors-compile-extension-list l face))
+         (dircolors-map-apply (lambda (l face) (dircolors-compile-extension-list l face))
                     dircolors-extension)
          ))
   )
@@ -192,7 +191,7 @@
             (toggle-read-only -1)
 
           ;; direct search seems faster than font-lock-mode
-            (map-apply (lambda (regexp face)
+            (dircolors-map-apply (lambda (regexp face)
                          (goto-char (point-min))
                          (while (re-search-forward regexp (point-max) t)
                            (let ( (begin (match-beginning 0)) (end (match-end 0)))
